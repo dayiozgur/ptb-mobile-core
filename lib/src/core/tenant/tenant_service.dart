@@ -52,6 +52,10 @@ class TenantService {
   static const String _currentTenantKey = 'current_tenant_id';
   static const String _tenantsCacheKey = 'user_tenants';
 
+  // Table names
+  static const String _tenantsTable = 'tenants';
+  static const String _tenantUsersTable = 'tenant_users';
+
   TenantService({
     required SupabaseClient supabase,
     required SecureStorage secureStorage,
@@ -140,8 +144,8 @@ class TenantService {
       }
 
       // Tenant aktif mi kontrol et
-      if (!tenant.isActive && !tenant.isTrial) {
-        Logger.warning('Tenant is not active: $tenantId (${tenant.status})');
+      if (!tenant.isActive) {
+        Logger.warning('Tenant is not active: $tenantId');
         return false;
       }
 
@@ -150,6 +154,16 @@ class TenantService {
 
       // Storage'a kaydet
       await _secureStorage.write(key: _currentTenantKey, value: tenantId);
+
+      // RPC ile varsayılan tenant olarak işaretle (opsiyonel)
+      try {
+        await _supabase.rpc('set_default_tenant', params: {
+          'p_tenant_id': tenantId,
+        });
+      } catch (e) {
+        // RPC yoksa veya hata olursa sessizce devam et
+        Logger.debug('set_default_tenant RPC not available or failed: $e');
+      }
 
       Logger.info('Tenant selected: ${tenant.name}');
       return true;
@@ -180,7 +194,7 @@ class TenantService {
 
       // Supabase'den getir
       final response = await _supabase
-          .from('tenants')
+          .from(_tenantsTable)
           .select()
           .eq('id', tenantId)
           .maybeSingle();
@@ -219,17 +233,61 @@ class TenantService {
         }
       }
 
-      // Supabase'den getir (membership üzerinden)
+      // Önce RPC dene (daha performanslı)
+      try {
+        final rpcResponse = await _supabase.rpc(
+          'get_user_tenants',
+          params: {'p_user_id': userId},
+        );
+
+        if (rpcResponse != null && rpcResponse is List) {
+          final tenants = <Tenant>[];
+          for (final item in rpcResponse) {
+            tenants.add(Tenant(
+              id: item['tenant_id'] as String,
+              name: item['tenant_name'] as String? ?? '',
+              userRole: TenantRole.fromString(item['role'] as String? ?? 'member'),
+              isDefault: item['is_default'] as bool? ?? false,
+              joinedAt: item['joined_at'] != null
+                  ? DateTime.tryParse(item['joined_at'] as String)
+                  : null,
+            ));
+          }
+
+          _userTenants = tenants;
+          _tenantsController.add(_userTenants);
+
+          // Cache'e kaydet
+          await _cacheManager.setList(
+            key: '${_tenantsCacheKey}_$userId',
+            value: tenants,
+            toJson: (t) => t.toJson(),
+            ttl: const Duration(minutes: 30),
+          );
+
+          Logger.debug('Loaded ${tenants.length} tenants for user via RPC');
+          return tenants;
+        }
+      } catch (e) {
+        Logger.debug('RPC get_user_tenants not available, falling back to query: $e');
+      }
+
+      // Fallback: Doğrudan sorgu
       final memberships = await _supabase
-          .from('tenant_memberships')
-          .select('*, tenant:tenants(*)')
+          .from(_tenantUsersTable)
+          .select('*, tenant:$_tenantsTable(*)')
           .eq('user_id', userId)
-          .eq('is_active', true);
+          .eq('status', 'active');
 
       final tenants = <Tenant>[];
       for (final membership in memberships) {
         if (membership['tenant'] != null) {
-          tenants.add(Tenant.fromJson(membership['tenant']));
+          final tenantJson = membership['tenant'] as Map<String, dynamic>;
+          // Membership bilgilerini tenant'a ekle
+          tenantJson['role'] = membership['role'];
+          tenantJson['is_default'] = membership['is_default'];
+          tenantJson['joined_at'] = membership['joined_at'];
+          tenants.add(Tenant.fromJson(tenantJson));
         }
       }
 
@@ -259,7 +317,7 @@ class TenantService {
   ) async {
     try {
       final response = await _supabase
-          .from('tenant_memberships')
+          .from(_tenantUsersTable)
           .select()
           .eq('user_id', userId)
           .eq('tenant_id', tenantId)
@@ -273,6 +331,38 @@ class TenantService {
     }
   }
 
+  /// Kullanıcının varsayılan tenant'ını getir
+  Future<String?> getUserDefaultTenantId(String userId) async {
+    try {
+      // Önce RPC dene
+      try {
+        final result = await _supabase.rpc(
+          'get_user_default_tenant',
+          params: {'p_user_id': userId},
+        );
+        if (result != null) {
+          return result as String;
+        }
+      } catch (e) {
+        Logger.debug('RPC get_user_default_tenant not available: $e');
+      }
+
+      // Fallback: Doğrudan sorgu
+      final response = await _supabase
+          .from(_tenantUsersTable)
+          .select('tenant_id')
+          .eq('user_id', userId)
+          .eq('is_default', true)
+          .eq('status', 'active')
+          .maybeSingle();
+
+      return response?['tenant_id'] as String?;
+    } catch (e) {
+      Logger.error('Failed to get user default tenant', e);
+      return null;
+    }
+  }
+
   // ============================================
   // TENANT MANAGEMENT (Admin operations)
   // ============================================
@@ -282,38 +372,42 @@ class TenantService {
     required String name,
     required String slug,
     required String ownerId,
+    String? code,
+    String? description,
     String? logoUrl,
-    TenantSettings? settings,
   }) async {
     try {
       // Tenant oluştur
       final tenantData = {
         'name': name,
-        'slug': slug,
-        'logo_url': logoUrl,
-        'status': TenantStatus.active.name,
-        'plan': SubscriptionPlan.free.name,
-        'settings': (settings ?? const TenantSettings()).toJson(),
+        'code': code ?? slug,
+        'description': description,
+        'active': true,
         'created_at': DateTime.now().toIso8601String(),
+        'created_by': ownerId,
       };
 
       final response = await _supabase
-          .from('tenants')
+          .from(_tenantsTable)
           .insert(tenantData)
           .select()
           .single();
 
       final tenant = Tenant.fromJson(response);
 
-      // Owner membership oluştur
-      await _supabase.from('tenant_memberships').insert({
+      // Owner olarak tenant_users'a ekle
+      await _supabase.from(_tenantUsersTable).insert({
         'user_id': ownerId,
         'tenant_id': tenant.id,
-        'role': TenantRole.owner.name,
-        'is_active': true,
-        'accepted_at': DateTime.now().toIso8601String(),
+        'role': TenantRole.owner.value,
+        'status': TenantMemberStatus.active.value,
+        'is_default': true, // İlk tenant varsayılan olsun
+        'joined_at': DateTime.now().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
       });
+
+      // Cache'i temizle
+      await _cacheManager.remove('${_tenantsCacheKey}_$ownerId');
 
       Logger.info('Tenant created: ${tenant.name}');
       return tenant;
@@ -327,8 +421,10 @@ class TenantService {
   Future<Tenant?> updateTenant({
     required String tenantId,
     String? name,
+    String? code,
+    String? description,
     String? logoUrl,
-    TenantSettings? settings,
+    bool? active,
   }) async {
     try {
       final updateData = <String, dynamic>{
@@ -336,11 +432,13 @@ class TenantService {
       };
 
       if (name != null) updateData['name'] = name;
+      if (code != null) updateData['code'] = code;
+      if (description != null) updateData['description'] = description;
       if (logoUrl != null) updateData['logo_url'] = logoUrl;
-      if (settings != null) updateData['settings'] = settings.toJson();
+      if (active != null) updateData['active'] = active;
 
       final response = await _supabase
-          .from('tenants')
+          .from(_tenantsTable)
           .update(updateData)
           .eq('id', tenantId)
           .select()
@@ -368,22 +466,37 @@ class TenantService {
     }
   }
 
-  /// Kullanıcıyı tenant'a davet et
-  Future<bool> inviteUser({
+  /// Kullanıcıyı tenant'a ekle
+  Future<TenantMembership?> addUserToTenant({
     required String tenantId,
-    required String email,
+    required String userId,
     TenantRole role = TenantRole.member,
+    String? invitedBy,
   }) async {
     try {
-      // Kullanıcı var mı kontrol et
-      // NOT: Gerçek uygulamada email ile kullanıcı bulma
-      // veya davet sistemi kullanılmalı
+      final membershipData = {
+        'user_id': userId,
+        'tenant_id': tenantId,
+        'role': role.value,
+        'status': TenantMemberStatus.active.value,
+        'is_default': false,
+        'invited_by': invitedBy,
+        'invited_at': invitedBy != null ? DateTime.now().toIso8601String() : null,
+        'joined_at': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
 
-      Logger.info('User invited to tenant: $email (${role.displayName})');
-      return true;
+      final response = await _supabase
+          .from(_tenantUsersTable)
+          .insert(membershipData)
+          .select()
+          .single();
+
+      Logger.info('User $userId added to tenant $tenantId with role ${role.displayName}');
+      return TenantMembership.fromJson(response);
     } catch (e) {
-      Logger.error('Failed to invite user', e);
-      return false;
+      Logger.error('Failed to add user to tenant', e);
+      return null;
     }
   }
 
@@ -394,8 +507,11 @@ class TenantService {
   }) async {
     try {
       await _supabase
-          .from('tenant_memberships')
-          .update({'role': newRole.name})
+          .from(_tenantUsersTable)
+          .update({
+            'role': newRole.value,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', membershipId);
 
       Logger.info('Member role updated: ${newRole.displayName}');
@@ -406,19 +522,57 @@ class TenantService {
     }
   }
 
-  /// Üyeyi kaldır
+  /// Üyeyi deaktif et (soft delete)
   Future<bool> removeMember(String membershipId) async {
     try {
       await _supabase
-          .from('tenant_memberships')
-          .update({'is_active': false})
+          .from(_tenantUsersTable)
+          .update({
+            'status': TenantMemberStatus.inactive.value,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', membershipId);
 
-      Logger.info('Member removed');
+      Logger.info('Member removed (deactivated)');
       return true;
     } catch (e) {
       Logger.error('Failed to remove member', e);
       return false;
+    }
+  }
+
+  /// Üyeyi kalıcı olarak sil
+  Future<bool> deleteMember(String membershipId) async {
+    try {
+      await _supabase
+          .from(_tenantUsersTable)
+          .delete()
+          .eq('id', membershipId);
+
+      Logger.info('Member permanently deleted');
+      return true;
+    } catch (e) {
+      Logger.error('Failed to delete member', e);
+      return false;
+    }
+  }
+
+  /// Tenant üyelerini getir
+  Future<List<TenantMembership>> getTenantMembers(String tenantId) async {
+    try {
+      final response = await _supabase
+          .from(_tenantUsersTable)
+          .select()
+          .eq('tenant_id', tenantId)
+          .eq('status', 'active')
+          .order('created_at');
+
+      return response
+          .map<TenantMembership>((json) => TenantMembership.fromJson(json))
+          .toList();
+    } catch (e) {
+      Logger.error('Failed to get tenant members', e);
+      return [];
     }
   }
 
@@ -438,17 +592,8 @@ class TenantService {
   /// Owner mı?
   bool get isOwner => _currentMembership?.role == TenantRole.owner;
 
-  /// Özellik aktif mi?
-  bool isFeatureEnabled(String feature) {
-    return _currentTenant?.settings.isFeatureEnabled(feature) ?? false;
-  }
-
-  /// Plan özelliğine sahip mi?
-  bool hasPlanFeature(bool Function(PlanFeatures) check) {
-    if (_currentTenant == null) return false;
-    final features = PlanFeatures.forPlan(_currentTenant!.plan);
-    return check(features);
-  }
+  /// Yönetebilir mi?
+  bool get canManage => hasPermission(TenantRole.manager);
 
   // ============================================
   // PLAN & LIMITS
@@ -468,14 +613,13 @@ class TenantService {
     if (features.hasUnlimitedUsers) return false;
 
     try {
-      final count = await _supabase
-          .from('tenant_memberships')
+      final response = await _supabase
+          .from(_tenantUsersTable)
           .select()
           .eq('tenant_id', _currentTenant!.id)
-          .eq('is_active', true)
-          .count();
+          .eq('status', 'active');
 
-      return count.count >= features.maxUsers;
+      return response.length >= features.maxUsers;
     } catch (e) {
       Logger.error('Failed to check user limit', e);
       return true;
@@ -501,33 +645,4 @@ class TenantService {
     _tenantsController.close();
     Logger.debug('TenantService disposed');
   }
-}
-
-/// Tenant context wrapper
-///
-/// Widget ağacında tenant bilgisine erişim için kullanılabilir.
-class TenantContext {
-  final Tenant tenant;
-  final TenantMembership membership;
-  final TenantRole role;
-
-  const TenantContext({
-    required this.tenant,
-    required this.membership,
-    required this.role,
-  });
-
-  /// Admin mi?
-  bool get isAdmin => role.isHigherOrEqualTo(TenantRole.admin);
-
-  /// Owner mı?
-  bool get isOwner => role == TenantRole.owner;
-
-  /// Özellik aktif mi?
-  bool isFeatureEnabled(String feature) {
-    return tenant.settings.isFeatureEnabled(feature);
-  }
-
-  /// Plan özellikleri
-  PlanFeatures get planFeatures => PlanFeatures.forPlan(tenant.plan);
 }

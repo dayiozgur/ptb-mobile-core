@@ -3,6 +3,9 @@ enum TenantStatus {
   /// Aktif
   active,
 
+  /// Pasif
+  inactive,
+
   /// Askıda
   suspended,
 
@@ -34,6 +37,7 @@ enum SubscriptionPlan {
 /// Tenant (Kiracı) modeli
 ///
 /// Multi-tenant mimarisinde organizasyon/şirket temsili.
+/// Gerçek veritabanı şemasına uygun yapı.
 class Tenant {
   /// Benzersiz ID
   final String id;
@@ -41,104 +45,146 @@ class Tenant {
   /// Tenant adı
   final String name;
 
-  /// Slug (URL-friendly identifier)
-  final String slug;
+  /// Tenant kodu (unique identifier)
+  final String? code;
 
-  /// Logo URL
+  /// Açıklama
+  final String? description;
+
+  /// Logo URL / Image path
   final String? logoUrl;
 
-  /// Domain (özel domain varsa)
-  final String? domain;
+  /// Aktif mi?
+  final bool active;
 
-  /// Durum
-  final TenantStatus status;
+  // ============================================
+  // KONUM BİLGİLERİ
+  // ============================================
 
-  /// Abonelik planı
-  final SubscriptionPlan plan;
+  /// Adres
+  final String? address;
 
-  /// Ayarlar
-  final TenantSettings settings;
+  /// Şehir
+  final String? city;
+
+  /// İlçe
+  final String? town;
+
+  /// Ülke
+  final String? country;
+
+  /// Enlem
+  final double? latitude;
+
+  /// Boylam
+  final double? longitude;
+
+  /// Zoom seviyesi (harita için)
+  final int? zoom;
+
+  /// Timezone
+  final String? timeZone;
+
+  // ============================================
+  // ZAMAN DAMGALARI
+  // ============================================
 
   /// Oluşturulma tarihi
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   /// Güncellenme tarihi
   final DateTime? updatedAt;
 
-  /// Deneme bitiş tarihi
-  final DateTime? trialEndsAt;
+  /// Oluşturan kullanıcı
+  final String? createdBy;
 
-  /// Abonelik bitiş tarihi
-  final DateTime? subscriptionEndsAt;
+  /// Güncelleyen kullanıcı
+  final String? updatedBy;
 
-  /// Metadata
-  final Map<String, dynamic>? metadata;
+  /// Row ID (sıralama için)
+  final int? rowId;
+
+  // ============================================
+  // COMPUTED / İLİŞKİLİ (tenant_users üzerinden)
+  // ============================================
+
+  /// Kullanıcının bu tenant'taki rolü (tenant_users'dan gelir)
+  final TenantRole? userRole;
+
+  /// Varsayılan tenant mı? (tenant_users.is_default)
+  final bool isDefault;
+
+  /// Katılım tarihi (tenant_users.joined_at)
+  final DateTime? joinedAt;
 
   const Tenant({
     required this.id,
     required this.name,
-    required this.slug,
+    this.code,
+    this.description,
     this.logoUrl,
-    this.domain,
-    this.status = TenantStatus.active,
-    this.plan = SubscriptionPlan.free,
-    this.settings = const TenantSettings(),
-    required this.createdAt,
+    this.active = true,
+    this.address,
+    this.city,
+    this.town,
+    this.country,
+    this.latitude,
+    this.longitude,
+    this.zoom,
+    this.timeZone,
+    this.createdAt,
     this.updatedAt,
-    this.trialEndsAt,
-    this.subscriptionEndsAt,
-    this.metadata,
+    this.createdBy,
+    this.updatedBy,
+    this.rowId,
+    this.userRole,
+    this.isDefault = false,
+    this.joinedAt,
   });
 
   /// Aktif mi?
-  bool get isActive => status == TenantStatus.active;
+  bool get isActive => active;
 
-  /// Deneme sürümünde mi?
-  bool get isTrial => status == TenantStatus.trial;
+  /// Deneme sürümünde mi? (geriye uyumluluk - subscription tablosundan kontrol edilmeli)
+  bool get isTrial => false;
 
-  /// Deneme süresi dolmuş mu?
-  bool get isTrialExpired {
-    if (!isTrial || trialEndsAt == null) return false;
-    return DateTime.now().isAfter(trialEndsAt!);
-  }
+  /// Plan (geriye uyumluluk - subscription tablosundan alınmalı)
+  SubscriptionPlan get plan => SubscriptionPlan.free;
 
-  /// Abonelik aktif mi?
-  bool get hasActiveSubscription {
-    if (plan == SubscriptionPlan.free) return true;
-    if (subscriptionEndsAt == null) return false;
-    return DateTime.now().isBefore(subscriptionEndsAt!);
-  }
-
-  /// JSON'dan oluştur
+  /// JSON'dan oluştur (tenants tablosu)
   factory Tenant.fromJson(Map<String, dynamic> json) {
     return Tenant(
       id: json['id'] as String,
-      name: json['name'] as String,
-      slug: json['slug'] as String,
-      logoUrl: json['logo_url'] as String?,
-      domain: json['domain'] as String?,
-      status: TenantStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => TenantStatus.active,
-      ),
-      plan: SubscriptionPlan.values.firstWhere(
-        (e) => e.name == json['plan'],
-        orElse: () => SubscriptionPlan.free,
-      ),
-      settings: json['settings'] != null
-          ? TenantSettings.fromJson(json['settings'] as Map<String, dynamic>)
-          : const TenantSettings(),
-      createdAt: DateTime.parse(json['created_at'] as String),
+      name: json['name'] as String? ?? '',
+      code: json['code'] as String?,
+      description: json['description'] as String?,
+      logoUrl: json['logo_url'] as String? ?? json['image_path'] as String?,
+      active: json['active'] as bool? ?? true,
+      address: json['address'] as String?,
+      city: json['city'] as String?,
+      town: json['town'] as String?,
+      country: json['country'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      zoom: json['zoom'] as int?,
+      timeZone: json['time_zone'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+          ? DateTime.tryParse(json['updated_at'] as String)
           : null,
-      trialEndsAt: json['trial_ends_at'] != null
-          ? DateTime.parse(json['trial_ends_at'] as String)
+      createdBy: json['created_by'] as String?,
+      updatedBy: json['updated_by'] as String?,
+      rowId: json['row_id'] as int?,
+      // tenant_users join'den gelen alanlar
+      userRole: json['role'] != null
+          ? TenantRole.fromString(json['role'] as String)
           : null,
-      subscriptionEndsAt: json['subscription_ends_at'] != null
-          ? DateTime.parse(json['subscription_ends_at'] as String)
+      isDefault: json['is_default'] as bool? ?? false,
+      joinedAt: json['joined_at'] != null
+          ? DateTime.tryParse(json['joined_at'] as String)
           : null,
-      metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
 
@@ -147,17 +193,22 @@ class Tenant {
     return {
       'id': id,
       'name': name,
-      'slug': slug,
+      'code': code,
+      'description': description,
       'logo_url': logoUrl,
-      'domain': domain,
-      'status': status.name,
-      'plan': plan.name,
-      'settings': settings.toJson(),
-      'created_at': createdAt.toIso8601String(),
+      'active': active,
+      'address': address,
+      'city': city,
+      'town': town,
+      'country': country,
+      'latitude': latitude,
+      'longitude': longitude,
+      'zoom': zoom,
+      'time_zone': timeZone,
+      'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'trial_ends_at': trialEndsAt?.toIso8601String(),
-      'subscription_ends_at': subscriptionEndsAt?.toIso8601String(),
-      'metadata': metadata,
+      'created_by': createdBy,
+      'updated_by': updatedBy,
     };
   }
 
@@ -165,37 +216,55 @@ class Tenant {
   Tenant copyWith({
     String? id,
     String? name,
-    String? slug,
+    String? code,
+    String? description,
     String? logoUrl,
-    String? domain,
-    TenantStatus? status,
-    SubscriptionPlan? plan,
-    TenantSettings? settings,
+    bool? active,
+    String? address,
+    String? city,
+    String? town,
+    String? country,
+    double? latitude,
+    double? longitude,
+    int? zoom,
+    String? timeZone,
     DateTime? createdAt,
     DateTime? updatedAt,
-    DateTime? trialEndsAt,
-    DateTime? subscriptionEndsAt,
-    Map<String, dynamic>? metadata,
+    String? createdBy,
+    String? updatedBy,
+    int? rowId,
+    TenantRole? userRole,
+    bool? isDefault,
+    DateTime? joinedAt,
   }) {
     return Tenant(
       id: id ?? this.id,
       name: name ?? this.name,
-      slug: slug ?? this.slug,
+      code: code ?? this.code,
+      description: description ?? this.description,
       logoUrl: logoUrl ?? this.logoUrl,
-      domain: domain ?? this.domain,
-      status: status ?? this.status,
-      plan: plan ?? this.plan,
-      settings: settings ?? this.settings,
+      active: active ?? this.active,
+      address: address ?? this.address,
+      city: city ?? this.city,
+      town: town ?? this.town,
+      country: country ?? this.country,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      zoom: zoom ?? this.zoom,
+      timeZone: timeZone ?? this.timeZone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      trialEndsAt: trialEndsAt ?? this.trialEndsAt,
-      subscriptionEndsAt: subscriptionEndsAt ?? this.subscriptionEndsAt,
-      metadata: metadata ?? this.metadata,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      rowId: rowId ?? this.rowId,
+      userRole: userRole ?? this.userRole,
+      isDefault: isDefault ?? this.isDefault,
+      joinedAt: joinedAt ?? this.joinedAt,
     );
   }
 
   @override
-  String toString() => 'Tenant($id, $name, $status)';
+  String toString() => 'Tenant($id, $name)';
 
   @override
   bool operator ==(Object other) =>
@@ -205,7 +274,191 @@ class Tenant {
   int get hashCode => id.hashCode;
 }
 
-/// Tenant ayarları
+/// Tenant üyeliği (tenant_users tablosu)
+class TenantMembership {
+  /// Üyelik ID
+  final String id;
+
+  /// Kullanıcı ID (auth.users.id)
+  final String userId;
+
+  /// Tenant ID
+  final String tenantId;
+
+  /// Rol
+  final TenantRole role;
+
+  /// Durum
+  final TenantMemberStatus status;
+
+  /// Varsayılan tenant mı?
+  final bool isDefault;
+
+  /// Davet eden kullanıcı
+  final String? invitedBy;
+
+  /// Davet tarihi
+  final DateTime? invitedAt;
+
+  /// Davet token'ı
+  final String? invitationToken;
+
+  /// Davet son kullanma tarihi
+  final DateTime? invitationExpiresAt;
+
+  /// Katılım tarihi
+  final DateTime? joinedAt;
+
+  /// Son erişim tarihi
+  final DateTime? lastAccessedAt;
+
+  /// Oluşturulma tarihi
+  final DateTime createdAt;
+
+  /// Güncellenme tarihi
+  final DateTime? updatedAt;
+
+  const TenantMembership({
+    required this.id,
+    required this.userId,
+    required this.tenantId,
+    required this.role,
+    this.status = TenantMemberStatus.active,
+    this.isDefault = false,
+    this.invitedBy,
+    this.invitedAt,
+    this.invitationToken,
+    this.invitationExpiresAt,
+    this.joinedAt,
+    this.lastAccessedAt,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  /// Aktif mi?
+  bool get isActive => status == TenantMemberStatus.active;
+
+  /// Beklemede mi?
+  bool get isPending => status == TenantMemberStatus.pending;
+
+  factory TenantMembership.fromJson(Map<String, dynamic> json) {
+    return TenantMembership(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      tenantId: json['tenant_id'] as String,
+      role: TenantRole.fromString(json['role'] as String? ?? 'member'),
+      status: TenantMemberStatus.fromString(json['status'] as String? ?? 'active'),
+      isDefault: json['is_default'] as bool? ?? false,
+      invitedBy: json['invited_by'] as String?,
+      invitedAt: json['invited_at'] != null
+          ? DateTime.tryParse(json['invited_at'] as String)
+          : null,
+      invitationToken: json['invitation_token'] as String?,
+      invitationExpiresAt: json['invitation_expires_at'] != null
+          ? DateTime.tryParse(json['invitation_expires_at'] as String)
+          : null,
+      joinedAt: json['joined_at'] != null
+          ? DateTime.tryParse(json['joined_at'] as String)
+          : null,
+      lastAccessedAt: json['last_accessed_at'] != null
+          ? DateTime.tryParse(json['last_accessed_at'] as String)
+          : null,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'tenant_id': tenantId,
+      'role': role.value,
+      'status': status.value,
+      'is_default': isDefault,
+      'invited_by': invitedBy,
+      'invited_at': invitedAt?.toIso8601String(),
+      'invitation_token': invitationToken,
+      'invitation_expires_at': invitationExpiresAt?.toIso8601String(),
+      'joined_at': joinedAt?.toIso8601String(),
+      'last_accessed_at': lastAccessedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+/// Tenant üyelik durumu
+enum TenantMemberStatus {
+  /// Aktif
+  active('active'),
+
+  /// Pasif
+  inactive('inactive'),
+
+  /// Askıda
+  suspended('suspended'),
+
+  /// Beklemede (davet kabul edilmedi)
+  pending('pending');
+
+  final String value;
+  const TenantMemberStatus(this.value);
+
+  static TenantMemberStatus fromString(String value) {
+    return TenantMemberStatus.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => TenantMemberStatus.active,
+    );
+  }
+}
+
+/// Tenant rolleri
+enum TenantRole {
+  /// Sahip (tam yetki)
+  owner('owner', 'Sahip', 100),
+
+  /// Admin (yönetim yetkisi)
+  admin('admin', 'Yönetici', 80),
+
+  /// Müdür (orta seviye yönetim)
+  manager('manager', 'Müdür', 60),
+
+  /// Üye (standart yetki)
+  member('member', 'Üye', 40),
+
+  /// Görüntüleyici (sadece okuma)
+  viewer('viewer', 'Görüntüleyici', 20);
+
+  final String value;
+  final String displayName;
+  final int level;
+
+  const TenantRole(this.value, this.displayName, this.level);
+
+  static TenantRole fromString(String value) {
+    return TenantRole.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => TenantRole.member,
+    );
+  }
+
+  /// Bu rol verilen rolden daha yetkili mi?
+  bool isHigherThan(TenantRole other) => level > other.level;
+
+  /// Bu rol verilen rolden daha yetkili veya eşit mi?
+  bool isHigherOrEqualTo(TenantRole other) => level >= other.level;
+
+  /// Yönetici mi? (admin veya owner)
+  bool get isAdminOrHigher => isHigherOrEqualTo(TenantRole.admin);
+
+  /// Yönetici olabilir mi? (manager veya üstü)
+  bool get canManage => isHigherOrEqualTo(TenantRole.manager);
+}
+
+/// Tenant ayarları (ayrı tabloda veya jsonb alanında tutulabilir)
 class TenantSettings {
   /// Varsayılan dil
   final String defaultLanguage;
@@ -298,129 +551,6 @@ class TenantSettings {
   }
 }
 
-/// Tenant üyeliği
-class TenantMembership {
-  /// Üyelik ID
-  final String id;
-
-  /// Kullanıcı ID
-  final String userId;
-
-  /// Tenant ID
-  final String tenantId;
-
-  /// Rol
-  final TenantRole role;
-
-  /// Aktif mi?
-  final bool isActive;
-
-  /// Davet edilme tarihi
-  final DateTime? invitedAt;
-
-  /// Kabul tarihi
-  final DateTime? acceptedAt;
-
-  /// Oluşturulma tarihi
-  final DateTime createdAt;
-
-  const TenantMembership({
-    required this.id,
-    required this.userId,
-    required this.tenantId,
-    required this.role,
-    this.isActive = true,
-    this.invitedAt,
-    this.acceptedAt,
-    required this.createdAt,
-  });
-
-  factory TenantMembership.fromJson(Map<String, dynamic> json) {
-    return TenantMembership(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      tenantId: json['tenant_id'] as String,
-      role: TenantRole.values.firstWhere(
-        (e) => e.name == json['role'],
-        orElse: () => TenantRole.member,
-      ),
-      isActive: json['is_active'] as bool? ?? true,
-      invitedAt: json['invited_at'] != null
-          ? DateTime.parse(json['invited_at'] as String)
-          : null,
-      acceptedAt: json['accepted_at'] != null
-          ? DateTime.parse(json['accepted_at'] as String)
-          : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'user_id': userId,
-      'tenant_id': tenantId,
-      'role': role.name,
-      'is_active': isActive,
-      'invited_at': invitedAt?.toIso8601String(),
-      'accepted_at': acceptedAt?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
-}
-
-/// Tenant rolleri
-enum TenantRole {
-  /// Sahip (tam yetki)
-  owner,
-
-  /// Admin (yönetim yetkisi)
-  admin,
-
-  /// Üye (standart yetki)
-  member,
-
-  /// Misafir (sınırlı yetki)
-  guest,
-}
-
-/// TenantRole extension
-extension TenantRoleExtension on TenantRole {
-  /// Görüntüleme adı
-  String get displayName {
-    switch (this) {
-      case TenantRole.owner:
-        return 'Sahip';
-      case TenantRole.admin:
-        return 'Yönetici';
-      case TenantRole.member:
-        return 'Üye';
-      case TenantRole.guest:
-        return 'Misafir';
-    }
-  }
-
-  /// Yetki seviyesi (yüksek = daha yetkili)
-  int get level {
-    switch (this) {
-      case TenantRole.owner:
-        return 100;
-      case TenantRole.admin:
-        return 80;
-      case TenantRole.member:
-        return 50;
-      case TenantRole.guest:
-        return 10;
-    }
-  }
-
-  /// Bu rol verilen rolden daha yetkili mi?
-  bool isHigherThan(TenantRole other) => level > other.level;
-
-  /// Bu rol verilen rolden daha yetkili veya eşit mi?
-  bool isHigherOrEqualTo(TenantRole other) => level >= other.level;
-}
-
 /// Plan özellikleri
 class PlanFeatures {
   /// Maksimum kullanıcı sayısı
@@ -511,4 +641,28 @@ class PlanFeatures {
   bool get hasUnlimitedUsers => maxUsers == -1;
   bool get hasUnlimitedStorage => maxStorageMb == -1;
   bool get hasUnlimitedProjects => maxProjects == -1;
+}
+
+/// Tenant context wrapper
+///
+/// Widget ağacında tenant bilgisine erişim için kullanılabilir.
+class TenantContext {
+  final Tenant tenant;
+  final TenantMembership? membership;
+  final TenantRole role;
+
+  const TenantContext({
+    required this.tenant,
+    this.membership,
+    required this.role,
+  });
+
+  /// Admin mi?
+  bool get isAdmin => role.isAdminOrHigher;
+
+  /// Owner mı?
+  bool get isOwner => role == TenantRole.owner;
+
+  /// Yönetebilir mi?
+  bool get canManage => role.canManage;
 }
