@@ -6,6 +6,7 @@ import '../api/api_client.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../notification/notification_service.dart';
+import '../reporting/reporting_service.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logger_interceptor.dart';
 import '../api/interceptors/tenant_interceptor.dart';
@@ -200,6 +201,17 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // REPORTING SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<ReportingService>(
+    () => ReportingService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -247,6 +259,7 @@ ActivityService get activityService => sl<ActivityService>();
 NotificationService get notificationService => sl<NotificationService>();
 ConnectivityService get connectivityService => sl<ConnectivityService>();
 OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
+ReportingService get reportingService => sl<ReportingService>();
 ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();

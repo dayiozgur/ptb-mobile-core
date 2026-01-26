@@ -78,6 +78,10 @@ export 'src/core/notification/notification_service.dart';
 export 'src/core/connectivity/connectivity_service.dart';
 export 'src/core/connectivity/offline_sync_service.dart';
 
+// Core - Reporting (Analytics)
+export 'src/core/reporting/reporting_model.dart';
+export 'src/core/reporting/reporting_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
