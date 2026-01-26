@@ -1,0 +1,67 @@
+name: protoolbag_core
+description: Enterprise-grade Flutter SaaS foundation library for Protoolbag ecosystem. Provides multi-tenant architecture, Apple HIG compliant UI components, and core services.
+version: 1.0.0
+homepage: https://github.com/ozgurprotoolbag/protoolbag-mobile-core
+repository: https://github.com/ozgurprotoolbag/protoolbag-mobile-core
+issue_tracker: https://github.com/ozgurprotoolbag/protoolbag-mobile-core/issues
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Networking
+  dio: ^5.4.3+1
+
+  # Supabase
+  supabase_flutter: ^2.5.6
+
+  # Local Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_secure_storage: ^9.2.2
+
+  # Dependency Injection
+  get_it: ^7.7.0
+  injectable: ^2.4.2
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+
+  # Biometric
+  local_auth: ^2.2.0
+
+  # UI Helpers
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Code Generation
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+  injectable_generator: ^2.6.1
+  hive_generator: ^2.0.1
+
+  # Testing
+  mocktail: ^1.0.3
+
+flutter:
+  uses-material-design: true
