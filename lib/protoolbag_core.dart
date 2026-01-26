@@ -87,6 +87,10 @@ export 'src/core/reporting/reporting_service.dart';
 export 'src/core/search/search_model.dart';
 export 'src/core/search/search_service.dart';
 
+// Core - Localization
+export 'src/core/localization/localization_service.dart';
+export 'src/core/localization/app_localizations.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';

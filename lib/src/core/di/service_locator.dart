@@ -9,6 +9,7 @@ import '../notification/notification_service.dart';
 import '../reporting/reporting_service.dart';
 import '../search/search_service.dart';
 import '../theme/theme_service.dart';
+import '../localization/localization_service.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logger_interceptor.dart';
 import '../api/interceptors/tenant_interceptor.dart';
@@ -235,6 +236,16 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // LOCALIZATION SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<LocalizationService>(
+    () => LocalizationService(
+      storage: sl<SecureStorage>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -285,6 +296,7 @@ OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
 ReportingService get reportingService => sl<ReportingService>();
 SearchService get searchService => sl<SearchService>();
 ThemeService get themeService => sl<ThemeService>();
+LocalizationService get localizationService => sl<LocalizationService>();
 ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();
