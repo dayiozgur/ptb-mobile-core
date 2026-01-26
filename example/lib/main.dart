@@ -132,7 +132,7 @@ class DemoHomeScreen extends StatelessWidget {
             AppCard(
               variant: AppCardVariant.filled,
               child: Padding(
-                padding: AppSpacing.cardPadding,
+                padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
                     Icon(

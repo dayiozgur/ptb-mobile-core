@@ -29,10 +29,10 @@ class AppErrorView extends StatelessWidget {
   /// İkon rengi
   final Color? iconColor;
 
-  /// Tekrar dene callback'i
+  /// Tekrar dene callback'i (or use onAction)
   final VoidCallback? onRetry;
 
-  /// Tekrar dene buton metni
+  /// Tekrar dene buton metni (or use actionLabel)
   final String retryButtonText;
 
   /// İkinci aksiyon callback'i
@@ -53,13 +53,17 @@ class AppErrorView extends StatelessWidget {
     required this.message,
     this.icon = Icons.error_outline,
     this.iconColor,
-    this.onRetry,
-    this.retryButtonText = 'Tekrar Dene',
+    VoidCallback? onRetry,
+    String? retryButtonText,
     this.onSecondaryAction,
     this.secondaryButtonText,
     this.fullScreen = false,
     this.compact = false,
-  });
+    // Alternative parameter names (aliases)
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) : onRetry = onRetry ?? onAction,
+       retryButtonText = retryButtonText ?? actionLabel ?? 'Tekrar Dene';
 
   @override
   Widget build(BuildContext context) {

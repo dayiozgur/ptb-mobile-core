@@ -44,10 +44,13 @@ class MetricCard extends StatelessWidget {
   /// İkon
   final IconData? icon;
 
-  /// İkon rengi
+  /// Ana renk (ikon ve arka plan için kullanılır)
+  final Color? color;
+
+  /// İkon rengi (color'dan bağımsız özelleştirme için)
   final Color? iconColor;
 
-  /// İkon arka plan rengi
+  /// İkon arka plan rengi (color'dan bağımsız özelleştirme için)
   final Color? iconBackgroundColor;
 
   /// Trend yönü
@@ -74,6 +77,7 @@ class MetricCard extends StatelessWidget {
     required this.value,
     this.subtitle,
     this.icon,
+    this.color,
     this.iconColor,
     this.iconBackgroundColor,
     this.trend,
@@ -193,9 +197,9 @@ class MetricCard extends StatelessWidget {
   }
 
   Widget _buildIcon(Brightness brightness, {bool small = false}) {
-    final bgColor = iconBackgroundColor ??
-        (iconColor ?? AppColors.primary).withOpacity(0.1);
-    final fgColor = iconColor ?? AppColors.primary;
+    final accentColor = iconColor ?? color ?? AppColors.primary;
+    final bgColor = iconBackgroundColor ?? accentColor.withValues(alpha: 0.1);
+    final fgColor = accentColor;
     final size = small ? 32.0 : 40.0;
     final iconSize = small ? 16.0 : 20.0;
 

@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:local_auth/local_auth.dart' as local_auth;
 
 import '../utils/logger.dart';
 
 /// Biyometrik authentication türleri
-enum BiometricType {
+enum AppBiometricType {
   /// Parmak izi
   fingerprint,
 
@@ -100,10 +100,10 @@ class BiometricResult {
 /// }
 /// ```
 class BiometricAuth {
-  final LocalAuthentication _localAuth;
+  final local_auth.LocalAuthentication _localAuth;
 
-  BiometricAuth({LocalAuthentication? localAuth})
-      : _localAuth = localAuth ?? LocalAuthentication();
+  BiometricAuth({local_auth.LocalAuthentication? localAuth})
+      : _localAuth = localAuth ?? local_auth.LocalAuthentication();
 
   /// Biyometrik authentication kullanılabilir mi?
   Future<bool> isAvailable() async {
@@ -126,7 +126,7 @@ class BiometricAuth {
   }
 
   /// Mevcut biyometrik türlerini getir
-  Future<List<BiometricType>> getAvailableTypes() async {
+  Future<List<AppBiometricType>> getAvailableTypes() async {
     try {
       final availableBiometrics = await _localAuth.getAvailableBiometrics();
       return availableBiometrics.map(_mapBiometricType).toList();
@@ -177,7 +177,7 @@ class BiometricAuth {
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: reason,
-        options: AuthenticationOptions(
+        options: local_auth.AuthenticationOptions(
           useErrorDialogs: useErrorDialogs,
           stickyAuth: stickyAuth,
           biometricOnly: biometricOnly,
@@ -217,23 +217,23 @@ class BiometricAuth {
   }
 
   /// Platform'a göre biyometrik türü adını getir
-  String getBiometricTypeName(BiometricType type) {
+  String getBiometricTypeName(AppBiometricType type) {
     if (Platform.isIOS) {
       switch (type) {
-        case BiometricType.face:
+        case AppBiometricType.face:
           return 'Face ID';
-        case BiometricType.fingerprint:
+        case AppBiometricType.fingerprint:
           return 'Touch ID';
         default:
           return 'Biyometrik';
       }
     } else {
       switch (type) {
-        case BiometricType.face:
+        case AppBiometricType.face:
           return 'Yüz Tanıma';
-        case BiometricType.fingerprint:
+        case AppBiometricType.fingerprint:
           return 'Parmak İzi';
-        case BiometricType.iris:
+        case AppBiometricType.iris:
           return 'Iris Tarama';
         default:
           return 'Biyometrik';
@@ -247,29 +247,29 @@ class BiometricAuth {
     if (types.isEmpty) return 'Biyometrik';
 
     // Face ID/Yüz tanıma öncelikli
-    if (types.contains(BiometricType.face)) {
-      return getBiometricTypeName(BiometricType.face);
+    if (types.contains(AppBiometricType.face)) {
+      return getBiometricTypeName(AppBiometricType.face);
     }
     // Sonra parmak izi
-    if (types.contains(BiometricType.fingerprint)) {
-      return getBiometricTypeName(BiometricType.fingerprint);
+    if (types.contains(AppBiometricType.fingerprint)) {
+      return getBiometricTypeName(AppBiometricType.fingerprint);
     }
     // Diğer
     return getBiometricTypeName(types.first);
   }
 
-  BiometricType _mapBiometricType(BiometricType systemType) {
+  AppBiometricType _mapBiometricType(local_auth.BiometricType systemType) {
     switch (systemType) {
-      case BiometricType.face:
-        return BiometricType.face;
-      case BiometricType.fingerprint:
-        return BiometricType.fingerprint;
-      case BiometricType.iris:
-        return BiometricType.iris;
-      case BiometricType.strong:
-        return BiometricType.strong;
-      case BiometricType.weak:
-        return BiometricType.weak;
+      case local_auth.BiometricType.face:
+        return AppBiometricType.face;
+      case local_auth.BiometricType.fingerprint:
+        return AppBiometricType.fingerprint;
+      case local_auth.BiometricType.iris:
+        return AppBiometricType.iris;
+      case local_auth.BiometricType.strong:
+        return AppBiometricType.strong;
+      case local_auth.BiometricType.weak:
+        return AppBiometricType.weak;
     }
   }
 
@@ -313,7 +313,7 @@ class BiometricSettings {
   final DateTime? lastUsed;
 
   /// Tercih edilen tür
-  final BiometricType? preferredType;
+  final AppBiometricType? preferredType;
 
   const BiometricSettings({
     this.isEnabled = false,
@@ -324,7 +324,7 @@ class BiometricSettings {
   BiometricSettings copyWith({
     bool? isEnabled,
     DateTime? lastUsed,
-    BiometricType? preferredType,
+    AppBiometricType? preferredType,
   }) {
     return BiometricSettings(
       isEnabled: isEnabled ?? this.isEnabled,
@@ -348,9 +348,9 @@ class BiometricSettings {
           ? DateTime.parse(json['lastUsed'] as String)
           : null,
       preferredType: json['preferredType'] != null
-          ? BiometricType.values.firstWhere(
+          ? AppBiometricType.values.firstWhere(
               (e) => e.name == json['preferredType'],
-              orElse: () => BiometricType.fingerprint,
+              orElse: () => AppBiometricType.fingerprint,
             )
           : null,
     );

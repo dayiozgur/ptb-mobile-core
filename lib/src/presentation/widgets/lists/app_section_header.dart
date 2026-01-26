@@ -12,8 +12,10 @@ import '../../../core/theme/app_typography.dart';
 /// ```dart
 /// AppSectionHeader(
 ///   title: 'Recent Items',
-///   action: 'See All',
-///   onActionTap: () => navigateToAll(),
+///   action: TextButton(
+///     onPressed: () => navigateToAll(),
+///     child: Text('See All'),
+///   ),
 /// )
 /// ```
 class AppSectionHeader extends StatelessWidget {
@@ -23,14 +25,14 @@ class AppSectionHeader extends StatelessWidget {
   /// Alt başlık
   final String? subtitle;
 
-  /// Aksiyon metni
-  final String? action;
+  /// Aksiyon widget'ı (TextButton, IconButton vb.)
+  final Widget? action;
 
-  /// Aksiyon tıklama
+  /// Aksiyon metni (basit text için - action yerine kullanılır)
+  final String? actionText;
+
+  /// Aksiyon tıklama (actionText ile kullanılır)
   final VoidCallback? onActionTap;
-
-  /// Aksiyon widget'ı (action yerine)
-  final Widget? actionWidget;
 
   /// Padding
   final EdgeInsetsGeometry? padding;
@@ -46,8 +48,8 @@ class AppSectionHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.action,
+    this.actionText,
     this.onActionTap,
-    this.actionWidget,
     this.padding,
     this.sticky = false,
     this.backgroundColor,
@@ -94,13 +96,13 @@ class AppSectionHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (actionWidget != null)
-            actionWidget!
-          else if (action != null)
+          if (action != null)
+            action!
+          else if (actionText != null)
             GestureDetector(
               onTap: onActionTap,
               child: Text(
-                action!,
+                actionText!,
                 style: AppTypography.subhead.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w500,

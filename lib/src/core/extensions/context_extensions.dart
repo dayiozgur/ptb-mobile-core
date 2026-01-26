@@ -104,10 +104,10 @@ extension ContextExtensions on BuildContext {
   NavigatorState get navigator => Navigator.of(this);
 
   /// Can pop?
-  bool get canPop => navigator.canPop();
+  bool get canNavigatorPop => navigator.canPop();
 
-  /// Pop
-  void pop<T>([T? result]) => navigator.pop(result);
+  /// Pop (using navigator directly - use context.pop() with go_router instead)
+  void navigatorPop<T>([T? result]) => navigator.pop(result);
 
   /// Push named
   Future<T?> pushNamed<T>(String routeName, {Object? arguments}) {
@@ -128,7 +128,7 @@ extension ContextExtensions on BuildContext {
   }
 
   /// Pop until
-  void popUntil(bool Function(Route<dynamic>) predicate) {
+  void navigatorPopUntil(bool Function(Route<dynamic>) predicate) {
     navigator.popUntil(predicate);
   }
 

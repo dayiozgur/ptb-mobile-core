@@ -66,11 +66,11 @@ Future<void> setupServiceLocator({
   // ============================================
 
   sl.registerLazySingleton<AuthInterceptor>(
-    () => AuthInterceptor(secureStorage: sl<SecureStorage>()),
+    () => AuthInterceptor(storage: sl<SecureStorage>()),
   );
 
   sl.registerLazySingleton<TenantInterceptor>(
-    () => TenantInterceptor(),
+    () => TenantInterceptor(storage: sl<SecureStorage>()),
   );
 
   if (enableLogging) {

@@ -87,6 +87,9 @@ class AppTextField extends StatefulWidget {
   /// Karakter sayacı göster
   final bool showCounter;
 
+  /// Text capitalization
+  final TextCapitalization textCapitalization;
+
   const AppTextField({
     super.key,
     this.label,
@@ -112,6 +115,7 @@ class AppTextField extends StatefulWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.showCounter = false,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -162,6 +166,7 @@ class _AppTextFieldState extends State<AppTextField> {
             obscureText: _obscureText,
             keyboardType: widget.keyboardType,
             textInputAction: widget.textInputAction,
+            textCapitalization: widget.textCapitalization,
             maxLines: widget.obscureText ? 1 : widget.maxLines,
             minLines: widget.minLines,
             maxLength: widget.maxLength,

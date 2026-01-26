@@ -146,4 +146,68 @@ class AppColors {
   static Color border(Brightness brightness) {
     return brightness == Brightness.light ? borderLight : borderDark;
   }
+
+  // ============================================
+  // CONTEXT-AWARE HELPERS (iOS Label Colors)
+  // ============================================
+
+  /// Primary label color (for primary text)
+  static Color primaryLabel(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? textPrimaryLight : textPrimaryDark;
+  }
+
+  /// Secondary label color (for secondary text)
+  static Color secondaryLabel(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? textSecondaryLight : textSecondaryDark;
+  }
+
+  /// Tertiary label color (for tertiary/placeholder text)
+  static Color tertiaryLabel(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? textTertiaryLight : textTertiaryDark;
+  }
+
+  /// Quaternary label color (for disabled text)
+  static Color quaternaryLabel(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFD1D1D6)
+        : const Color(0xFF3A3A3C);
+  }
+
+  /// Separator color (for dividers and separators)
+  static Color separator(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? dividerLight : dividerDark;
+  }
+
+  /// Opaque separator color (non-transparent separator)
+  static Color opaqueSeparator(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFC6C6C8)
+        : const Color(0xFF38383A);
+  }
+
+  /// System background color
+  static Color systemBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? backgroundLight : backgroundDark;
+  }
+
+  /// Grouped background color (for grouped table views)
+  static Color groupedBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFF2F2F7)
+        : const Color(0xFF000000);
+  }
+
+  /// Card background color
+  static Color cardBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light ? surfaceLight : surfaceDark;
+  }
 }

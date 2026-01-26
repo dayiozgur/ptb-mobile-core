@@ -147,6 +147,46 @@ class AppSnackbar {
     );
   }
 
+  // ============================================
+  // ALIASES (Alternative naming convention)
+  // ============================================
+
+  /// Alias for success
+  static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSuccess(
+    BuildContext context, {
+    required String message,
+    Duration duration = const Duration(seconds: 3),
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) => success(context, message: message, duration: duration, actionLabel: actionLabel, onAction: onAction);
+
+  /// Alias for error
+  static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showError(
+    BuildContext context, {
+    required String message,
+    Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) => error(context, message: message, duration: duration, actionLabel: actionLabel, onAction: onAction);
+
+  /// Alias for warning
+  static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showWarning(
+    BuildContext context, {
+    required String message,
+    Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) => warning(context, message: message, duration: duration, actionLabel: actionLabel, onAction: onAction);
+
+  /// Alias for info
+  static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showInfo(
+    BuildContext context, {
+    required String message,
+    Duration duration = const Duration(seconds: 3),
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) => info(context, message: message, duration: duration, actionLabel: actionLabel, onAction: onAction);
+
   /// Tüm snackbar'ları kapat
   static void hideAll(BuildContext context) {
     ScaffoldMessenger.of(context).clearSnackBars();

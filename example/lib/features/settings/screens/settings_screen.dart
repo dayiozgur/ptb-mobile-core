@@ -79,7 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
-                padding: AppSpacing.cardPadding,
+                padding: AppSpacing.cardInsets,
                 child: Row(
                   children: [
                     AppAvatar(

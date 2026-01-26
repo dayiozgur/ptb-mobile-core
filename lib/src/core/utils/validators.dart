@@ -9,7 +9,7 @@ class Validators {
   // EMAIL
   // ============================================
 
-  /// Email doğrulama
+  /// Email doğrulama (doğrudan validator olarak kullanılabilir)
   static String? email(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email adresi gerekli';
@@ -30,60 +30,63 @@ class Validators {
   // PASSWORD
   // ============================================
 
-  /// Şifre doğrulama
+  /// Şifre doğrulama (factory - validator fonksiyonu döndürür)
   ///
   /// [minLength] - Minimum karakter sayısı (varsayılan: 8)
   /// [requireNumber] - Rakam gerekli mi (varsayılan: true)
   /// [requireSpecialChar] - Özel karakter gerekli mi (varsayılan: true)
   /// [requireUppercase] - Büyük harf gerekli mi (varsayılan: true)
   /// [requireLowercase] - Küçük harf gerekli mi (varsayılan: true)
-  static String? password(
-    String? value, {
+  static String? Function(String?) password({
     int minLength = 8,
     bool requireNumber = true,
     bool requireSpecialChar = true,
     bool requireUppercase = true,
     bool requireLowercase = true,
   }) {
-    if (value == null || value.isEmpty) {
-      return 'Şifre gerekli';
-    }
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return 'Şifre gerekli';
+      }
 
-    if (value.length < minLength) {
-      return 'Şifre en az $minLength karakter olmalı';
-    }
+      if (value.length < minLength) {
+        return 'Şifre en az $minLength karakter olmalı';
+      }
 
-    if (requireNumber && !RegExp(r'[0-9]').hasMatch(value)) {
-      return 'Şifre en az bir rakam içermeli';
-    }
+      if (requireNumber && !RegExp(r'[0-9]').hasMatch(value)) {
+        return 'Şifre en az bir rakam içermeli';
+      }
 
-    if (requireSpecialChar &&
-        !RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
-      return 'Şifre en az bir özel karakter içermeli';
-    }
+      if (requireSpecialChar &&
+          !RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+        return 'Şifre en az bir özel karakter içermeli';
+      }
 
-    if (requireUppercase && !RegExp(r'[A-Z]').hasMatch(value)) {
-      return 'Şifre en az bir büyük harf içermeli';
-    }
+      if (requireUppercase && !RegExp(r'[A-Z]').hasMatch(value)) {
+        return 'Şifre en az bir büyük harf içermeli';
+      }
 
-    if (requireLowercase && !RegExp(r'[a-z]').hasMatch(value)) {
-      return 'Şifre en az bir küçük harf içermeli';
-    }
+      if (requireLowercase && !RegExp(r'[a-z]').hasMatch(value)) {
+        return 'Şifre en az bir küçük harf içermeli';
+      }
 
-    return null;
+      return null;
+    };
   }
 
   /// Basit şifre doğrulama (sadece minimum uzunluk)
-  static String? passwordSimple(String? value, {int minLength = 6}) {
-    if (value == null || value.isEmpty) {
-      return 'Şifre gerekli';
-    }
+  static String? Function(String?) passwordSimple({int minLength = 6}) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return 'Şifre gerekli';
+      }
 
-    if (value.length < minLength) {
-      return 'Şifre en az $minLength karakter olmalı';
-    }
+      if (value.length < minLength) {
+        return 'Şifre en az $minLength karakter olmalı';
+      }
 
-    return null;
+      return null;
+    };
   }
 
   /// Şifre eşleştirme doğrulama
@@ -105,8 +108,18 @@ class Validators {
   // REQUIRED
   // ============================================
 
-  /// Zorunlu alan doğrulama
-  static String? required(String? value, {String? fieldName}) {
+  /// Zorunlu alan doğrulama (factory - validator fonksiyonu döndürür)
+  static String? Function(String?) required([String? errorMessage]) {
+    return (String? value) {
+      if (value == null || value.trim().isEmpty) {
+        return errorMessage ?? 'Bu alan gerekli';
+      }
+      return null;
+    };
+  }
+
+  /// Zorunlu alan doğrulama (doğrudan kullanım)
+  static String? requiredField(String? value, {String? fieldName}) {
     if (value == null || value.trim().isEmpty) {
       return fieldName != null ? '$fieldName gerekli' : 'Bu alan gerekli';
     }
@@ -118,55 +131,60 @@ class Validators {
   // ============================================
 
   /// Minimum uzunluk doğrulama
-  static String? minLength(String? value, int length, {String? fieldName}) {
-    if (value == null || value.isEmpty) {
-      return null; // required ile birlikte kullanılmalı
-    }
+  static String? Function(String?) minLength(int length, {String? fieldName}) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null; // required ile birlikte kullanılmalı
+      }
 
-    if (value.length < length) {
-      final name = fieldName ?? 'Bu alan';
-      return '$name en az $length karakter olmalı';
-    }
+      if (value.length < length) {
+        final name = fieldName ?? 'Bu alan';
+        return '$name en az $length karakter olmalı';
+      }
 
-    return null;
+      return null;
+    };
   }
 
   /// Maksimum uzunluk doğrulama
-  static String? maxLength(String? value, int length, {String? fieldName}) {
-    if (value == null || value.isEmpty) {
+  static String? Function(String?) maxLength(int length, {String? fieldName}) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+
+      if (value.length > length) {
+        final name = fieldName ?? 'Bu alan';
+        return '$name en fazla $length karakter olabilir';
+      }
+
       return null;
-    }
-
-    if (value.length > length) {
-      final name = fieldName ?? 'Bu alan';
-      return '$name en fazla $length karakter olabilir';
-    }
-
-    return null;
+    };
   }
 
   /// Uzunluk aralığı doğrulama
-  static String? lengthRange(
-    String? value,
+  static String? Function(String?) lengthRange(
     int min,
     int max, {
     String? fieldName,
   }) {
-    if (value == null || value.isEmpty) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+
+      final name = fieldName ?? 'Bu alan';
+
+      if (value.length < min) {
+        return '$name en az $min karakter olmalı';
+      }
+
+      if (value.length > max) {
+        return '$name en fazla $max karakter olabilir';
+      }
+
       return null;
-    }
-
-    final name = fieldName ?? 'Bu alan';
-
-    if (value.length < min) {
-      return '$name en az $min karakter olmalı';
-    }
-
-    if (value.length > max) {
-      return '$name en fazla $max karakter olabilir';
-    }
-
-    return null;
+    };
   }
 
   // ============================================
@@ -260,41 +278,45 @@ class Validators {
   }
 
   /// Minimum değer doğrulama
-  static String? minValue(String? value, num min, {String? fieldName}) {
-    if (value == null || value.isEmpty) {
+  static String? Function(String?) minValue(num min, {String? fieldName}) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+
+      final number = num.tryParse(value);
+      if (number == null) {
+        return 'Geçerli bir sayı girin';
+      }
+
+      if (number < min) {
+        final name = fieldName ?? 'Değer';
+        return '$name en az $min olmalı';
+      }
+
       return null;
-    }
-
-    final number = num.tryParse(value);
-    if (number == null) {
-      return 'Geçerli bir sayı girin';
-    }
-
-    if (number < min) {
-      final name = fieldName ?? 'Değer';
-      return '$name en az $min olmalı';
-    }
-
-    return null;
+    };
   }
 
   /// Maksimum değer doğrulama
-  static String? maxValue(String? value, num max, {String? fieldName}) {
-    if (value == null || value.isEmpty) {
+  static String? Function(String?) maxValue(num max, {String? fieldName}) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+
+      final number = num.tryParse(value);
+      if (number == null) {
+        return 'Geçerli bir sayı girin';
+      }
+
+      if (number > max) {
+        final name = fieldName ?? 'Değer';
+        return '$name en fazla $max olabilir';
+      }
+
       return null;
-    }
-
-    final number = num.tryParse(value);
-    if (number == null) {
-      return 'Geçerli bir sayı girin';
-    }
-
-    if (number > max) {
-      final name = fieldName ?? 'Değer';
-      return '$name en fazla $max olabilir';
-    }
-
-    return null;
+    };
   }
 
   // ============================================
@@ -302,20 +324,21 @@ class Validators {
   // ============================================
 
   /// Regex ile özel doğrulama
-  static String? regex(
-    String? value,
+  static String? Function(String?) regex(
     String pattern, {
     String? errorMessage,
   }) {
-    if (value == null || value.isEmpty) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+
+      if (!RegExp(pattern).hasMatch(value)) {
+        return errorMessage ?? 'Geçersiz format';
+      }
+
       return null;
-    }
-
-    if (!RegExp(pattern).hasMatch(value)) {
-      return errorMessage ?? 'Geçersiz format';
-    }
-
-    return null;
+    };
   }
 
   /// Birden fazla validator birleştirme

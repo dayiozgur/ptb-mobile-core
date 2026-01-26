@@ -97,7 +97,7 @@ class _WelcomeCard extends StatelessWidget {
     return AppCard(
       variant: AppCardVariant.filled,
       child: Padding(
-        padding: AppSpacing.cardPadding,
+        padding: AppSpacing.cardInsets,
         child: Row(
           children: [
             AppAvatar(

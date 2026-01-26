@@ -251,7 +251,7 @@ class _TenantCard extends StatelessWidget {
     return AppCard(
       onTap: onTap,
       child: Padding(
-        padding: AppSpacing.cardPadding,
+        padding: AppSpacing.cardInsets,
         child: Row(
           children: [
             // Avatar/Logo

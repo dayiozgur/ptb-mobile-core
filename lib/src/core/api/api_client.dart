@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' as dio show MultipartFile;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/exceptions.dart';
@@ -194,7 +195,7 @@ class ApiClient {
   }) async {
     try {
       final formData = FormData.fromMap({
-        fileField: await MultipartFile.fromFile(filePath),
+        fileField: await dio.MultipartFile.fromFile(filePath),
         ...?extraData,
       });
 

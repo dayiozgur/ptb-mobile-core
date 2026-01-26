@@ -9,6 +9,9 @@ enum AppBadgeVariant {
   /// Primary - Mavi
   primary,
 
+  /// Secondary - Mor
+  secondary,
+
   /// Success - Yeşil
   success,
 
@@ -192,6 +195,8 @@ class AppBadge extends StatelessWidget {
     switch (variant) {
       case AppBadgeVariant.primary:
         return AppColors.primary;
+      case AppBadgeVariant.secondary:
+        return AppColors.secondary;
       case AppBadgeVariant.success:
         return AppColors.success;
       case AppBadgeVariant.warning:

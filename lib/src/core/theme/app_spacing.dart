@@ -11,6 +11,9 @@ class AppSpacing {
   // BASE SPACING VALUES
   // ============================================
 
+  /// Extra extra small - 2px
+  static const double xxs = 2.0;
+
   /// Extra small - 4px
   static const double xs = 4.0;
 

@@ -99,6 +99,9 @@ class AppTypography {
     height: 1.4,
   );
 
+  /// Subheadline - alias for subhead (iOS naming convention)
+  static const TextStyle subheadline = subhead;
+
   // ============================================
   // FOOTNOTE & CAPTION
   // ============================================

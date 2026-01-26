@@ -5,20 +5,65 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../buttons/app_button.dart';
 
-/// Protoolbag Bottom Sheet Helper
+/// Protoolbag Bottom Sheet Widget
 ///
-/// Modal bottom sheet göstermek için kullanılır.
+/// Modal bottom sheet içeriği olarak doğrudan kullanılabilir.
 ///
 /// Örnek kullanım:
 /// ```dart
-/// AppBottomSheet.show(
+/// showModalBottomSheet(
 ///   context: context,
-///   title: 'Select Option',
-///   child: ListView(...),
+///   builder: (context) => AppBottomSheet(
+///     title: 'Select Option',
+///     child: ListView(...),
+///   ),
 /// );
 /// ```
-class AppBottomSheet {
-  AppBottomSheet._();
+class AppBottomSheet extends StatelessWidget {
+  /// Başlık
+  final String? title;
+
+  /// İçerik widget'ı
+  final Widget child;
+
+  /// Drag handle göster
+  final bool showDragHandle;
+
+  /// Maksimum yükseklik
+  final double? maxHeight;
+
+  /// İçerik padding'i
+  final EdgeInsetsGeometry? padding;
+
+  /// Aksiyon butonları
+  final List<Widget>? actions;
+
+  const AppBottomSheet({
+    super.key,
+    this.title,
+    required this.child,
+    this.showDragHandle = true,
+    this.maxHeight,
+    this.padding,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BottomSheetContent(
+      title: title,
+      showDragHandle: showDragHandle,
+      maxHeight: maxHeight,
+      padding: padding,
+      actions: actions,
+      child: child,
+    );
+  }
+}
+
+/// AppBottomSheet static metodları
+class AppBottomSheetHelper {
+  AppBottomSheetHelper._();
 
   /// Bottom sheet göster
   static Future<T?> show<T>({

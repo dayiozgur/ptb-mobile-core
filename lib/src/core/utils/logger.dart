@@ -33,6 +33,14 @@ class Logger {
     _onLog = onLog;
   }
 
+  /// Minimum log seviyesini ayarla
+  static void setMinLevel(LogLevel level) {
+    _minLevel = level;
+  }
+
+  /// Mevcut minimum log seviyesini al
+  static LogLevel get minLevel => _minLevel;
+
   /// Debug log
   static void debug(String message, [Object? data]) {
     _log(LogLevel.debug, message, data);
