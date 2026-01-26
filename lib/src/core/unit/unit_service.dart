@@ -265,6 +265,23 @@ class UnitService {
     }
   }
 
+  /// ID ile unit getir
+  Future<Unit?> getUnitById(String unitId) async {
+    try {
+      final response = await _supabase
+          .from(_tableName)
+          .select('*, unit_type:unit_types(*)')
+          .eq('id', unitId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Unit.fromJson(response);
+    } catch (e) {
+      Logger.error('Failed to get unit: $unitId', e);
+      return null;
+    }
+  }
+
   /// Alt unitleri getir
   Future<List<Unit>> getChildUnits(String parentUnitId) async {
     try {

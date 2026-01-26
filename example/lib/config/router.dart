@@ -12,6 +12,8 @@ import '../features/settings/screens/settings_screen.dart';
 import '../features/site/screens/site_selector_screen.dart';
 import '../features/tenant/screens/tenant_selector_screen.dart';
 import '../features/unit/screens/unit_selector_screen.dart';
+import '../features/unit/screens/unit_detail_screen.dart';
+import '../features/unit/screens/unit_form_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 
 /// Router provider
@@ -91,12 +93,36 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
-      // Unit Selection
+      // Unit Management
       // ==================
       GoRoute(
         path: '/units',
         name: 'units',
         builder: (context, state) => const UnitSelectorScreen(),
+      ),
+      GoRoute(
+        path: '/units/new',
+        name: 'unit-new',
+        builder: (context, state) {
+          final parentId = state.uri.queryParameters['parentId'];
+          return UnitFormScreen(parentId: parentId);
+        },
+      ),
+      GoRoute(
+        path: '/units/:id',
+        name: 'unit-detail',
+        builder: (context, state) {
+          final unitId = state.pathParameters['id']!;
+          return UnitDetailScreen(unitId: unitId);
+        },
+      ),
+      GoRoute(
+        path: '/units/:id/edit',
+        name: 'unit-edit',
+        builder: (context, state) {
+          final unitId = state.pathParameters['id']!;
+          return UnitFormScreen(unitId: unitId);
+        },
       ),
 
       // ==================
