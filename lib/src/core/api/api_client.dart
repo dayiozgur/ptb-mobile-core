@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio/dio.dart' as dio show MultipartFile;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/exceptions.dart';
@@ -195,7 +194,7 @@ class ApiClient {
   }) async {
     try {
       final formData = FormData.fromMap({
-        fileField: await dio.MultipartFile.fromFile(filePath),
+        fileField: await MultipartFile.fromFile(filePath),
         ...?extraData,
       });
 
@@ -325,8 +324,8 @@ class ApiClient {
     required String table,
     required Map<String, dynamic> data,
     required T Function(Map<String, dynamic>) fromJson,
-    required PostgrestFilterBuilder<List<Map<String, dynamic>>> Function(
-      PostgrestFilterBuilder<List<Map<String, dynamic>>>,
+    required PostgrestTransformBuilder Function(
+      PostgrestFilterBuilder,
     ) filter,
   }) async {
     if (_supabase == null) {
@@ -334,7 +333,7 @@ class ApiClient {
     }
 
     try {
-      var query = _supabase!.from(table).update(data);
+      final query = _supabase!.from(table).update(data);
       final response = await filter(query).select().single();
       return fromJson(response);
     } catch (e) {
@@ -349,8 +348,8 @@ class ApiClient {
   /// Supabase delete
   Future<void> deleteSupabase({
     required String table,
-    required PostgrestFilterBuilder<List<Map<String, dynamic>>> Function(
-      PostgrestFilterBuilder<List<Map<String, dynamic>>>,
+    required PostgrestFilterBuilder Function(
+      PostgrestFilterBuilder,
     ) filter,
   }) async {
     if (_supabase == null) {
@@ -358,7 +357,7 @@ class ApiClient {
     }
 
     try {
-      var query = _supabase!.from(table).delete();
+      final query = _supabase!.from(table).delete();
       await filter(query);
     } catch (e) {
       Logger.error('Supabase delete error: $table', e);

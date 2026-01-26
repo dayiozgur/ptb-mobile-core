@@ -183,7 +183,9 @@ class AuthService {
   Future<void> _saveSession(Session? session) async {
     if (session != null) {
       await _secureStorage.saveAccessToken(session.accessToken);
-      await _secureStorage.saveRefreshToken(session.refreshToken);
+      if (session.refreshToken != null) {
+        await _secureStorage.saveRefreshToken(session.refreshToken!);
+      }
     }
   }
 
