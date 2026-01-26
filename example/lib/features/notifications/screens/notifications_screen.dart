@@ -101,7 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     // Navigate based on entity type
     if (notification.entityType != null && notification.entityId != null) {
-      switch (notification.entityType) {
+      switch (notification.entityType!) {
         case NotificationEntityType.unit:
           context.push('/units/${notification.entityId}');
           return;
