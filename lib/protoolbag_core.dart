@@ -46,6 +46,22 @@ export 'src/core/auth/biometric_auth.dart';
 export 'src/core/tenant/tenant_model.dart';
 export 'src/core/tenant/tenant_service.dart';
 
+// Core - Organization
+export 'src/core/organization/organization_model.dart';
+export 'src/core/organization/organization_service.dart';
+
+// Core - Site
+export 'src/core/site/site_model.dart';
+export 'src/core/site/site_service.dart';
+
+// Core - Invitation
+export 'src/core/invitation/invitation_model.dart';
+export 'src/core/invitation/invitation_service.dart';
+
+// Core - Permission
+export 'src/core/permission/permission_model.dart';
+export 'src/core/permission/permission_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
