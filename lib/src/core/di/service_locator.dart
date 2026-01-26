@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../activity/activity_service.dart';
 import '../api/api_client.dart';
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
 import '../notification/notification_service.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logger_interceptor.dart';
@@ -180,6 +182,24 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // CONNECTIVITY SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<ConnectivityService>(
+    () => ConnectivityService(),
+  );
+
+  // ============================================
+  // OFFLINE SYNC SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<OfflineSyncService>(
+    () => OfflineSyncService(
+      connectivityService: sl<ConnectivityService>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -225,6 +245,8 @@ SiteService get siteService => sl<SiteService>();
 UnitService get unitService => sl<UnitService>();
 ActivityService get activityService => sl<ActivityService>();
 NotificationService get notificationService => sl<NotificationService>();
+ConnectivityService get connectivityService => sl<ConnectivityService>();
+OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
 ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();

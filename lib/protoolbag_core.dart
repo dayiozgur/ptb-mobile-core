@@ -74,6 +74,10 @@ export 'src/core/activity/activity_service.dart';
 export 'src/core/notification/notification_model.dart';
 export 'src/core/notification/notification_service.dart';
 
+// Core - Connectivity (Offline Support)
+export 'src/core/connectivity/connectivity_service.dart';
+export 'src/core/connectivity/offline_sync_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -107,6 +111,7 @@ export 'src/presentation/widgets/feedback/app_empty_state.dart';
 export 'src/presentation/widgets/feedback/app_badge.dart';
 export 'src/presentation/widgets/feedback/app_snackbar.dart';
 export 'src/presentation/widgets/feedback/notification_badge.dart';
+export 'src/presentation/widgets/feedback/offline_indicator.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';
