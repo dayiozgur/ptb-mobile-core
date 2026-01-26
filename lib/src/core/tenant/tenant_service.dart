@@ -407,7 +407,7 @@ class TenantService {
       });
 
       // Cache'i temizle
-      await _cacheManager.remove('${_tenantsCacheKey}_$ownerId');
+      await _cacheManager.delete('${_tenantsCacheKey}_$ownerId');
 
       Logger.info('Tenant created: ${tenant.name}');
       return tenant;
