@@ -82,6 +82,10 @@ export 'src/core/connectivity/offline_sync_service.dart';
 export 'src/core/reporting/reporting_model.dart';
 export 'src/core/reporting/reporting_service.dart';
 
+// Core - Search
+export 'src/core/search/search_model.dart';
+export 'src/core/search/search_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -94,6 +98,7 @@ export 'src/presentation/widgets/buttons/app_icon_button.dart';
 export 'src/presentation/widgets/inputs/app_text_field.dart';
 export 'src/presentation/widgets/inputs/app_dropdown.dart';
 export 'src/presentation/widgets/inputs/app_date_picker.dart';
+export 'src/presentation/widgets/inputs/app_search_bar.dart';
 
 // Presentation - Widgets - Cards
 export 'src/presentation/widgets/cards/app_card.dart';
