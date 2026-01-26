@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../organization/screens/organization_selector_screen.dart';
-
-/// Site Servisi instance'ı
-final siteService = SiteService(
-  supabase: Supabase.instance.client,
-  cacheManager: cacheManager,
-);
 
 class SiteSelectorScreen extends StatefulWidget {
   const SiteSelectorScreen({super.key});

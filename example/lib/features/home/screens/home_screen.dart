@@ -3,16 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../organization/screens/organization_selector_screen.dart';
-import '../../site/screens/site_selector_screen.dart';
-import '../../unit/screens/unit_selector_screen.dart';
-
-/// Activity Service instance
-final activityService = ActivityService(
-  supabase: Supabase.instance.client,
-  cacheManager: cacheManager,
-);
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

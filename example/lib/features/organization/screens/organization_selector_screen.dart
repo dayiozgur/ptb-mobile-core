@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-/// Organizasyon Servisi instance'ı
-final organizationService = OrganizationService(
-  supabase: Supabase.instance.client,
-  cacheManager: cacheManager,
-);
 
 class OrganizationSelectorScreen extends StatefulWidget {
   const OrganizationSelectorScreen({super.key});

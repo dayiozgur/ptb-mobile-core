@@ -77,9 +77,9 @@ class NotificationService {
 
       // Cache kontrolü
       if (!forceRefresh && !unreadOnly && type == null) {
-        final cached = _cacheManager.getList<AppNotification>(
-          cacheKey,
-          (json) => AppNotification.fromJson(json),
+        final cached = await _cacheManager.getList<AppNotification>(
+          key: cacheKey,
+          fromJson: (json) => AppNotification.fromJson(json),
         );
         if (cached != null && cached.isNotEmpty) {
           _notifications = cached;
@@ -115,10 +115,10 @@ class NotificationService {
 
       // Cache'e kaydet
       if (!unreadOnly && type == null) {
-        _cacheManager.setList(
-          cacheKey,
-          notifications,
-          (item) => item.toJson(),
+        await _cacheManager.setList(
+          key: cacheKey,
+          value: notifications,
+          toJson: (item) => item.toJson(),
           ttl: _cacheDuration,
         );
       }

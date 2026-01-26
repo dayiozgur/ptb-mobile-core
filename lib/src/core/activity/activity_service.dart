@@ -36,9 +36,9 @@ class ActivityService {
 
     // Cache kontrolü
     if (useCache) {
-      final cached = _cacheManager.getList<ActivityLog>(
-        cacheKey,
-        (json) => ActivityLog.fromJson(json),
+      final cached = await _cacheManager.getList<ActivityLog>(
+        key: cacheKey,
+        fromJson: (json) => ActivityLog.fromJson(json),
       );
       if (cached != null) {
         return cached;
@@ -70,10 +70,10 @@ class ActivityService {
           .toList();
 
       // Cache'e kaydet
-      _cacheManager.setList(
-        cacheKey,
-        activities,
-        (item) => item.toJson(),
+      await _cacheManager.setList(
+        key: cacheKey,
+        value: activities,
+        toJson: (item) => item.toJson(),
         ttl: _cacheDuration,
       );
 

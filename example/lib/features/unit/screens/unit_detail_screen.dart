@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../site/screens/site_selector_screen.dart';
-import 'unit_selector_screen.dart';
-
 class UnitDetailScreen extends StatefulWidget {
   final String unitId;
 

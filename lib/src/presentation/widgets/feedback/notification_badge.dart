@@ -198,7 +198,7 @@ class NotificationIconBadge extends StatelessWidget {
               top: 4,
               child: Icon(
                 icon,
-                color: iconColor ?? AppColors.label(context),
+                color: iconColor ?? AppColors.primaryLabel(context),
                 size: iconSize,
               ),
             ),
