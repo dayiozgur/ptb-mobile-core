@@ -17,6 +17,14 @@ Bu klasor, Protoolbag projelerinin veritabani semasinin analizini ve mimarisi ha
 | [09_WORKFLOW_BUSINESS_ANALYSIS.md](./09_WORKFLOW_BUSINESS_ANALYSIS.md) | Workflow, Business Interaction, Work Request analizi |
 | [10_USER_PROFILE_MANAGEMENT.md](./10_USER_PROFILE_MANAGEMENT.md) | Kullanici ve Profil Yonetimi, Staffs, Teams analizi |
 | [11_SUPPLEMENTARY_TABLES.md](./11_SUPPLEMENTARY_TABLES.md) | Envanter, Alarm, Enerji, Takvim, Perakende, Finansal ve diger tablolar |
+| [DATABASE_SYNC_PLAN.md](./DATABASE_SYNC_PLAN.md) | Flutter-Database senkronizasyon plani |
+
+## Migration Dosyalari
+
+| Dosya | Aciklama |
+|-------|----------|
+| [migrations/001_rls_policies.sql](./migrations/001_rls_policies.sql) | Row Level Security politikalari |
+| [migrations/002_schema_improvements.sql](./migrations/002_schema_improvements.sql) | Schema iyilestirmeleri ve indexler |
 
 ## Schema Ozeti
 
@@ -118,5 +126,5 @@ TENANT (Musteri/Firma)
 
 ## Son Guncelleme
 
-**Tarih:** 2026-01-24
-**Versiyon:** 1.0.0
+**Tarih:** 2026-01-26
+**Versiyon:** 1.2.0

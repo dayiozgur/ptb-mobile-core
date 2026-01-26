@@ -84,6 +84,21 @@
 - Offline support (offline-first repository)
 - Multi-tenant (tenant management)
 
+### 9. DEVELOPMENT_ROADMAP.md
+- Faz 1: Core Services & Testing (Tamamlandı)
+- Faz 2: Realtime & Storage (Tamamlandı)
+- Faz 3: IoT & Workflow (Planlandı)
+- Faz 4: Advanced Modules (Gelecek)
+- Teknik borç ve iyileştirmeler
+- Release notları
+
+### 10. DATABASE_SYNC_PLAN.md (database/)
+- Migration durumu
+- Schema değişiklikleri
+- Flutter model güncellemeleri
+- Senkronizasyon adımları
+- Doğrulama kontrol listesi
+
 ## 🎯 Kullanım Senaryoları
 
 ### Yeni Proje Başlatma

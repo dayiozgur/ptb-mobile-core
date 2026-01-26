@@ -2,7 +2,7 @@
 
 > Enterprise-grade Flutter SaaS foundation library for Protoolbag ecosystem
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ozgurprotoolbag/protoolbag-mobile-core)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/ozgurprotoolbag/protoolbag-mobile-core)
 [![Flutter](https://img.shields.io/badge/Flutter-3.19+-02569B.svg?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -80,6 +80,36 @@ Protoolbag Mobile Core, tüm Protoolbag SaaS uygulamaları için ortak foundatio
 - Validators
 - String extensions
 - Image utilities
+
+### 🌍 Localization
+- Multi-language support (TR, EN, DE)
+- Locale persistence
+- Number/currency/date formatters
+- Hot-reload locale switching
+
+### 📡 Realtime & Push
+- Supabase Realtime subscriptions
+- Push notifications (FCM, APNs)
+- Presence tracking
+- Broadcast messaging
+
+### 📁 File Storage
+- Supabase Storage integration
+- Upload progress tracking
+- Image compression
+- Thumbnail generation
+
+### 📊 Pagination
+- Offset-based pagination
+- Cursor-based pagination
+- Infinite scroll helpers
+- Supabase range utilities
+
+### 🛡️ Error Handling
+- Error boundary widget
+- Global error catching
+- Fallback UI rendering
+- Error reporting hooks
 
 ## 📦 Kurulum
 
@@ -203,6 +233,8 @@ Detaylı dokümantasyon için:
 - [**Component Library**](docs/COMPONENT_LIBRARY.md) - Widget katalog ve örnekleri
 - [**Migration Guide**](docs/MIGRATION_GUIDE.md) - Versiyon yükseltme rehberi
 - [**Examples**](docs/EXAMPLES.md) - Gerçek kullanım senaryoları
+- [**Development Roadmap**](docs/DEVELOPMENT_ROADMAP.md) - Geliştirme yol haritası
+- [**Database Sync Plan**](database/DATABASE_SYNC_PLAN.md) - Veritabanı senkronizasyon planı
 
 ## 🏗️ Projeler
 

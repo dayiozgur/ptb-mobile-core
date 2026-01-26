@@ -7,14 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Initial project structure
-- Core authentication system
-- Multi-tenant support
-- Apple-style UI components
-- API client with Supabase integration
-- Local database with offline support
-- Comprehensive documentation
+### Planned for Phase 3
+- Controller/Provider/Variable models (IoT layer)
+- Workflow management system
+- Calendar and events module
+- Inventory management module
+
+## [1.2.0] - 2026-01-26
+
+### Added - Phase 2 Features
+- **Push Notification Service** (`push_notification_service.dart`)
+  - FCM and APNs token management
+  - Notification permissions handling
+  - Topic subscription support
+  - Notification channels (iOS 10+, Android O+)
+  - Background/foreground message handling
+
+- **Realtime Service** (`realtime_service.dart`)
+  - Supabase Realtime integration
+  - Database change subscriptions (INSERT, UPDATE, DELETE)
+  - Presence tracking for user status
+  - Broadcast messaging for real-time communication
+  - Typed generic change handlers
+
+- **File Storage Service** (`file_storage_service.dart`)
+  - Supabase Storage integration
+  - File upload with progress tracking
+  - File download and URL generation
+  - Image compression and thumbnails
+  - MIME type detection
+  - Multiple bucket support
+
+- **Pagination Helpers** (`pagination.dart`)
+  - PaginatedList<T> with status management
+  - PaginationController for automatic loading
+  - Cursor-based pagination support
+  - Supabase range helpers
+  - Infinite scroll support
+
+- **Error Boundary Widget** (`error_boundary.dart`)
+  - Global error catching
+  - Fallback UI rendering
+  - Error reporting hooks
+  - runAppWithErrorHandler for app-wide protection
+
+### Changed
+- Improved service locator with new service registrations
+- Enhanced protoolbag_core.dart exports
+
+## [1.1.0] - 2026-01-26
+
+### Added - Phase 1 Features
+- **Localization Service** (`localization_service.dart`)
+  - Multi-language support (TR, EN, DE)
+  - Locale persistence with SecureStorage
+  - Number, currency, date formatters
+  - Interpolation support in translations
+  - Hot-reload locale switching
+
+- **Comprehensive Unit Tests**
+  - `test/services/localization_service_test.dart`
+  - `test/services/theme_service_test.dart`
+  - `test/services/connectivity_service_test.dart`
+  - `test/services/offline_sync_service_test.dart`
+  - `test/models/notification_model_test.dart`
+  - `test/models/search_model_test.dart`
+  - `test/models/reporting_model_test.dart`
+
+- **Integration Tests**
+  - `test/integration/service_integration_test.dart`
+  - `test/integration/widget_integration_test.dart`
+
+- **Database Migrations**
+  - `001_rls_policies.sql` - Row Level Security policies
+  - `002_schema_improvements.sql` - Schema improvements and indexes
+
+- **Database Documentation**
+  - `DATABASE_SYNC_PLAN.md` - Comprehensive sync plan
+
+### Fixed
+- SecureStorage write method signature (named parameters)
+- AppColors method calls for brightness-aware colors
+- NotificationEntityType switch exhaustiveness
+- Nullable title handling in notifications
 
 ## [1.0.0] - 2024-01-26
 
