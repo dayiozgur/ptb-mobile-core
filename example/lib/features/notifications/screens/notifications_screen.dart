@@ -27,8 +27,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
 
     try {
-      final userId = authService.currentUser?.id;
-      if (userId == null) {
+      // Profile ID kullanıcının auth ID'si ile aynı
+      final profileId = authService.currentUser?.id;
+      if (profileId == null) {
         setState(() {
           _error = 'Oturum bilgisi bulunamadı';
           _isLoading = false;
@@ -37,7 +38,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
 
       final notifications = await notificationService.getNotifications(
-        userId,
+        profileId,
         forceRefresh: true,
       );
 
@@ -72,14 +73,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAllAsRead() async {
-    final userId = authService.currentUser?.id;
-    if (userId == null) return;
+    final profileId = authService.currentUser?.id;
+    if (profileId == null) return;
 
-    final success = await notificationService.markAllAsRead(userId);
+    final success = await notificationService.markAllAsRead(profileId);
     if (success && mounted) {
       setState(() {
         _notifications = _notifications
-            .map((n) => n.copyWith(isRead: true, readAt: DateTime.now()))
+            .map((n) => n.copyWith(isRead: true))
             .toList();
       });
       AppSnackbar.showSuccess(context, message: 'Tüm bildirimler okundu işaretlendi');
@@ -349,7 +350,7 @@ class _NotificationListItem extends StatelessWidget {
 }
 
 class _NotificationIcon extends StatelessWidget {
-  final NotificationType type;
+  final NotificationType? type;
 
   const _NotificationIcon({required this.type});
 
@@ -372,51 +373,27 @@ class _NotificationIcon extends StatelessWidget {
 
   IconData _getIcon() {
     switch (type) {
-      case NotificationType.system:
-        return Icons.settings;
+      case NotificationType.alert:
+        return Icons.warning_amber;
+      case NotificationType.reminder:
+        return Icons.alarm;
       case NotificationType.info:
         return Icons.info_outline;
-      case NotificationType.warning:
-        return Icons.warning_amber;
-      case NotificationType.error:
-        return Icons.error_outline;
-      case NotificationType.success:
-        return Icons.check_circle_outline;
-      case NotificationType.task:
-        return Icons.task_alt;
-      case NotificationType.activity:
-        return Icons.history;
-      case NotificationType.invitation:
-        return Icons.mail_outline;
-      case NotificationType.comment:
-        return Icons.comment_outlined;
-      case NotificationType.mention:
-        return Icons.alternate_email;
+      case null:
+        return Icons.notifications_outlined;
     }
   }
 
   Color _getColor() {
     switch (type) {
-      case NotificationType.system:
-        return Colors.grey;
-      case NotificationType.info:
-        return Colors.blue;
-      case NotificationType.warning:
+      case NotificationType.alert:
         return Colors.orange;
-      case NotificationType.error:
-        return Colors.red;
-      case NotificationType.success:
-        return Colors.green;
-      case NotificationType.task:
-        return Colors.purple;
-      case NotificationType.activity:
+      case NotificationType.reminder:
+        return Colors.blue;
+      case NotificationType.info:
         return Colors.teal;
-      case NotificationType.invitation:
-        return Colors.indigo;
-      case NotificationType.comment:
-        return Colors.amber;
-      case NotificationType.mention:
-        return Colors.cyan;
+      case null:
+        return Colors.grey;
     }
   }
 }

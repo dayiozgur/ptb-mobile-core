@@ -1,34 +1,13 @@
-/// Bildirim türleri
+/// Bildirim türleri (mevcut DB şemasına uygun)
 enum NotificationType {
-  /// Sistem bildirimi
-  system('SYSTEM', 'Sistem'),
+  /// Uyarı bildirimi
+  alert('ALERT', 'Uyarı'),
+
+  /// Hatırlatma bildirimi
+  reminder('REMINDER', 'Hatırlatma'),
 
   /// Bilgi bildirimi
-  info('INFO', 'Bilgi'),
-
-  /// Uyarı bildirimi
-  warning('WARNING', 'Uyarı'),
-
-  /// Hata bildirimi
-  error('ERROR', 'Hata'),
-
-  /// Başarı bildirimi
-  success('SUCCESS', 'Başarı'),
-
-  /// Görev bildirimi
-  task('TASK', 'Görev'),
-
-  /// Aktivite bildirimi
-  activity('ACTIVITY', 'Aktivite'),
-
-  /// Davet bildirimi
-  invitation('INVITATION', 'Davet'),
-
-  /// Yorum bildirimi
-  comment('COMMENT', 'Yorum'),
-
-  /// Mention bildirimi
-  mention('MENTION', 'Bahsetme');
+  info('INFO', 'Bilgi');
 
   final String value;
   final String label;
@@ -44,188 +23,275 @@ enum NotificationType {
   }
 }
 
-/// Bildirim önceliği
-enum NotificationPriority {
-  low('LOW', 'Düşük'),
-  normal('NORMAL', 'Normal'),
-  high('HIGH', 'Yüksek'),
-  urgent('URGENT', 'Acil');
+/// Entity türleri (mevcut DB şemasına uygun)
+enum NotificationEntityType {
+  invoice('INVOICE', 'Fatura'),
+  production('PRODUCTION', 'Üretim'),
+  product('PRODUCT', 'Ürün'),
+  blueprint('BLUEPRINT', 'Şablon'),
+  productionOrder('PRODUCTION_ORDER', 'Üretim Siparişi'),
+  controller('CONTROLLER', 'Kontrol Cihazı'),
+  provider('PROVIDER', 'Tedarikçi'),
+  item('ITEM', 'Öğe'),
+  unit('UNIT', 'Alan');
 
   final String value;
   final String label;
 
-  const NotificationPriority(this.value, this.label);
+  const NotificationEntityType(this.value, this.label);
 
-  static NotificationPriority? fromString(String? value) {
+  static NotificationEntityType? fromString(String? value) {
     if (value == null) return null;
-    return NotificationPriority.values.cast<NotificationPriority?>().firstWhere(
+    return NotificationEntityType.values.cast<NotificationEntityType?>().firstWhere(
           (e) => e?.value == value,
           orElse: () => null,
         );
   }
 }
 
-/// Bildirim modeli
+/// Bildirim önceliği (0-11 arası, DB şemasına uygun)
+class NotificationPriority {
+  final int value;
+
+  const NotificationPriority(this.value);
+
+  static const NotificationPriority low = NotificationPriority(0);
+  static const NotificationPriority normal = NotificationPriority(5);
+  static const NotificationPriority high = NotificationPriority(8);
+  static const NotificationPriority urgent = NotificationPriority(11);
+
+  String get label {
+    if (value <= 2) return 'Düşük';
+    if (value <= 5) return 'Normal';
+    if (value <= 8) return 'Yüksek';
+    return 'Acil';
+  }
+
+  bool get isLow => value <= 2;
+  bool get isNormal => value > 2 && value <= 5;
+  bool get isHigh => value > 5 && value <= 8;
+  bool get isUrgent => value > 8;
+}
+
+/// Bildirim modeli (mevcut notifications tablosuna uygun)
 ///
 /// Uygulama içi bildirimleri temsil eder.
 class AppNotification {
   /// Benzersiz ID
   final String id;
 
-  /// Bildirim başlığı
-  final String title;
+  /// Row ID (serial)
+  final int? rowId;
 
-  /// Bildirim mesajı
-  final String message;
+  /// Aktif mi?
+  final bool active;
+
+  /// Bildirim başlığı
+  final String? title;
+
+  /// Bildirim açıklaması
+  final String? description;
 
   /// Bildirim türü
-  final NotificationType type;
+  final NotificationType? type;
 
-  /// Bildirim önceliği
+  /// Öncelik (0-11)
   final NotificationPriority priority;
 
   /// İlgili entity tipi
-  final String? entityType;
+  final NotificationEntityType? entityType;
 
   /// İlgili entity ID
   final String? entityId;
 
-  /// Yönlendirme URL'i
-  final String? actionUrl;
+  /// Ek meta verisi (JSON string)
+  final String? meta;
 
-  /// Ek veri
-  final Map<String, dynamic>? data;
+  /// Bildirim tarihi/saati
+  final DateTime? dateTime;
 
   /// Okundu mu?
   final bool isRead;
 
-  /// Okunma tarihi
-  final DateTime? readAt;
+  /// Gönderildi mi?
+  final bool sent;
+
+  /// Onaylandı mı?
+  final bool acknowledged;
+
+  /// Onaylama tarihi
+  final DateTime? acknowledgedAt;
+
+  /// Onaylayan kullanıcı ID
+  final String? acknowledgedBy;
+
+  /// Platform ID
+  final String? platformId;
+
+  /// Profil ID (alıcı)
+  final String? profileId;
+
+  /// Oluşturan kullanıcı ID
+  final String? createdBy;
 
   /// Oluşturulma tarihi
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
-  /// Tenant ID
-  final String? tenantId;
+  /// Güncelleyen kullanıcı ID
+  final String? updatedBy;
 
-  /// Kullanıcı ID (alıcı)
-  final String userId;
+  /// Güncellenme tarihi
+  final DateTime? updatedAt;
 
-  /// Gönderen kullanıcı ID
-  final String? senderId;
-
-  /// Gönderen bilgileri (eager loaded)
-  final NotificationSender? sender;
+  /// Profil bilgileri (eager loaded)
+  final NotificationProfile? profile;
 
   AppNotification({
     required this.id,
-    required this.title,
-    required this.message,
-    this.type = NotificationType.info,
-    this.priority = NotificationPriority.normal,
+    this.rowId,
+    this.active = true,
+    this.title,
+    this.description,
+    this.type,
+    this.priority = const NotificationPriority(5),
     this.entityType,
     this.entityId,
-    this.actionUrl,
-    this.data,
+    this.meta,
+    this.dateTime,
     this.isRead = false,
-    this.readAt,
-    required this.createdAt,
-    this.tenantId,
-    required this.userId,
-    this.senderId,
-    this.sender,
+    this.sent = false,
+    this.acknowledged = false,
+    this.acknowledgedAt,
+    this.acknowledgedBy,
+    this.platformId,
+    this.profileId,
+    this.createdBy,
+    this.createdAt,
+    this.updatedBy,
+    this.updatedAt,
+    this.profile,
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id'] as String,
-      title: json['title'] as String? ?? '',
-      message: json['message'] as String? ?? '',
-      type: NotificationType.fromString(json['type'] as String?) ??
-          NotificationType.info,
-      priority:
-          NotificationPriority.fromString(json['priority'] as String?) ??
-              NotificationPriority.normal,
-      entityType: json['entity_type'] as String?,
+      rowId: json['row_id'] as int?,
+      active: json['active'] as bool? ?? true,
+      title: json['title'] as String?,
+      description: json['description'] as String?,
+      type: NotificationType.fromString(json['notification_type'] as String?),
+      priority: NotificationPriority(json['priority'] as int? ?? 5),
+      entityType: NotificationEntityType.fromString(json['entity_type'] as String?),
       entityId: json['entity_id'] as String?,
-      actionUrl: json['action_url'] as String?,
-      data: json['data'] as Map<String, dynamic>?,
-      isRead: json['is_read'] as bool? ?? false,
-      readAt: json['read_at'] != null
-          ? DateTime.tryParse(json['read_at'] as String)
+      meta: json['meta'] as String?,
+      dateTime: json['date_time'] != null
+          ? DateTime.tryParse(json['date_time'] as String)
           : null,
+      isRead: json['read'] as bool? ?? false,
+      sent: json['sent'] as bool? ?? false,
+      acknowledged: json['acknowledged'] as bool? ?? false,
+      acknowledgedAt: json['acknowledged_at'] != null
+          ? DateTime.tryParse(json['acknowledged_at'] as String)
+          : null,
+      acknowledgedBy: json['acknowledged_by'] as String?,
+      platformId: json['platform_id'] as String?,
+      profileId: json['profile_id'] as String?,
+      createdBy: json['created_by'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
-      tenantId: json['tenant_id'] as String?,
-      userId: json['user_id'] as String,
-      senderId: json['sender_id'] as String?,
-      sender: json['sender'] != null
-          ? NotificationSender.fromJson(json['sender'] as Map<String, dynamic>)
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
+      updatedBy: json['updated_by'] as String?,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
+      profile: json['profile'] != null
+          ? NotificationProfile.fromJson(json['profile'] as Map<String, dynamic>)
           : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'row_id': rowId,
+        'active': active,
         'title': title,
-        'message': message,
-        'type': type.value,
+        'description': description,
+        'notification_type': type?.value,
         'priority': priority.value,
-        'entity_type': entityType,
+        'entity_type': entityType?.value,
         'entity_id': entityId,
-        'action_url': actionUrl,
-        'data': data,
-        'is_read': isRead,
-        'read_at': readAt?.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-        'tenant_id': tenantId,
-        'user_id': userId,
-        'sender_id': senderId,
+        'meta': meta,
+        'date_time': dateTime?.toIso8601String(),
+        'read': isRead,
+        'sent': sent,
+        'acknowledged': acknowledged,
+        'acknowledged_at': acknowledgedAt?.toIso8601String(),
+        'acknowledged_by': acknowledgedBy,
+        'platform_id': platformId,
+        'profile_id': profileId,
+        'created_by': createdBy,
+        'created_at': createdAt?.toIso8601String(),
+        'updated_by': updatedBy,
+        'updated_at': updatedAt?.toIso8601String(),
       };
 
   AppNotification copyWith({
     String? id,
+    int? rowId,
+    bool? active,
     String? title,
-    String? message,
+    String? description,
     NotificationType? type,
     NotificationPriority? priority,
-    String? entityType,
+    NotificationEntityType? entityType,
     String? entityId,
-    String? actionUrl,
-    Map<String, dynamic>? data,
+    String? meta,
+    DateTime? dateTime,
     bool? isRead,
-    DateTime? readAt,
+    bool? sent,
+    bool? acknowledged,
+    DateTime? acknowledgedAt,
+    String? acknowledgedBy,
+    String? platformId,
+    String? profileId,
+    String? createdBy,
     DateTime? createdAt,
-    String? tenantId,
-    String? userId,
-    String? senderId,
-    NotificationSender? sender,
+    String? updatedBy,
+    DateTime? updatedAt,
+    NotificationProfile? profile,
   }) {
     return AppNotification(
       id: id ?? this.id,
+      rowId: rowId ?? this.rowId,
+      active: active ?? this.active,
       title: title ?? this.title,
-      message: message ?? this.message,
+      description: description ?? this.description,
       type: type ?? this.type,
       priority: priority ?? this.priority,
       entityType: entityType ?? this.entityType,
       entityId: entityId ?? this.entityId,
-      actionUrl: actionUrl ?? this.actionUrl,
-      data: data ?? this.data,
+      meta: meta ?? this.meta,
+      dateTime: dateTime ?? this.dateTime,
       isRead: isRead ?? this.isRead,
-      readAt: readAt ?? this.readAt,
+      sent: sent ?? this.sent,
+      acknowledged: acknowledged ?? this.acknowledged,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
+      acknowledgedBy: acknowledgedBy ?? this.acknowledgedBy,
+      platformId: platformId ?? this.platformId,
+      profileId: profileId ?? this.profileId,
+      createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
-      tenantId: tenantId ?? this.tenantId,
-      userId: userId ?? this.userId,
-      senderId: senderId ?? this.senderId,
-      sender: sender ?? this.sender,
+      updatedBy: updatedBy ?? this.updatedBy,
+      updatedAt: updatedAt ?? this.updatedAt,
+      profile: profile ?? this.profile,
     );
   }
 
   /// Bildirim ne kadar önce oluşturuldu
   String get timeAgo {
+    final date = dateTime ?? createdAt ?? DateTime.now();
     final now = DateTime.now();
-    final difference = now.difference(createdAt);
+    final difference = now.difference(date);
 
     if (difference.inSeconds < 60) {
       return 'Az önce';
@@ -244,9 +310,12 @@ class AppNotification {
     }
   }
 
+  /// Mesaj metni (title veya description)
+  String get message => description ?? title ?? '';
+
   @override
   String toString() =>
-      'AppNotification(id: $id, title: $title, type: ${type.value})';
+      'AppNotification(id: $id, title: $title, type: ${type?.value})';
 
   @override
   bool operator ==(Object other) =>
@@ -259,20 +328,20 @@ class AppNotification {
   int get hashCode => id.hashCode;
 }
 
-/// Bildirim gönderen bilgisi
-class NotificationSender {
+/// Bildirim profil bilgisi
+class NotificationProfile {
   final String id;
   final String? fullName;
   final String? avatarUrl;
 
-  NotificationSender({
+  NotificationProfile({
     required this.id,
     this.fullName,
     this.avatarUrl,
   });
 
-  factory NotificationSender.fromJson(Map<String, dynamic> json) {
-    return NotificationSender(
+  factory NotificationProfile.fromJson(Map<String, dynamic> json) {
+    return NotificationProfile(
       id: json['id'] as String,
       fullName: json['full_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
@@ -294,52 +363,29 @@ class NotificationSummary {
   /// Okunmamış bildirim sayısı
   final int unread;
 
+  /// Onaylanmamış bildirim sayısı
+  final int unacknowledged;
+
   /// Türe göre sayılar
   final Map<NotificationType, int> byType;
 
   NotificationSummary({
     required this.total,
     required this.unread,
+    this.unacknowledged = 0,
     this.byType = const {},
   });
 
   factory NotificationSummary.empty() => NotificationSummary(
         total: 0,
         unread: 0,
+        unacknowledged: 0,
         byType: {},
       );
 
-  factory NotificationSummary.fromJson(Map<String, dynamic> json) {
-    final byTypeJson = json['by_type'] as Map<String, dynamic>? ?? {};
-    final byType = <NotificationType, int>{};
-
-    byTypeJson.forEach((key, value) {
-      final type = NotificationType.fromString(key);
-      if (type != null) {
-        byType[type] = value as int;
-      }
-    });
-
-    return NotificationSummary(
-      total: json['total'] as int? ?? 0,
-      unread: json['unread'] as int? ?? 0,
-      byType: byType,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    final byTypeJson = <String, int>{};
-    byType.forEach((key, value) {
-      byTypeJson[key.value] = value;
-    });
-
-    return {
-      'total': total,
-      'unread': unread,
-      'by_type': byTypeJson,
-    };
-  }
-
   /// Okunmamış bildirim var mı?
   bool get hasUnread => unread > 0;
+
+  /// Onaylanmamış bildirim var mı?
+  bool get hasUnacknowledged => unacknowledged > 0;
 }

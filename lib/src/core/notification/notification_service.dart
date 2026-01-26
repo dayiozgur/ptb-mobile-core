@@ -6,7 +6,7 @@ import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'notification_model.dart';
 
-/// Bildirim servisi
+/// Bildirim servisi (mevcut notifications tablosuna uygun)
 ///
 /// Uygulama içi bildirimleri yönetir.
 /// Supabase realtime ile anlık bildirim desteği sağlar.
@@ -63,9 +63,9 @@ class NotificationService {
   // READ OPERATIONS
   // ============================================
 
-  /// Kullanıcının bildirimlerini getir
+  /// Kullanıcının bildirimlerini getir (profile_id ile)
   Future<List<AppNotification>> getNotifications(
-    String userId, {
+    String profileId, {
     int limit = 50,
     int offset = 0,
     bool unreadOnly = false,
@@ -73,7 +73,7 @@ class NotificationService {
     bool forceRefresh = false,
   }) async {
     try {
-      final cacheKey = '${_cacheKey}_${userId}_${limit}_$offset';
+      final cacheKey = '${_cacheKey}_${profileId}_${limit}_$offset';
 
       // Cache kontrolü
       if (!forceRefresh && !unreadOnly && type == null) {
@@ -92,16 +92,17 @@ class NotificationService {
           .from(_tableName)
           .select('''
             *,
-            sender:sender_id(id, full_name, avatar_url)
+            profile:profile_id(id, full_name, avatar_url)
           ''')
-          .eq('user_id', userId);
+          .eq('profile_id', profileId)
+          .eq('active', true);
 
       if (unreadOnly) {
-        query = query.eq('is_read', false);
+        query = query.eq('read', false);
       }
 
       if (type != null) {
-        query = query.eq('type', type.value);
+        query = query.eq('notification_type', type.value);
       }
 
       final response = await query
@@ -133,13 +134,14 @@ class NotificationService {
   }
 
   /// Okunmamış bildirim sayısını getir
-  Future<int> getUnreadCount(String userId) async {
+  Future<int> getUnreadCount(String profileId) async {
     try {
       final response = await _supabase
           .from(_tableName)
           .select('id')
-          .eq('user_id', userId)
-          .eq('is_read', false);
+          .eq('profile_id', profileId)
+          .eq('active', true)
+          .eq('read', false);
 
       _unreadCount = (response as List).length;
       _unreadCountController.add(_unreadCount);
@@ -151,20 +153,23 @@ class NotificationService {
   }
 
   /// Bildirim özetini getir
-  Future<NotificationSummary> getSummary(String userId) async {
+  Future<NotificationSummary> getSummary(String profileId) async {
     try {
       final allResponse = await _supabase
           .from(_tableName)
-          .select('id, type, is_read')
-          .eq('user_id', userId);
+          .select('id, notification_type, read, acknowledged')
+          .eq('profile_id', profileId)
+          .eq('active', true);
 
       final notifications = allResponse as List;
       final total = notifications.length;
-      final unread = notifications.where((n) => n['is_read'] == false).length;
+      final unread = notifications.where((n) => n['read'] == false).length;
+      final unacknowledged =
+          notifications.where((n) => n['acknowledged'] == false).length;
 
       final byType = <NotificationType, int>{};
       for (final n in notifications) {
-        final type = NotificationType.fromString(n['type'] as String?);
+        final type = NotificationType.fromString(n['notification_type'] as String?);
         if (type != null) {
           byType[type] = (byType[type] ?? 0) + 1;
         }
@@ -173,6 +178,7 @@ class NotificationService {
       return NotificationSummary(
         total: total,
         unread: unread,
+        unacknowledged: unacknowledged,
         byType: byType,
       );
     } catch (e) {
@@ -188,7 +194,7 @@ class NotificationService {
           .from(_tableName)
           .select('''
             *,
-            sender:sender_id(id, full_name, avatar_url)
+            profile:profile_id(id, full_name, avatar_url)
           ''')
           .eq('id', notificationId)
           .maybeSingle();
@@ -207,33 +213,35 @@ class NotificationService {
 
   /// Bildirim oluştur
   Future<AppNotification?> createNotification({
-    required String userId,
+    required String profileId,
     required String title,
-    required String message,
+    String? description,
     NotificationType type = NotificationType.info,
-    NotificationPriority priority = NotificationPriority.normal,
-    String? tenantId,
-    String? senderId,
-    String? entityType,
+    int priority = 5,
+    String? platformId,
+    NotificationEntityType? entityType,
     String? entityId,
-    String? actionUrl,
-    Map<String, dynamic>? data,
+    String? meta,
+    String? createdBy,
   }) async {
     try {
       final insertData = {
-        'user_id': userId,
+        'profile_id': profileId,
         'title': title,
-        'message': message,
-        'type': type.value,
-        'priority': priority.value,
-        'tenant_id': tenantId,
-        'sender_id': senderId,
-        'entity_type': entityType,
+        'description': description,
+        'notification_type': type.value,
+        'priority': priority,
+        'platform_id': platformId,
+        'entity_type': entityType?.value,
         'entity_id': entityId,
-        'action_url': actionUrl,
-        'data': data,
-        'is_read': false,
+        'meta': meta,
+        'active': true,
+        'read': false,
+        'sent': false,
+        'acknowledged': false,
+        'date_time': DateTime.now().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
+        'created_by': createdBy,
       };
 
       final response = await _supabase
@@ -241,14 +249,14 @@ class NotificationService {
           .insert(insertData)
           .select('''
             *,
-            sender:sender_id(id, full_name, avatar_url)
+            profile:profile_id(id, full_name, avatar_url)
           ''')
           .single();
 
       final notification = AppNotification.fromJson(response);
 
       // Cache'i temizle
-      _invalidateCache(userId);
+      _invalidateCache(profileId);
 
       Logger.info('Notification created: ${notification.title}');
       return notification;
@@ -258,64 +266,18 @@ class NotificationService {
     }
   }
 
-  /// Toplu bildirim oluştur
-  Future<int> createBulkNotifications({
-    required List<String> userIds,
-    required String title,
-    required String message,
-    NotificationType type = NotificationType.info,
-    NotificationPriority priority = NotificationPriority.normal,
-    String? tenantId,
-    String? senderId,
-    String? entityType,
-    String? entityId,
-    String? actionUrl,
-    Map<String, dynamic>? data,
-  }) async {
-    try {
-      final insertData = userIds
-          .map((userId) => {
-                'user_id': userId,
-                'title': title,
-                'message': message,
-                'type': type.value,
-                'priority': priority.value,
-                'tenant_id': tenantId,
-                'sender_id': senderId,
-                'entity_type': entityType,
-                'entity_id': entityId,
-                'action_url': actionUrl,
-                'data': data,
-                'is_read': false,
-                'created_at': DateTime.now().toIso8601String(),
-              })
-          .toList();
-
-      await _supabase.from(_tableName).insert(insertData);
-
-      Logger.info('Bulk notifications created for ${userIds.length} users');
-      return userIds.length;
-    } catch (e) {
-      Logger.error('Failed to create bulk notifications', e);
-      return 0;
-    }
-  }
-
   /// Bildirimi okundu olarak işaretle
   Future<bool> markAsRead(String notificationId) async {
     try {
       await _supabase.from(_tableName).update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
+        'read': true,
+        'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', notificationId);
 
       // Local state güncelle
       final index = _notifications.indexWhere((n) => n.id == notificationId);
       if (index != -1) {
-        _notifications[index] = _notifications[index].copyWith(
-          isRead: true,
-          readAt: DateTime.now(),
-        );
+        _notifications[index] = _notifications[index].copyWith(isRead: true);
         _notificationsController.add(_notifications);
       }
 
@@ -331,16 +293,16 @@ class NotificationService {
   }
 
   /// Tüm bildirimleri okundu olarak işaretle
-  Future<bool> markAllAsRead(String userId) async {
+  Future<bool> markAllAsRead(String profileId) async {
     try {
       await _supabase.from(_tableName).update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      }).eq('user_id', userId).eq('is_read', false);
+        'read': true,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('profile_id', profileId).eq('read', false);
 
       // Local state güncelle
       _notifications = _notifications
-          .map((n) => n.copyWith(isRead: true, readAt: DateTime.now()))
+          .map((n) => n.copyWith(isRead: true))
           .toList();
       _notificationsController.add(_notifications);
 
@@ -348,9 +310,9 @@ class NotificationService {
       _unreadCountController.add(_unreadCount);
 
       // Cache'i temizle
-      _invalidateCache(userId);
+      _invalidateCache(profileId);
 
-      Logger.info('All notifications marked as read for user: $userId');
+      Logger.info('All notifications marked as read for profile: $profileId');
       return true;
     } catch (e) {
       Logger.error('Failed to mark all notifications as read', e);
@@ -358,10 +320,45 @@ class NotificationService {
     }
   }
 
-  /// Bildirim sil
+  /// Bildirimi onayla (acknowledge)
+  Future<bool> acknowledgeNotification(
+    String notificationId,
+    String acknowledgedBy,
+  ) async {
+    try {
+      await _supabase.from(_tableName).update({
+        'acknowledged': true,
+        'acknowledged_at': DateTime.now().toIso8601String(),
+        'acknowledged_by': acknowledgedBy,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', notificationId);
+
+      // Local state güncelle
+      final index = _notifications.indexWhere((n) => n.id == notificationId);
+      if (index != -1) {
+        _notifications[index] = _notifications[index].copyWith(
+          acknowledged: true,
+          acknowledgedAt: DateTime.now(),
+          acknowledgedBy: acknowledgedBy,
+        );
+        _notificationsController.add(_notifications);
+      }
+
+      Logger.debug('Notification acknowledged: $notificationId');
+      return true;
+    } catch (e) {
+      Logger.error('Failed to acknowledge notification', e);
+      return false;
+    }
+  }
+
+  /// Bildirim sil (soft delete)
   Future<bool> deleteNotification(String notificationId) async {
     try {
-      await _supabase.from(_tableName).delete().eq('id', notificationId);
+      await _supabase.from(_tableName).update({
+        'active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', notificationId);
 
       // Local state güncelle
       final notification = _notifications.firstWhere(
@@ -385,10 +382,13 @@ class NotificationService {
     }
   }
 
-  /// Tüm bildirimleri sil
-  Future<bool> deleteAllNotifications(String userId) async {
+  /// Tüm bildirimleri sil (soft delete)
+  Future<bool> deleteAllNotifications(String profileId) async {
     try {
-      await _supabase.from(_tableName).delete().eq('user_id', userId);
+      await _supabase.from(_tableName).update({
+        'active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('profile_id', profileId);
 
       _notifications = [];
       _notificationsController.add(_notifications);
@@ -397,9 +397,9 @@ class NotificationService {
       _unreadCountController.add(_unreadCount);
 
       // Cache'i temizle
-      _invalidateCache(userId);
+      _invalidateCache(profileId);
 
-      Logger.info('All notifications deleted for user: $userId');
+      Logger.info('All notifications deleted for profile: $profileId');
       return true;
     } catch (e) {
       Logger.error('Failed to delete all notifications', e);
@@ -412,19 +412,19 @@ class NotificationService {
   // ============================================
 
   /// Realtime bildirim dinlemeyi başlat
-  void startListening(String userId) {
+  void startListening(String profileId) {
     _realtimeChannel?.unsubscribe();
 
     _realtimeChannel = _supabase
-        .channel('notifications_$userId')
+        .channel('notifications_$profileId')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: _tableName,
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'user_id',
-            value: userId,
+            column: 'profile_id',
+            value: profileId,
           ),
           callback: (payload) {
             Logger.debug('New notification received');
@@ -433,7 +433,7 @@ class NotificationService {
         )
         .subscribe();
 
-    Logger.info('Started listening for notifications: $userId');
+    Logger.info('Started listening for notifications: $profileId');
   }
 
   /// Realtime dinlemeyi durdur
@@ -452,8 +452,10 @@ class NotificationService {
       _notificationsController.add(_notifications);
 
       // Okunmamış sayısını artır
-      _unreadCount++;
-      _unreadCountController.add(_unreadCount);
+      if (!notification.isRead) {
+        _unreadCount++;
+        _unreadCountController.add(_unreadCount);
+      }
 
       // Yeni bildirim event'i
       _newNotificationController.add(notification);
@@ -469,8 +471,8 @@ class NotificationService {
   // ============================================
 
   /// Cache'i temizle
-  void _invalidateCache(String userId) {
-    _cacheManager.delete('${_cacheKey}_$userId');
+  void _invalidateCache(String profileId) {
+    _cacheManager.delete('${_cacheKey}_$profileId');
   }
 
   /// Tüm cache'i temizle
