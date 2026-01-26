@@ -66,6 +66,10 @@ export 'src/core/invitation/invitation_service.dart';
 export 'src/core/permission/permission_model.dart';
 export 'src/core/permission/permission_service.dart';
 
+// Core - Activity
+export 'src/core/activity/activity_model.dart';
+export 'src/core/activity/activity_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';

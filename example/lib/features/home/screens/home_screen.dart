@@ -7,6 +7,12 @@ import '../../organization/screens/organization_selector_screen.dart';
 import '../../site/screens/site_selector_screen.dart';
 import '../../unit/screens/unit_selector_screen.dart';
 
+/// Activity Service instance
+final activityService = ActivityService(
+  supabase: Supabase.instance.client,
+  cacheManager: cacheManager,
+);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _siteCount = 0;
   int _unitCount = 0;
   int _memberCount = 0;
+  List<ActivityLog> _recentActivities = [];
 
   @override
   void initState() {
@@ -67,6 +74,13 @@ class _HomeScreenState extends State<HomeScreen> {
         futures.add(
           _getMemberCount(tenantId).then((count) {
             _memberCount = count;
+          }),
+        );
+
+        // Son aktiviteleri al
+        futures.add(
+          activityService.getRecentActivities(tenantId, limit: 5).then((activities) {
+            _recentActivities = activities;
           }),
         );
       }
@@ -188,13 +202,17 @@ class _HomeScreenState extends State<HomeScreen> {
               // Recent activity
               AppSectionHeader(
                 title: 'Son Aktiviteler',
-                action: TextButton(
-                  onPressed: () {},
-                  child: const Text('Tümünü Gör'),
-                ),
+                action: _recentActivities.isNotEmpty
+                    ? TextButton(
+                        onPressed: () {
+                          // TODO: Navigate to activity list
+                        },
+                        child: const Text('Tümünü Gör'),
+                      )
+                    : null,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const _RecentActivity(),
+              _RecentActivity(activities: _recentActivities, isLoading: _isLoading),
 
               const SizedBox(height: AppSpacing.xl),
             ],
@@ -784,30 +802,56 @@ class _HierarchyConnector extends StatelessWidget {
 }
 
 class _RecentActivity extends StatelessWidget {
-  const _RecentActivity();
+  final List<ActivityLog> activities;
+  final bool isLoading;
+
+  const _RecentActivity({
+    required this.activities,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final activities = [
-      _Activity(
-        icon: Icons.login,
-        color: AppColors.success,
-        title: 'Sisteme giriş yapıldı',
-        subtitle: 'Az önce',
-      ),
-      _Activity(
-        icon: Icons.swap_horiz,
-        color: AppColors.primary,
-        title: 'Tenant değiştirildi',
-        subtitle: '5 dakika önce',
-      ),
-      _Activity(
-        icon: Icons.person_add,
-        color: AppColors.info,
-        title: 'Yeni kullanıcı davet edildi',
-        subtitle: '2 saat önce',
-      ),
-    ];
+    if (isLoading) {
+      return AppCard(
+        child: Padding(
+          padding: AppSpacing.cardInsets,
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (activities.isEmpty) {
+      return AppCard(
+        child: Padding(
+          padding: AppSpacing.cardInsets,
+          child: Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 40,
+                  color: AppColors.tertiaryLabel(context),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Henüz aktivite yok',
+                  style: AppTypography.subheadline.copyWith(
+                    color: AppColors.secondaryLabel(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return AppCard(
       child: Column(
@@ -822,13 +866,17 @@ class _RecentActivity extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: activity.color.withOpacity(0.1),
+                    color: _getActionColor(activity.action).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(activity.icon, color: activity.color, size: 20),
+                  child: Icon(
+                    _getActionIcon(activity.action),
+                    color: _getActionColor(activity.action),
+                    size: 20,
+                  ),
                 ),
-                title: activity.title,
-                subtitle: activity.subtitle,
+                title: activity.displayText,
+                subtitle: activity.relativeTime,
               ),
               if (!isLast)
                 Divider(height: 1, color: AppColors.separator(context)),
@@ -838,18 +886,50 @@ class _RecentActivity extends StatelessWidget {
       ),
     );
   }
-}
 
-class _Activity {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
+  IconData _getActionIcon(ActivityAction action) {
+    switch (action) {
+      case ActivityAction.login:
+        return Icons.login;
+      case ActivityAction.logout:
+        return Icons.logout;
+      case ActivityAction.create:
+        return Icons.add_circle;
+      case ActivityAction.update:
+        return Icons.edit;
+      case ActivityAction.delete:
+        return Icons.delete;
+      case ActivityAction.enable:
+        return Icons.check_circle;
+      case ActivityAction.disable:
+        return Icons.block;
+      case ActivityAction.export_:
+        return Icons.download;
+      case ActivityAction.import_:
+        return Icons.upload;
+      default:
+        return Icons.info;
+    }
+  }
 
-  const _Activity({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-  });
+  Color _getActionColor(ActivityAction action) {
+    switch (action) {
+      case ActivityAction.login:
+        return AppColors.success;
+      case ActivityAction.logout:
+        return AppColors.warning;
+      case ActivityAction.create:
+        return AppColors.info;
+      case ActivityAction.update:
+        return AppColors.primary;
+      case ActivityAction.delete:
+        return AppColors.error;
+      case ActivityAction.enable:
+        return AppColors.success;
+      case ActivityAction.disable:
+        return AppColors.warning;
+      default:
+        return AppColors.primary;
+    }
+  }
 }
