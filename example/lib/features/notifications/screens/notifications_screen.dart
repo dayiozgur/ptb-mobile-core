@@ -65,7 +65,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (index != -1) {
           _notifications[index] = notification.copyWith(
             isRead: true,
-            readAt: DateTime.now(),
           );
         }
       });
@@ -100,27 +99,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _handleNotificationTap(AppNotification notification) {
     _markAsRead(notification);
 
-    // Navigate based on action URL or entity type
-    if (notification.actionUrl != null) {
-      context.push(notification.actionUrl!);
-    } else if (notification.entityType != null && notification.entityId != null) {
+    // Navigate based on entity type
+    if (notification.entityType != null && notification.entityId != null) {
       switch (notification.entityType) {
-        case 'unit':
+        case NotificationEntityType.unit:
           context.push('/units/${notification.entityId}');
-          break;
-        case 'site':
-          context.push('/sites');
-          break;
-        case 'organization':
-          context.push('/organizations');
-          break;
-        default:
-          // Show notification details
+          return;
+        case NotificationEntityType.invoice:
+        case NotificationEntityType.production:
+        case NotificationEntityType.product:
+        case NotificationEntityType.blueprint:
+        case NotificationEntityType.productionOrder:
+        case NotificationEntityType.controller:
+        case NotificationEntityType.provider:
+        case NotificationEntityType.item:
+          // Show notification details for these types
           _showNotificationDetail(notification);
+          return;
       }
-    } else {
-      _showNotificationDetail(notification);
     }
+
+    _showNotificationDetail(notification);
   }
 
   void _showNotificationDetail(AppNotification notification) {
@@ -156,7 +155,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      notification.title,
+                      notification.title ?? '',
                       style: AppTypography.title3,
                     ),
                   ),
@@ -307,7 +306,7 @@ class _NotificationListItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      notification.title,
+                      notification.title ?? '',
                       style: AppTypography.subheadline.copyWith(
                         fontWeight:
                             notification.isRead ? FontWeight.normal : FontWeight.bold,

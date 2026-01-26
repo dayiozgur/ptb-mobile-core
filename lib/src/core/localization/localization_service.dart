@@ -142,7 +142,7 @@ class LocalizationService {
 
     _currentLocale = locale;
     await _loadTranslations(locale);
-    await _storage.write(_localeKey, locale.languageCode);
+    await _storage.write(key: _localeKey, value: locale.languageCode);
     _localeController.add(locale);
 
     Logger.info('Locale changed to: ${locale.displayName}');

@@ -234,7 +234,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: AppColors.systemGray6(brightness),
+        color: brightness == Brightness.light ? AppColors.systemGray6 : AppColors.surfaceDark,
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Row(
@@ -299,7 +299,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: AppColors.systemGray4(brightness),
+                    color: brightness == Brightness.light ? AppColors.systemGray4 : AppColors.borderDark,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -505,7 +505,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.systemGray6(brightness),
+                  color: brightness == Brightness.light ? AppColors.systemGray6 : AppColors.surfaceDark,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -608,7 +608,7 @@ class SearchButton extends StatelessWidget {
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.systemGray6(brightness),
+          color: brightness == Brightness.light ? AppColors.systemGray6 : AppColors.surfaceDark,
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
         child: Row(

@@ -338,7 +338,7 @@ class ThemeService {
 
   Future<void> _saveSettings() async {
     try {
-      await _storage.write(_settingsKey, _encodeJson(_settings.toJson()));
+      await _storage.write(key: _settingsKey, value: _encodeJson(_settings.toJson()));
     } catch (e) {
       Logger.error('Failed to save theme settings', e);
     }
