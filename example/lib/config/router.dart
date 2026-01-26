@@ -6,7 +6,10 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/members/screens/members_screen.dart';
+import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/site/screens/site_selector_screen.dart';
 import '../features/tenant/screens/tenant_selector_screen.dart';
 
 /// Router provider
@@ -68,6 +71,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
+      // Organization Selection
+      // ==================
+      GoRoute(
+        path: '/organizations',
+        name: 'organizations',
+        builder: (context, state) => const OrganizationSelectorScreen(),
+      ),
+
+      // ==================
+      // Site Selection
+      // ==================
+      GoRoute(
+        path: '/sites',
+        name: 'sites',
+        builder: (context, state) => const SiteSelectorScreen(),
+      ),
+
+      // ==================
       // Main App Routes
       // ==================
       GoRoute(
@@ -79,6 +100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/members',
+        name: 'members',
+        builder: (context, state) => const MembersScreen(),
       ),
     ],
 

@@ -150,9 +150,14 @@ CREATE TRIGGER set_first_tenant_as_default
 -- ============================================
 
 -- Bu fonksiyon manuel çalıştırılmalı (bir kerelik migrasyon)
+-- NOT: Sadece auth.users tablosunda mevcut olan profilleri migrate eder
 CREATE OR REPLACE FUNCTION public.migrate_existing_profile_tenants()
 RETURNS void AS $$
+DECLARE
+    v_migrated_count integer := 0;
+    v_skipped_count integer := 0;
 BEGIN
+    -- Sadece auth.users'da mevcut olan profilleri migrate et
     INSERT INTO public.tenant_users (user_id, tenant_id, role, status, is_default, joined_at)
     SELECT
         p.id as user_id,
@@ -170,12 +175,30 @@ BEGIN
         COALESCE(p.created_at, now()) as joined_at
     FROM public.profiles p
     WHERE p.tenant_id IS NOT NULL
+      -- KRITIK: Sadece auth.users'da mevcut olan kullanıcıları al
+      AND EXISTS (
+          SELECT 1 FROM auth.users au
+          WHERE au.id = p.id
+      )
+      -- Zaten tenant_users'da yoksa
       AND NOT EXISTS (
           SELECT 1 FROM public.tenant_users tu
           WHERE tu.user_id = p.id AND tu.tenant_id = p.tenant_id
       );
 
-    RAISE NOTICE 'Migration completed. Check tenant_users table.';
+    GET DIAGNOSTICS v_migrated_count = ROW_COUNT;
+
+    -- Migrate edilemeyen (auth.users'da olmayan) profil sayısını bul
+    SELECT COUNT(*) INTO v_skipped_count
+    FROM public.profiles p
+    WHERE p.tenant_id IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM auth.users au
+          WHERE au.id = p.id
+      );
+
+    RAISE NOTICE 'Migration completed. Migrated: %, Skipped (no auth user): %',
+        v_migrated_count, v_skipped_count;
 END;
 $$ LANGUAGE plpgsql;
 
