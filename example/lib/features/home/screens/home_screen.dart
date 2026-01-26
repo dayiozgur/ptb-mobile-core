@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _siteCount = 0;
   int _unitCount = 0;
   int _memberCount = 0;
+  int _unreadNotifications = 0;
   List<ActivityLog> _recentActivities = [];
 
   @override
@@ -85,6 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
+      // Okunmamış bildirim sayısını al
+      final userId = authService.currentUser?.id;
+      if (userId != null) {
+        futures.add(
+          notificationService.getUnreadCount(userId).then((count) {
+            _unreadNotifications = count;
+          }),
+        );
+      }
+
       await Future.wait(futures);
     } catch (e) {
       Logger.error('Failed to load dashboard data', e);
@@ -119,14 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
       title: tenant?.name ?? 'Ana Sayfa',
       showBackButton: false,
       actions: [
-        AppIconButton(
-          icon: Icons.notifications_outlined,
-          onPressed: () {
-            AppSnackbar.showInfo(
-              context,
-              message: 'Bildirimler yakında eklenecek',
-            );
-          },
+        NotificationIconBadge(
+          count: _unreadNotifications,
+          onTap: () => context.push('/notifications'),
         ),
         AppIconButton(
           icon: Icons.settings_outlined,

@@ -15,6 +15,7 @@ import '../features/unit/screens/unit_selector_screen.dart';
 import '../features/unit/screens/unit_detail_screen.dart';
 import '../features/unit/screens/unit_form_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/notifications/screens/notifications_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -147,6 +148,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
 

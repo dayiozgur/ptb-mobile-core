@@ -70,6 +70,10 @@ export 'src/core/permission/permission_service.dart';
 export 'src/core/activity/activity_model.dart';
 export 'src/core/activity/activity_service.dart';
 
+// Core - Notification
+export 'src/core/notification/notification_model.dart';
+export 'src/core/notification/notification_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -102,6 +106,7 @@ export 'src/presentation/widgets/feedback/app_error_view.dart';
 export 'src/presentation/widgets/feedback/app_empty_state.dart';
 export 'src/presentation/widgets/feedback/app_badge.dart';
 export 'src/presentation/widgets/feedback/app_snackbar.dart';
+export 'src/presentation/widgets/feedback/notification_badge.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../activity/activity_service.dart';
 import '../api/api_client.dart';
+import '../notification/notification_service.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logger_interceptor.dart';
 import '../api/interceptors/tenant_interceptor.dart';
@@ -168,6 +169,17 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // NOTIFICATION SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<NotificationService>(
+    () => NotificationService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -212,6 +224,7 @@ OrganizationService get organizationService => sl<OrganizationService>();
 SiteService get siteService => sl<SiteService>();
 UnitService get unitService => sl<UnitService>();
 ActivityService get activityService => sl<ActivityService>();
+NotificationService get notificationService => sl<NotificationService>();
 ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();
