@@ -82,6 +82,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     return AppScaffold(
       title: 'Site Seç',
       showBackButton: true,
+      onBack: () => context.go('/organizations'),
       child: _buildContent(),
     );
   }

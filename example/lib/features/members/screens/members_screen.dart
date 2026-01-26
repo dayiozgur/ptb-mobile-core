@@ -91,6 +91,7 @@ class _MembersScreenState extends State<MembersScreen>
     return AppScaffold(
       title: 'Üyeler',
       showBackButton: true,
+      onBack: () => context.go('/settings'),
       actions: [
         if (_canInvite)
           AppIconButton(

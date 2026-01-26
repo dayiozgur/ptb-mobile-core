@@ -82,6 +82,7 @@ class _OrganizationSelectorScreenState
     return AppScaffold(
       title: 'Organizasyon Seç',
       showBackButton: true,
+      onBack: () => context.go('/tenant-select'),
       child: _buildContent(),
     );
   }

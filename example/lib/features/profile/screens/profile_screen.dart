@@ -307,6 +307,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return AppScaffold(
       title: 'Profil',
+      showBackButton: true,
+      onBack: () => context.go('/settings'),
       actions: [
         if (_isLoading)
           const Padding(

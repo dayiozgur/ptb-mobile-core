@@ -138,6 +138,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Kayıt Ol',
+      showBackButton: true,
+      onBack: () => context.go('/login'),
       child: SingleChildScrollView(
         padding: AppSpacing.screenPadding,
         child: Form(

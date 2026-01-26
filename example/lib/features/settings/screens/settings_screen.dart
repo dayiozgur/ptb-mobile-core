@@ -76,6 +76,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return AppScaffold(
       title: 'Ayarlar',
+      showBackButton: true,
+      onBack: () => context.go('/home'),
       child: SingleChildScrollView(
         padding: AppSpacing.screenPadding,
         child: Column(

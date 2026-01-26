@@ -98,6 +98,7 @@ class _UnitSelectorScreenState extends State<UnitSelectorScreen> {
     return AppScaffold(
       title: 'Alan Seç',
       showBackButton: true,
+      onBack: () => context.go('/home'),
       actions: [
         AppIconButton(
           icon: _showTreeView ? Icons.list : Icons.account_tree,
