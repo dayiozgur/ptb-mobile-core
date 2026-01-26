@@ -598,7 +598,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     AppAvatar(
                       imageUrl: tenant.logoUrl,
                       name: tenant.name,
-                      size: AppAvatarSize.xlarge,
+                      size: AppAvatarSize.xl,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
@@ -646,11 +646,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: 'Mevcut Plan',
                         value: tenant.plan.name,
                       ),
-                      if (tenant.isTrial && tenant.trialEndsAt != null) ...[
+                      if (tenant.isTrial) ...[
                         const SizedBox(height: AppSpacing.xs),
                         _InfoRow(
-                          label: 'Deneme Bitis',
-                          value: _formatDate(tenant.trialEndsAt!),
+                          label: 'Durum',
+                          value: 'Deneme Sürümü',
+                          valueColor: AppColors.warning,
                         ),
                       ],
                       const SizedBox(height: AppSpacing.xs),

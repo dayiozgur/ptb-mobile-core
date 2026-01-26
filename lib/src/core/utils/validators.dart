@@ -10,7 +10,7 @@ class Validators {
   // ============================================
 
   /// Email doğrulama (doğrudan validator olarak kullanılabilir)
-  static String? email(String? value) {
+  static String? emailValidator(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email adresi gerekli';
     }
@@ -24,6 +24,25 @@ class Validators {
     }
 
     return null;
+  }
+
+  /// Email doğrulama (factory - özel mesaj ile)
+  static String? Function(String?) email([String? errorMessage]) {
+    return (String? value) {
+      if (value == null || value.isEmpty) {
+        return errorMessage ?? 'Email adresi gerekli';
+      }
+
+      final emailRegex = RegExp(
+        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      );
+
+      if (!emailRegex.hasMatch(value)) {
+        return errorMessage ?? 'Geçerli bir email adresi girin';
+      }
+
+      return null;
+    };
   }
 
   // ============================================

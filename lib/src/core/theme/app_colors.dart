@@ -210,4 +210,20 @@ class AppColors {
     final brightness = Theme.of(context).brightness;
     return brightness == Brightness.light ? surfaceLight : surfaceDark;
   }
+
+  /// Secondary system background color (for grouped content backgrounds)
+  static Color secondarySystemBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFF2F2F7)
+        : const Color(0xFF1C1C1E);
+  }
+
+  /// Tertiary system background color (for nested content backgrounds)
+  static Color tertiarySystemBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFF2C2C2E);
+  }
 }
