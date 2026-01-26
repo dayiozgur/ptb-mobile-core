@@ -57,11 +57,6 @@ class _UnitSelectorScreenState extends State<UnitSelectorScreen> {
         _unitTree = tree;
         _isLoading = false;
       });
-
-      // Tek unit varsa otomatik seç
-      if (units.length == 1) {
-        await _selectUnit(units.first);
-      }
     } catch (e) {
       Logger.error('Failed to load units', e);
       setState(() {

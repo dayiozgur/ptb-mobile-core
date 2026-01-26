@@ -135,7 +135,8 @@ class AppScaffold extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(BuildContext context, Brightness brightness) {
     final canPop = Navigator.of(context).canPop();
-    final showBack = showBackButton && canPop;
+    // Show back button if: showBackButton is true AND (canPop OR onBack is provided)
+    final showBack = showBackButton && (canPop || onBack != null);
 
     return AppBar(
       backgroundColor:

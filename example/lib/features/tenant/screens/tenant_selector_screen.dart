@@ -42,11 +42,6 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
         _tenants = tenants;
         _isLoading = false;
       });
-
-      // Tek tenant varsa otomatik seç
-      if (tenants.length == 1) {
-        await _selectTenant(tenants.first);
-      }
     } catch (e) {
       Logger.error('Failed to load tenants', e);
       setState(() {

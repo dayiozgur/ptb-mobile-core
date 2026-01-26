@@ -51,11 +51,6 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
         _sites = sites;
         _isLoading = false;
       });
-
-      // Tek site varsa otomatik seç
-      if (sites.length == 1) {
-        await _selectSite(sites.first);
-      }
     } catch (e) {
       Logger.error('Failed to load sites', e);
       setState(() {

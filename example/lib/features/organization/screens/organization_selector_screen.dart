@@ -51,11 +51,6 @@ class _OrganizationSelectorScreenState
         _organizations = organizations;
         _isLoading = false;
       });
-
-      // Tek organizasyon varsa otomatik seç
-      if (organizations.length == 1) {
-        await _selectOrganization(organizations.first);
-      }
     } catch (e) {
       Logger.error('Failed to load organizations', e);
       setState(() {
