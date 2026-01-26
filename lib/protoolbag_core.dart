@@ -30,6 +30,7 @@ export 'src/core/errors/exceptions.dart';
 // Core - Storage
 export 'src/core/storage/secure_storage.dart';
 export 'src/core/storage/cache_manager.dart';
+export 'src/core/storage/file_storage_service.dart';
 
 // Core - API
 export 'src/core/api/api_client.dart';
@@ -91,6 +92,15 @@ export 'src/core/search/search_service.dart';
 export 'src/core/localization/localization_service.dart';
 export 'src/core/localization/app_localizations.dart';
 
+// Core - Push Notifications
+export 'src/core/push/push_notification_service.dart';
+
+// Core - Realtime
+export 'src/core/realtime/realtime_service.dart';
+
+// Core - Pagination
+export 'src/core/pagination/pagination.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -126,6 +136,7 @@ export 'src/presentation/widgets/feedback/app_badge.dart';
 export 'src/presentation/widgets/feedback/app_snackbar.dart';
 export 'src/presentation/widgets/feedback/notification_badge.dart';
 export 'src/presentation/widgets/feedback/offline_indicator.dart';
+export 'src/presentation/widgets/feedback/error_boundary.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';
