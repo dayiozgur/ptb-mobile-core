@@ -11,6 +11,7 @@ export 'src/core/theme/app_typography.dart';
 export 'src/core/theme/app_spacing.dart';
 export 'src/core/theme/app_shadows.dart';
 export 'src/core/theme/app_theme.dart';
+export 'src/core/theme/theme_service.dart';
 
 // Core - Utils
 export 'src/core/utils/validators.dart';
