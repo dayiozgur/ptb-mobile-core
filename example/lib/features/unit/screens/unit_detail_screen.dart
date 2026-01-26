@@ -165,14 +165,6 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            // Metadata
-            if (_unit!.metadata != null && _unit!.metadata!.isNotEmpty) ...[
-              AppSectionHeader(title: 'Ek Bilgiler'),
-              const SizedBox(height: AppSpacing.sm),
-              _MetadataCard(metadata: _unit!.metadata!),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-
             // Children
             AppSectionHeader(
               title: 'Alt Alanlar',
@@ -213,13 +205,13 @@ class _UnitHeaderCard extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: _getCategoryColor(unit.category).withOpacity(0.1),
+                color: _getCategoryColor(unit.category ?? UnitCategory.custom).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
                 child: Icon(
-                  _getCategoryIcon(unit.category),
-                  color: _getCategoryColor(unit.category),
+                  _getCategoryIcon(unit.category ?? UnitCategory.custom),
+                  color: _getCategoryColor(unit.category ?? UnitCategory.custom),
                   size: 32,
                 ),
               ),
@@ -237,7 +229,7 @@ class _UnitHeaderCard extends StatelessWidget {
                   Row(
                     children: [
                       AppBadge(
-                        label: unit.category.displayName,
+                        label: unit.categoryLabel,
                         variant: AppBadgeVariant.primary,
                         size: AppBadgeSize.small,
                       ),
@@ -348,41 +340,27 @@ class _UnitInfoCard extends StatelessWidget {
               ),
               const Divider(),
             ],
-            if (unit.floor != null) ...[
-              _InfoRow(
-                icon: Icons.layers,
-                label: 'Kat',
-                value: '${unit.floor}. Kat',
-              ),
-              const Divider(),
-            ],
-            if (unit.capacity != null) ...[
-              _InfoRow(
-                icon: Icons.people,
-                label: 'Kapasite',
-                value: '${unit.capacity} kişi',
-              ),
-              const Divider(),
-            ],
-            if (unit.areaSqm != null) ...[
+            if (unit.areaSize != null) ...[
               _InfoRow(
                 icon: Icons.square_foot,
                 label: 'Alan',
-                value: '${unit.areaSqm} m²',
+                value: unit.areaSizeFormatted,
               ),
               const Divider(),
             ],
-            _InfoRow(
-              icon: Icons.calendar_today,
-              label: 'Oluşturulma',
-              value: _formatDate(unit.createdAt),
-            ),
-            if (unit.updatedAt != unit.createdAt) ...[
+            if (unit.createdAt != null) ...[
+              _InfoRow(
+                icon: Icons.calendar_today,
+                label: 'Oluşturulma',
+                value: _formatDate(unit.createdAt!),
+              ),
+            ],
+            if (unit.updatedAt != null && unit.updatedAt != unit.createdAt) ...[
               const Divider(),
               _InfoRow(
                 icon: Icons.update,
                 label: 'Son Güncelleme',
-                value: _formatDate(unit.updatedAt),
+                value: _formatDate(unit.updatedAt!),
               ),
             ],
           ],
@@ -430,46 +408,6 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MetadataCard extends StatelessWidget {
-  final Map<String, dynamic> metadata;
-
-  const _MetadataCard({required this.metadata});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Padding(
-        padding: AppSpacing.cardInsets,
-        child: Column(
-          children: metadata.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    entry.key,
-                    style: AppTypography.subheadline.copyWith(
-                      color: AppColors.secondaryLabel(context),
-                    ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      entry.value.toString(),
-                      style: AppTypography.subheadline,
-                      textAlign: TextAlign.end,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
       ),
     );
   }
@@ -536,7 +474,7 @@ class _ChildrenList extends StatelessWidget {
                   ),
                 ),
                 title: child.name,
-                subtitle: child.category.displayName,
+                subtitle: child.categoryLabel,
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => onChildTap(child),
               ),

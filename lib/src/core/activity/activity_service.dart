@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../cache/cache_manager.dart';
+import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'activity_model.dart';
 
@@ -52,9 +52,7 @@ class ActivityService {
             *,
             profiles:created_by(full_name, avatar_url)
           ''')
-          .eq('tenant_id', tenantId)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+          .eq('tenant_id', tenantId);
 
       if (entityType != null) {
         query = query.eq('entity_type', entityType.value);
@@ -64,7 +62,9 @@ class ActivityService {
         query = query.eq('action', action.value);
       }
 
-      final response = await query;
+      final response = await query
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
       final activities = (response as List)
           .map((json) => ActivityLog.fromJson(json as Map<String, dynamic>))
           .toList();

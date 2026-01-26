@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../organization/screens/organization_selector_screen.dart';
-import '../../site/screens/site_selector_screen.dart';
-import 'unit_selector_screen.dart';
-
 class UnitFormScreen extends StatefulWidget {
   final String? unitId;
   final String? parentId;
@@ -27,13 +23,12 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _floorController = TextEditingController();
-  final _capacityController = TextEditingController();
   final _areaController = TextEditingController();
 
-  UnitCategory _selectedCategory = UnitCategory.room;
   String? _selectedParentId;
+  String? _selectedUnitTypeId;
   List<Unit> _availableParents = [];
+  List<UnitType> _unitTypes = [];
   bool _isLoading = false;
   bool _isLoadingData = true;
   Unit? _existingUnit;
@@ -50,8 +45,6 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
     _nameController.dispose();
     _codeController.dispose();
     _descriptionController.dispose();
-    _floorController.dispose();
-    _capacityController.dispose();
     _areaController.dispose();
     super.dispose();
   }
@@ -66,6 +59,9 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
         return;
       }
 
+      // Unit tiplerini yükle
+      _unitTypes = await unitService.getUnitTypes();
+
       // Mevcut unitleri yükle (parent seçimi için)
       final units = await unitService.getUnits(siteId);
       _availableParents = units;
@@ -78,10 +74,8 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
           _nameController.text = unit.name;
           _codeController.text = unit.code ?? '';
           _descriptionController.text = unit.description ?? '';
-          _floorController.text = unit.floor?.toString() ?? '';
-          _capacityController.text = unit.capacity?.toString() ?? '';
-          _areaController.text = unit.areaSqm?.toString() ?? '';
-          _selectedCategory = unit.category;
+          _areaController.text = unit.areaSize?.toString() ?? '';
+          _selectedUnitTypeId = unit.unitTypeId;
           _selectedParentId = unit.parentUnitId;
 
           // Kendisini ve alt elemanlarını parent listesinden çıkar
@@ -115,6 +109,7 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
     try {
       final siteId = siteService.currentSiteId;
       final tenantId = tenantService.currentTenantId;
+      final orgId = organizationService.currentOrganizationId;
       final userId = authService.currentUser?.id;
 
       if (siteId == null || tenantId == null || userId == null) {
@@ -126,8 +121,6 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
       final name = _nameController.text.trim();
       final code = _codeController.text.trim();
       final description = _descriptionController.text.trim();
-      final floor = int.tryParse(_floorController.text.trim());
-      final capacity = int.tryParse(_capacityController.text.trim());
       final area = double.tryParse(_areaController.text.trim());
 
       Unit? result;
@@ -139,25 +132,23 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
           name: name,
           code: code.isNotEmpty ? code : null,
           description: description.isNotEmpty ? description : null,
-          category: _selectedCategory,
           parentUnitId: _selectedParentId,
-          floor: floor,
-          capacity: capacity,
-          areaSqm: area,
+          unitTypeId: _selectedUnitTypeId,
+          areaSize: area,
+          updatedBy: userId,
         );
       } else {
         // Oluştur
         result = await unitService.createUnit(
           siteId: siteId,
           tenantId: tenantId,
+          organizationId: orgId,
           name: name,
-          category: _selectedCategory,
           code: code.isNotEmpty ? code : null,
           description: description.isNotEmpty ? description : null,
           parentUnitId: _selectedParentId,
-          floor: floor,
-          capacity: capacity,
-          areaSqm: area,
+          unitTypeId: _selectedUnitTypeId,
+          areaSize: area,
           createdBy: userId,
         );
       }
@@ -258,11 +249,12 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Kategori seçimi
-            _CategorySelector(
-              selectedCategory: _selectedCategory,
-              onCategoryChanged: (category) {
-                setState(() => _selectedCategory = category);
+            // Unit Type seçimi
+            _UnitTypeSelector(
+              selectedTypeId: _selectedUnitTypeId,
+              unitTypes: _unitTypes,
+              onTypeChanged: (typeId) {
+                setState(() => _selectedUnitTypeId = typeId);
               },
               enabled: !_isLoading,
             ),
@@ -296,34 +288,6 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
 
             const SizedBox(height: AppSpacing.md),
 
-            Row(
-              children: [
-                Expanded(
-                  child: AppTextField(
-                    controller: _floorController,
-                    label: 'Kat',
-                    placeholder: '0',
-                    prefixIcon: Icons.layers,
-                    keyboardType: TextInputType.number,
-                    enabled: !_isLoading,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: AppTextField(
-                    controller: _capacityController,
-                    label: 'Kapasite',
-                    placeholder: '10',
-                    prefixIcon: Icons.people,
-                    keyboardType: TextInputType.number,
-                    enabled: !_isLoading,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
             AppTextField(
               controller: _areaController,
               label: 'Alan (m\u00b2)',
@@ -350,44 +314,140 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
   }
 }
 
-class _CategorySelector extends StatelessWidget {
-  final UnitCategory selectedCategory;
-  final ValueChanged<UnitCategory> onCategoryChanged;
+class _UnitTypeSelector extends StatelessWidget {
+  final String? selectedTypeId;
+  final List<UnitType> unitTypes;
+  final ValueChanged<String?> onTypeChanged;
   final bool enabled;
 
-  const _CategorySelector({
-    required this.selectedCategory,
-    required this.onCategoryChanged,
+  const _UnitTypeSelector({
+    required this.selectedTypeId,
+    required this.unitTypes,
+    required this.onTypeChanged,
     required this.enabled,
   });
 
   @override
   Widget build(BuildContext context) {
+    final selectedType = selectedTypeId != null
+        ? unitTypes.firstWhere(
+            (t) => t.id == selectedTypeId,
+            orElse: () => unitTypes.first,
+          )
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Kategori',
+          'Alan Tipi (Opsiyonel)',
           style: AppTypography.subheadline.copyWith(
             color: AppColors.secondaryLabel(context),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xs,
-          children: UnitCategory.values.map((category) {
-            final isSelected = category == selectedCategory;
-            return FilterChip(
-              label: Text(category.displayName),
-              selected: isSelected,
-              onSelected: enabled ? (_) => onCategoryChanged(category) : null,
-              selectedColor: AppColors.primary.withOpacity(0.2),
-              checkmarkColor: AppColors.primary,
-            );
-          }).toList(),
+        AppCard(
+          onTap: enabled && unitTypes.isNotEmpty ? () => _showTypePicker(context) : null,
+          child: Padding(
+            padding: AppSpacing.cardInsets,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.category,
+                  color: AppColors.secondaryLabel(context),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    selectedType?.name ?? 'Alan tipi seçin (opsiyonel)',
+                    style: AppTypography.subheadline.copyWith(
+                      color: selectedType != null
+                          ? null
+                          : AppColors.tertiaryLabel(context),
+                    ),
+                  ),
+                ),
+                if (selectedTypeId != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: enabled ? () => onTypeChanged(null) : null,
+                    iconSize: 20,
+                  )
+                else
+                  Icon(
+                    Icons.chevron_right,
+                    color: AppColors.tertiaryLabel(context),
+                  ),
+              ],
+            ),
+          ),
         ),
       ],
+    );
+  }
+
+  void _showTypePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: AppSpacing.screenPadding,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Alan Tipi Seç', style: AppTypography.headline),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: unitTypes.length,
+                itemBuilder: (context, index) {
+                  final type = unitTypes[index];
+                  final isSelected = type.id == selectedTypeId;
+
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.category,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    title: Text(type.name),
+                    subtitle: type.category != null ? Text(type.category!.label) : null,
+                    trailing: isSelected
+                        ? Icon(Icons.check, color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      onTypeChanged(type.id);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -407,6 +467,13 @@ class _ParentSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedParent = selectedParentId != null && availableParents.isNotEmpty
+        ? availableParents.firstWhere(
+            (u) => u.id == selectedParentId,
+            orElse: () => availableParents.first,
+          )
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -418,7 +485,7 @@ class _ParentSelector extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         AppCard(
-          onTap: enabled ? () => _showParentPicker(context) : null,
+          onTap: enabled && availableParents.isNotEmpty ? () => _showParentPicker(context) : null,
           child: Padding(
             padding: AppSpacing.cardInsets,
             child: Row(
@@ -430,16 +497,9 @@ class _ParentSelector extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    selectedParentId != null
-                        ? availableParents
-                            .firstWhere(
-                              (u) => u.id == selectedParentId,
-                              orElse: () => availableParents.first,
-                            )
-                            .name
-                        : 'Üst alan seçin (opsiyonel)',
+                    selectedParent?.name ?? 'Üst alan seçin (opsiyonel)',
                     style: AppTypography.subheadline.copyWith(
-                      color: selectedParentId != null
+                      color: selectedParent != null
                           ? null
                           : AppColors.tertiaryLabel(context),
                     ),
@@ -511,7 +571,7 @@ class _ParentSelector extends StatelessWidget {
                       ),
                     ),
                     title: Text(unit.name),
-                    subtitle: Text(unit.category.displayName),
+                    subtitle: Text(unit.categoryLabel),
                     trailing: isSelected
                         ? Icon(Icons.check, color: AppColors.primary)
                         : null,
