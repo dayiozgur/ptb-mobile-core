@@ -1,13 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../organization/screens/organization_selector_screen.dart';
+import '../../site/screens/site_selector_screen.dart';
+import '../../unit/screens/unit_selector_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isLoading = true;
+  int _organizationCount = 0;
+  int _siteCount = 0;
+  int _unitCount = 0;
+  int _memberCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final tenantId = tenantService.currentTenantId;
+      final organizationId = organizationService.currentOrganizationId;
+      final siteId = siteService.currentSiteId;
+
+      // Paralel olarak verileri yükle
+      final futures = <Future>[];
+
+      if (tenantId != null) {
+        futures.add(
+          organizationService.getOrganizations(tenantId).then((orgs) {
+            _organizationCount = orgs.length;
+          }),
+        );
+      }
+
+      if (organizationId != null) {
+        futures.add(
+          siteService.getSites(organizationId).then((sites) {
+            _siteCount = sites.length;
+          }),
+        );
+      }
+
+      if (siteId != null) {
+        futures.add(
+          unitService.getUnits(siteId).then((units) {
+            _unitCount = units.length;
+          }),
+        );
+      }
+
+      // Üye sayısını al (tenant_users'dan)
+      if (tenantId != null) {
+        futures.add(
+          _getMemberCount(tenantId).then((count) {
+            _memberCount = count;
+          }),
+        );
+      }
+
+      await Future.wait(futures);
+    } catch (e) {
+      Logger.error('Failed to load dashboard data', e);
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<int> _getMemberCount(String tenantId) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('tenant_users')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'active');
+      return (response as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final tenant = tenantService.currentTenant;
+    final organization = organizationService.currentOrganization;
+    final site = siteService.currentSite;
     final user = authService.currentUser;
 
     return AppScaffold(
@@ -29,10 +120,7 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
       child: RefreshIndicator(
-        onRefresh: () async {
-          // Refresh data
-          await Future.delayed(const Duration(seconds: 1));
-        },
+        onRefresh: _loadDashboardData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: AppSpacing.screenPadding,
@@ -44,23 +132,56 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Quick stats
+              // Current context card
+              _CurrentContextCard(
+                organization: organization,
+                site: site,
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Dashboard stats
               AppSectionHeader(
-                title: 'Özet',
-                action: TextButton(
-                  onPressed: () {},
-                  child: const Text('Tümünü Gör'),
-                ),
+                title: 'Genel Bakış',
+                action: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const _QuickStats(),
+              _DashboardStats(
+                organizationCount: _organizationCount,
+                siteCount: _siteCount,
+                unitCount: _unitCount,
+                memberCount: _memberCount,
+                isLoading: _isLoading,
+              ),
 
               const SizedBox(height: AppSpacing.lg),
 
               // Quick actions
               AppSectionHeader(title: 'Hızlı İşlemler'),
               const SizedBox(height: AppSpacing.sm),
-              const _QuickActions(),
+              _QuickActions(
+                onNavigateOrganizations: () => context.go('/organizations'),
+                onNavigateSites: () => context.go('/sites'),
+                onNavigateUnits: () => context.go('/units'),
+                onNavigateMembers: () => context.go('/members'),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Hierarchy navigation
+              AppSectionHeader(title: 'Hiyerarşi'),
+              const SizedBox(height: AppSpacing.sm),
+              _HierarchyCard(
+                tenant: tenant,
+                organization: organization,
+                site: site,
+              ),
 
               const SizedBox(height: AppSpacing.lg),
 
@@ -100,9 +221,12 @@ class _WelcomeCard extends StatelessWidget {
         padding: AppSpacing.cardInsets,
         child: Row(
           children: [
-            AppAvatar(
-              name: user?.email ?? 'User',
-              size: AppAvatarSize.large,
+            GestureDetector(
+              onTap: () => context.push('/profile'),
+              child: AppAvatar(
+                name: user?.email ?? 'User',
+                size: AppAvatarSize.large,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -122,14 +246,30 @@ class _WelcomeCard extends StatelessWidget {
                   ),
                   if (tenant != null) ...[
                     const SizedBox(height: AppSpacing.xs),
-                    AppBadge(
-                      label: tenant!.name,
-                      variant: AppBadgeVariant.primary,
-                      size: AppBadgeSize.small,
+                    Row(
+                      children: [
+                        AppBadge(
+                          label: tenant!.plan.name.toUpperCase(),
+                          variant: _getPlanBadgeVariant(tenant!.plan),
+                          size: AppBadgeSize.small,
+                        ),
+                        if (tenant!.isTrial) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          AppBadge(
+                            label: 'Deneme',
+                            variant: AppBadgeVariant.warning,
+                            size: AppBadgeSize.small,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ],
               ),
+            ),
+            AppIconButton(
+              icon: Icons.swap_horiz,
+              onPressed: () => context.go('/tenant-select'),
             ),
           ],
         ),
@@ -147,95 +287,495 @@ class _WelcomeCard extends StatelessWidget {
       return 'İyi Akşamlar!';
     }
   }
+
+  AppBadgeVariant _getPlanBadgeVariant(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.free:
+        return AppBadgeVariant.secondary;
+      case SubscriptionPlan.basic:
+        return AppBadgeVariant.info;
+      case SubscriptionPlan.professional:
+        return AppBadgeVariant.primary;
+      case SubscriptionPlan.enterprise:
+        return AppBadgeVariant.success;
+    }
+  }
 }
 
-class _QuickStats extends StatelessWidget {
-  const _QuickStats();
+class _CurrentContextCard extends StatelessWidget {
+  final Organization? organization;
+  final Site? site;
+
+  const _CurrentContextCard({
+    this.organization,
+    this.site,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: MetricCard(
-            title: 'Toplam Kayıt',
-            value: '1,234',
-            icon: Icons.inventory_2_outlined,
-            trend: MetricTrend.up,
-            trendValue: '+12%',
-          ),
+    if (organization == null && site == null) {
+      return const SizedBox.shrink();
+    }
+
+    return AppCard(
+      child: Padding(
+        padding: AppSpacing.cardInsets,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.location_on, color: AppColors.primary, size: 18),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Mevcut Konum',
+                  style: AppTypography.caption1.copyWith(
+                    color: AppColors.secondaryLabel(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (organization != null) ...[
+              _ContextItem(
+                icon: Icons.apartment,
+                label: 'Organizasyon',
+                value: organization!.name,
+                onTap: () => context.go('/organizations'),
+              ),
+            ],
+            if (site != null) ...[
+              if (organization != null) const SizedBox(height: AppSpacing.xs),
+              _ContextItem(
+                icon: Icons.location_city,
+                label: 'Site',
+                value: site!.name,
+                onTap: () => context.go('/sites'),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: MetricCard(
-            title: 'Aktif',
-            value: '892',
-            icon: Icons.check_circle_outline,
-            color: AppColors.success,
-          ),
+      ),
+    );
+  }
+}
+
+class _ContextItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _ContextItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: AppColors.tertiaryLabel(context)),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              '$label: ',
+              style: AppTypography.caption1.copyWith(
+                color: AppColors.tertiaryLabel(context),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: AppTypography.subheadline,
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.tertiaryLabel(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardStats extends StatelessWidget {
+  final int organizationCount;
+  final int siteCount;
+  final int unitCount;
+  final int memberCount;
+  final bool isLoading;
+
+  const _DashboardStats({
+    required this.organizationCount,
+    required this.siteCount,
+    required this.unitCount,
+    required this.memberCount,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.apartment,
+                value: isLoading ? '-' : '$organizationCount',
+                label: 'Organizasyon',
+                color: Colors.blue,
+                onTap: () => context.go('/organizations'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.location_city,
+                value: isLoading ? '-' : '$siteCount',
+                label: 'Site',
+                color: Colors.green,
+                onTap: () => context.go('/sites'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.space_dashboard,
+                value: isLoading ? '-' : '$unitCount',
+                label: 'Alan',
+                color: Colors.orange,
+                onTap: () => context.go('/units'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.people,
+                value: isLoading ? '-' : '$memberCount',
+                label: 'Üye',
+                color: Colors.purple,
+                onTap: () => context.go('/members'),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _StatCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      child: Padding(
+        padding: AppSpacing.cardInsets,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              value,
+              style: AppTypography.title1.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              label,
+              style: AppTypography.caption1.copyWith(
+                color: AppColors.secondaryLabel(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _QuickActions extends StatelessWidget {
-  const _QuickActions();
+  final VoidCallback onNavigateOrganizations;
+  final VoidCallback onNavigateSites;
+  final VoidCallback onNavigateUnits;
+  final VoidCallback onNavigateMembers;
+
+  const _QuickActions({
+    required this.onNavigateOrganizations,
+    required this.onNavigateSites,
+    required this.onNavigateUnits,
+    required this.onNavigateMembers,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       child: Column(
         children: [
-          AppListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.add, color: AppColors.primary),
-            ),
-            title: 'Yeni Kayıt Ekle',
-            subtitle: 'Yeni bir kayıt oluşturun',
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              AppSnackbar.showInfo(context, message: 'Yeni kayıt ekleniyor...');
-            },
+          _QuickActionItem(
+            icon: Icons.apartment,
+            color: Colors.blue,
+            title: 'Organizasyonlar',
+            subtitle: 'Organizasyonları yönetin',
+            onTap: onNavigateOrganizations,
           ),
           Divider(height: 1, color: AppColors.separator(context)),
-          AppListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.search, color: AppColors.success),
-            ),
-            title: 'Kayıt Ara',
-            subtitle: 'Mevcut kayıtlarda arama yapın',
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              AppSnackbar.showInfo(context, message: 'Arama açılıyor...');
-            },
+          _QuickActionItem(
+            icon: Icons.location_city,
+            color: Colors.green,
+            title: 'Siteler',
+            subtitle: 'Siteleri görüntüleyin ve yönetin',
+            onTap: onNavigateSites,
           ),
           Divider(height: 1, color: AppColors.separator(context)),
-          AppListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
+          _QuickActionItem(
+            icon: Icons.space_dashboard,
+            color: Colors.orange,
+            title: 'Alanlar',
+            subtitle: 'Alan hiyerarşisini yönetin',
+            onTap: onNavigateUnits,
+          ),
+          Divider(height: 1, color: AppColors.separator(context)),
+          _QuickActionItem(
+            icon: Icons.people,
+            color: Colors.purple,
+            title: 'Üyeler ve Davetler',
+            subtitle: 'Ekip üyelerini yönetin',
+            onTap: onNavigateMembers,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _QuickActionItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color),
+      ),
+      title: title,
+      subtitle: subtitle,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+class _HierarchyCard extends StatelessWidget {
+  final Tenant? tenant;
+  final Organization? organization;
+  final Site? site;
+
+  const _HierarchyCard({
+    this.tenant,
+    this.organization,
+    this.site,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Padding(
+        padding: AppSpacing.cardInsets,
+        child: Column(
+          children: [
+            _HierarchyLevel(
+              level: 1,
+              icon: Icons.business,
+              label: 'Tenant',
+              value: tenant?.name ?? 'Seçilmedi',
+              isActive: tenant != null,
+              onTap: () => context.go('/tenant-select'),
+            ),
+            _HierarchyConnector(isActive: tenant != null),
+            _HierarchyLevel(
+              level: 2,
+              icon: Icons.apartment,
+              label: 'Organizasyon',
+              value: organization?.name ?? 'Seçilmedi',
+              isActive: organization != null,
+              onTap: () => context.go('/organizations'),
+            ),
+            _HierarchyConnector(isActive: organization != null),
+            _HierarchyLevel(
+              level: 3,
+              icon: Icons.location_city,
+              label: 'Site',
+              value: site?.name ?? 'Seçilmedi',
+              isActive: site != null,
+              onTap: () => context.go('/sites'),
+            ),
+            _HierarchyConnector(isActive: site != null),
+            _HierarchyLevel(
+              level: 4,
+              icon: Icons.space_dashboard,
+              label: 'Alan',
+              value: unitService.currentUnit?.name ?? 'Seçilmedi',
+              isActive: unitService.currentUnit != null,
+              onTap: () => context.go('/units'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HierarchyLevel extends StatelessWidget {
+  final int level;
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _HierarchyLevel({
+    required this.level,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
+                color: isActive
+                    ? AppColors.primary.withOpacity(0.1)
+                    : AppColors.tertiaryLabel(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.bar_chart, color: AppColors.warning),
+              child: Center(
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: isActive
+                      ? AppColors.primary
+                      : AppColors.tertiaryLabel(context),
+                ),
+              ),
             ),
-            title: 'Raporlar',
-            subtitle: 'Detaylı raporları görüntüleyin',
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              AppSnackbar.showInfo(context, message: 'Raporlar yükleniyor...');
-            },
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: AppTypography.caption2.copyWith(
+                      color: AppColors.tertiaryLabel(context),
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: AppTypography.subheadline.copyWith(
+                      color: isActive ? null : AppColors.tertiaryLabel(context),
+                      fontWeight: isActive ? FontWeight.w500 : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.tertiaryLabel(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HierarchyConnector extends StatelessWidget {
+  final bool isActive;
+
+  const _HierarchyConnector({required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 22),
+      child: Row(
+        children: [
+          Container(
+            width: 2,
+            height: 16,
+            color: isActive
+                ? AppColors.primary.withOpacity(0.3)
+                : AppColors.tertiaryLabel(context).withOpacity(0.2),
           ),
         ],
       ),
@@ -250,28 +790,22 @@ class _RecentActivity extends StatelessWidget {
   Widget build(BuildContext context) {
     final activities = [
       _Activity(
-        icon: Icons.add_circle,
+        icon: Icons.login,
         color: AppColors.success,
-        title: 'Yeni kayıt eklendi',
-        subtitle: '5 dakika önce',
+        title: 'Sisteme giriş yapıldı',
+        subtitle: 'Az önce',
       ),
       _Activity(
-        icon: Icons.edit,
+        icon: Icons.swap_horiz,
         color: AppColors.primary,
-        title: 'Kayıt güncellendi',
-        subtitle: '1 saat önce',
+        title: 'Tenant değiştirildi',
+        subtitle: '5 dakika önce',
       ),
       _Activity(
         icon: Icons.person_add,
         color: AppColors.info,
         title: 'Yeni kullanıcı davet edildi',
         subtitle: '2 saat önce',
-      ),
-      _Activity(
-        icon: Icons.delete,
-        color: AppColors.error,
-        title: 'Kayıt silindi',
-        subtitle: 'Dün',
       ),
     ];
 
@@ -296,7 +830,8 @@ class _RecentActivity extends StatelessWidget {
                 title: activity.title,
                 subtitle: activity.subtitle,
               ),
-              if (!isLast) Divider(height: 1, color: AppColors.separator(context)),
+              if (!isLast)
+                Divider(height: 1, color: AppColors.separator(context)),
             ],
           );
         }).toList(),

@@ -12,7 +12,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
+  ThemeMode _themeMode = ThemeMode.system;
+  String _selectedLanguage = 'tr';
+
+  final _languages = [
+    {'code': 'tr', 'name': 'Turkce', 'flag': 'TR'},
+    {'code': 'en', 'name': 'English', 'flag': 'EN'},
+    {'code': 'de', 'name': 'Deutsch', 'flag': 'DE'},
+  ];
 
   @override
   void initState() {
@@ -31,17 +38,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Çıkış Yap'),
-        content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
+        title: const Text('Cikis Yap'),
+        content: const Text('Cikis yapmak istediginizden emin misiniz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: const Text('Iptal'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Çıkış Yap'),
+            child: const Text('Cikis Yap'),
           ),
         ],
       ),
@@ -78,11 +85,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             AppSectionHeader(title: 'Profil'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
+              onTap: () => context.push('/profile'),
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Row(
                   children: [
                     AppAvatar(
+                      imageUrl: user?.userMetadata?['avatar_url'] as String?,
                       name: user?.email ?? 'User',
                       size: AppAvatarSize.large,
                     ),
@@ -92,7 +101,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user?.userMetadata?['full_name'] ?? 'Kullanıcı',
+                            user?.userMetadata?['full_name'] as String? ??
+                                'Kullanici',
                             style: AppTypography.headline,
                           ),
                           Text(
@@ -104,15 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                    AppIconButton(
-                      icon: Icons.edit,
-                      onPressed: () {
-                        AppSnackbar.showInfo(
-                          context,
-                          message: 'Profil düzenleme yakında',
-                        );
-                      },
-                    ),
+                    const Icon(Icons.chevron_right),
                   ],
                 ),
               ),
@@ -120,33 +122,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            // Organization section
-            AppSectionHeader(title: 'Organizasyon'),
+            // Tenant section
+            AppSectionHeader(title: 'Tenant Yonetimi'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
                 children: [
                   AppListTile(
                     leading: AppAvatar(
+                      imageUrl: tenant?.logoUrl,
                       name: tenant?.name ?? 'Org',
                       size: AppAvatarSize.medium,
                     ),
                     title: tenant?.name ?? 'Organizasyon',
                     subtitle: tenant?.plan.name.toUpperCase() ?? 'FREE',
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      AppSnackbar.showInfo(
-                        context,
-                        message: 'Organizasyon detayları yakında',
-                      );
-                    },
+                    onTap: () => _showTenantSettingsSheet(),
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.swap_horiz, color: AppColors.primary),
-                    title: 'Organizasyon Değiştir',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.swap_horiz, color: AppColors.primary),
+                    ),
+                    title: 'Tenant Degistir',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _handleSwitchTenant,
+                  ),
+                  Divider(height: 1, color: AppColors.separator(context)),
+                  AppListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.people, color: Colors.purple),
+                    ),
+                    title: 'Uyeler ve Davetler',
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/members'),
                   ),
                 ],
               ),
@@ -155,14 +174,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Security section
-            AppSectionHeader(title: 'Güvenlik'),
+            AppSectionHeader(title: 'Guvenlik'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
                 children: [
                   AppListTile(
-                    leading: Icon(Icons.lock_outline, color: AppColors.primary),
-                    title: 'Şifre Değiştir',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.lock_outline, color: AppColors.primary),
+                    ),
+                    title: 'Sifre Degistir',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showChangePasswordDialog(),
                   ),
@@ -176,9 +202,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return Column(
                         children: [
                           AppListTile(
-                            leading: Icon(Icons.fingerprint, color: AppColors.primary),
-                            title: 'Biyometrik Giriş',
-                            subtitle: 'Face ID veya parmak izi ile giriş',
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.fingerprint,
+                                  color: Colors.green),
+                            ),
+                            title: 'Biyometrik Giris',
+                            subtitle: 'Face ID veya parmak izi ile giris',
                             trailing: Switch.adaptive(
                               value: _biometricEnabled,
                               onChanged: (value) async {
@@ -192,19 +226,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               activeColor: AppColors.primary,
                             ),
                           ),
-                          Divider(height: 1, color: AppColors.separator(context)),
+                          Divider(
+                              height: 1, color: AppColors.separator(context)),
                         ],
                       );
                     },
                   ),
                   AppListTile(
-                    leading: Icon(Icons.devices, color: AppColors.primary),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.devices, color: Colors.orange),
+                    ),
                     title: 'Aktif Oturumlar',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       AppSnackbar.showInfo(
                         context,
-                        message: 'Oturum yönetimi yakında',
+                        message: 'Oturum yonetimi yakinda',
                       );
                     },
                   ),
@@ -221,23 +263,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   AppListTile(
-                    leading: Icon(Icons.dark_mode, color: AppColors.primary),
-                    title: 'Karanlık Mod',
-                    trailing: Switch.adaptive(
-                      value: _darkModeEnabled,
-                      onChanged: (value) {
-                        setState(() => _darkModeEnabled = value);
-                        AppSnackbar.showInfo(
-                          context,
-                          message: 'Tema değişikliği sistem ayarlarından yapılabilir',
-                        );
-                      },
-                      activeColor: AppColors.primary,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.palette, color: Colors.indigo),
                     ),
+                    title: 'Tema',
+                    subtitle: _getThemeName(_themeMode),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showThemeSelector(),
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.notifications_outlined, color: AppColors.primary),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.language, color: Colors.blue),
+                    ),
+                    title: 'Dil',
+                    subtitle: _getLanguageName(_selectedLanguage),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showLanguageSelector(),
+                  ),
+                  Divider(height: 1, color: AppColors.separator(context)),
+                  AppListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child:
+                          const Icon(Icons.notifications, color: Colors.red),
+                    ),
                     title: 'Bildirimler',
                     trailing: Switch.adaptive(
                       value: _notificationsEnabled,
@@ -247,16 +311,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       activeColor: AppColors.primary,
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Data section
+            AppSectionHeader(title: 'Veri Yonetimi'),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: Column(
+                children: [
+                  AppListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.cached, color: Colors.teal),
+                    ),
+                    title: 'Onbellegi Temizle',
+                    subtitle: 'Gecici verileri sil',
+                    onTap: () async {
+                      await cacheManager.clear();
+                      if (mounted) {
+                        AppSnackbar.showSuccess(
+                          context,
+                          message: 'Onbellek temizlendi',
+                        );
+                      }
+                    },
+                  ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.language, color: AppColors.primary),
-                    title: 'Dil',
-                    subtitle: 'Türkçe',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.cyan.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.download, color: Colors.cyan),
+                    ),
+                    title: 'Verilerimi Indir',
+                    subtitle: 'Tum verilerinizi disa aktarin',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       AppSnackbar.showInfo(
                         context,
-                        message: 'Dil seçimi yakında',
+                        message: 'Veri indirme yakinda',
                       );
                     },
                   ),
@@ -267,34 +371,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // About section
-            AppSectionHeader(title: 'Hakkında'),
+            AppSectionHeader(title: 'Hakkinda'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
                 children: [
                   AppListTile(
-                    leading: Icon(Icons.info_outline, color: AppColors.primary),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.info_outline, color: AppColors.primary),
+                    ),
                     title: 'Versiyon',
                     subtitle: '1.0.0 (Build 1)',
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.description_outlined, color: AppColors.primary),
-                    title: 'Kullanım Koşulları',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.description_outlined,
+                          color: Colors.grey),
+                    ),
+                    title: 'Kullanim Kosullari',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {},
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
-                    title: 'Gizlilik Politikası',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.privacy_tip_outlined,
+                          color: Colors.grey),
+                    ),
+                    title: 'Gizlilik Politikasi',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {},
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
-                    leading: Icon(Icons.help_outline, color: AppColors.primary),
-                    title: 'Yardım & Destek',
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child:
+                          const Icon(Icons.help_outline, color: Colors.grey),
+                    ),
+                    title: 'Yardim & Destek',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {},
                   ),
@@ -306,7 +441,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Logout button
             AppButton(
-              label: 'Çıkış Yap',
+              label: 'Cikis Yap',
               variant: AppButtonVariant.destructive,
               icon: Icons.logout,
               onPressed: _handleLogout,
@@ -317,6 +452,257 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  String _getThemeName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'Sistem';
+      case ThemeMode.light:
+        return 'Acik';
+      case ThemeMode.dark:
+        return 'Koyu';
+    }
+  }
+
+  String _getLanguageName(String code) {
+    final lang = _languages.firstWhere(
+      (l) => l['code'] == code,
+      orElse: () => _languages.first,
+    );
+    return lang['name'] as String;
+  }
+
+  void _showThemeSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => AppBottomSheet(
+        title: 'Tema Sec',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ThemeOption(
+              icon: Icons.brightness_auto,
+              title: 'Sistem',
+              subtitle: 'Cihaz ayarlarini kullan',
+              isSelected: _themeMode == ThemeMode.system,
+              onTap: () {
+                setState(() => _themeMode = ThemeMode.system);
+                Navigator.pop(context);
+              },
+            ),
+            Divider(height: 1, color: AppColors.separator(context)),
+            _ThemeOption(
+              icon: Icons.light_mode,
+              title: 'Acik',
+              subtitle: 'Her zaman acik tema',
+              isSelected: _themeMode == ThemeMode.light,
+              onTap: () {
+                setState(() => _themeMode = ThemeMode.light);
+                Navigator.pop(context);
+              },
+            ),
+            Divider(height: 1, color: AppColors.separator(context)),
+            _ThemeOption(
+              icon: Icons.dark_mode,
+              title: 'Koyu',
+              subtitle: 'Her zaman koyu tema',
+              isSelected: _themeMode == ThemeMode.dark,
+              onTap: () {
+                setState(() => _themeMode = ThemeMode.dark);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => AppBottomSheet(
+        title: 'Dil Sec',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ..._languages.map((lang) {
+              final isLast = lang == _languages.last;
+              return Column(
+                children: [
+                  AppListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          lang['flag'] as String,
+                          style: AppTypography.subheadline.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: lang['name'] as String,
+                    trailing: _selectedLanguage == lang['code']
+                        ? Icon(Icons.check, color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      setState(
+                          () => _selectedLanguage = lang['code'] as String);
+                      Navigator.pop(context);
+                      AppSnackbar.showInfo(
+                        context,
+                        message:
+                            'Dil degisikligi uygulama yeniden baslatildiginda aktif olacak',
+                      );
+                    },
+                  ),
+                  if (!isLast)
+                    Divider(height: 1, color: AppColors.separator(context)),
+                ],
+              );
+            }),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTenantSettingsSheet() {
+    final tenant = tenantService.currentTenant;
+    if (tenant == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AppBottomSheet(
+        title: 'Tenant Ayarlari',
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Tenant info
+              Center(
+                child: Column(
+                  children: [
+                    AppAvatar(
+                      imageUrl: tenant.logoUrl,
+                      name: tenant.name,
+                      size: AppAvatarSize.xlarge,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      tenant.name,
+                      style: AppTypography.title2,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AppBadge(
+                          label: tenant.plan.name.toUpperCase(),
+                          variant: _getPlanVariant(tenant.plan),
+                        ),
+                        if (tenant.isTrial) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          AppBadge(
+                            label: 'Deneme',
+                            variant: AppBadgeVariant.warning,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Plan info
+              AppCard(
+                child: Padding(
+                  padding: AppSpacing.cardInsets,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Plan Bilgileri',
+                        style: AppTypography.subheadline.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _InfoRow(
+                        label: 'Mevcut Plan',
+                        value: tenant.plan.name,
+                      ),
+                      if (tenant.isTrial && tenant.trialEndsAt != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        _InfoRow(
+                          label: 'Deneme Bitis',
+                          value: _formatDate(tenant.trialEndsAt!),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.xs),
+                      _InfoRow(
+                        label: 'Durum',
+                        value: tenant.active ? 'Aktif' : 'Pasif',
+                        valueColor:
+                            tenant.active ? AppColors.success : AppColors.error,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Actions
+              AppButton(
+                label: 'Plani Yukselt',
+                icon: Icons.upgrade,
+                onPressed: () {
+                  Navigator.pop(context);
+                  AppSnackbar.showInfo(
+                    context,
+                    message: 'Plan yukseltme yakinda',
+                  );
+                },
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  AppBadgeVariant _getPlanVariant(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.free:
+        return AppBadgeVariant.secondary;
+      case SubscriptionPlan.basic:
+        return AppBadgeVariant.info;
+      case SubscriptionPlan.professional:
+        return AppBadgeVariant.primary;
+      case SubscriptionPlan.enterprise:
+        return AppBadgeVariant.success;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}.${date.month}.${date.year}';
   }
 
   void _showChangePasswordDialog() {
@@ -333,7 +719,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: AppBottomSheet(
-          title: 'Şifre Değiştir',
+          title: 'Sifre Degistir',
           child: Padding(
             padding: AppSpacing.screenPadding,
             child: Form(
@@ -344,28 +730,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   AppPasswordField(
                     controller: currentController,
-                    label: 'Mevcut Şifre',
+                    label: 'Mevcut Sifre',
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppPasswordField(
                     controller: newController,
-                    label: 'Yeni Şifre',
+                    label: 'Yeni Sifre',
                     validator: Validators.password(),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppPasswordField(
                     controller: confirmController,
-                    label: 'Yeni Şifre (Tekrar)',
+                    label: 'Yeni Sifre (Tekrar)',
                     validator: (value) {
                       if (value != newController.text) {
-                        return 'Şifreler eşleşmiyor';
+                        return 'Sifreler eslesmedi';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   AppButton(
-                    label: 'Şifreyi Güncelle',
+                    label: 'Sifreyi Guncelle',
                     onPressed: () async {
                       if (!formKey.currentState!.validate()) return;
 
@@ -380,13 +766,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           success: (_, __) {
                             AppSnackbar.showSuccess(
                               context,
-                              message: 'Şifre başarıyla güncellendi',
+                              message: 'Sifre basariyla guncellendi',
                             );
                           },
                           failure: (error) {
                             AppSnackbar.showError(
                               context,
-                              message: error?.message ?? 'Şifre güncellenemedi',
+                              message:
+                                  error?.message ?? 'Sifre guncellenemedi',
                             );
                           },
                         );
@@ -400,6 +787,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: (isSelected ? AppColors.primary : Colors.grey).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? AppColors.primary : Colors.grey,
+        ),
+      ),
+      title: title,
+      subtitle: subtitle,
+      trailing: isSelected ? Icon(Icons.check, color: AppColors.primary) : null,
+      onTap: onTap,
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption1.copyWith(
+            color: AppColors.secondaryLabel(context),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTypography.subheadline.copyWith(
+            color: valueColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

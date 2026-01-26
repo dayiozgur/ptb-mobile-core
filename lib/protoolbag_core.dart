@@ -54,6 +54,10 @@ export 'src/core/organization/organization_service.dart';
 export 'src/core/site/site_model.dart';
 export 'src/core/site/site_service.dart';
 
+// Core - Unit
+export 'src/core/unit/unit_model.dart';
+export 'src/core/unit/unit_service.dart';
+
 // Core - Invitation
 export 'src/core/invitation/invitation_model.dart';
 export 'src/core/invitation/invitation_service.dart';

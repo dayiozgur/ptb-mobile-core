@@ -11,6 +11,8 @@ import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/site/screens/site_selector_screen.dart';
 import '../features/tenant/screens/tenant_selector_screen.dart';
+import '../features/unit/screens/unit_selector_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -89,6 +91,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
+      // Unit Selection
+      // ==================
+      GoRoute(
+        path: '/units',
+        name: 'units',
+        builder: (context, state) => const UnitSelectorScreen(),
+      ),
+
+      // ==================
       // Main App Routes
       // ==================
       GoRoute(
@@ -105,6 +116,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/members',
         name: 'members',
         builder: (context, state) => const MembersScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
 
