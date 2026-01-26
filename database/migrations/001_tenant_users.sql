@@ -208,6 +208,13 @@ $$ LANGUAGE plpgsql;
 
 ALTER TABLE public.tenant_users ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for idempotent migration)
+DROP POLICY IF EXISTS "Users can view own memberships" ON public.tenant_users;
+DROP POLICY IF EXISTS "Tenant admins can view all members" ON public.tenant_users;
+DROP POLICY IF EXISTS "Users can update own membership" ON public.tenant_users;
+DROP POLICY IF EXISTS "Tenant admins can insert members" ON public.tenant_users;
+DROP POLICY IF EXISTS "Tenant owners can delete members" ON public.tenant_users;
+
 -- Kullanıcı kendi üyeliklerini görebilir
 CREATE POLICY "Users can view own memberships"
     ON public.tenant_users
