@@ -43,11 +43,12 @@ export 'src/core/auth/auth_result.dart';
 export 'src/core/auth/biometric_auth.dart';
 
 // Core - Tenant
+export 'src/core/tenant/tenant_model.dart';
 export 'src/core/tenant/tenant_service.dart';
 
-// Core - Initialization
-export 'src/core/core_initializer.dart';
-export 'src/core/di/injection.dart';
+// Core - DI & Initialization
+export 'src/core/di/service_locator.dart';
+export 'src/core/di/core_initializer.dart';
 
 // Presentation - Widgets - Buttons
 export 'src/presentation/widgets/buttons/app_button.dart';
