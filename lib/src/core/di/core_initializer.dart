@@ -5,9 +5,15 @@ import '../auth/auth_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../localization/localization_service.dart';
+import '../notification/notification_service.dart';
+import '../organization/organization_service.dart';
+import '../push/push_notification_service.dart';
+import '../search/search_service.dart';
+import '../site/site_service.dart';
 import '../storage/cache_manager.dart';
 import '../tenant/tenant_service.dart';
 import '../theme/theme_service.dart';
+import '../unit/unit_service.dart';
 import '../utils/logger.dart';
 import 'service_locator.dart';
 
@@ -233,7 +239,12 @@ class CoreInitializer {
       final offlineSyncService = sl<OfflineSyncService>();
       await offlineSyncService.initialize();
 
-      // Step 9: Session restore
+      // Step 9: Push Notification Service başlat
+      onProgress?.call('Push Notification Service');
+      final pushNotificationService = sl<PushNotificationService>();
+      await pushNotificationService.initialize();
+
+      // Step 10: Session restore
       bool sessionRestored = false;
       if (config.autoRestoreSession) {
         onProgress?.call('Session restore');
@@ -243,7 +254,7 @@ class CoreInitializer {
         Logger.debug('Session restore: ${sessionRestored ? 'success' : 'failed'}');
       }
 
-      // Step 10: Tenant restore
+      // Step 11: Tenant restore
       bool tenantRestored = false;
       if (config.autoRestoreTenant && sessionRestored) {
         onProgress?.call('Tenant restore');
@@ -284,10 +295,25 @@ class CoreInitializer {
 
     Logger.debug('Resetting CoreInitializer...');
 
-    // Servisleri temizle
+    // Tüm servisleri temizle
     try {
+      // Core services with dispose
       sl<AuthService>().dispose();
       sl<TenantService>().dispose();
+      sl<ThemeService>().dispose();
+      sl<LocalizationService>().dispose();
+      sl<ConnectivityService>().dispose();
+      sl<OfflineSyncService>().dispose();
+      sl<PushNotificationService>().dispose();
+
+      // Entity services with dispose
+      sl<OrganizationService>().dispose();
+      sl<SiteService>().dispose();
+      sl<UnitService>().dispose();
+      sl<NotificationService>().dispose();
+      sl<SearchService>().dispose();
+
+      // Cache manager (async close)
       await sl<CacheManager>().close();
     } catch (e) {
       Logger.warning('Error disposing services', e);
@@ -335,6 +361,7 @@ extension CoreServices on CoreInitializer {
   static LocalizationService get localization => sl<LocalizationService>();
   static ConnectivityService get connectivity => sl<ConnectivityService>();
   static OfflineSyncService get offlineSync => sl<OfflineSyncService>();
+  static PushNotificationService get pushNotification => sl<PushNotificationService>();
 }
 
 /// Hızlı başlatma helper'ı
