@@ -28,8 +28,8 @@ enum PushTokenType {
   }
 }
 
-/// Bildirim önceliği
-enum NotificationPriority {
+/// Push bildirim önceliği (Android notification channels için)
+enum PushPushNotificationPriority {
   /// Düşük öncelik - sessiz bildirim
   low('low'),
 
@@ -41,7 +41,7 @@ enum NotificationPriority {
 
   final String value;
 
-  const NotificationPriority(this.value);
+  const PushPushNotificationPriority(this.value);
 }
 
 /// Bildirim kanalı (Android)
@@ -49,7 +49,7 @@ class NotificationChannel {
   final String id;
   final String name;
   final String? description;
-  final NotificationPriority priority;
+  final PushNotificationPriority priority;
   final bool playSound;
   final bool enableVibration;
   final bool showBadge;
@@ -58,7 +58,7 @@ class NotificationChannel {
     required this.id,
     required this.name,
     this.description,
-    this.priority = NotificationPriority.normal,
+    this.priority = PushNotificationPriority.normal,
     this.playSound = true,
     this.enableVibration = true,
     this.showBadge = true,
@@ -76,7 +76,7 @@ class NotificationChannel {
     id: 'important',
     name: 'Önemli Bildirimler',
     description: 'Acil ve önemli bildirimler',
-    priority: NotificationPriority.high,
+    priority: PushNotificationPriority.high,
   );
 
   /// Sessiz bildirimler kanalı
@@ -84,7 +84,7 @@ class NotificationChannel {
     id: 'silent',
     name: 'Sessiz Bildirimler',
     description: 'Ses çıkarmayan bildirimler',
-    priority: NotificationPriority.low,
+    priority: PushNotificationPriority.low,
     playSound: false,
     enableVibration: false,
   );

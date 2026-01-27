@@ -214,26 +214,24 @@ class RealtimeService {
     final channelName = 'realtime:$schema:$table:${filter ?? 'all'}';
     final channel = _supabase.channel(channelName);
 
-    // PostgresChangeFilter oluştur
-    final changeFilter = ChannelFilter(
-      event: events.length == 1 ? events.first.value : '*',
-      schema: schema,
-      table: table,
-      filter: filter,
-    );
+    // Event türünü belirle
+    final postgresEvent = events.length == 1
+        ? _mapToPostgresChangeEvent(events.first)
+        : PostgresChangeEvent.all;
 
     // Değişiklikleri dinle
     channel.onPostgresChanges(
-      event: PostgresChangeEvent.values.firstWhere(
-        (e) => e.name.toUpperCase() == changeFilter.event,
-        orElse: () => PostgresChangeEvent.all,
-      ),
+      event: postgresEvent,
       schema: schema,
       table: table,
-      filter: filter,
+      filter: filter != null ? PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: filter.split('=eq.').first,
+        value: filter.split('=eq.').length > 1 ? filter.split('=eq.').last : '',
+      ) : null,
       callback: (payload) {
         try {
-          final eventType = RealtimeEventType.fromString(payload.eventType);
+          final eventType = _mapFromPostgresChangeEvent(payload.eventType);
 
           T? newRecord;
           T? oldRecord;
@@ -281,20 +279,6 @@ class RealtimeService {
       },
     );
 
-    // Bağlantı durumunu dinle
-    channel.onError((error) {
-      Logger.error('Realtime channel error: $error');
-      _subscriptions[subscriptionId]?.status = SubscriptionStatus.error;
-      _statusController.add(SubscriptionStatus.error);
-      onError?.call(error.toString());
-    });
-
-    channel.onClose(() {
-      Logger.debug('Realtime channel closed: $subscriptionId');
-      _subscriptions[subscriptionId]?.status = SubscriptionStatus.disconnected;
-      _statusController.add(SubscriptionStatus.disconnected);
-    });
-
     // Subscribe
     channel.subscribe((status, error) {
       if (status == RealtimeSubscribeStatus.subscribed) {
@@ -302,10 +286,15 @@ class RealtimeService {
         _statusController.add(SubscriptionStatus.connected);
         _isConnected = true;
         Logger.info('Realtime subscribed: $subscriptionId');
-      } else if (error != null) {
+      } else if (status == RealtimeSubscribeStatus.closed) {
+        Logger.debug('Realtime channel closed: $subscriptionId');
+        _subscriptions[subscriptionId]?.status = SubscriptionStatus.disconnected;
+        _statusController.add(SubscriptionStatus.disconnected);
+      } else if (status == RealtimeSubscribeStatus.channelError) {
+        Logger.error('Realtime channel error: $error');
         _subscriptions[subscriptionId]?.status = SubscriptionStatus.error;
         _statusController.add(SubscriptionStatus.error);
-        onError?.call(error.message);
+        onError?.call(error?.toString() ?? 'Unknown error');
       }
     });
 
@@ -362,6 +351,34 @@ class RealtimeService {
   /// Subscription ID oluştur
   String _generateSubscriptionId(String table, String schema, String? filter) {
     return '$schema:$table:${filter ?? 'all'}';
+  }
+
+  /// RealtimeEventType'dan PostgresChangeEvent'e çevir
+  PostgresChangeEvent _mapToPostgresChangeEvent(RealtimeEventType type) {
+    switch (type) {
+      case RealtimeEventType.insert:
+        return PostgresChangeEvent.insert;
+      case RealtimeEventType.update:
+        return PostgresChangeEvent.update;
+      case RealtimeEventType.delete:
+        return PostgresChangeEvent.delete;
+      case RealtimeEventType.all:
+        return PostgresChangeEvent.all;
+    }
+  }
+
+  /// PostgresChangeEvent'den RealtimeEventType'a çevir
+  RealtimeEventType _mapFromPostgresChangeEvent(PostgresChangeEvent event) {
+    switch (event) {
+      case PostgresChangeEvent.insert:
+        return RealtimeEventType.insert;
+      case PostgresChangeEvent.update:
+        return RealtimeEventType.update;
+      case PostgresChangeEvent.delete:
+        return RealtimeEventType.delete;
+      case PostgresChangeEvent.all:
+        return RealtimeEventType.all;
+    }
   }
 
   // ============================================
@@ -455,8 +472,8 @@ class RealtimeService {
     final channel = _supabase.channel(channelName);
 
     channel.onPresenceSync((payload) {
-      final users = channel.presenceState().values.expand((e) => e).toList();
-      final userList = users.map((u) => u.payload).toList();
+      final presenceList = channel.presenceState();
+      final userList = presenceList.map((u) => u.payload).toList();
       onSync?.call(userList);
     });
 
