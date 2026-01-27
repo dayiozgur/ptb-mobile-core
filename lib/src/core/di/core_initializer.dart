@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../storage/cache_manager.dart';
 import '../tenant/tenant_service.dart';
+import '../theme/theme_service.dart';
 import '../utils/logger.dart';
 import 'service_locator.dart';
 
@@ -209,7 +210,12 @@ class CoreInitializer {
         await cacheManager.cleanExpired();
       }
 
-      // Step 5: Session restore
+      // Step 5: Theme Service başlat
+      onProgress?.call('Theme Service');
+      final themeService = sl<ThemeService>();
+      await themeService.initialize();
+
+      // Step 6: Session restore
       bool sessionRestored = false;
       if (config.autoRestoreSession) {
         onProgress?.call('Session restore');
@@ -219,7 +225,7 @@ class CoreInitializer {
         Logger.debug('Session restore: ${sessionRestored ? 'success' : 'failed'}');
       }
 
-      // Step 6: Tenant restore
+      // Step 7: Tenant restore
       bool tenantRestored = false;
       if (config.autoRestoreTenant && sessionRestored) {
         onProgress?.call('Tenant restore');
@@ -307,6 +313,7 @@ extension CoreServices on CoreInitializer {
   static AuthService get auth => sl<AuthService>();
   static TenantService get tenant => sl<TenantService>();
   static CacheManager get cache => sl<CacheManager>();
+  static ThemeService get theme => sl<ThemeService>();
 }
 
 /// Hızlı başlatma helper'ı

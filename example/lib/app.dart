@@ -12,18 +12,24 @@ class ExampleApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeService = sl<ThemeService>();
 
-    return MaterialApp.router(
-      title: Environment.appName,
-      debugShowCheckedModeBanner: false,
+    return ThemeBuilder(
+      themeService: themeService,
+      builder: (context, settings) {
+        return MaterialApp.router(
+          title: Environment.appName,
+          debugShowCheckedModeBanner: false,
 
-      // Theme from Protoolbag Core
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+          // Theme from ThemeService (dynamic)
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          themeMode: themeService.flutterThemeMode,
 
-      // Router configuration
-      routerConfig: router,
+          // Router configuration
+          routerConfig: router,
+        );
+      },
     );
   }
 }

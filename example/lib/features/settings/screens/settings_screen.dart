@@ -12,7 +12,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _notificationsEnabled = true;
-  ThemeMode _themeMode = ThemeMode.system;
+  late AppThemeMode _themeMode;
   String _selectedLanguage = 'tr';
 
   final _languages = [
@@ -24,6 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    // ThemeService'den mevcut tema modunu al
+    _themeMode = themeService.themeMode;
     _loadSettings();
   }
 
@@ -456,13 +458,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _getThemeName(ThemeMode mode) {
+  String _getThemeName(AppThemeMode mode) {
     switch (mode) {
-      case ThemeMode.system:
+      case AppThemeMode.system:
         return 'Sistem';
-      case ThemeMode.light:
+      case AppThemeMode.light:
         return 'Acik';
-      case ThemeMode.dark:
+      case AppThemeMode.dark:
         return 'Koyu';
     }
   }
@@ -487,10 +489,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.brightness_auto,
               title: 'Sistem',
               subtitle: 'Cihaz ayarlarini kullan',
-              isSelected: _themeMode == ThemeMode.system,
-              onTap: () {
-                setState(() => _themeMode = ThemeMode.system);
-                Navigator.pop(context);
+              isSelected: _themeMode == AppThemeMode.system,
+              onTap: () async {
+                await themeService.setThemeMode(AppThemeMode.system);
+                setState(() => _themeMode = AppThemeMode.system);
+                if (mounted) Navigator.pop(context);
               },
             ),
             Divider(height: 1, color: AppColors.separator(context)),
@@ -498,10 +501,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.light_mode,
               title: 'Acik',
               subtitle: 'Her zaman acik tema',
-              isSelected: _themeMode == ThemeMode.light,
-              onTap: () {
-                setState(() => _themeMode = ThemeMode.light);
-                Navigator.pop(context);
+              isSelected: _themeMode == AppThemeMode.light,
+              onTap: () async {
+                await themeService.setThemeMode(AppThemeMode.light);
+                setState(() => _themeMode = AppThemeMode.light);
+                if (mounted) Navigator.pop(context);
               },
             ),
             Divider(height: 1, color: AppColors.separator(context)),
@@ -509,10 +513,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.dark_mode,
               title: 'Koyu',
               subtitle: 'Her zaman koyu tema',
-              isSelected: _themeMode == ThemeMode.dark,
-              onTap: () {
-                setState(() => _themeMode = ThemeMode.dark);
-                Navigator.pop(context);
+              isSelected: _themeMode == AppThemeMode.dark,
+              onTap: () async {
+                await themeService.setThemeMode(AppThemeMode.dark);
+                setState(() => _themeMode = AppThemeMode.dark);
+                if (mounted) Navigator.pop(context);
               },
             ),
             const SizedBox(height: AppSpacing.lg),
