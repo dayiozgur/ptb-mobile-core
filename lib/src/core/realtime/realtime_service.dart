@@ -473,19 +473,21 @@ class RealtimeService {
 
     channel.onPresenceSync((payload) {
       final presenceList = channel.presenceState();
-      final userList = presenceList.map((u) => u.payload).toList();
+      final userList = presenceList
+          .map((u) => Map<String, dynamic>.from(u.state))
+          .toList();
       onSync?.call(userList);
     });
 
     channel.onPresenceJoin((payload) {
       for (final presence in payload.newPresences) {
-        onJoin?.call(presence.payload);
+        onJoin?.call(Map<String, dynamic>.from(presence.state));
       }
     });
 
     channel.onPresenceLeave((payload) {
       for (final presence in payload.leftPresences) {
-        onLeave?.call(presence.payload);
+        onLeave?.call(Map<String, dynamic>.from(presence.state));
       }
     });
 

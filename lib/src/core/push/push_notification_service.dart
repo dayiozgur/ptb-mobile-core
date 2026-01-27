@@ -29,7 +29,7 @@ enum PushTokenType {
 }
 
 /// Push bildirim önceliği (Android notification channels için)
-enum PushPushNotificationPriority {
+enum PushNotificationPriority {
   /// Düşük öncelik - sessiz bildirim
   low('low'),
 
@@ -41,7 +41,7 @@ enum PushPushNotificationPriority {
 
   final String value;
 
-  const PushPushNotificationPriority(this.value);
+  const PushNotificationPriority(this.value);
 }
 
 /// Bildirim kanalı (Android)
