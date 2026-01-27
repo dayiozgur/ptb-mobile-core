@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
+import '../localization/localization_service.dart';
 import '../storage/cache_manager.dart';
 import '../tenant/tenant_service.dart';
 import '../theme/theme_service.dart';
@@ -215,7 +218,22 @@ class CoreInitializer {
       final themeService = sl<ThemeService>();
       await themeService.initialize();
 
-      // Step 6: Session restore
+      // Step 6: Localization Service başlat
+      onProgress?.call('Localization Service');
+      final localizationService = sl<LocalizationService>();
+      await localizationService.initialize();
+
+      // Step 7: Connectivity Service başlat
+      onProgress?.call('Connectivity Service');
+      final connectivityService = sl<ConnectivityService>();
+      await connectivityService.initialize();
+
+      // Step 8: Offline Sync Service başlat
+      onProgress?.call('Offline Sync Service');
+      final offlineSyncService = sl<OfflineSyncService>();
+      await offlineSyncService.initialize();
+
+      // Step 9: Session restore
       bool sessionRestored = false;
       if (config.autoRestoreSession) {
         onProgress?.call('Session restore');
@@ -225,7 +243,7 @@ class CoreInitializer {
         Logger.debug('Session restore: ${sessionRestored ? 'success' : 'failed'}');
       }
 
-      // Step 7: Tenant restore
+      // Step 10: Tenant restore
       bool tenantRestored = false;
       if (config.autoRestoreTenant && sessionRestored) {
         onProgress?.call('Tenant restore');
@@ -314,6 +332,9 @@ extension CoreServices on CoreInitializer {
   static TenantService get tenant => sl<TenantService>();
   static CacheManager get cache => sl<CacheManager>();
   static ThemeService get theme => sl<ThemeService>();
+  static LocalizationService get localization => sl<LocalizationService>();
+  static ConnectivityService get connectivity => sl<ConnectivityService>();
+  static OfflineSyncService get offlineSync => sl<OfflineSyncService>();
 }
 
 /// Hızlı başlatma helper'ı

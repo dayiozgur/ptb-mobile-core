@@ -5,7 +5,11 @@ import '../activity/activity_service.dart';
 import '../api/api_client.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
+import '../invitation/invitation_service.dart';
 import '../notification/notification_service.dart';
+import '../permission/permission_service.dart';
+import '../push/push_notification_service.dart';
+import '../realtime/realtime_service.dart';
 import '../reporting/reporting_service.dart';
 import '../search/search_service.dart';
 import '../theme/theme_service.dart';
@@ -246,6 +250,47 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // PERMISSION SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<PermissionService>(
+    () => PermissionService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // INVITATION SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<InvitationService>(
+    () => InvitationService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+
+  // ============================================
+  // PUSH NOTIFICATION SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<PushNotificationService>(
+    () => PushNotificationService(
+      storage: sl<SecureStorage>(),
+    ),
+  );
+
+  // ============================================
+  // REALTIME SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<RealtimeService>(
+    () => RealtimeService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -297,6 +342,10 @@ ReportingService get reportingService => sl<ReportingService>();
 SearchService get searchService => sl<SearchService>();
 ThemeService get themeService => sl<ThemeService>();
 LocalizationService get localizationService => sl<LocalizationService>();
+PermissionService get permissionService => sl<PermissionService>();
+InvitationService get invitationService => sl<InvitationService>();
+PushNotificationService get pushNotificationService => sl<PushNotificationService>();
+RealtimeService get realtimeService => sl<RealtimeService>();
 ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();
