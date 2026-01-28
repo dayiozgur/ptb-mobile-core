@@ -117,7 +117,7 @@ class ControllerService {
         } catch (cacheError) {
           Logger.warning('Failed to parse controllers from cache, fetching fresh: $cacheError');
           // Cache bozuksa temizle ve DB'den yükle
-          await _cacheManager.remove(cacheKey);
+          await _cacheManager.delete(cacheKey);
         }
       }
     }
