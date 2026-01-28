@@ -456,7 +456,7 @@ class VariableService {
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
     if (_currentTenantId != null) {
-      await _cacheManager.removeByPrefix('variables_$_currentTenantId');
+      await _cacheManager.deleteByPrefix('variables_$_currentTenantId');
     }
   }
 

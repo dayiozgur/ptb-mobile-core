@@ -538,7 +538,7 @@ class WorkflowService {
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
     if (_currentTenantId != null) {
-      await _cacheManager.removeByPrefix('workflows_$_currentTenantId');
+      await _cacheManager.deleteByPrefix('workflows_$_currentTenantId');
     }
   }
 

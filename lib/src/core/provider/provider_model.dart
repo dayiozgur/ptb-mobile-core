@@ -1,5 +1,5 @@
-/// Provider durumu
-enum ProviderStatus {
+/// DataProvider durumu
+enum DataProviderStatus {
   /// Aktif
   active,
 
@@ -15,33 +15,33 @@ enum ProviderStatus {
   /// Devre dışı
   disabled;
 
-  /// String'den ProviderStatus'a dönüştür
-  static ProviderStatus fromString(String? value) {
-    return ProviderStatus.values.firstWhere(
+  /// String'den DataProviderStatus'a dönüştür
+  static DataProviderStatus fromString(String? value) {
+    return DataProviderStatus.values.firstWhere(
       (e) => e.name == value,
-      orElse: () => ProviderStatus.inactive,
+      orElse: () => DataProviderStatus.inactive,
     );
   }
 
   /// Türkçe etiket
   String get label {
     switch (this) {
-      case ProviderStatus.active:
+      case DataProviderStatus.active:
         return 'Aktif';
-      case ProviderStatus.inactive:
+      case DataProviderStatus.inactive:
         return 'Pasif';
-      case ProviderStatus.connecting:
+      case DataProviderStatus.connecting:
         return 'Bağlanıyor';
-      case ProviderStatus.error:
+      case DataProviderStatus.error:
         return 'Hata';
-      case ProviderStatus.disabled:
+      case DataProviderStatus.disabled:
         return 'Devre Dışı';
     }
   }
 }
 
-/// Provider tipi
-enum ProviderType {
+/// DataProvider tipi
+enum DataProviderType {
   /// Modbus
   modbus('MODBUS', 'Modbus'),
 
@@ -74,12 +74,12 @@ enum ProviderType {
 
   final String value;
   final String label;
-  const ProviderType(this.value, this.label);
+  const DataProviderType(this.value, this.label);
 
-  static ProviderType fromString(String? value) {
-    return ProviderType.values.firstWhere(
+  static DataProviderType fromString(String? value) {
+    return DataProviderType.values.firstWhere(
       (e) => e.value == value || e.name == value,
-      orElse: () => ProviderType.custom,
+      orElse: () => DataProviderType.custom,
     );
   }
 }
@@ -110,28 +110,28 @@ enum DataCollectionMode {
   }
 }
 
-/// Provider (Veri Sağlayıcı) modeli
+/// DataProvider (Veri Sağlayıcı) modeli
 ///
 /// IoT sistemindeki veri kaynaklarını/protokollerini temsil eder.
-/// Hiyerarşi: Tenant → Provider → Controller → Variable
-class Provider {
+/// Hiyerarşi: Tenant → DataProvider → Controller → Variable
+class DataProvider {
   /// Benzersiz ID
   final String id;
 
-  /// Provider adı
+  /// DataProvider adı
   final String name;
 
-  /// Provider kodu
+  /// DataProvider kodu
   final String? code;
 
   /// Açıklama
   final String? description;
 
-  /// Provider tipi
-  final ProviderType type;
+  /// DataProvider tipi
+  final DataProviderType type;
 
   /// Durum
-  final ProviderStatus status;
+  final DataProviderStatus status;
 
   /// Aktif mi?
   final bool active;
@@ -235,14 +235,14 @@ class Provider {
   /// Güncelleyen kullanıcı
   final String? updatedBy;
 
-  const Provider({
+  const DataProvider({
     required this.id,
     required this.name,
     required this.tenantId,
     this.code,
     this.description,
-    this.type = ProviderType.modbus,
-    this.status = ProviderStatus.inactive,
+    this.type = DataProviderType.modbus,
+    this.status = DataProviderStatus.inactive,
     this.active = true,
     this.host,
     this.port,
@@ -275,10 +275,10 @@ class Provider {
   // ============================================
 
   /// Aktif mi?
-  bool get isActive => active && status == ProviderStatus.active;
+  bool get isActive => active && status == DataProviderStatus.active;
 
   /// Hata durumunda mı?
-  bool get hasError => status == ProviderStatus.error;
+  bool get hasError => status == DataProviderStatus.error;
 
   /// Bağlantı bilgisi var mı?
   bool get hasConnectionInfo =>
@@ -306,15 +306,15 @@ class Provider {
   // JSON SERIALIZATION
   // ============================================
 
-  factory Provider.fromJson(Map<String, dynamic> json) {
-    return Provider(
+  factory DataProvider.fromJson(Map<String, dynamic> json) {
+    return DataProvider(
       id: json['id'] as String,
       name: json['name'] as String,
       tenantId: json['tenant_id'] as String,
       code: json['code'] as String?,
       description: json['description'] as String?,
-      type: ProviderType.fromString(json['type'] as String?),
-      status: ProviderStatus.fromString(json['status'] as String?),
+      type: DataProviderType.fromString(json['type'] as String?),
+      status: DataProviderStatus.fromString(json['status'] as String?),
       active: json['active'] as bool? ?? true,
       host: json['host'] as String?,
       port: json['port'] as int?,
@@ -395,14 +395,14 @@ class Provider {
   // COPY WITH
   // ============================================
 
-  Provider copyWith({
+  DataProvider copyWith({
     String? id,
     String? name,
     String? tenantId,
     String? code,
     String? description,
-    ProviderType? type,
-    ProviderStatus? status,
+    DataProviderType? type,
+    DataProviderStatus? status,
     bool? active,
     String? host,
     int? port,
@@ -429,7 +429,7 @@ class Provider {
     String? createdBy,
     String? updatedBy,
   }) {
-    return Provider(
+    return DataProvider(
       id: id ?? this.id,
       name: name ?? this.name,
       tenantId: tenantId ?? this.tenantId,
@@ -466,18 +466,18 @@ class Provider {
   }
 
   @override
-  String toString() => 'Provider($id, $name, ${type.label})';
+  String toString() => 'DataProvider($id, $name, ${type.label})';
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is Provider && id == other.id;
+      identical(this, other) || other is DataProvider && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
 }
 
-/// Provider bağlantı testi sonucu
-class ProviderConnectionTestResult {
+/// DataProvider bağlantı testi sonucu
+class DataProviderConnectionTestResult {
   /// Başarılı mı?
   final bool success;
 
@@ -493,7 +493,7 @@ class ProviderConnectionTestResult {
   /// Test tarihi
   final DateTime testedAt;
 
-  const ProviderConnectionTestResult({
+  const DataProviderConnectionTestResult({
     required this.success,
     required this.message,
     this.responseTimeMs,
@@ -501,11 +501,11 @@ class ProviderConnectionTestResult {
     required this.testedAt,
   });
 
-  factory ProviderConnectionTestResult.success({
+  factory DataProviderConnectionTestResult.success({
     required String message,
     int? responseTimeMs,
   }) {
-    return ProviderConnectionTestResult(
+    return DataProviderConnectionTestResult(
       success: true,
       message: message,
       responseTimeMs: responseTimeMs,
@@ -513,11 +513,11 @@ class ProviderConnectionTestResult {
     );
   }
 
-  factory ProviderConnectionTestResult.failure({
+  factory DataProviderConnectionTestResult.failure({
     required String message,
     String? errorDetail,
   }) {
-    return ProviderConnectionTestResult(
+    return DataProviderConnectionTestResult(
       success: false,
       message: message,
       errorDetail: errorDetail,

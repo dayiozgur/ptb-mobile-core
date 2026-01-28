@@ -405,7 +405,7 @@ class ControllerService {
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
     if (_currentTenantId != null) {
-      await _cacheManager.removeByPrefix('controllers_$_currentTenantId');
+      await _cacheManager.deleteByPrefix('controllers_$_currentTenantId');
     }
   }
 

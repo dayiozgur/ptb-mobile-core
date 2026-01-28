@@ -6,29 +6,29 @@ import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'provider_model.dart';
 
-/// Provider Service
+/// DataProvider Service
 ///
 /// IoT veri sağlayıcılarını yönetir.
-class ProviderService {
+class DataProviderService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
 
-  /// Provider listesi stream
-  final _providersController = StreamController<List<Provider>>.broadcast();
+  /// DataProvider listesi stream
+  final _providersController = StreamController<List<DataProvider>>.broadcast();
 
   /// Seçili provider stream
-  final _selectedProvider = StreamController<Provider?>.broadcast();
+  final _selectedProvider = StreamController<DataProvider?>.broadcast();
 
   /// Mevcut tenant ID
   String? _currentTenantId;
 
   /// Mevcut provider listesi
-  List<Provider> _providers = [];
+  List<DataProvider> _providers = [];
 
   /// Seçili provider
-  Provider? _selected;
+  DataProvider? _selected;
 
-  ProviderService({
+  DataProviderService({
     required SupabaseClient supabase,
     required CacheManager cacheManager,
   })  : _supabase = supabase,
@@ -38,24 +38,24 @@ class ProviderService {
   // GETTERS
   // ============================================
 
-  /// Provider listesi stream
-  Stream<List<Provider>> get providersStream => _providersController.stream;
+  /// DataProvider listesi stream
+  Stream<List<DataProvider>> get providersStream => _providersController.stream;
 
   /// Seçili provider stream
-  Stream<Provider?> get selectedStream => _selectedProvider.stream;
+  Stream<DataProvider?> get selectedStream => _selectedProvider.stream;
 
   /// Mevcut provider listesi
-  List<Provider> get providers => List.unmodifiable(_providers);
+  List<DataProvider> get providers => List.unmodifiable(_providers);
 
   /// Seçili provider
-  Provider? get selected => _selected;
+  DataProvider? get selected => _selected;
 
   /// Aktif provider listesi
-  List<Provider> get activeProviders =>
+  List<DataProvider> get activeProviders =>
       _providers.where((p) => p.isActive).toList();
 
   /// Hata durumundaki provider listesi
-  List<Provider> get errorProviders =>
+  List<DataProvider> get errorProviders =>
       _providers.where((p) => p.hasError).toList();
 
   // ============================================
@@ -87,9 +87,9 @@ class ProviderService {
   // ============================================
 
   /// Tüm provider'ları getir
-  Future<List<Provider>> getAll({
-    ProviderType? type,
-    ProviderStatus? status,
+  Future<List<DataProvider>> getAll({
+    DataProviderType? type,
+    DataProviderStatus? status,
     bool forceRefresh = false,
   }) async {
     if (_currentTenantId == null) {
@@ -103,7 +103,7 @@ class ProviderService {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
       if (cached != null) {
         _providers = cached
-            .map((e) => Provider.fromJson(e as Map<String, dynamic>))
+            .map((e) => DataProvider.fromJson(e as Map<String, dynamic>))
             .toList();
         _providersController.add(_providers);
         return _providers;
@@ -127,7 +127,7 @@ class ProviderService {
       final response = await query.order('name');
 
       _providers = (response as List)
-          .map((e) => Provider.fromJson(e as Map<String, dynamic>))
+          .map((e) => DataProvider.fromJson(e as Map<String, dynamic>))
           .toList();
 
       // Cache'e kaydet
@@ -146,7 +146,7 @@ class ProviderService {
   }
 
   /// ID ile provider getir
-  Future<Provider?> getById(String id) async {
+  Future<DataProvider?> getById(String id) async {
     // Önce memory cache'den kontrol
     final cached = _providers.where((p) => p.id == id).firstOrNull;
     if (cached != null) return cached;
@@ -160,15 +160,15 @@ class ProviderService {
 
       if (response == null) return null;
 
-      return Provider.fromJson(response);
+      return DataProvider.fromJson(response);
     } catch (e, stackTrace) {
       Logger.error('Failed to get provider by id', e, stackTrace);
       rethrow;
     }
   }
 
-  /// Provider oluştur
-  Future<Provider> create(Provider provider) async {
+  /// DataProvider oluştur
+  Future<DataProvider> create(DataProvider provider) async {
     if (_currentTenantId == null) {
       throw Exception('Tenant context is not set');
     }
@@ -185,7 +185,7 @@ class ProviderService {
           .select()
           .single();
 
-      final created = Provider.fromJson(response);
+      final created = DataProvider.fromJson(response);
 
       _providers.add(created);
       _providersController.add(_providers);
@@ -193,7 +193,7 @@ class ProviderService {
       // Cache'i temizle
       await _invalidateCache();
 
-      Logger.info('Provider created: ${created.name}');
+      Logger.info('DataProvider created: ${created.name}');
       return created;
     } catch (e, stackTrace) {
       Logger.error('Failed to create provider', e, stackTrace);
@@ -201,8 +201,8 @@ class ProviderService {
     }
   }
 
-  /// Provider güncelle
-  Future<Provider> update(Provider provider) async {
+  /// DataProvider güncelle
+  Future<DataProvider> update(DataProvider provider) async {
     try {
       final data = provider.toJson();
       data['updated_at'] = DateTime.now().toIso8601String();
@@ -214,7 +214,7 @@ class ProviderService {
           .select()
           .single();
 
-      final updated = Provider.fromJson(response);
+      final updated = DataProvider.fromJson(response);
 
       // Liste güncelle
       final index = _providers.indexWhere((p) => p.id == provider.id);
@@ -232,7 +232,7 @@ class ProviderService {
       // Cache'i temizle
       await _invalidateCache();
 
-      Logger.info('Provider updated: ${updated.name}');
+      Logger.info('DataProvider updated: ${updated.name}');
       return updated;
     } catch (e, stackTrace) {
       Logger.error('Failed to update provider', e, stackTrace);
@@ -240,7 +240,7 @@ class ProviderService {
     }
   }
 
-  /// Provider sil
+  /// DataProvider sil
   Future<void> delete(String id) async {
     try {
       await _supabase.from('providers').delete().eq('id', id);
@@ -256,7 +256,7 @@ class ProviderService {
       // Cache'i temizle
       await _invalidateCache();
 
-      Logger.info('Provider deleted: $id');
+      Logger.info('DataProvider deleted: $id');
     } catch (e, stackTrace) {
       Logger.error('Failed to delete provider', e, stackTrace);
       rethrow;
@@ -267,8 +267,8 @@ class ProviderService {
   // STATUS OPERATIONS
   // ============================================
 
-  /// Provider durumunu güncelle
-  Future<void> updateStatus(String id, ProviderStatus status) async {
+  /// DataProvider durumunu güncelle
+  Future<void> updateStatus(String id, DataProviderStatus status) async {
     try {
       await _supabase.from('providers').update({
         'status': status.name,
@@ -282,7 +282,7 @@ class ProviderService {
         _providersController.add(_providers);
       }
 
-      Logger.debug('Provider status updated: $id -> ${status.name}');
+      Logger.debug('DataProvider status updated: $id -> ${status.name}');
     } catch (e, stackTrace) {
       Logger.error('Failed to update provider status', e, stackTrace);
       rethrow;
@@ -293,8 +293,8 @@ class ProviderService {
   // CONNECTION TEST
   // ============================================
 
-  /// Provider bağlantısını test et
-  Future<ProviderConnectionTestResult> testConnection(Provider provider) async {
+  /// DataProvider bağlantısını test et
+  Future<DataProviderConnectionTestResult> testConnection(DataProvider provider) async {
     final stopwatch = Stopwatch()..start();
 
     try {
@@ -308,19 +308,19 @@ class ProviderService {
 
       // Bağlantı bilgisi kontrolü
       if (!provider.hasConnectionInfo) {
-        return ProviderConnectionTestResult.failure(
+        return DataProviderConnectionTestResult.failure(
           message: 'Bağlantı bilgisi eksik',
           errorDetail: 'Host veya connection string belirtilmemiş',
         );
       }
 
-      return ProviderConnectionTestResult.success(
+      return DataProviderConnectionTestResult.success(
         message: 'Bağlantı başarılı',
         responseTimeMs: stopwatch.elapsedMilliseconds,
       );
     } catch (e) {
       stopwatch.stop();
-      return ProviderConnectionTestResult.failure(
+      return DataProviderConnectionTestResult.failure(
         message: 'Bağlantı başarısız',
         errorDetail: e.toString(),
       );
@@ -331,8 +331,8 @@ class ProviderService {
   // SELECTION
   // ============================================
 
-  /// Provider seç
-  void select(Provider? provider) {
+  /// DataProvider seç
+  void select(DataProvider? provider) {
     _selected = provider;
     _selectedProvider.add(_selected);
   }
@@ -347,8 +347,8 @@ class ProviderService {
   // SEARCH
   // ============================================
 
-  /// Provider ara
-  Future<List<Provider>> search(String query) async {
+  /// DataProvider ara
+  Future<List<DataProvider>> search(String query) async {
     if (_currentTenantId == null) {
       return [];
     }
@@ -373,7 +373,7 @@ class ProviderService {
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
     if (_currentTenantId != null) {
-      await _cacheManager.removeByPrefix('providers_$_currentTenantId');
+      await _cacheManager.deleteByPrefix('providers_$_currentTenantId');
     }
   }
 

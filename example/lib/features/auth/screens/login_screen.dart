@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         AppSnackbar.showError(
           context,
-          message: result.error ?? 'Biyometrik doğrulama başarısız',
+          message: result.errorMessage ?? 'Biyometrik doğrulama başarısız',
         );
       }
     } finally {
