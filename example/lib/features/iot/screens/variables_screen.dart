@@ -372,9 +372,9 @@ class _ValueDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = variable.currentValue;
+    final value = variable.value;
 
-    if (value == null) {
+    if (value == null || value.isEmpty) {
       return Text(
         'Değer yok',
         style: AppTypography.caption2.copyWith(
@@ -448,10 +448,10 @@ class _VariableDetailSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _LargeValueDisplay(variable: variable),
-                    if (variable.lastUpdatedAt != null) ...[
+                    if (variable.lastUpdate != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Son güncelleme: ${_formatDate(variable.lastUpdatedAt!)}',
+                        'Son güncelleme: ${_formatDate(variable.lastUpdate!)}',
                         style: AppTypography.caption2.copyWith(
                           color: AppColors.tertiaryLabel(context),
                         ),
@@ -481,23 +481,24 @@ class _VariableDetailSheet extends StatelessWidget {
               ),
             ),
 
-            if (variable.hasAlarmLimits) ...[
+            // Min/Max değerler
+            if (variable.minimum != null || variable.maximum != null || variable.minValue != null || variable.maxValue != null) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Alarm Limitleri'),
+              AppSectionHeader(title: 'Değer Aralığı'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
                   padding: AppSpacing.cardInsets,
                   child: Column(
                     children: [
-                      if (variable.hiHiLimit != null)
-                        _InfoRow(label: 'Çok Yüksek', value: variable.hiHiLimit.toString()),
-                      if (variable.hiLimit != null)
-                        _InfoRow(label: 'Yüksek', value: variable.hiLimit.toString()),
-                      if (variable.loLimit != null)
-                        _InfoRow(label: 'Düşük', value: variable.loLimit.toString()),
-                      if (variable.loLoLimit != null)
-                        _InfoRow(label: 'Çok Düşük', value: variable.loLoLimit.toString()),
+                      if (variable.minimum != null)
+                        _InfoRow(label: 'Minimum', value: variable.minimum!),
+                      if (variable.maximum != null)
+                        _InfoRow(label: 'Maximum', value: variable.maximum!),
+                      if (variable.minValue != null)
+                        _InfoRow(label: 'Min Değer', value: variable.minValue.toString()),
+                      if (variable.maxValue != null)
+                        _InfoRow(label: 'Max Değer', value: variable.maxValue.toString()),
                     ],
                   ),
                 ),
@@ -557,9 +558,9 @@ class _LargeValueDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = variable.currentValue;
+    final value = variable.value;
 
-    if (value == null) {
+    if (value == null || value.isEmpty) {
       return Text(
         '-',
         style: AppTypography.largeTitle.copyWith(

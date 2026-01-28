@@ -116,6 +116,10 @@ export 'src/core/provider/provider_service.dart';
 export 'src/core/variable/variable_model.dart';
 export 'src/core/variable/variable_service.dart';
 
+// Core - IoT Realtime (Controller-Variable Junction)
+export 'src/core/iot_realtime/iot_realtime_model.dart';
+export 'src/core/iot_realtime/iot_realtime_service.dart';
+
 // Core - Workflow
 export 'src/core/workflow/workflow_model.dart';
 export 'src/core/workflow/workflow_service.dart';

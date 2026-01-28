@@ -9,6 +9,10 @@ import 'variable_model.dart';
 /// Variable Service
 ///
 /// IoT değişkenlerini/tagları yönetir.
+///
+/// NOT: Variables tablosunda tenant_id ve controller_id kolonları YOKTUR.
+/// Variables, device_model bazlı şablonlardır.
+/// Controller bağlantısı için IoTRealtimeService kullanılmalıdır.
 class VariableService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
@@ -22,7 +26,7 @@ class VariableService {
   /// Değer güncelleme stream
   final _valueUpdates = StreamController<VariableValueUpdate>.broadcast();
 
-  /// Mevcut tenant ID
+  /// Mevcut tenant ID (geriye uyumluluk için tutulur ama DB sorgularında kullanılmaz)
   String? _currentTenantId;
 
   /// Mevcut variable listesi
@@ -56,14 +60,6 @@ class VariableService {
   /// Seçili variable
   Variable? get selected => _selected;
 
-  /// Alarm durumundaki variable listesi
-  List<Variable> get alarmedVariables =>
-      _variables.where((v) => v.inAlarm).toList();
-
-  /// Kötü kalitedeki variable listesi
-  List<Variable> get badQualityVariables =>
-      _variables.where((v) => !v.isGoodQuality).toList();
-
   // ============================================
   // TENANT CONTEXT
   // ============================================
@@ -93,19 +89,16 @@ class VariableService {
   // ============================================
 
   /// Tüm variable'ları getir
+  ///
+  /// NOT: DB'de tenant_id yok, bu yüzden tüm variable'ları döndürür.
+  /// Daha iyi performans için getByDeviceModel kullanın.
   Future<List<Variable>> getAll({
-    String? controllerId,
-    String? unitId,
+    String? deviceModelId,
     VariableCategory? category,
-    bool? alarmsOnly,
     bool forceRefresh = false,
+    int limit = 1000,
   }) async {
-    if (_currentTenantId == null) {
-      throw Exception('Tenant context is not set');
-    }
-
-    final cacheKey =
-        'variables_${_currentTenantId}_${controllerId ?? 'all'}_${unitId ?? 'all'}';
+    final cacheKey = 'variables_${deviceModelId ?? 'all'}_${category?.value ?? 'all'}';
 
     // Cache kontrolü
     if (!forceRefresh) {
@@ -120,39 +113,27 @@ class VariableService {
     }
 
     try {
-      var query = _supabase
-          .from('variables')
-          .select()
-          .eq('tenant_id', _currentTenantId!);
+      var query = _supabase.from('variables').select();
 
-      if (controllerId != null) {
-        query = query.eq('controller_id', controllerId);
-      }
-
-      if (unitId != null) {
-        query = query.eq('unit_id', unitId);
+      if (deviceModelId != null) {
+        query = query.eq('device_model_id', deviceModelId);
       }
 
       if (category != null) {
-        query = query.eq('category', category.value);
+        query = query.eq('grp_category', category.value);
       }
 
-      final response = await query.order('name');
+      final response = await query.order('name').limit(limit);
 
       _variables = (response as List)
           .map((e) => Variable.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      // Alarm filtresi (client-side)
-      if (alarmsOnly == true) {
-        _variables = _variables.where((v) => v.inAlarm).toList();
-      }
-
       // Cache'e kaydet
       await _cacheManager.set(
         cacheKey,
         _variables.map((e) => e.toJson()).toList(),
-        ttl: const Duration(minutes: 1), // Variable değerleri sık değişir
+        ttl: const Duration(minutes: 2),
       );
 
       _variablesController.add(_variables);
@@ -163,9 +144,59 @@ class VariableService {
     }
   }
 
-  /// Controller'a ait variable'ları getir
-  Future<List<Variable>> getByController(String controllerId) async {
-    return getAll(controllerId: controllerId);
+  /// Device model'e ait variable'ları getir
+  ///
+  /// Variables, device_model bazlı şablonlardır.
+  /// Aynı device_model'e sahip controller'lar bu variable setini paylaşır.
+  Future<List<Variable>> getByDeviceModel(
+    String deviceModelId, {
+    bool forceRefresh = false,
+  }) async {
+    return getAll(deviceModelId: deviceModelId, forceRefresh: forceRefresh);
+  }
+
+  /// Birden fazla device model için variable'ları getir
+  Future<List<Variable>> getByDeviceModels(
+    List<String> deviceModelIds, {
+    bool forceRefresh = false,
+  }) async {
+    if (deviceModelIds.isEmpty) return [];
+
+    final cacheKey = 'variables_multi_${deviceModelIds.join('_')}';
+
+    // Cache kontrolü
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached
+            .map((e) => Variable.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    }
+
+    try {
+      final response = await _supabase
+          .from('variables')
+          .select()
+          .inFilter('device_model_id', deviceModelIds)
+          .order('name');
+
+      final result = (response as List)
+          .map((e) => Variable.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      // Cache'e kaydet
+      await _cacheManager.set(
+        cacheKey,
+        result.map((e) => e.toJson()).toList(),
+        ttl: const Duration(minutes: 2),
+      );
+
+      return result;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get variables by device models', e, stackTrace);
+      rethrow;
+    }
   }
 
   /// ID ile variable getir
@@ -192,13 +223,8 @@ class VariableService {
 
   /// Variable oluştur
   Future<Variable> create(Variable variable) async {
-    if (_currentTenantId == null) {
-      throw Exception('Tenant context is not set');
-    }
-
     try {
       final data = variable.toJson();
-      data['tenant_id'] = _currentTenantId;
       data.remove('id');
       data['created_at'] = DateTime.now().toIso8601String();
 
@@ -291,29 +317,21 @@ class VariableService {
   // ============================================
 
   /// Variable değerini güncelle
-  Future<void> updateValue(
-    String id,
-    dynamic value, {
-    VariableQuality quality = VariableQuality.good,
-  }) async {
+  Future<void> updateValue(String id, String? value) async {
     try {
       final now = DateTime.now();
 
       await _supabase.from('variables').update({
-        'current_value': value,
-        'quality': quality.value,
-        'last_updated_at': now.toIso8601String(),
-        'last_changed_at': now.toIso8601String(),
+        'value': value,
+        'last_update': now.toIso8601String(),
       }).eq('id', id);
 
       // Memory'deki listeyi güncelle
       final index = _variables.indexWhere((v) => v.id == id);
       if (index != -1) {
         _variables[index] = _variables[index].copyWith(
-          currentValue: value,
-          quality: quality,
-          lastUpdatedAt: now,
-          lastChangedAt: now,
+          value: value,
+          lastUpdate: now,
         );
         _variablesController.add(_variables);
       }
@@ -322,7 +340,6 @@ class VariableService {
       _valueUpdates.add(VariableValueUpdate(
         variableId: id,
         value: value,
-        quality: quality,
         timestamp: now,
       ));
 
@@ -341,10 +358,8 @@ class VariableService {
         final index = _variables.indexWhere((v) => v.id == update.variableId);
         if (index != -1) {
           _variables[index] = _variables[index].copyWith(
-            currentValue: update.value,
-            quality: update.quality,
-            lastUpdatedAt: update.timestamp,
-            lastChangedAt: update.timestamp,
+            value: update.value,
+            lastUpdate: update.timestamp,
           );
         }
 
@@ -362,7 +377,7 @@ class VariableService {
   }
 
   /// Variable'a değer yaz
-  Future<bool> writeValue(String id, dynamic value) async {
+  Future<bool> writeValue(String id, String value) async {
     try {
       final variable = await getById(id);
       if (variable == null) {
@@ -406,10 +421,6 @@ class VariableService {
 
   /// Variable ara
   Future<List<Variable>> search(String query) async {
-    if (_currentTenantId == null) {
-      return [];
-    }
-
     if (query.isEmpty) {
       return _variables;
     }
@@ -428,9 +439,9 @@ class VariableService {
     return _variables.where((v) => v.category == category).toList();
   }
 
-  /// Controller'a göre filtrele
-  List<Variable> filterByController(String controllerId) {
-    return _variables.where((v) => v.controllerId == controllerId).toList();
+  /// Device model'e göre filtrele (memory)
+  List<Variable> filterByDeviceModel(String deviceModelId) {
+    return _variables.where((v) => v.deviceModelId == deviceModelId).toList();
   }
 
   // ============================================
@@ -442,8 +453,6 @@ class VariableService {
     return {
       'total': _variables.length,
       'active': _variables.where((v) => v.active).length,
-      'alarmed': _variables.where((v) => v.inAlarm).length,
-      'badQuality': _variables.where((v) => !v.isGoodQuality).length,
       'readable': _variables.where((v) => v.isReadable).length,
       'writable': _variables.where((v) => v.isWritable).length,
     };
@@ -455,9 +464,7 @@ class VariableService {
 
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
-    if (_currentTenantId != null) {
-      await _cacheManager.deleteByPrefix('variables_$_currentTenantId');
-    }
+    await _cacheManager.deleteByPrefix('variables_');
   }
 
   /// Servisi temizle

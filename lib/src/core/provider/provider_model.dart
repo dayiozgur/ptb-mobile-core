@@ -209,6 +209,21 @@ class DataProvider {
   /// Bağlı olduğu Tenant ID
   final String tenantId;
 
+  /// Bağlı olduğu Site ID (DB: site_id)
+  final String? siteId;
+
+  /// Bağlı olduğu Unit ID (DB: unit_id)
+  final String? unitId;
+
+  /// IP adresi (DB: ip)
+  final String? ip;
+
+  /// Hostname (DB: hostname)
+  final String? hostname;
+
+  /// MAC adresi (DB: mac)
+  final String? mac;
+
   // ============================================
   // METADATA
   // ============================================
@@ -262,6 +277,11 @@ class DataProvider {
     this.lastErrorAt,
     this.variableCount = 0,
     this.controllerCount = 0,
+    this.siteId,
+    this.unitId,
+    this.ip,
+    this.hostname,
+    this.mac,
     this.config = const {},
     this.tags = const [],
     required this.createdAt,
@@ -339,6 +359,11 @@ class DataProvider {
           : null,
       variableCount: json['variable_count'] as int? ?? 0,
       controllerCount: json['controller_count'] as int? ?? 0,
+      siteId: json['site_id'] as String?,
+      unitId: json['unit_id'] as String?,
+      ip: json['ip'] as String?,
+      hostname: json['hostname'] as String?,
+      mac: json['mac'] as String?,
       config: json['config'] as Map<String, dynamic>? ?? const {},
       tags: json['tags'] != null
           ? List<String>.from(json['tags'] as List)
@@ -382,6 +407,11 @@ class DataProvider {
       'last_error_at': lastErrorAt?.toIso8601String(),
       'variable_count': variableCount,
       'controller_count': controllerCount,
+      'site_id': siteId,
+      'unit_id': unitId,
+      'ip': ip,
+      'hostname': hostname,
+      'mac': mac,
       'config': config,
       'tags': tags,
       'created_at': createdAt.toIso8601String(),
@@ -422,6 +452,11 @@ class DataProvider {
     DateTime? lastErrorAt,
     int? variableCount,
     int? controllerCount,
+    String? siteId,
+    String? unitId,
+    String? ip,
+    String? hostname,
+    String? mac,
     Map<String, dynamic>? config,
     List<String>? tags,
     DateTime? createdAt,
@@ -456,6 +491,11 @@ class DataProvider {
       lastErrorAt: lastErrorAt ?? this.lastErrorAt,
       variableCount: variableCount ?? this.variableCount,
       controllerCount: controllerCount ?? this.controllerCount,
+      siteId: siteId ?? this.siteId,
+      unitId: unitId ?? this.unitId,
+      ip: ip ?? this.ip,
+      hostname: hostname ?? this.hostname,
+      mac: mac ?? this.mac,
       config: config ?? this.config,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,

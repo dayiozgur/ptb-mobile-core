@@ -245,6 +245,11 @@ class Controller {
   /// Provider ID (veri sağlayıcı)
   final String? providerId;
 
+  /// Device Model ID (cihaz şablonu)
+  /// Variables ile ilişki device_model_id üzerinden kurulur.
+  /// Aynı device_model'e sahip controller'lar aynı variable şablonlarını kullanır.
+  final String? deviceModelId;
+
   // ============================================
   // METADATA
   // ============================================
@@ -301,6 +306,7 @@ class Controller {
     this.unitId,
     this.siteId,
     this.providerId,
+    this.deviceModelId,
     this.tags = const [],
     this.metadata = const {},
     required this.createdAt,
@@ -405,6 +411,7 @@ class Controller {
       unitId: json['unit_id'] as String?,
       siteId: json['site_id'] as String?,
       providerId: json['provider_id'] as String?,
+      deviceModelId: json['device_model_id'] as String?,
       tags: json['tags'] != null
           ? List<String>.from(json['tags'] as List)
           : const [],
@@ -451,6 +458,7 @@ class Controller {
       'unit_id': unitId,
       'site_id': siteId,
       'provider_id': providerId,
+      'device_model_id': deviceModelId,
       'tags': tags,
       'metadata': metadata,
       'created_at': createdAt.toIso8601String(),
@@ -494,6 +502,7 @@ class Controller {
     String? unitId,
     String? siteId,
     String? providerId,
+    String? deviceModelId,
     List<String>? tags,
     Map<String, dynamic>? metadata,
     DateTime? createdAt,
@@ -531,6 +540,7 @@ class Controller {
       unitId: unitId ?? this.unitId,
       siteId: siteId ?? this.siteId,
       providerId: providerId ?? this.providerId,
+      deviceModelId: deviceModelId ?? this.deviceModelId,
       tags: tags ?? this.tags,
       metadata: metadata ?? this.metadata,
       createdAt: createdAt ?? this.createdAt,

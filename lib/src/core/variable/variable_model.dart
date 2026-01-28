@@ -126,36 +126,16 @@ enum VariableCategory {
   }
 }
 
-/// Variable kalite durumu
-enum VariableQuality {
-  /// İyi (geçerli veri)
-  good('GOOD', 'İyi'),
-
-  /// Kötü (geçersiz veri)
-  bad('BAD', 'Kötü'),
-
-  /// Şüpheli (belirsiz veri)
-  uncertain('UNCERTAIN', 'Şüpheli'),
-
-  /// Bağlantı yok
-  noConnection('NO_CONNECTION', 'Bağlantı Yok');
-
-  final String value;
-  final String label;
-  const VariableQuality(this.value, this.label);
-
-  static VariableQuality fromString(String? value) {
-    return VariableQuality.values.firstWhere(
-      (e) => e.value == value || e.name == value,
-      orElse: () => VariableQuality.bad,
-    );
-  }
-}
-
 /// Variable (Değişken/Tag) modeli
 ///
 /// IoT sistemindeki veri noktalarını temsil eder.
-/// Hiyerarşi: Controller → Variable
+/// Variables, device_model bazlı şablonlardır.
+/// Controller bağlantısı realtimes junction tablosu üzerinden sağlanır.
+///
+/// DB Tablosu: variables
+/// NOT: DB'de controller_id ve tenant_id kolonları YOKTUR.
+/// Controller bağlantısı: realtimes.controller_id ↔ realtimes.variable_id
+/// Device model bağlantısı: variables.device_model_id
 class Variable {
   /// Benzersiz ID
   final String id;
@@ -169,13 +149,13 @@ class Variable {
   /// Açıklama
   final String? description;
 
-  /// Veri tipi
+  /// Veri tipi (DB: data_type)
   final VariableDataType dataType;
 
-  /// Erişim modu
+  /// Erişim modu (DB: read_only bool + read_write int)
   final VariableAccessMode accessMode;
 
-  /// Kategori
+  /// Kategori (DB: grp_category)
   final VariableCategory category;
 
   /// Aktif mi?
@@ -185,104 +165,156 @@ class Variable {
   // ADRES BİLGİLERİ
   // ============================================
 
-  /// Adres (Modbus register, OPC node, vb.)
-  final String? address;
+  /// Giriş adresi (DB: address_input)
+  final String? addressInput;
 
-  /// Register tipi (holding, input, coil, vb.)
-  final String? registerType;
-
-  /// Byte sıralaması (big-endian, little-endian)
-  final String? byteOrder;
+  /// Çıkış adresi (DB: address_output)
+  final String? addressOutput;
 
   /// Bit pozisyonu (boolean için)
   final int? bitPosition;
 
   // ============================================
-  // ÖLÇEKLEME
+  // DEĞER BİLGİLERİ
   // ============================================
 
-  /// Ham değer minimum
-  final double? rawMin;
+  /// Minimum değer (DB: minimum - varchar)
+  final String? minimum;
 
-  /// Ham değer maksimum
-  final double? rawMax;
+  /// Maksimum değer (DB: maximum - varchar)
+  final String? maximum;
 
-  /// Ölçeklenmiş değer minimum
-  final double? scaledMin;
+  /// Min değer (DB: min_value - numeric)
+  final double? minValue;
 
-  /// Ölçeklenmiş değer maksimum
-  final double? scaledMax;
+  /// Max değer (DB: max_value - numeric)
+  final double? maxValue;
+
+  /// Varsayılan değer (DB: default_value)
+  final String? defaultValue;
+
+  /// A katsayısı (DB: a_value - ölçekleme)
+  final double? aValue;
+
+  /// B katsayısı (DB: b_value - ölçekleme)
+  final double? bValue;
 
   /// Birim (°C, kW, %, vb.)
   final String? unit;
 
-  /// Ondalık basamak sayısı
-  final int decimals;
+  /// Ölçü birimi (DB: measure_unit)
+  final String? measureUnit;
 
-  // ============================================
-  // ALARM LİMİTLERİ
-  // ============================================
-
-  /// Düşük-düşük limit
-  final double? loLoLimit;
-
-  /// Düşük limit
-  final double? loLimit;
-
-  /// Yüksek limit
-  final double? hiLimit;
-
-  /// Yüksek-yüksek limit
-  final double? hiHiLimit;
-
-  /// Deadband (histerezis)
-  final double? deadband;
+  /// Ondalık (DB: decimal - boolean)
+  final bool decimal;
 
   // ============================================
   // MEVCUT DEĞER
   // ============================================
 
-  /// Mevcut değer
-  final dynamic currentValue;
+  /// Mevcut değer (DB: value - varchar)
+  final String? value;
 
-  /// Kalite durumu
-  final VariableQuality quality;
+  /// Durum (DB: status)
+  final String? status;
 
-  /// Son güncelleme tarihi
-  final DateTime? lastUpdatedAt;
+  /// Tip (DB: type)
+  final String? type;
 
-  /// Son değişiklik tarihi
-  final DateTime? lastChangedAt;
+  /// Variable alt tipi (DB: variable_type)
+  final String? variableType;
+
+  /// Son güncelleme tarihi (DB: last_update)
+  final DateTime? lastUpdate;
+
+  // ============================================
+  // MODBUS/PROTOKOL BİLGİLERİ
+  // ============================================
+
+  /// Boyut (DB: dimension)
+  final int? dimension;
+
+  /// Uzunluk (DB: length)
+  final int? length;
+
+  /// İşaretli mi? (DB: signed)
+  final bool? signed;
+
+  /// Okuma/yazma modu (DB: read_write - int)
+  final int? readWrite;
+
+  /// Sadece okunur (DB: read_only)
+  final bool? readOnly;
+
+  /// Okuma fonksiyon tipi (DB: func_type_read)
+  final int? funcTypeRead;
+
+  /// Yazma fonksiyon tipi (DB: func_type_write)
+  final int? funcTypeWrite;
+
+  /// Fonksiyon kodu (DB: function_code)
+  final String? functionCode;
+
+  /// Encoding (DB: var_encoding)
+  final int? varEncoding;
+
+  // ============================================
+  // BAYRAKLAR
+  // ============================================
+
+  /// Aktif mi? (DB: is_active)
+  final bool? isActive;
+
+  /// İptal edilmiş mi? (DB: is_cancelled)
+  final bool? isCancelled;
+
+  /// Loglanıyor mu? (DB: is_logged)
+  final bool? isLogged;
+
+  /// Mantıksal mı? (DB: is_logic)
+  final bool? isLogic;
+
+  /// Değişiklikte mi? (DB: is_on_change)
+  final bool? isOnChange;
+
+  /// HACCP mi? (DB: ishaccp)
+  final bool? isHaccp;
+
+  /// Zaman serisi etkin mi? (DB: time_series_enabled)
+  final bool? timeSeriesEnabled;
+
+  // ============================================
+  // GÖRSEL BİLGİLERİ
+  // ============================================
+
+  /// Renk (DB: color)
+  final String? color;
+
+  /// Frekans (DB: frequency)
+  final String? frequency;
+
+  /// Gecikme (DB: delay)
+  final String? delay;
+
+  /// Delta (DB: delta)
+  final String? delta;
 
   // ============================================
   // İLİŞKİLER
   // ============================================
 
-  /// Bağlı olduğu Controller ID
-  final String controllerId;
+  /// Device Model ID (DB: device_model_id FK)
+  final String? deviceModelId;
 
-  /// Bağlı olduğu Tenant ID
-  final String tenantId;
-
-  /// Unit ID (opsiyonel)
-  final String? unitId;
-
-  // ============================================
-  // METADATA
-  // ============================================
-
-  /// Etiketler
-  final List<String> tags;
-
-  /// Ek özellikler
-  final Map<String, dynamic> metadata;
+  /// Priority ID (DB: priority_id FK)
+  final String? priorityId;
 
   // ============================================
   // ZAMAN DAMGALARI
   // ============================================
 
   /// Oluşturulma tarihi
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   /// Güncellenme tarihi
   final DateTime? updatedAt;
@@ -296,37 +328,53 @@ class Variable {
   const Variable({
     required this.id,
     required this.name,
-    required this.controllerId,
-    required this.tenantId,
     this.code,
     this.description,
     this.dataType = VariableDataType.float32,
     this.accessMode = VariableAccessMode.readOnly,
     this.category = VariableCategory.other,
     this.active = true,
-    this.address,
-    this.registerType,
-    this.byteOrder,
+    this.addressInput,
+    this.addressOutput,
     this.bitPosition,
-    this.rawMin,
-    this.rawMax,
-    this.scaledMin,
-    this.scaledMax,
+    this.minimum,
+    this.maximum,
+    this.minValue,
+    this.maxValue,
+    this.defaultValue,
+    this.aValue,
+    this.bValue,
     this.unit,
-    this.decimals = 2,
-    this.loLoLimit,
-    this.loLimit,
-    this.hiLimit,
-    this.hiHiLimit,
-    this.deadband,
-    this.currentValue,
-    this.quality = VariableQuality.bad,
-    this.lastUpdatedAt,
-    this.lastChangedAt,
-    this.unitId,
-    this.tags = const [],
-    this.metadata = const {},
-    required this.createdAt,
+    this.measureUnit,
+    this.decimal = false,
+    this.value,
+    this.status,
+    this.type,
+    this.variableType,
+    this.lastUpdate,
+    this.dimension,
+    this.length,
+    this.signed,
+    this.readWrite,
+    this.readOnly,
+    this.funcTypeRead,
+    this.funcTypeWrite,
+    this.functionCode,
+    this.varEncoding,
+    this.isActive,
+    this.isCancelled,
+    this.isLogged,
+    this.isLogic,
+    this.isOnChange,
+    this.isHaccp,
+    this.timeSeriesEnabled,
+    this.color,
+    this.frequency,
+    this.delay,
+    this.delta,
+    this.deviceModelId,
+    this.priorityId,
+    this.createdAt,
     this.updatedAt,
     this.createdBy,
     this.updatedBy,
@@ -336,16 +384,15 @@ class Variable {
   // COMPUTED PROPERTIES
   // ============================================
 
-  /// Değer iyi kalitede mi?
-  bool get isGoodQuality => quality == VariableQuality.good;
-
   /// Okunabilir mi?
   bool get isReadable =>
+      readOnly == true ||
       accessMode == VariableAccessMode.readOnly ||
       accessMode == VariableAccessMode.readWrite;
 
   /// Yazılabilir mi?
   bool get isWritable =>
+      readOnly == false ||
       accessMode == VariableAccessMode.writeOnly ||
       accessMode == VariableAccessMode.readWrite;
 
@@ -355,94 +402,49 @@ class Variable {
   /// Boolean değer mi?
   bool get isBoolean => dataType == VariableDataType.boolean;
 
-  /// Alarm limitleri tanımlı mı?
-  bool get hasAlarmLimits =>
-      loLoLimit != null ||
-      loLimit != null ||
-      hiLimit != null ||
-      hiHiLimit != null;
-
   /// Ölçekleme tanımlı mı?
-  bool get hasScaling =>
-      rawMin != null &&
-      rawMax != null &&
-      scaledMin != null &&
-      scaledMax != null;
+  bool get hasScaling => aValue != null && bValue != null;
 
   /// Numeric değer (null-safe)
   double? get numericValue {
-    if (currentValue == null) return null;
-    if (currentValue is num) return (currentValue as num).toDouble();
-    if (currentValue is String) return double.tryParse(currentValue as String);
-    return null;
+    if (value == null) return null;
+    return double.tryParse(value!);
   }
 
   /// Boolean değer (null-safe)
   bool? get booleanValue {
-    if (currentValue == null) return null;
-    if (currentValue is bool) return currentValue as bool;
-    if (currentValue is num) return (currentValue as num) != 0;
-    if (currentValue is String) {
-      final str = (currentValue as String).toLowerCase();
-      return str == 'true' || str == '1' || str == 'on';
-    }
-    return null;
+    if (value == null) return null;
+    final str = value!.toLowerCase();
+    return str == 'true' || str == '1' || str == 'on';
   }
 
   /// Formatlanmış değer
   String get formattedValue {
-    if (currentValue == null) return '-';
+    if (value == null || value!.isEmpty) return '-';
     if (isBoolean) {
       return booleanValue == true ? 'ON' : 'OFF';
     }
     if (isNumeric && numericValue != null) {
-      final formatted = numericValue!.toStringAsFixed(decimals);
-      return unit != null ? '$formatted $unit' : formatted;
+      final formatted = decimal
+          ? numericValue!.toStringAsFixed(2)
+          : numericValue!.toStringAsFixed(0);
+      final displayUnit = unit ?? measureUnit;
+      return displayUnit != null ? '$formatted $displayUnit' : formatted;
     }
-    return currentValue.toString();
+    return value!;
   }
 
-  /// Alarm durumu
-  AlarmState get alarmState {
-    if (!isNumeric || numericValue == null) return AlarmState.normal;
-
-    final value = numericValue!;
-
-    if (hiHiLimit != null && value >= hiHiLimit!) return AlarmState.hiHi;
-    if (loLoLimit != null && value <= loLoLimit!) return AlarmState.loLo;
-    if (hiLimit != null && value >= hiLimit!) return AlarmState.hi;
-    if (loLimit != null && value <= loLimit!) return AlarmState.lo;
-
-    return AlarmState.normal;
-  }
-
-  /// Alarm durumunda mı?
-  bool get inAlarm => alarmState != AlarmState.normal;
+  /// Adres (geriye uyumluluk - addressInput kullanır)
+  String? get address => addressInput;
 
   // ============================================
   // SCALING
   // ============================================
 
-  /// Ham değeri ölçeklenmiş değere dönüştür
+  /// Ham değeri ölçeklenmiş değere dönüştür (y = a*x + b)
   double? scaleValue(double rawValue) {
     if (!hasScaling) return rawValue;
-
-    final rawRange = rawMax! - rawMin!;
-    if (rawRange == 0) return scaledMin;
-
-    final scaledRange = scaledMax! - scaledMin!;
-    return scaledMin! + ((rawValue - rawMin!) / rawRange) * scaledRange;
-  }
-
-  /// Ölçeklenmiş değeri ham değere dönüştür
-  double? unscaleValue(double scaledValue) {
-    if (!hasScaling) return scaledValue;
-
-    final scaledRange = scaledMax! - scaledMin!;
-    if (scaledRange == 0) return rawMin;
-
-    final rawRange = rawMax! - rawMin!;
-    return rawMin! + ((scaledValue - scaledMin!) / scaledRange) * rawRange;
+    return aValue! * rawValue + bValue!;
   }
 
   // ============================================
@@ -452,46 +454,62 @@ class Variable {
   factory Variable.fromJson(Map<String, dynamic> json) {
     return Variable(
       id: json['id'] as String,
-      name: json['name'] as String,
-      controllerId: json['controller_id'] as String,
-      tenantId: json['tenant_id'] as String,
+      name: json['name'] as String? ?? '',
       code: json['code'] as String?,
       description: json['description'] as String?,
       dataType: VariableDataType.fromString(json['data_type'] as String?),
-      accessMode: VariableAccessMode.fromString(json['access_mode'] as String?),
-      category: VariableCategory.fromString(json['category'] as String?),
+      accessMode: json['read_only'] == true
+          ? VariableAccessMode.readOnly
+          : json['read_write'] != null && (json['read_write'] as int) > 0
+              ? VariableAccessMode.readWrite
+              : VariableAccessMode.readOnly,
+      category: VariableCategory.fromString(json['grp_category'] as String? ?? json['category'] as String?),
       active: json['active'] as bool? ?? true,
-      address: json['address'] as String?,
-      registerType: json['register_type'] as String?,
-      byteOrder: json['byte_order'] as String?,
+      addressInput: json['address_input'] as String? ?? json['address'] as String?,
+      addressOutput: json['address_output'] as String?,
       bitPosition: json['bit_position'] as int?,
-      rawMin: (json['raw_min'] as num?)?.toDouble(),
-      rawMax: (json['raw_max'] as num?)?.toDouble(),
-      scaledMin: (json['scaled_min'] as num?)?.toDouble(),
-      scaledMax: (json['scaled_max'] as num?)?.toDouble(),
+      minimum: json['minimum'] as String?,
+      maximum: json['maximum'] as String?,
+      minValue: (json['min_value'] as num?)?.toDouble(),
+      maxValue: (json['max_value'] as num?)?.toDouble(),
+      defaultValue: json['default_value'] as String?,
+      aValue: (json['a_value'] as num?)?.toDouble(),
+      bValue: (json['b_value'] as num?)?.toDouble(),
       unit: json['unit'] as String?,
-      decimals: json['decimals'] as int? ?? 2,
-      loLoLimit: (json['lolo_limit'] as num?)?.toDouble(),
-      loLimit: (json['lo_limit'] as num?)?.toDouble(),
-      hiLimit: (json['hi_limit'] as num?)?.toDouble(),
-      hiHiLimit: (json['hihi_limit'] as num?)?.toDouble(),
-      deadband: (json['deadband'] as num?)?.toDouble(),
-      currentValue: json['current_value'],
-      quality: VariableQuality.fromString(json['quality'] as String?),
-      lastUpdatedAt: json['last_updated_at'] != null
-          ? DateTime.tryParse(json['last_updated_at'] as String)
+      measureUnit: json['measure_unit'] as String?,
+      decimal: json['decimal'] as bool? ?? false,
+      value: json['value'] as String?,
+      status: json['status'] as String?,
+      type: json['type'] as String?,
+      variableType: json['variable_type'] as String?,
+      lastUpdate: json['last_update'] != null
+          ? DateTime.tryParse(json['last_update'] as String)
           : null,
-      lastChangedAt: json['last_changed_at'] != null
-          ? DateTime.tryParse(json['last_changed_at'] as String)
-          : null,
-      unitId: json['unit_id'] as String?,
-      tags: json['tags'] != null
-          ? List<String>.from(json['tags'] as List)
-          : const [],
-      metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
+      dimension: json['dimension'] as int?,
+      length: json['length'] as int?,
+      signed: json['signed'] as bool?,
+      readWrite: json['read_write'] as int?,
+      readOnly: json['read_only'] as bool?,
+      funcTypeRead: json['func_type_read'] as int?,
+      funcTypeWrite: json['func_type_write'] as int?,
+      functionCode: json['function_code'] as String?,
+      varEncoding: json['var_encoding'] as int?,
+      isActive: json['is_active'] as bool?,
+      isCancelled: json['is_cancelled'] as bool?,
+      isLogged: json['is_logged'] as bool?,
+      isLogic: json['is_logic'] as bool?,
+      isOnChange: json['is_on_change'] as bool?,
+      isHaccp: json['ishaccp'] as bool?,
+      timeSeriesEnabled: json['time_series_enabled'] as bool?,
+      color: json['color'] as String?,
+      frequency: json['frequency'] as String?,
+      delay: json['delay'] as String?,
+      delta: json['delta'] as String?,
+      deviceModelId: json['device_model_id'] as String?,
+      priorityId: json['priority_id'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)
           : null,
@@ -504,37 +522,52 @@ class Variable {
     return {
       'id': id,
       'name': name,
-      'controller_id': controllerId,
-      'tenant_id': tenantId,
       'code': code,
       'description': description,
       'data_type': dataType.value,
-      'access_mode': accessMode.value,
-      'category': category.value,
+      'grp_category': category.value,
       'active': active,
-      'address': address,
-      'register_type': registerType,
-      'byte_order': byteOrder,
+      'address_input': addressInput,
+      'address_output': addressOutput,
       'bit_position': bitPosition,
-      'raw_min': rawMin,
-      'raw_max': rawMax,
-      'scaled_min': scaledMin,
-      'scaled_max': scaledMax,
+      'minimum': minimum,
+      'maximum': maximum,
+      'min_value': minValue,
+      'max_value': maxValue,
+      'default_value': defaultValue,
+      'a_value': aValue,
+      'b_value': bValue,
       'unit': unit,
-      'decimals': decimals,
-      'lolo_limit': loLoLimit,
-      'lo_limit': loLimit,
-      'hi_limit': hiLimit,
-      'hihi_limit': hiHiLimit,
-      'deadband': deadband,
-      'current_value': currentValue,
-      'quality': quality.value,
-      'last_updated_at': lastUpdatedAt?.toIso8601String(),
-      'last_changed_at': lastChangedAt?.toIso8601String(),
-      'unit_id': unitId,
-      'tags': tags,
-      'metadata': metadata,
-      'created_at': createdAt.toIso8601String(),
+      'measure_unit': measureUnit,
+      'decimal': decimal,
+      'value': value,
+      'status': status,
+      'type': type,
+      'variable_type': variableType,
+      'last_update': lastUpdate?.toIso8601String(),
+      'dimension': dimension,
+      'length': length,
+      'signed': signed,
+      'read_write': readWrite,
+      'read_only': readOnly,
+      'func_type_read': funcTypeRead,
+      'func_type_write': funcTypeWrite,
+      'function_code': functionCode,
+      'var_encoding': varEncoding,
+      'is_active': isActive,
+      'is_cancelled': isCancelled,
+      'is_logged': isLogged,
+      'is_logic': isLogic,
+      'is_on_change': isOnChange,
+      'ishaccp': isHaccp,
+      'time_series_enabled': timeSeriesEnabled,
+      'color': color,
+      'frequency': frequency,
+      'delay': delay,
+      'delta': delta,
+      'device_model_id': deviceModelId,
+      'priority_id': priorityId,
+      'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
@@ -548,36 +581,52 @@ class Variable {
   Variable copyWith({
     String? id,
     String? name,
-    String? controllerId,
-    String? tenantId,
     String? code,
     String? description,
     VariableDataType? dataType,
     VariableAccessMode? accessMode,
     VariableCategory? category,
     bool? active,
-    String? address,
-    String? registerType,
-    String? byteOrder,
+    String? addressInput,
+    String? addressOutput,
     int? bitPosition,
-    double? rawMin,
-    double? rawMax,
-    double? scaledMin,
-    double? scaledMax,
+    String? minimum,
+    String? maximum,
+    double? minValue,
+    double? maxValue,
+    String? defaultValue,
+    double? aValue,
+    double? bValue,
     String? unit,
-    int? decimals,
-    double? loLoLimit,
-    double? loLimit,
-    double? hiLimit,
-    double? hiHiLimit,
-    double? deadband,
-    dynamic currentValue,
-    VariableQuality? quality,
-    DateTime? lastUpdatedAt,
-    DateTime? lastChangedAt,
-    String? unitId,
-    List<String>? tags,
-    Map<String, dynamic>? metadata,
+    String? measureUnit,
+    bool? decimal,
+    String? value,
+    String? status,
+    String? type,
+    String? variableType,
+    DateTime? lastUpdate,
+    int? dimension,
+    int? length,
+    bool? signed,
+    int? readWrite,
+    bool? readOnly,
+    int? funcTypeRead,
+    int? funcTypeWrite,
+    String? functionCode,
+    int? varEncoding,
+    bool? isActive,
+    bool? isCancelled,
+    bool? isLogged,
+    bool? isLogic,
+    bool? isOnChange,
+    bool? isHaccp,
+    bool? timeSeriesEnabled,
+    String? color,
+    String? frequency,
+    String? delay,
+    String? delta,
+    String? deviceModelId,
+    String? priorityId,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
@@ -586,36 +635,52 @@ class Variable {
     return Variable(
       id: id ?? this.id,
       name: name ?? this.name,
-      controllerId: controllerId ?? this.controllerId,
-      tenantId: tenantId ?? this.tenantId,
       code: code ?? this.code,
       description: description ?? this.description,
       dataType: dataType ?? this.dataType,
       accessMode: accessMode ?? this.accessMode,
       category: category ?? this.category,
       active: active ?? this.active,
-      address: address ?? this.address,
-      registerType: registerType ?? this.registerType,
-      byteOrder: byteOrder ?? this.byteOrder,
+      addressInput: addressInput ?? this.addressInput,
+      addressOutput: addressOutput ?? this.addressOutput,
       bitPosition: bitPosition ?? this.bitPosition,
-      rawMin: rawMin ?? this.rawMin,
-      rawMax: rawMax ?? this.rawMax,
-      scaledMin: scaledMin ?? this.scaledMin,
-      scaledMax: scaledMax ?? this.scaledMax,
+      minimum: minimum ?? this.minimum,
+      maximum: maximum ?? this.maximum,
+      minValue: minValue ?? this.minValue,
+      maxValue: maxValue ?? this.maxValue,
+      defaultValue: defaultValue ?? this.defaultValue,
+      aValue: aValue ?? this.aValue,
+      bValue: bValue ?? this.bValue,
       unit: unit ?? this.unit,
-      decimals: decimals ?? this.decimals,
-      loLoLimit: loLoLimit ?? this.loLoLimit,
-      loLimit: loLimit ?? this.loLimit,
-      hiLimit: hiLimit ?? this.hiLimit,
-      hiHiLimit: hiHiLimit ?? this.hiHiLimit,
-      deadband: deadband ?? this.deadband,
-      currentValue: currentValue ?? this.currentValue,
-      quality: quality ?? this.quality,
-      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
-      lastChangedAt: lastChangedAt ?? this.lastChangedAt,
-      unitId: unitId ?? this.unitId,
-      tags: tags ?? this.tags,
-      metadata: metadata ?? this.metadata,
+      measureUnit: measureUnit ?? this.measureUnit,
+      decimal: decimal ?? this.decimal,
+      value: value ?? this.value,
+      status: status ?? this.status,
+      type: type ?? this.type,
+      variableType: variableType ?? this.variableType,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      dimension: dimension ?? this.dimension,
+      length: length ?? this.length,
+      signed: signed ?? this.signed,
+      readWrite: readWrite ?? this.readWrite,
+      readOnly: readOnly ?? this.readOnly,
+      funcTypeRead: funcTypeRead ?? this.funcTypeRead,
+      funcTypeWrite: funcTypeWrite ?? this.funcTypeWrite,
+      functionCode: functionCode ?? this.functionCode,
+      varEncoding: varEncoding ?? this.varEncoding,
+      isActive: isActive ?? this.isActive,
+      isCancelled: isCancelled ?? this.isCancelled,
+      isLogged: isLogged ?? this.isLogged,
+      isLogic: isLogic ?? this.isLogic,
+      isOnChange: isOnChange ?? this.isOnChange,
+      isHaccp: isHaccp ?? this.isHaccp,
+      timeSeriesEnabled: timeSeriesEnabled ?? this.timeSeriesEnabled,
+      color: color ?? this.color,
+      frequency: frequency ?? this.frequency,
+      delay: delay ?? this.delay,
+      delta: delta ?? this.delta,
+      deviceModelId: deviceModelId ?? this.deviceModelId,
+      priorityId: priorityId ?? this.priorityId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
@@ -634,44 +699,13 @@ class Variable {
   int get hashCode => id.hashCode;
 }
 
-/// Alarm durumu
-enum AlarmState {
-  /// Normal
-  normal('NORMAL', 'Normal'),
-
-  /// Düşük
-  lo('LO', 'Düşük'),
-
-  /// Düşük-düşük
-  loLo('LOLO', 'Çok Düşük'),
-
-  /// Yüksek
-  hi('HI', 'Yüksek'),
-
-  /// Yüksek-yüksek
-  hiHi('HIHI', 'Çok Yüksek');
-
-  final String value;
-  final String label;
-  const AlarmState(this.value, this.label);
-
-  /// Kritik alarm mı?
-  bool get isCritical => this == loLo || this == hiHi;
-
-  /// Uyarı mı?
-  bool get isWarning => this == lo || this == hi;
-}
-
 /// Variable değer güncelleme
 class VariableValueUpdate {
   /// Variable ID
   final String variableId;
 
   /// Yeni değer
-  final dynamic value;
-
-  /// Kalite
-  final VariableQuality quality;
+  final String? value;
 
   /// Zaman damgası
   final DateTime timestamp;
@@ -679,15 +713,13 @@ class VariableValueUpdate {
   const VariableValueUpdate({
     required this.variableId,
     required this.value,
-    this.quality = VariableQuality.good,
     required this.timestamp,
   });
 
   factory VariableValueUpdate.fromJson(Map<String, dynamic> json) {
     return VariableValueUpdate(
       variableId: json['variable_id'] as String,
-      value: json['value'],
-      quality: VariableQuality.fromString(json['quality'] as String?),
+      value: json['value'] as String?,
       timestamp: DateTime.parse(json['timestamp'] as String),
     );
   }
@@ -696,7 +728,6 @@ class VariableValueUpdate {
     return {
       'variable_id': variableId,
       'value': value,
-      'quality': quality.value,
       'timestamp': timestamp.toIso8601String(),
     };
   }

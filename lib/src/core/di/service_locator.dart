@@ -30,6 +30,7 @@ import '../controller/controller_service.dart';
 import '../provider/provider_service.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
+import '../iot_realtime/iot_realtime_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -320,6 +321,13 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  sl.registerLazySingleton<IoTRealtimeService>(
+    () => IoTRealtimeService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   sl.registerLazySingleton<WorkflowService>(
     () => WorkflowService(
       supabase: sl<SupabaseClient>(),
@@ -391,4 +399,5 @@ SupabaseClient get supabase => sl<SupabaseClient>();
 ControllerService get controllerService => sl<ControllerService>();
 DataProviderService get dataProviderService => sl<DataProviderService>();
 VariableService get variableService => sl<VariableService>();
+IoTRealtimeService get iotRealtimeService => sl<IoTRealtimeService>();
 WorkflowService get workflowService => sl<WorkflowService>();
