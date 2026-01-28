@@ -377,17 +377,17 @@ class Controller {
   factory Controller.fromJson(Map<String, dynamic> json) {
     return Controller(
       id: json['id'] as String,
-      name: json['name'] as String,
-      tenantId: json['tenant_id'] as String,
+      name: json['name'] as String? ?? '',
+      tenantId: json['tenant_id'] as String? ?? '',
       code: json['code'] as String?,
       description: json['description'] as String?,
       type: ControllerType.fromString(json['type'] as String?),
       brand: json['brand'] as String?,
-      model: json['model'] as String?,
-      serialNumber: json['serial_number'] as String?,
+      model: json['model_code'] as String? ?? json['model'] as String?,
+      serialNumber: json['serial'] as String? ?? json['serial_number'] as String?,
       firmwareVersion: json['firmware_version'] as String?,
       protocol: CommunicationProtocol.fromString(json['protocol'] as String?),
-      ipAddress: json['ip_address'] as String?,
+      ipAddress: json['ip'] as String? ?? json['ip_address'] as String?,
       port: json['port'] as int?,
       slaveId: json['slave_id'] as int?,
       connectionString: json['connection_string'] as String?,
@@ -395,14 +395,18 @@ class Controller {
       readTimeout: json['read_timeout'] as int? ?? 3000,
       retryCount: json['retry_count'] as int? ?? 3,
       retryInterval: json['retry_interval'] as int? ?? 1000,
-      status: ControllerStatus.fromString(json['status'] as String?),
+      status: _statusFromJson(json),
       active: json['active'] as bool? ?? true,
-      lastConnectedAt: json['last_connected_at'] != null
-          ? DateTime.tryParse(json['last_connected_at'] as String)
-          : null,
-      lastDataAt: json['last_data_at'] != null
-          ? DateTime.tryParse(json['last_data_at'] as String)
-          : null,
+      lastConnectedAt: json['last_connection_time'] != null
+          ? DateTime.tryParse(json['last_connection_time'] as String)
+          : json['last_connected_at'] != null
+              ? DateTime.tryParse(json['last_connected_at'] as String)
+              : null,
+      lastDataAt: json['last_communication_time'] != null
+          ? DateTime.tryParse(json['last_communication_time'] as String)
+          : json['last_data_at'] != null
+              ? DateTime.tryParse(json['last_data_at'] as String)
+              : null,
       lastError: json['last_error'] as String?,
       lastErrorAt: json['last_error_at'] != null
           ? DateTime.tryParse(json['last_error_at'] as String)
@@ -412,12 +416,12 @@ class Controller {
       siteId: json['site_id'] as String?,
       providerId: json['provider_id'] as String?,
       deviceModelId: json['device_model_id'] as String?,
-      tags: json['tags'] != null
+      tags: json['tags'] != null && json['tags'] is List
           ? List<String>.from(json['tags'] as List)
           : const [],
       metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)
@@ -425,6 +429,20 @@ class Controller {
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
     );
+  }
+
+  /// DB'deki is_enabled/is_canceled alanlarından status türet
+  static ControllerStatus _statusFromJson(Map<String, dynamic> json) {
+    // Önce doğrudan status alanını kontrol et
+    if (json['status'] != null) {
+      return ControllerStatus.fromString(json['status'] as String?);
+    }
+    // DB'deki boolean alanlardan türet
+    final isCanceled = json['is_canceled'] as bool? ?? false;
+    final isEnabled = json['is_enabled'] as bool? ?? true;
+    if (isCanceled) return ControllerStatus.disabled;
+    if (!isEnabled) return ControllerStatus.offline;
+    return ControllerStatus.unknown;
   }
 
   Map<String, dynamic> toJson() {

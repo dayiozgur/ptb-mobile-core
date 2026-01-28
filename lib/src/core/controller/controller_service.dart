@@ -130,19 +130,26 @@ class ControllerService {
         query = query.eq('unit_id', unitId);
       }
 
-      if (status != null) {
-        query = query.eq('status', status.name);
-      }
-
-      if (type != null) {
-        query = query.eq('type', type.value);
-      }
+      // NOT: DB'de 'status' ve 'type' kolonları yok.
+      // status → is_enabled + is_canceled, type → supervisor_type_id (FK)
+      // Filtreleme client-side yapılır.
 
       final response = await query.order('name');
 
-      _controllers = (response as List)
+      var controllers = (response as List)
           .map((e) => Controller.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      // Client-side filtreleme
+      if (status != null) {
+        controllers = controllers.where((c) => c.status == status).toList();
+      }
+
+      if (type != null) {
+        controllers = controllers.where((c) => c.type == type).toList();
+      }
+
+      _controllers = controllers;
 
       // Cache'e kaydet
       await _cacheManager.set(
@@ -284,10 +291,19 @@ class ControllerService {
   /// Controller durumunu güncelle
   Future<void> updateStatus(String id, ControllerStatus status) async {
     try {
-      await _supabase.from('controllers').update({
-        'status': status.name,
+      // DB'de status kolonu yok, is_enabled ve is_canceled kullanılır
+      final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', id);
+      };
+      if (status == ControllerStatus.disabled) {
+        updates['is_canceled'] = true;
+      } else if (status == ControllerStatus.offline) {
+        updates['is_enabled'] = false;
+      } else {
+        updates['is_enabled'] = true;
+        updates['is_canceled'] = false;
+      }
+      await _supabase.from('controllers').update(updates).eq('id', id);
 
       // Liste güncelle
       final index = _controllers.indexWhere((c) => c.id == id);
@@ -307,15 +323,13 @@ class ControllerService {
   Future<void> updateLastConnected(String id, {String? error}) async {
     try {
       final updates = <String, dynamic>{
-        'last_connected_at': DateTime.now().toIso8601String(),
-        'status': error == null
-            ? ControllerStatus.online.name
-            : ControllerStatus.error.name,
+        'last_connection_time': DateTime.now().toIso8601String(),
       };
 
       if (error != null) {
-        updates['last_error'] = error;
-        updates['last_error_at'] = DateTime.now().toIso8601String();
+        updates['is_enabled'] = false;
+      } else {
+        updates['is_enabled'] = true;
       }
 
       await _supabase.from('controllers').update(updates).eq('id', id);
@@ -340,17 +354,32 @@ class ControllerService {
     try {
       final response = await _supabase
           .from('controllers')
-          .select('status')
+          .select('id, is_enabled, is_canceled, active')
           .eq('tenant_id', _currentTenantId!);
 
-      final statuses = (response as List).map((e) => e['status'] as String?);
+      final rows = response as List;
+      int enabledCount = 0;
+      int disabledCount = 0;
+      int canceledCount = 0;
+
+      for (final row in rows) {
+        final isCanceled = row['is_canceled'] as bool? ?? false;
+        final isEnabled = row['is_enabled'] as bool? ?? true;
+        if (isCanceled) {
+          canceledCount++;
+        } else if (isEnabled) {
+          enabledCount++;
+        } else {
+          disabledCount++;
+        }
+      }
 
       return ControllerStats(
-        totalCount: statuses.length,
-        onlineCount: statuses.where((s) => s == 'online').length,
-        offlineCount: statuses.where((s) => s == 'offline').length,
-        errorCount: statuses.where((s) => s == 'error').length,
-        maintenanceCount: statuses.where((s) => s == 'maintenance').length,
+        totalCount: rows.length,
+        onlineCount: enabledCount,
+        offlineCount: disabledCount,
+        errorCount: canceledCount,
+        maintenanceCount: 0,
       );
     } catch (e, stackTrace) {
       Logger.error('Failed to get controller stats', e, stackTrace);

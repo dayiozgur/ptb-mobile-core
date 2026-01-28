@@ -329,14 +329,14 @@ class DataProvider {
   factory DataProvider.fromJson(Map<String, dynamic> json) {
     return DataProvider(
       id: json['id'] as String,
-      name: json['name'] as String,
-      tenantId: json['tenant_id'] as String,
+      name: json['name'] as String? ?? '',
+      tenantId: json['tenant_id'] as String? ?? '',
       code: json['code'] as String?,
       description: json['description'] as String?,
       type: DataProviderType.fromString(json['type'] as String?),
       status: DataProviderStatus.fromString(json['status'] as String?),
       active: json['active'] as bool? ?? true,
-      host: json['host'] as String?,
+      host: json['host'] as String? ?? json['ip'] as String?,
       port: json['port'] as int?,
       username: json['username'] as String?,
       password: json['password'] as String?,
@@ -350,9 +350,11 @@ class DataProvider {
       timeout: json['timeout'] as int? ?? 5000,
       retryCount: json['retry_count'] as int? ?? 3,
       retryInterval: json['retry_interval'] as int? ?? 1000,
-      lastConnectedAt: json['last_connected_at'] != null
-          ? DateTime.tryParse(json['last_connected_at'] as String)
-          : null,
+      lastConnectedAt: json['last_connection_time'] != null
+          ? DateTime.tryParse(json['last_connection_time'] as String)
+          : json['last_connected_at'] != null
+              ? DateTime.tryParse(json['last_connected_at'] as String)
+              : null,
       lastError: json['last_error'] as String?,
       lastErrorAt: json['last_error_at'] != null
           ? DateTime.tryParse(json['last_error_at'] as String)
@@ -365,11 +367,11 @@ class DataProvider {
       hostname: json['hostname'] as String?,
       mac: json['mac'] as String?,
       config: json['config'] as Map<String, dynamic>? ?? const {},
-      tags: json['tags'] != null
+      tags: json['tags'] != null && json['tags'] is List
           ? List<String>.from(json['tags'] as List)
           : const [],
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)

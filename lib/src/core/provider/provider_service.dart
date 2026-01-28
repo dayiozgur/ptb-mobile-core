@@ -116,19 +116,26 @@ class DataProviderService {
           .select()
           .eq('tenant_id', _currentTenantId!);
 
-      if (type != null) {
-        query = query.eq('type', type.value);
-      }
-
-      if (status != null) {
-        query = query.eq('status', status.name);
-      }
+      // NOT: DB'de 'type' ve 'status' kolonları yok.
+      // type → protocol_type_id (FK), status yok.
+      // Filtreleme client-side yapılır.
 
       final response = await query.order('name');
 
-      _providers = (response as List)
+      var providers = (response as List)
           .map((e) => DataProvider.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      // Client-side filtreleme
+      if (type != null) {
+        providers = providers.where((p) => p.type == type).toList();
+      }
+
+      if (status != null) {
+        providers = providers.where((p) => p.status == status).toList();
+      }
+
+      _providers = providers;
 
       // Cache'e kaydet
       await _cacheManager.set(
@@ -268,10 +275,11 @@ class DataProviderService {
   // ============================================
 
   /// DataProvider durumunu güncelle
+  ///
+  /// NOT: DB'de status kolonu yok. Bu metod sadece memory state'i günceller.
   Future<void> updateStatus(String id, DataProviderStatus status) async {
     try {
       await _supabase.from('providers').update({
-        'status': status.name,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', id);
 
