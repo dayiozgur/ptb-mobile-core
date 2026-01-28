@@ -27,33 +27,53 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
+    // Tenant context'i tüm IoT servislerine aktar
+    final tenantId = tenantService.currentTenantId;
+    if (tenantId != null) {
+      controllerService.setTenant(tenantId);
+      dataProviderService.setTenant(tenantId);
+      variableService.setTenant(tenantId);
+      workflowService.setTenant(tenantId);
+    }
+
+    // Her servisi bağımsız yükle - biri başarısız olursa diğerleri etkilenmesin
+    List<Controller> controllers = [];
     try {
-      // Tenant context'i tüm IoT servislerine aktar
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId != null) {
-        controllerService.setTenant(tenantId);
-        dataProviderService.setTenant(tenantId);
-        variableService.setTenant(tenantId);
-        workflowService.setTenant(tenantId);
-      }
-
-      final controllers = await controllerService.getAll();
-      final providers = await dataProviderService.getAll();
-      final variables = await variableService.getAll();
-      final workflows = await workflowService.getAll();
-
-      if (mounted) {
-        setState(() {
-          _controllerCount = controllers.length;
-          _providerCount = providers.length;
-          _variableCount = variables.length;
-          _workflowCount = workflows.length;
-          _activeControllers = controllers.where((c) => c.status == ControllerStatus.online).length;
-          _activeWorkflows = workflows.where((w) => w.status == WorkflowStatus.active).length;
-        });
-      }
+      controllers = await controllerService.getAll();
     } catch (e) {
-      Logger.error('Failed to load IoT data', e);
+      Logger.error('Failed to load controllers', e);
+    }
+
+    List<DataProvider> providers = [];
+    try {
+      providers = await dataProviderService.getAll();
+    } catch (e) {
+      Logger.error('Failed to load providers', e);
+    }
+
+    List<Variable> variables = [];
+    try {
+      variables = await variableService.getAll();
+    } catch (e) {
+      Logger.error('Failed to load variables', e);
+    }
+
+    List<Workflow> workflows = [];
+    try {
+      workflows = await workflowService.getAll();
+    } catch (e) {
+      Logger.error('Failed to load workflows', e);
+    }
+
+    if (mounted) {
+      setState(() {
+        _controllerCount = controllers.length;
+        _providerCount = providers.length;
+        _variableCount = variables.length;
+        _workflowCount = workflows.length;
+        _activeControllers = controllers.where((c) => c.status == ControllerStatus.online).length;
+        _activeWorkflows = workflows.where((w) => w.status == WorkflowStatus.active).length;
+      });
     }
 
     if (mounted) {

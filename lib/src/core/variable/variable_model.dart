@@ -465,8 +465,12 @@ class Variable {
               : VariableAccessMode.readOnly,
       category: VariableCategory.fromString(json['grp_category'] as String? ?? json['category'] as String?),
       active: json['active'] as bool? ?? true,
-      addressInput: json['address_input'] as String? ?? json['address'] as String?,
-      addressOutput: json['address_output'] as String?,
+      addressInput: json['address_input'] != null
+          ? json['address_input'].toString()
+          : json['address'] as String?,
+      addressOutput: json['address_output'] != null
+          ? json['address_output'].toString()
+          : null,
       bitPosition: json['bit_position'] as int?,
       minimum: json['minimum'] as String?,
       maximum: json['maximum'] as String?,

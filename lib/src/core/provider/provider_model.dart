@@ -334,7 +334,7 @@ class DataProvider {
       code: json['code'] as String?,
       description: json['description'] as String?,
       type: DataProviderType.fromString(json['type'] as String?),
-      status: DataProviderStatus.fromString(json['status'] as String?),
+      status: _statusFromJson(json),
       active: json['active'] as bool? ?? true,
       host: json['host'] as String? ?? json['ip'] as String?,
       port: json['port'] as int?,
@@ -379,6 +379,17 @@ class DataProvider {
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
     );
+  }
+
+  /// DB'deki active alanından status türet
+  static DataProviderStatus _statusFromJson(Map<String, dynamic> json) {
+    // Önce doğrudan status alanını kontrol et (cache'den okuma)
+    if (json['status'] != null) {
+      return DataProviderStatus.fromString(json['status'] as String?);
+    }
+    // DB'deki active boolean'dan türet
+    final active = json['active'] as bool? ?? true;
+    return active ? DataProviderStatus.active : DataProviderStatus.inactive;
   }
 
   Map<String, dynamic> toJson() {

@@ -186,19 +186,19 @@ class _ProviderCard extends StatelessWidget {
                       color: AppColors.secondaryLabel(context),
                     ),
                   ),
-                  if (provider.connectionString != null) ...[
+                  if (provider.ip != null || provider.hostname != null) ...[
                     const SizedBox(height: AppSpacing.xxs),
                     Row(
                       children: [
                         Icon(
-                          Icons.link,
+                          Icons.lan,
                           size: 14,
                           color: AppColors.tertiaryLabel(context),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            provider.connectionString!,
+                            provider.hostname ?? provider.ip ?? '',
                             style: AppTypography.caption2.copyWith(
                               color: AppColors.tertiaryLabel(context),
                             ),
@@ -353,25 +353,22 @@ class _ProviderDetailSheet extends StatelessWidget {
                 child: Column(
                   children: [
                     _InfoRow(
-                      label: 'Bağlantı String',
-                      value: provider.connectionString ?? '-',
+                      label: 'IP Adresi',
+                      value: provider.ip ?? '-',
                     ),
                     _InfoRow(
-                      label: 'Polling Süresi',
-                      value: provider.pollingInterval != null
-                          ? '${provider.pollingInterval} ms'
-                          : '-',
+                      label: 'Hostname',
+                      value: provider.hostname ?? '-',
                     ),
                     _InfoRow(
-                      label: 'Timeout',
-                      value: provider.timeout != null
-                          ? '${provider.timeout} ms'
-                          : '-',
+                      label: 'MAC',
+                      value: provider.mac ?? '-',
                     ),
-                    _InfoRow(
-                      label: 'Retry Sayısı',
-                      value: provider.retryCount?.toString() ?? '-',
-                    ),
+                    if (provider.code != null)
+                      _InfoRow(
+                        label: 'Kod',
+                        value: provider.code!,
+                      ),
                   ],
                 ),
               ),
