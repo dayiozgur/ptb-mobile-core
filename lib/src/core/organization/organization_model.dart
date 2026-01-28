@@ -1,3 +1,29 @@
+/// Organization durumu
+enum OrganizationStatus {
+  /// Aktif
+  active,
+
+  /// Pasif
+  inactive,
+
+  /// Askıda
+  suspended,
+
+  /// Kapatılmış
+  closed,
+
+  /// Silinmiş
+  deleted;
+
+  /// String'den OrganizationStatus'a dönüştür
+  static OrganizationStatus fromString(String? value) {
+    return OrganizationStatus.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => OrganizationStatus.active,
+    );
+  }
+}
+
 /// Organization (Alt Organizasyon) modeli
 ///
 /// Tenant altındaki departman/bölüm temsili.
@@ -21,8 +47,36 @@ class Organization {
   /// Görsel yolu
   final String? imagePath;
 
-  /// Aktif mi?
+  /// Aktif mi? (geriye uyumluluk için korundu)
   final bool active;
+
+  /// Organization durumu
+  final OrganizationStatus status;
+
+  /// Askıya alınma tarihi
+  final DateTime? suspendedAt;
+
+  /// Askıya alınma nedeni
+  final String? suspendedReason;
+
+  /// Silinme tarihi (soft delete)
+  final DateTime? deletedAt;
+
+  // ============================================
+  // AUDIT BİLGİLERİ
+  // ============================================
+
+  /// Audit versiyonu (optimistic locking için)
+  final int version;
+
+  /// Son audit tarihi
+  final DateTime? lastAuditAt;
+
+  /// Son audit yapan kullanıcı
+  final String? lastAuditBy;
+
+  /// Audit notları
+  final String? auditNotes;
 
   // ============================================
   // KONUM BİLGİLERİ
@@ -94,6 +148,14 @@ class Organization {
     this.color,
     this.imagePath,
     this.active = true,
+    this.status = OrganizationStatus.active,
+    this.suspendedAt,
+    this.suspendedReason,
+    this.deletedAt,
+    this.version = 1,
+    this.lastAuditAt,
+    this.lastAuditBy,
+    this.auditNotes,
     this.address,
     this.city,
     this.town,
@@ -124,6 +186,20 @@ class Organization {
       color: json['color'] as String?,
       imagePath: json['image_path'] as String?,
       active: json['active'] as bool? ?? true,
+      status: OrganizationStatus.fromString(json['status'] as String?),
+      suspendedAt: json['suspended_at'] != null
+          ? DateTime.tryParse(json['suspended_at'] as String)
+          : null,
+      suspendedReason: json['suspended_reason'] as String?,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.tryParse(json['deleted_at'] as String)
+          : null,
+      version: json['version'] as int? ?? 1,
+      lastAuditAt: json['last_audit_at'] != null
+          ? DateTime.tryParse(json['last_audit_at'] as String)
+          : null,
+      lastAuditBy: json['last_audit_by'] as String?,
+      auditNotes: json['audit_notes'] as String?,
       address: json['address'] as String?,
       city: json['city'] as String?,
       town: json['town'] as String?,
@@ -155,6 +231,14 @@ class Organization {
       'color': color,
       'image_path': imagePath,
       'active': active,
+      'status': status.name,
+      'suspended_at': suspendedAt?.toIso8601String(),
+      'suspended_reason': suspendedReason,
+      'deleted_at': deletedAt?.toIso8601String(),
+      'version': version,
+      'last_audit_at': lastAuditAt?.toIso8601String(),
+      'last_audit_by': lastAuditBy,
+      'audit_notes': auditNotes,
       'address': address,
       'city': city,
       'town': town,
@@ -185,6 +269,14 @@ class Organization {
     String? color,
     String? imagePath,
     bool? active,
+    OrganizationStatus? status,
+    DateTime? suspendedAt,
+    String? suspendedReason,
+    DateTime? deletedAt,
+    int? version,
+    DateTime? lastAuditAt,
+    String? lastAuditBy,
+    String? auditNotes,
     String? address,
     String? city,
     String? town,
@@ -209,6 +301,14 @@ class Organization {
       color: color ?? this.color,
       imagePath: imagePath ?? this.imagePath,
       active: active ?? this.active,
+      status: status ?? this.status,
+      suspendedAt: suspendedAt ?? this.suspendedAt,
+      suspendedReason: suspendedReason ?? this.suspendedReason,
+      deletedAt: deletedAt ?? this.deletedAt,
+      version: version ?? this.version,
+      lastAuditAt: lastAuditAt ?? this.lastAuditAt,
+      lastAuditBy: lastAuditBy ?? this.lastAuditBy,
+      auditNotes: auditNotes ?? this.auditNotes,
       address: address ?? this.address,
       city: city ?? this.city,
       town: town ?? this.town,
@@ -224,6 +324,35 @@ class Organization {
       updatedBy: updatedBy ?? this.updatedBy,
       rowId: rowId ?? this.rowId,
     );
+  }
+
+  // ============================================
+  // STATUS HELPERS
+  // ============================================
+
+  /// Gerçekten aktif mi? (active flag ve status kontrolü)
+  bool get isActive => active && status == OrganizationStatus.active;
+
+  /// Askıda mı?
+  bool get isSuspended => status == OrganizationStatus.suspended;
+
+  /// Kapatılmış mı?
+  bool get isClosed => status == OrganizationStatus.closed;
+
+  /// Silinmiş mi?
+  bool get isDeleted => status == OrganizationStatus.deleted;
+
+  /// Audit gerekli mi? (son audit 1 yıldan eski)
+  bool get needsAudit {
+    if (lastAuditAt == null) return true;
+    final oneYearAgo = DateTime.now().subtract(const Duration(days: 365));
+    return lastAuditAt!.isBefore(oneYearAgo);
+  }
+
+  /// Son audit'ten bu yana geçen gün sayısı
+  int? get daysSinceLastAudit {
+    if (lastAuditAt == null) return null;
+    return DateTime.now().difference(lastAuditAt!).inDays;
   }
 
   // ============================================

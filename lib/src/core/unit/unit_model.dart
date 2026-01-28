@@ -1,3 +1,32 @@
+/// Unit durumu
+enum UnitStatus {
+  /// Aktif
+  active,
+
+  /// Pasif
+  inactive,
+
+  /// Bakımda
+  maintenance,
+
+  /// Askıda
+  suspended,
+
+  /// Kapalı
+  closed,
+
+  /// Silinmiş
+  deleted;
+
+  /// String'den UnitStatus'a dönüştür
+  static UnitStatus fromString(String? value) {
+    return UnitStatus.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => UnitStatus.active,
+    );
+  }
+}
+
 /// Unit kategorileri
 enum UnitCategory {
   main('MAIN', 'Ana Alan'),
@@ -139,8 +168,20 @@ class Unit {
   /// Görsel bucket path
   final String? imageBucket;
 
-  /// Aktif mi?
+  /// Aktif mi? (geriye uyumluluk için korundu)
   final bool active;
+
+  /// Unit durumu
+  final UnitStatus status;
+
+  /// Askıya alınma tarihi
+  final DateTime? suspendedAt;
+
+  /// Askıya alınma nedeni
+  final String? suspendedReason;
+
+  /// Silinme tarihi (soft delete)
+  final DateTime? deletedAt;
 
   // ============================================
   // HİYERARŞİ
@@ -249,6 +290,10 @@ class Unit {
     this.areaSize,
     this.imageBucket,
     this.active = true,
+    this.status = UnitStatus.active,
+    this.suspendedAt,
+    this.suspendedReason,
+    this.deletedAt,
     this.parentUnitId,
     this.parentUnit,
     this.children = const [],
@@ -289,6 +334,14 @@ class Unit {
       areaSize: (json['area_size'] as num?)?.toDouble(),
       imageBucket: json['image_bucket'] as String?,
       active: json['active'] as bool? ?? true,
+      status: UnitStatus.fromString(json['status'] as String?),
+      suspendedAt: json['suspended_at'] != null
+          ? DateTime.tryParse(json['suspended_at'] as String)
+          : null,
+      suspendedReason: json['suspended_reason'] as String?,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.tryParse(json['deleted_at'] as String)
+          : null,
       parentUnitId: json['parent_unit_id'] as String?,
       parentUnit: json['parent_unit'] != null
           ? Unit.fromJson(json['parent_unit'] as Map<String, dynamic>)
@@ -337,6 +390,10 @@ class Unit {
         'area_size': areaSize,
         'image_bucket': imageBucket,
         'active': active,
+        'status': status.name,
+        'suspended_at': suspendedAt?.toIso8601String(),
+        'suspended_reason': suspendedReason,
+        'deleted_at': deletedAt?.toIso8601String(),
         'parent_unit_id': parentUnitId,
         'site_id': siteId,
         'organization_id': organizationId,
@@ -373,6 +430,10 @@ class Unit {
     double? areaSize,
     String? imageBucket,
     bool? active,
+    UnitStatus? status,
+    DateTime? suspendedAt,
+    String? suspendedReason,
+    DateTime? deletedAt,
     String? parentUnitId,
     Unit? parentUnit,
     List<Unit>? children,
@@ -407,6 +468,10 @@ class Unit {
       areaSize: areaSize ?? this.areaSize,
       imageBucket: imageBucket ?? this.imageBucket,
       active: active ?? this.active,
+      status: status ?? this.status,
+      suspendedAt: suspendedAt ?? this.suspendedAt,
+      suspendedReason: suspendedReason ?? this.suspendedReason,
+      deletedAt: deletedAt ?? this.deletedAt,
       parentUnitId: parentUnitId ?? this.parentUnitId,
       parentUnit: parentUnit ?? this.parentUnit,
       children: children ?? this.children,
@@ -434,6 +499,28 @@ class Unit {
       rowId: rowId ?? this.rowId,
     );
   }
+
+  // ============================================
+  // STATUS HELPERS
+  // ============================================
+
+  /// Gerçekten aktif mi? (active flag ve status kontrolü)
+  bool get isActive => active && status == UnitStatus.active;
+
+  /// Bakımda mı?
+  bool get isUnderMaintenance => status == UnitStatus.maintenance;
+
+  /// Askıda mı?
+  bool get isSuspended => status == UnitStatus.suspended;
+
+  /// Kapalı mı?
+  bool get isClosed => status == UnitStatus.closed;
+
+  /// Silinmiş mi?
+  bool get isDeleted => status == UnitStatus.deleted;
+
+  /// Kullanılabilir mi? (aktif veya bakımda)
+  bool get isUsable => status == UnitStatus.active || status == UnitStatus.maintenance;
 
   // ============================================
   // HELPERS

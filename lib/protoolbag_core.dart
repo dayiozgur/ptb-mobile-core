@@ -44,6 +44,9 @@ export 'src/core/auth/auth_service.dart';
 export 'src/core/auth/auth_result.dart';
 export 'src/core/auth/biometric_auth.dart';
 
+// Core - User
+export 'src/core/user/user_profile.dart';
+
 // Core - Tenant
 export 'src/core/tenant/tenant_model.dart';
 export 'src/core/tenant/tenant_service.dart';
@@ -100,6 +103,22 @@ export 'src/core/realtime/realtime_service.dart';
 
 // Core - Pagination
 export 'src/core/pagination/pagination.dart';
+
+// Core - Controller (IoT)
+export 'src/core/controller/controller_model.dart';
+export 'src/core/controller/controller_service.dart';
+
+// Core - Provider (IoT)
+export 'src/core/provider/provider_model.dart';
+export 'src/core/provider/provider_service.dart';
+
+// Core - Variable (IoT)
+export 'src/core/variable/variable_model.dart';
+export 'src/core/variable/variable_service.dart';
+
+// Core - Workflow
+export 'src/core/workflow/workflow_model.dart';
+export 'src/core/workflow/workflow_service.dart';
 
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';

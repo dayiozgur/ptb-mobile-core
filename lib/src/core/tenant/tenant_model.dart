@@ -17,6 +17,17 @@ enum TenantStatus {
 
   /// İptal edilmiş
   cancelled,
+
+  /// Silinmiş
+  deleted;
+
+  /// String'den TenantStatus'a dönüştür
+  static TenantStatus fromString(String? value) {
+    return TenantStatus.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => TenantStatus.active,
+    );
+  }
 }
 
 /// Abonelik planı
@@ -54,8 +65,20 @@ class Tenant {
   /// Logo URL / Image path
   final String? logoUrl;
 
-  /// Aktif mi?
+  /// Aktif mi? (geriye uyumluluk için korundu)
   final bool active;
+
+  /// Tenant durumu
+  final TenantStatus status;
+
+  /// Askıya alınma tarihi
+  final DateTime? suspendedAt;
+
+  /// Askıya alınma nedeni
+  final String? suspendedReason;
+
+  /// Silinme tarihi (soft delete)
+  final DateTime? deletedAt;
 
   // ============================================
   // KONUM BİLGİLERİ
@@ -124,6 +147,10 @@ class Tenant {
     this.description,
     this.logoUrl,
     this.active = true,
+    this.status = TenantStatus.active,
+    this.suspendedAt,
+    this.suspendedReason,
+    this.deletedAt,
     this.address,
     this.city,
     this.town,
@@ -143,10 +170,22 @@ class Tenant {
   });
 
   /// Aktif mi?
-  bool get isActive => active;
+  bool get isActive => active && status == TenantStatus.active;
 
-  /// Deneme sürümünde mi? (geriye uyumluluk - subscription tablosundan kontrol edilmeli)
-  bool get isTrial => false;
+  /// Deneme sürümünde mi?
+  bool get isTrial => status == TenantStatus.trial;
+
+  /// Askıda mı?
+  bool get isSuspended => status == TenantStatus.suspended;
+
+  /// Silinmiş mi?
+  bool get isDeleted => status == TenantStatus.deleted;
+
+  /// Süresi dolmuş mu?
+  bool get isExpired => status == TenantStatus.expired;
+
+  /// İptal edilmiş mi?
+  bool get isCancelled => status == TenantStatus.cancelled;
 
   /// Plan (geriye uyumluluk - subscription tablosundan alınmalı)
   SubscriptionPlan get plan => SubscriptionPlan.free;
@@ -160,6 +199,14 @@ class Tenant {
       description: json['description'] as String?,
       logoUrl: json['logo_url'] as String? ?? json['image_path'] as String?,
       active: json['active'] as bool? ?? true,
+      status: TenantStatus.fromString(json['status'] as String?),
+      suspendedAt: json['suspended_at'] != null
+          ? DateTime.tryParse(json['suspended_at'] as String)
+          : null,
+      suspendedReason: json['suspended_reason'] as String?,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.tryParse(json['deleted_at'] as String)
+          : null,
       address: json['address'] as String?,
       city: json['city'] as String?,
       town: json['town'] as String?,
@@ -197,6 +244,10 @@ class Tenant {
       'description': description,
       'logo_url': logoUrl,
       'active': active,
+      'status': status.name,
+      'suspended_at': suspendedAt?.toIso8601String(),
+      'suspended_reason': suspendedReason,
+      'deleted_at': deletedAt?.toIso8601String(),
       'address': address,
       'city': city,
       'town': town,
@@ -220,6 +271,10 @@ class Tenant {
     String? description,
     String? logoUrl,
     bool? active,
+    TenantStatus? status,
+    DateTime? suspendedAt,
+    String? suspendedReason,
+    DateTime? deletedAt,
     String? address,
     String? city,
     String? town,
@@ -244,6 +299,10 @@ class Tenant {
       description: description ?? this.description,
       logoUrl: logoUrl ?? this.logoUrl,
       active: active ?? this.active,
+      status: status ?? this.status,
+      suspendedAt: suspendedAt ?? this.suspendedAt,
+      suspendedReason: suspendedReason ?? this.suspendedReason,
+      deletedAt: deletedAt ?? this.deletedAt,
       address: address ?? this.address,
       city: city ?? this.city,
       town: town ?? this.town,

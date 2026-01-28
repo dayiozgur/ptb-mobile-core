@@ -14,6 +14,25 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricStatus();
+  }
+
+  Future<void> _checkBiometricStatus() async {
+    final available = await authService.isBiometricAvailable();
+    final enabled = await authService.isBiometricLoginEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -38,8 +57,13 @@ class _LoginScreenState extends State<LoginScreen> {
       result.when(
         success: (user, session) {
           Logger.info('Login successful: ${user.email}');
-          // Router will handle redirect based on tenant state
-          context.go('/tenant-select');
+
+          // Biometric kullanılabilir ama etkin değilse, etkinleştirmeyi öner
+          if (_biometricAvailable && !_biometricEnabled) {
+            _showEnableBiometricDialog();
+          } else {
+            context.go('/tenant-select');
+          }
         },
         failure: (error) {
           AppSnackbar.showError(
@@ -55,37 +79,92 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _showEnableBiometricDialog() async {
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Biyometrik Giriş'),
+        content: const Text(
+          'Gelecekte daha hızlı giriş için biyometrik doğrulamayı etkinleştirmek ister misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hayır'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Evet, Etkinleştir'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldEnable == true) {
+      await authService.enableBiometricLogin();
+      if (mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          message: 'Biyometrik giriş etkinleştirildi',
+        );
+      }
+    }
+
+    if (mounted) {
+      context.go('/tenant-select');
+    }
+  }
+
   Future<void> _handleBiometricLogin() async {
-    final isAvailable = await authService.isBiometricAvailable();
-    if (!isAvailable) {
+    // Önce biometric login'in etkin olup olmadığını kontrol et
+    if (!_biometricEnabled) {
       if (mounted) {
         AppSnackbar.showInfo(
           context,
-          message: 'Biyometrik doğrulama kullanılamıyor',
+          message: 'Önce email ile giriş yapıp biyometrik girişi etkinleştirin',
         );
       }
       return;
     }
 
-    final result = await authService.authenticateWithBiometric(
-      reason: 'Uygulamaya giriş yapmak için doğrulayın',
-    );
+    setState(() => _isLoading = true);
 
-    if (result.isSuccess) {
-      // Restore previous session
-      final sessionResult = await authService.restoreSession();
-      if (mounted) {
+    try {
+      final result = await authService.authenticateWithBiometric(
+        reason: 'Uygulamaya giriş yapmak için doğrulayın',
+      );
+
+      if (!mounted) return;
+
+      if (result.isSuccess) {
+        // Önceki oturumu geri yükle
+        final sessionResult = await authService.restoreSession();
+
+        if (!mounted) return;
+
         sessionResult.when(
           success: (user, session) {
             context.go('/tenant-select');
           },
           failure: (error) {
+            // Oturum bulunamadı, biometric'i devre dışı bırak
+            authService.disableBiometricLogin();
+            setState(() => _biometricEnabled = false);
             AppSnackbar.showError(
               context,
-              message: 'Oturum geri yüklenemedi',
+              message: 'Oturum süresi dolmuş, lütfen tekrar giriş yapın',
             );
           },
         );
+      } else {
+        AppSnackbar.showError(
+          context,
+          message: result.error ?? 'Biyometrik doğrulama başarısız',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -181,40 +260,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Biometric login
-              FutureBuilder<bool>(
-                future: authService.isBiometricAvailable(),
-                builder: (context, snapshot) {
-                  if (snapshot.data != true) return const SizedBox.shrink();
-
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: AppColors.separator(context))),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                            child: Text(
-                              'veya',
-                              style: AppTypography.footnote.copyWith(
-                                color: AppColors.secondaryLabel(context),
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: AppColors.separator(context))),
-                        ],
+              // Biometric login - Sadece KULLANILABILIR VE ETKİN ise göster
+              if (_biometricAvailable && _biometricEnabled) ...[
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: AppColors.separator(context))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: Text(
+                        'veya',
+                        style: AppTypography.footnote.copyWith(
+                          color: AppColors.secondaryLabel(context),
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppButton(
-                        label: 'Biyometrik ile Giriş',
-                        variant: AppButtonVariant.secondary,
-                        icon: Icons.fingerprint,
-                        onPressed: _isLoading ? null : _handleBiometricLogin,
-                      ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                    Expanded(child: Divider(color: AppColors.separator(context))),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppButton(
+                  label: 'Biyometrik ile Giriş',
+                  variant: AppButtonVariant.secondary,
+                  icon: Icons.fingerprint,
+                  onPressed: _isLoading ? null : _handleBiometricLogin,
+                ),
+              ],
 
               const SizedBox(height: AppSpacing.xl),
 
