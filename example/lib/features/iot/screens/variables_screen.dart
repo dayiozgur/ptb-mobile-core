@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class VariablesScreen extends StatefulWidget {
@@ -87,7 +86,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: AppSearchField(
-              hint: 'Değişken ara...',
+              placeholder: 'Değişken ara...',
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -101,7 +100,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppLoadingView();
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -117,18 +116,41 @@ class _VariablesScreenState extends State<VariablesScreen> {
 
     if (filtered.isEmpty) {
       if (_variables.isEmpty) {
-        return AppEmptyView(
-          icon: Icons.data_object,
-          title: 'Değişken Bulunamadı',
-          message: 'Henüz tanımlanmış değişken yok',
-          actionLabel: 'Değişken Ekle',
-          onAction: () => _showAddVariableDialog(),
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.data_object, size: 64, color: AppColors.tertiaryLabel(context)),
+              const SizedBox(height: AppSpacing.md),
+              Text('Değişken Bulunamadı', style: AppTypography.headline),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Henüz tanımlanmış değişken yok',
+                style: AppTypography.subheadline.copyWith(color: AppColors.secondaryLabel(context)),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
+                label: 'Değişken Ekle',
+                onPressed: () => _showAddVariableDialog(),
+              ),
+            ],
+          ),
         );
       }
-      return AppEmptyView(
-        icon: Icons.search_off,
-        title: 'Sonuç Bulunamadı',
-        message: 'Arama kriterlerinize uygun değişken yok',
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: AppColors.tertiaryLabel(context)),
+            const SizedBox(height: AppSpacing.md),
+            Text('Sonuç Bulunamadı', style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Arama kriterlerinize uygun değişken yok',
+              style: AppTypography.subheadline.copyWith(color: AppColors.secondaryLabel(context)),
+            ),
+          ],
+        ),
       );
     }
 
@@ -175,7 +197,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
                     },
                   ),
                   ...VariableDataType.values.map((type) => _FilterChip(
-                        label: type.name.toUpperCase(),
+                        label: type.label,
                         isSelected: _filterType == type,
                         onSelected: () {
                           setState(() => _filterType = type);
@@ -272,7 +294,7 @@ class _VariableCard extends StatelessWidget {
                         ),
                       ),
                       AppBadge(
-                        label: variable.dataType.name.toUpperCase(),
+                        label: variable.dataType.label,
                         variant: AppBadgeVariant.info,
                         size: AppBadgeSize.small,
                       ),
@@ -293,7 +315,7 @@ class _VariableCard extends StatelessWidget {
                     children: [
                       _ValueDisplay(variable: variable),
                       const Spacer(),
-                      if (variable.isReadOnly)
+                      if (!variable.isWritable)
                         Icon(
                           Icons.lock,
                           size: 14,
@@ -313,44 +335,36 @@ class _VariableCard extends StatelessWidget {
   }
 
   Color _getTypeColor() {
+    if (variable.isBoolean) return Colors.purple;
+    if (variable.isNumeric) return Colors.blue;
     switch (variable.dataType) {
-      case VariableDataType.boolean:
-        return Colors.purple;
-      case VariableDataType.integer:
-      case VariableDataType.float:
-      case VariableDataType.double_:
-        return Colors.blue;
       case VariableDataType.string:
         return Colors.green;
-      case VariableDataType.dateTime:
+      case VariableDataType.datetime:
         return Colors.orange;
       case VariableDataType.json:
-      case VariableDataType.array:
         return Colors.teal;
       case VariableDataType.binary:
         return Colors.grey;
+      default:
+        return Colors.blue;
     }
   }
 
   IconData _getTypeIcon() {
+    if (variable.isBoolean) return Icons.toggle_on;
+    if (variable.isNumeric) return Icons.numbers;
     switch (variable.dataType) {
-      case VariableDataType.boolean:
-        return Icons.toggle_on;
-      case VariableDataType.integer:
-        return Icons.tag;
-      case VariableDataType.float:
-      case VariableDataType.double_:
-        return Icons.numbers;
       case VariableDataType.string:
         return Icons.text_fields;
-      case VariableDataType.dateTime:
+      case VariableDataType.datetime:
         return Icons.schedule;
       case VariableDataType.json:
         return Icons.data_object;
-      case VariableDataType.array:
-        return Icons.data_array;
       case VariableDataType.binary:
         return Icons.memory;
+      default:
+        return Icons.tag;
     }
   }
 }
@@ -374,8 +388,8 @@ class _ValueDisplay extends StatelessWidget {
       );
     }
 
-    if (variable.dataType == VariableDataType.boolean) {
-      final boolValue = value == true || value == 'true' || value == 1;
+    if (variable.isBoolean) {
+      final boolValue = variable.booleanValue ?? false;
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -399,13 +413,8 @@ class _ValueDisplay extends StatelessWidget {
       );
     }
 
-    String displayValue = value.toString();
-    if (variable.unit != null) {
-      displayValue = '$displayValue ${variable.unit}';
-    }
-
     return Text(
-      displayValue,
+      variable.formattedValue,
       style: AppTypography.caption1.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.primary,
@@ -467,28 +476,32 @@ class _VariableDetailSheet extends StatelessWidget {
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Veri Tipi', value: variable.dataType.name.toUpperCase()),
+                    _InfoRow(label: 'Veri Tipi', value: variable.dataType.label),
                     _InfoRow(label: 'Adres', value: variable.address ?? '-'),
                     _InfoRow(label: 'Birim', value: variable.unit ?? '-'),
-                    _InfoRow(label: 'Okuma/Yazma', value: variable.isReadOnly ? 'Sadece Okuma' : 'Okuma/Yazma'),
+                    _InfoRow(label: 'Erişim', value: variable.accessMode.label),
                   ],
                 ),
               ),
             ),
 
-            if (variable.minValue != null || variable.maxValue != null) ...[
+            if (variable.hasAlarmLimits) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Limitler'),
+              AppSectionHeader(title: 'Alarm Limitleri'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
                   padding: AppSpacing.cardInsets,
                   child: Column(
                     children: [
-                      _InfoRow(label: 'Minimum', value: variable.minValue?.toString() ?? '-'),
-                      _InfoRow(label: 'Maksimum', value: variable.maxValue?.toString() ?? '-'),
-                      if (variable.defaultValue != null)
-                        _InfoRow(label: 'Varsayılan', value: variable.defaultValue.toString()),
+                      if (variable.hiHiLimit != null)
+                        _InfoRow(label: 'Çok Yüksek', value: variable.hiHiLimit.toString()),
+                      if (variable.hiLimit != null)
+                        _InfoRow(label: 'Yüksek', value: variable.hiLimit.toString()),
+                      if (variable.loLimit != null)
+                        _InfoRow(label: 'Düşük', value: variable.loLimit.toString()),
+                      if (variable.loLoLimit != null)
+                        _InfoRow(label: 'Çok Düşük', value: variable.loLoLimit.toString()),
                     ],
                   ),
                 ),
@@ -510,7 +523,7 @@ class _VariableDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Actions
-            if (!variable.isReadOnly)
+            if (variable.isWritable)
               Row(
                 children: [
                   Expanded(
@@ -559,8 +572,8 @@ class _LargeValueDisplay extends StatelessWidget {
       );
     }
 
-    if (variable.dataType == VariableDataType.boolean) {
-      final boolValue = value == true || value == 'true' || value == 1;
+    if (variable.isBoolean) {
+      final boolValue = variable.booleanValue ?? false;
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
@@ -577,30 +590,16 @@ class _LargeValueDisplay extends StatelessWidget {
       );
     }
 
-    String displayValue = value.toString();
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          displayValue,
+          variable.formattedValue,
           style: AppTypography.largeTitle.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
-        if (variable.unit != null) ...[
-          const SizedBox(width: 4),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              variable.unit!,
-              style: AppTypography.title2.copyWith(
-                color: AppColors.secondaryLabel(context),
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

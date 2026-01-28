@@ -26,6 +26,10 @@ import '../storage/secure_storage.dart';
 import '../tenant/tenant_service.dart';
 import '../unit/unit_service.dart';
 import '../utils/logger.dart';
+import '../controller/controller_service.dart';
+import '../provider/provider_service.dart';
+import '../variable/variable_service.dart';
+import '../workflow/workflow_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -291,6 +295,38 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // IOT SERVICES
+  // ============================================
+
+  sl.registerLazySingleton<ControllerService>(
+    () => ControllerService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<DataProviderService>(
+    () => DataProviderService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<VariableService>(
+    () => VariableService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<WorkflowService>(
+    () => WorkflowService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -350,3 +386,9 @@ ApiClient get apiClient => sl<ApiClient>();
 SecureStorage get secureStorage => sl<SecureStorage>();
 CacheManager get cacheManager => sl<CacheManager>();
 SupabaseClient get supabase => sl<SupabaseClient>();
+
+// IoT Services
+ControllerService get controllerService => sl<ControllerService>();
+DataProviderService get dataProviderService => sl<DataProviderService>();
+VariableService get variableService => sl<VariableService>();
+WorkflowService get workflowService => sl<WorkflowService>();

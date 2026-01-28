@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class WorkflowsScreen extends StatefulWidget {
@@ -65,7 +64,7 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppLoadingView();
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -78,12 +77,25 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
     }
 
     if (_workflows.isEmpty) {
-      return AppEmptyView(
-        icon: Icons.account_tree,
-        title: 'Workflow Bulunamadı',
-        message: 'Henüz tanımlanmış otomasyon senaryosu yok',
-        actionLabel: 'Workflow Oluştur',
-        onAction: () => _showAddWorkflowDialog(),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_tree, size: 64, color: AppColors.tertiaryLabel(context)),
+            const SizedBox(height: AppSpacing.md),
+            Text('Workflow Bulunamadı', style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Henüz tanımlanmış otomasyon senaryosu yok',
+              style: AppTypography.subheadline.copyWith(color: AppColors.secondaryLabel(context)),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Workflow Oluştur',
+              onPressed: () => _showAddWorkflowDialog(),
+            ),
+          ],
+        ),
       );
     }
 
@@ -164,12 +176,12 @@ class _WorkflowCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _getStatusColor().withOpacity(0.1),
+                    color: _getStatusColor(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    _getTriggerIcon(),
-                    color: _getStatusColor(),
+                    _getTypeIcon(),
+                    color: _getStatusColor(context),
                     size: 24,
                   ),
                 ),
@@ -188,7 +200,7 @@ class _WorkflowCard extends StatelessWidget {
                           _StatusBadge(status: workflow.status),
                           const SizedBox(width: AppSpacing.xs),
                           AppBadge(
-                            label: _getTriggerLabel(),
+                            label: workflow.type.label,
                             variant: AppBadgeVariant.secondary,
                             size: AppBadgeSize.small,
                           ),
@@ -219,14 +231,14 @@ class _WorkflowCard extends StatelessWidget {
               children: [
                 _StatItem(
                   icon: Icons.play_arrow,
-                  value: '${workflow.executionCount}',
+                  value: '${workflow.runCount}',
                   label: 'Çalışma',
                 ),
                 const SizedBox(width: AppSpacing.md),
-                if (workflow.lastExecutedAt != null)
+                if (workflow.lastRunAt != null)
                   _StatItem(
                     icon: Icons.schedule,
-                    value: _getRelativeTime(workflow.lastExecutedAt!),
+                    value: _getRelativeTime(workflow.lastRunAt!),
                     label: 'Son çalışma',
                   ),
               ],
@@ -237,52 +249,33 @@ class _WorkflowCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor() {
+  Color _getStatusColor(BuildContext context) {
     switch (workflow.status) {
       case WorkflowStatus.active:
         return AppColors.success;
       case WorkflowStatus.inactive:
-        return AppColors.tertiaryLabel(null);
-      case WorkflowStatus.paused:
+        return AppColors.tertiaryLabel(context);
+      case WorkflowStatus.suspended:
         return AppColors.warning;
-      case WorkflowStatus.error:
-        return AppColors.error;
-      case WorkflowStatus.disabled:
-        return AppColors.tertiaryLabel(null);
+      case WorkflowStatus.archived:
+        return AppColors.tertiaryLabel(context);
+      case WorkflowStatus.draft:
+        return AppColors.info;
     }
   }
 
-  IconData _getTriggerIcon() {
-    switch (workflow.triggerType) {
-      case WorkflowTriggerType.manual:
-        return Icons.touch_app;
-      case WorkflowTriggerType.schedule:
+  IconData _getTypeIcon() {
+    switch (workflow.type) {
+      case WorkflowType.automation:
+        return Icons.smart_toy;
+      case WorkflowType.scheduled:
         return Icons.schedule;
-      case WorkflowTriggerType.event:
+      case WorkflowType.manual:
+        return Icons.touch_app;
+      case WorkflowType.eventDriven:
         return Icons.bolt;
-      case WorkflowTriggerType.condition:
-        return Icons.rule;
-      case WorkflowTriggerType.webhook:
-        return Icons.webhook;
-      case WorkflowTriggerType.api:
-        return Icons.api;
-    }
-  }
-
-  String _getTriggerLabel() {
-    switch (workflow.triggerType) {
-      case WorkflowTriggerType.manual:
-        return 'Manuel';
-      case WorkflowTriggerType.schedule:
-        return 'Zamanlı';
-      case WorkflowTriggerType.event:
-        return 'Olay';
-      case WorkflowTriggerType.condition:
-        return 'Koşul';
-      case WorkflowTriggerType.webhook:
-        return 'Webhook';
-      case WorkflowTriggerType.api:
-        return 'API';
+      case WorkflowType.approval:
+        return Icons.approval;
     }
   }
 
@@ -335,25 +328,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppBadge(
-      label: _getLabel(),
+      label: status.label,
       variant: _getVariant(),
       size: AppBadgeSize.small,
     );
-  }
-
-  String _getLabel() {
-    switch (status) {
-      case WorkflowStatus.active:
-        return 'Aktif';
-      case WorkflowStatus.inactive:
-        return 'Pasif';
-      case WorkflowStatus.paused:
-        return 'Duraklatıldı';
-      case WorkflowStatus.error:
-        return 'Hata';
-      case WorkflowStatus.disabled:
-        return 'Devre Dışı';
-    }
   }
 
   AppBadgeVariant _getVariant() {
@@ -362,12 +340,12 @@ class _StatusBadge extends StatelessWidget {
         return AppBadgeVariant.success;
       case WorkflowStatus.inactive:
         return AppBadgeVariant.secondary;
-      case WorkflowStatus.paused:
+      case WorkflowStatus.suspended:
         return AppBadgeVariant.warning;
-      case WorkflowStatus.error:
-        return AppBadgeVariant.error;
-      case WorkflowStatus.disabled:
+      case WorkflowStatus.archived:
         return AppBadgeVariant.secondary;
+      case WorkflowStatus.draft:
+        return AppBadgeVariant.info;
     }
   }
 }
@@ -405,8 +383,8 @@ class _WorkflowDetailSheet extends StatelessWidget {
                     ),
                     Expanded(
                       child: _DetailItem(
-                        label: 'Tetikleme',
-                        value: _getTriggerLabel(),
+                        label: 'Tip',
+                        value: workflow.type.label,
                       ),
                     ),
                   ],
@@ -426,24 +404,32 @@ class _WorkflowDetailSheet extends StatelessWidget {
                   children: [
                     _InfoRow(
                       label: 'Toplam Çalışma',
-                      value: '${workflow.executionCount}',
+                      value: '${workflow.runCount}',
+                    ),
+                    _InfoRow(
+                      label: 'Başarılı',
+                      value: '${workflow.successCount}',
+                    ),
+                    _InfoRow(
+                      label: 'Başarısız',
+                      value: '${workflow.failureCount}',
                     ),
                     _InfoRow(
                       label: 'Son Çalışma',
-                      value: workflow.lastExecutedAt != null
-                          ? _formatDate(workflow.lastExecutedAt!)
+                      value: workflow.lastRunAt != null
+                          ? _formatDate(workflow.lastRunAt!)
                           : 'Henüz çalışmadı',
                     ),
                     _InfoRow(
                       label: 'Öncelik',
-                      value: '${workflow.priority}',
+                      value: workflow.priority.label,
                     ),
                   ],
                 ),
               ),
             ),
 
-            if (workflow.schedule != null) ...[
+            if (workflow.cronExpression != null) ...[
               const SizedBox(height: AppSpacing.md),
               AppSectionHeader(title: 'Zamanlama'),
               const SizedBox(height: AppSpacing.sm),
@@ -456,7 +442,7 @@ class _WorkflowDetailSheet extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          workflow.schedule!,
+                          workflow.cronExpression!,
                           style: AppTypography.body.copyWith(
                             fontFamily: 'monospace',
                           ),
@@ -494,10 +480,11 @@ class _WorkflowDetailSheet extends StatelessWidget {
                       label: 'Oluşturulma',
                       value: _formatDate(workflow.createdAt),
                     ),
-                    _InfoRow(
-                      label: 'Güncelleme',
-                      value: _formatDate(workflow.updatedAt),
-                    ),
+                    if (workflow.updatedAt != null)
+                      _InfoRow(
+                        label: 'Güncelleme',
+                        value: _formatDate(workflow.updatedAt!),
+                      ),
                   ],
                 ),
               ),
@@ -546,23 +533,6 @@ class _WorkflowDetailSheet extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _getTriggerLabel() {
-    switch (workflow.triggerType) {
-      case WorkflowTriggerType.manual:
-        return 'Manuel';
-      case WorkflowTriggerType.schedule:
-        return 'Zamanlı';
-      case WorkflowTriggerType.event:
-        return 'Olay';
-      case WorkflowTriggerType.condition:
-        return 'Koşul';
-      case WorkflowTriggerType.webhook:
-        return 'Webhook';
-      case WorkflowTriggerType.api:
-        return 'API';
-    }
   }
 
   String _formatDate(DateTime date) {

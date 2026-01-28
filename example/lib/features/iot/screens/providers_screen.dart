@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class ProvidersScreen extends StatefulWidget {
@@ -65,7 +64,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppLoadingView();
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -78,12 +77,25 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     }
 
     if (_providers.isEmpty) {
-      return AppEmptyView(
-        icon: Icons.storage,
-        title: 'Veri Sağlayıcı Bulunamadı',
-        message: 'Henüz tanımlanmış veri sağlayıcı yok',
-        actionLabel: 'Veri Sağlayıcı Ekle',
-        onAction: () => _showAddProviderDialog(),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.storage, size: 64, color: AppColors.tertiaryLabel(context)),
+            const SizedBox(height: AppSpacing.md),
+            Text('Veri Sağlayıcı Bulunamadı', style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Henüz tanımlanmış veri sağlayıcı yok',
+              style: AppTypography.subheadline.copyWith(color: AppColors.secondaryLabel(context)),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Veri Sağlayıcı Ekle',
+              onPressed: () => _showAddProviderDialog(),
+            ),
+          ],
+        ),
       );
     }
 
@@ -140,12 +152,12 @@ class _ProviderCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.1),
+                color: _getStatusColor(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _getTypeIcon(),
-                color: _getStatusColor(),
+                color: _getStatusColor(context),
                 size: 24,
               ),
             ),
@@ -167,7 +179,7 @@ class _ProviderCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    _getTypeName(),
+                    provider.type.label,
                     style: AppTypography.caption1.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
@@ -204,18 +216,18 @@ class _ProviderCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor() {
+  Color _getStatusColor(BuildContext context) {
     switch (provider.status) {
       case DataProviderStatus.active:
         return AppColors.success;
       case DataProviderStatus.inactive:
-        return AppColors.tertiaryLabel(null);
+        return AppColors.tertiaryLabel(context);
       case DataProviderStatus.connecting:
         return AppColors.warning;
       case DataProviderStatus.error:
         return AppColors.error;
       case DataProviderStatus.disabled:
-        return AppColors.tertiaryLabel(null);
+        return AppColors.tertiaryLabel(context);
     }
   }
 
@@ -241,31 +253,6 @@ class _ProviderCard extends StatelessWidget {
         return Icons.file_present;
       case DataProviderType.custom:
         return Icons.extension;
-    }
-  }
-
-  String _getTypeName() {
-    switch (provider.type) {
-      case DataProviderType.modbus:
-        return 'Modbus TCP/RTU';
-      case DataProviderType.opcUa:
-        return 'OPC-UA';
-      case DataProviderType.mqtt:
-        return 'MQTT';
-      case DataProviderType.http:
-        return 'HTTP/REST API';
-      case DataProviderType.bacnet:
-        return 'BACnet';
-      case DataProviderType.s7:
-        return 'Siemens S7';
-      case DataProviderType.allenBradley:
-        return 'Allen-Bradley';
-      case DataProviderType.database:
-        return 'Veritabanı';
-      case DataProviderType.file:
-        return 'Dosya';
-      case DataProviderType.custom:
-        return 'Özel';
     }
   }
 }
@@ -345,7 +332,7 @@ class _ProviderDetailSheet extends StatelessWidget {
                     Expanded(
                       child: _DetailItem(
                         label: 'Tip',
-                        value: _getTypeName(),
+                        value: provider.type.label,
                       ),
                     ),
                   ],
@@ -417,10 +404,11 @@ class _ProviderDetailSheet extends StatelessWidget {
                       label: 'Oluşturulma',
                       value: _formatDate(provider.createdAt),
                     ),
-                    _InfoRow(
-                      label: 'Güncelleme',
-                      value: _formatDate(provider.updatedAt),
-                    ),
+                    if (provider.updatedAt != null)
+                      _InfoRow(
+                        label: 'Güncelleme',
+                        value: _formatDate(provider.updatedAt!),
+                      ),
                   ],
                 ),
               ),
@@ -453,31 +441,6 @@ class _ProviderDetailSheet extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _getTypeName() {
-    switch (provider.type) {
-      case DataProviderType.modbus:
-        return 'Modbus';
-      case DataProviderType.opcUa:
-        return 'OPC-UA';
-      case DataProviderType.mqtt:
-        return 'MQTT';
-      case DataProviderType.http:
-        return 'HTTP';
-      case DataProviderType.bacnet:
-        return 'BACnet';
-      case DataProviderType.s7:
-        return 'S7';
-      case DataProviderType.allenBradley:
-        return 'AB';
-      case DataProviderType.database:
-        return 'DB';
-      case DataProviderType.file:
-        return 'File';
-      case DataProviderType.custom:
-        return 'Custom';
-    }
   }
 
   String _formatDate(DateTime date) {

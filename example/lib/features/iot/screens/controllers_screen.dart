@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class ControllersScreen extends StatefulWidget {
@@ -65,7 +64,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppLoadingView();
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -78,12 +77,25 @@ class _ControllersScreenState extends State<ControllersScreen> {
     }
 
     if (_controllers.isEmpty) {
-      return AppEmptyView(
-        icon: Icons.developer_board,
-        title: 'Controller Bulunamadı',
-        message: 'Henüz tanımlanmış controller yok',
-        actionLabel: 'Controller Ekle',
-        onAction: () => _showAddControllerDialog(),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.developer_board, size: 64, color: AppColors.tertiaryLabel(context)),
+            const SizedBox(height: AppSpacing.md),
+            Text('Controller Bulunamadı', style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Henüz tanımlanmış controller yok',
+              style: AppTypography.subheadline.copyWith(color: AppColors.secondaryLabel(context)),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Controller Ekle',
+              onPressed: () => _showAddControllerDialog(),
+            ),
+          ],
+        ),
       );
     }
 
@@ -140,12 +152,12 @@ class _ControllerCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.1),
+                color: _getStatusColor(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _getTypeIcon(),
-                color: _getStatusColor(),
+                color: _getStatusColor(context),
                 size: 24,
               ),
             ),
@@ -167,7 +179,7 @@ class _ControllerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    controller.type.name.toUpperCase(),
+                    controller.type.label,
                     style: AppTypography.caption1.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
@@ -183,7 +195,7 @@ class _ControllerCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${controller.ipAddress}:${controller.port ?? "-"}',
+                          controller.connectionAddress,
                           style: AppTypography.caption2.copyWith(
                             color: AppColors.tertiaryLabel(context),
                           ),
@@ -201,7 +213,7 @@ class _ControllerCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor() {
+  Color _getStatusColor(BuildContext context) {
     switch (controller.status) {
       case ControllerStatus.online:
         return AppColors.success;
@@ -214,7 +226,8 @@ class _ControllerCard extends StatelessWidget {
       case ControllerStatus.maintenance:
         return AppColors.info;
       case ControllerStatus.disabled:
-        return AppColors.tertiaryLabel(null);
+      case ControllerStatus.unknown:
+        return AppColors.tertiaryLabel(context);
     }
   }
 
@@ -224,19 +237,20 @@ class _ControllerCard extends StatelessWidget {
         return Icons.memory;
       case ControllerType.rtu:
         return Icons.router;
-      case ControllerType.dcs:
-        return Icons.hub;
       case ControllerType.scada:
         return Icons.monitor;
       case ControllerType.hmi:
         return Icons.touch_app;
       case ControllerType.gateway:
+      case ControllerType.iotGateway:
         return Icons.settings_input_antenna;
-      case ControllerType.edgeDevice:
+      case ControllerType.edge:
         return Icons.devices_other;
-      case ControllerType.virtualController:
+      case ControllerType.sensorHub:
+        return Icons.sensors;
+      case ControllerType.virtual:
         return Icons.cloud;
-      case ControllerType.custom:
+      case ControllerType.other:
         return Icons.developer_board;
     }
   }
@@ -250,27 +264,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppBadge(
-      label: _getLabel(),
+      label: status.label,
       variant: _getVariant(),
       size: AppBadgeSize.small,
     );
-  }
-
-  String _getLabel() {
-    switch (status) {
-      case ControllerStatus.online:
-        return 'Çevrimiçi';
-      case ControllerStatus.offline:
-        return 'Çevrimdışı';
-      case ControllerStatus.connecting:
-        return 'Bağlanıyor';
-      case ControllerStatus.error:
-        return 'Hata';
-      case ControllerStatus.maintenance:
-        return 'Bakım';
-      case ControllerStatus.disabled:
-        return 'Devre Dışı';
-    }
   }
 
   AppBadgeVariant _getVariant() {
@@ -286,6 +283,7 @@ class _StatusBadge extends StatelessWidget {
       case ControllerStatus.maintenance:
         return AppBadgeVariant.info;
       case ControllerStatus.disabled:
+      case ControllerStatus.unknown:
         return AppBadgeVariant.secondary;
     }
   }
@@ -321,7 +319,7 @@ class _ControllerDetailSheet extends StatelessWidget {
                     Expanded(
                       child: _DetailItem(
                         label: 'Tip',
-                        value: controller.type.name.toUpperCase(),
+                        value: controller.type.label,
                       ),
                     ),
                   ],
@@ -341,7 +339,7 @@ class _ControllerDetailSheet extends StatelessWidget {
                   children: [
                     _InfoRow(label: 'IP Adresi', value: controller.ipAddress ?? '-'),
                     _InfoRow(label: 'Port', value: controller.port?.toString() ?? '-'),
-                    _InfoRow(label: 'Protokol', value: controller.protocol ?? '-'),
+                    _InfoRow(label: 'Protokol', value: controller.protocol.label),
                   ],
                 ),
               ),
@@ -376,10 +374,11 @@ class _ControllerDetailSheet extends StatelessWidget {
                       label: 'Oluşturulma',
                       value: _formatDate(controller.createdAt),
                     ),
-                    _InfoRow(
-                      label: 'Güncelleme',
-                      value: _formatDate(controller.updatedAt),
-                    ),
+                    if (controller.updatedAt != null)
+                      _InfoRow(
+                        label: 'Güncelleme',
+                        value: _formatDate(controller.updatedAt!),
+                      ),
                     if (controller.lastConnectedAt != null)
                       _InfoRow(
                         label: 'Son Bağlantı',

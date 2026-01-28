@@ -31,17 +31,10 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
       final tenantId = tenantService.currentTenantId;
       if (tenantId == null) return;
 
-      final futures = await Future.wait([
-        controllerService.getControllers(tenantId),
-        dataProviderService.getProviders(tenantId),
-        variableService.getVariables(tenantId),
-        workflowService.getWorkflows(tenantId),
-      ]);
-
-      final controllers = futures[0] as List<Controller>;
-      final providers = futures[1] as List<DataProvider>;
-      final variables = futures[2] as List<Variable>;
-      final workflows = futures[3] as List<Workflow>;
+      final controllers = await controllerService.getControllers(tenantId);
+      final providers = await dataProviderService.getProviders(tenantId);
+      final variables = await variableService.getVariables(tenantId);
+      final workflows = await workflowService.getWorkflows(tenantId);
 
       if (mounted) {
         setState(() {
