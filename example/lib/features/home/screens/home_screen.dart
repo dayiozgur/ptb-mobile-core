@@ -184,6 +184,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // IoT Section
+              AppSectionHeader(
+                title: 'IoT Yönetimi',
+                action: TextButton(
+                  onPressed: () => context.go('/iot'),
+                  child: const Text('Tümü'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _IotQuickAccess(),
+
+              const SizedBox(height: AppSpacing.lg),
+
               // Hierarchy navigation
               AppSectionHeader(title: 'Hiyerarşi'),
               const SizedBox(height: AppSpacing.sm),
@@ -792,6 +805,97 @@ class _HierarchyConnector extends StatelessWidget {
                 : AppColors.tertiaryLabel(context).withOpacity(0.2),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _IotQuickAccess extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _IotQuickCard(
+            icon: Icons.developer_board,
+            label: 'Controllers',
+            color: Colors.blue,
+            onTap: () => context.go('/iot/controllers'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _IotQuickCard(
+            icon: Icons.storage,
+            label: 'Providers',
+            color: Colors.green,
+            onTap: () => context.go('/iot/providers'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _IotQuickCard(
+            icon: Icons.data_object,
+            label: 'Variables',
+            color: Colors.orange,
+            onTap: () => context.go('/iot/variables'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _IotQuickCard(
+            icon: Icons.account_tree,
+            label: 'Workflows',
+            color: Colors.purple,
+            onTap: () => context.go('/iot/workflows'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IotQuickCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _IotQuickCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.xs),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              label,
+              style: AppTypography.caption2.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

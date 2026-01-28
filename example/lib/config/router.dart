@@ -6,6 +6,11 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/iot/screens/iot_dashboard_screen.dart';
+import '../features/iot/screens/controllers_screen.dart';
+import '../features/iot/screens/providers_screen.dart';
+import '../features/iot/screens/variables_screen.dart';
+import '../features/iot/screens/workflows_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
@@ -153,6 +158,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         name: 'notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+
+      // ==================
+      // IoT Routes
+      // ==================
+      GoRoute(
+        path: '/iot',
+        name: 'iot',
+        builder: (context, state) => const IotDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/iot/controllers',
+        name: 'iot-controllers',
+        builder: (context, state) => const ControllersScreen(),
+      ),
+      GoRoute(
+        path: '/iot/providers',
+        name: 'iot-providers',
+        builder: (context, state) => const ProvidersScreen(),
+      ),
+      GoRoute(
+        path: '/iot/variables',
+        name: 'iot-variables',
+        builder: (context, state) => const VariablesScreen(),
+      ),
+      GoRoute(
+        path: '/iot/workflows',
+        name: 'iot-workflows',
+        builder: (context, state) => const WorkflowsScreen(),
       ),
     ],
 
