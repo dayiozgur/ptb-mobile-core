@@ -26,13 +26,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     });
 
     try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId == null) {
-        setState(() => _errorMessage = 'Tenant seçili değil');
-        return;
-      }
-
-      final providers = await dataProviderService.getProviders(tenantId);
+      final providers = await dataProviderService.getAll();
       if (mounted) {
         setState(() => _providers = providers);
       }

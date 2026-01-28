@@ -28,13 +28,10 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId == null) return;
-
-      final controllers = await controllerService.getControllers(tenantId);
-      final providers = await dataProviderService.getProviders(tenantId);
-      final variables = await variableService.getVariables(tenantId);
-      final workflows = await workflowService.getWorkflows(tenantId);
+      final controllers = await controllerService.getAll();
+      final providers = await dataProviderService.getAll();
+      final variables = await variableService.getAll();
+      final workflows = await workflowService.getAll();
 
       if (mounted) {
         setState(() {

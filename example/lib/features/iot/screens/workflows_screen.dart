@@ -26,13 +26,7 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
     });
 
     try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId == null) {
-        setState(() => _errorMessage = 'Tenant seçili değil');
-        return;
-      }
-
-      final workflows = await workflowService.getWorkflows(tenantId);
+      final workflows = await workflowService.getAll();
       if (mounted) {
         setState(() => _workflows = workflows);
       }
@@ -138,10 +132,10 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
   Future<void> _toggleWorkflow(Workflow workflow) async {
     try {
       if (workflow.status == WorkflowStatus.active) {
-        await workflowService.deactivateWorkflow(workflow.id);
+        await workflowService.deactivate(workflow.id);
         AppSnackbar.showSuccess(context, message: 'Workflow durduruldu');
       } else {
-        await workflowService.activateWorkflow(workflow.id);
+        await workflowService.activate(workflow.id);
         AppSnackbar.showSuccess(context, message: 'Workflow başlatıldı');
       }
       _loadWorkflows();

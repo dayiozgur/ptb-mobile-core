@@ -26,13 +26,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
     });
 
     try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId == null) {
-        setState(() => _errorMessage = 'Tenant seçili değil');
-        return;
-      }
-
-      final controllers = await controllerService.getControllers(tenantId);
+      final controllers = await controllerService.getAll();
       if (mounted) {
         setState(() => _controllers = controllers);
       }

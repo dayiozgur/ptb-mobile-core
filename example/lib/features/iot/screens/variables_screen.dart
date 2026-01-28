@@ -28,13 +28,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
     });
 
     try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId == null) {
-        setState(() => _errorMessage = 'Tenant seçili değil');
-        return;
-      }
-
-      final variables = await variableService.getVariables(tenantId);
+      final variables = await variableService.getAll();
       if (mounted) {
         setState(() => _variables = variables);
       }
