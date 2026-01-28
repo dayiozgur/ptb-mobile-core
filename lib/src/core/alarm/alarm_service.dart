@@ -6,6 +6,7 @@ import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'alarm_model.dart';
 import 'alarm_history_model.dart';
+import 'alarm_stats_model.dart';
 
 /// Alarm Service
 ///
@@ -223,6 +224,316 @@ class AlarmService {
     } catch (e) {
       Logger.warning('Failed to get alarm count for provider: $e');
       return 0;
+    }
+  }
+
+  // ============================================
+  // RESET ALARMS (alarm_histories tablosu)
+  // ============================================
+
+  /// Resetli alarmları getir (alarm_histories tablosu)
+  ///
+  /// Son [days] gün içindeki resetlenmiş alarmları döner (max 90 gün).
+  /// Sıralama: reset_time DESC
+  Future<List<AlarmHistory>> getResetAlarms({
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+    int days = 90,
+    int limit = 50,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = days.clamp(1, 90);
+    final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
+    final cacheKey =
+        'reset_alarms_${_currentTenantId}_${filterKey}_${effectiveDays}d';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached
+            .map((e) => AlarmHistory.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    }
+
+    try {
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      var query = _supabase
+          .from('alarm_histories')
+          .select()
+          .not('reset_time', 'is', null)
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+      if (providerId != null) {
+        query = query.eq('provider_id', providerId);
+      }
+
+      final response = await query
+          .order('reset_time', ascending: false)
+          .limit(limit);
+
+      final results = <AlarmHistory>[];
+      for (final e in (response as List)) {
+        try {
+          results.add(AlarmHistory.fromJson(e as Map<String, dynamic>));
+        } catch (parseError) {
+          Logger.warning('Failed to parse reset alarm: $parseError');
+        }
+      }
+
+      await _cacheManager.set(
+        cacheKey,
+        results.map((e) => e.toJson()).toList(),
+        ttl: const Duration(minutes: 5),
+      );
+
+      return results;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get reset alarms', e, stackTrace);
+      return [];
+    }
+  }
+
+  // ============================================
+  // ALARM TIMELINE (alarm_histories tablosu)
+  // ============================================
+
+  /// Alarm zaman çizelgesi - günlük gruplandırılmış alarm sayıları
+  ///
+  /// alarm_histories tablosundan son [days] gün (max 90) verileri çeker,
+  /// client-side günlük gruplandırma yapar.
+  /// Her gün için priority bazlı ayrıntı içerir.
+  Future<List<AlarmTimelineEntry>> getAlarmTimeline({
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+    int days = 30,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = days.clamp(1, 90);
+    final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
+    final cacheKey =
+        'alarm_timeline_${_currentTenantId}_${filterKey}_${effectiveDays}d';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached.map((e) {
+          final map = e as Map<String, dynamic>;
+          return AlarmTimelineEntry(
+            date: DateTime.parse(map['date'] as String),
+            totalCount: map['totalCount'] as int,
+            countByPriority:
+                (map['countByPriority'] as Map<String, dynamic>?)
+                    ?.map((k, v) => MapEntry(k, v as int)) ??
+                {},
+          );
+        }).toList();
+      }
+    }
+
+    try {
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      var query = _supabase
+          .from('alarm_histories')
+          .select('id,start_time,priority_id')
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+      if (providerId != null) {
+        query = query.eq('provider_id', providerId);
+      }
+
+      final response =
+          await query.order('start_time', ascending: true);
+
+      // Client-side günlük gruplandırma
+      final dailyMap = <String, Map<String, int>>{};
+      final dailyTotal = <String, int>{};
+
+      for (final e in (response as List)) {
+        final row = e as Map<String, dynamic>;
+        final startTime = row['start_time'] as String?;
+        if (startTime == null) continue;
+
+        final date = DateTime.tryParse(startTime);
+        if (date == null) continue;
+
+        final dateKey =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        final priorityId = row['priority_id'] as String? ?? 'unknown';
+
+        dailyTotal[dateKey] = (dailyTotal[dateKey] ?? 0) + 1;
+        dailyMap[dateKey] ??= {};
+        dailyMap[dateKey]![priorityId] =
+            (dailyMap[dateKey]![priorityId] ?? 0) + 1;
+      }
+
+      // Boş günleri de dahil et
+      final entries = <AlarmTimelineEntry>[];
+      final now = DateTime.now();
+      for (var i = effectiveDays - 1; i >= 0; i--) {
+        final day = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: i));
+        final dateKey =
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+        entries.add(AlarmTimelineEntry(
+          date: day,
+          totalCount: dailyTotal[dateKey] ?? 0,
+          countByPriority: dailyMap[dateKey] ?? {},
+        ));
+      }
+
+      await _cacheManager.set(
+        cacheKey,
+        entries
+            .map((e) => {
+                  'date': e.date.toIso8601String(),
+                  'totalCount': e.totalCount,
+                  'countByPriority': e.countByPriority,
+                })
+            .toList(),
+        ttl: const Duration(minutes: 5),
+      );
+
+      return entries;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get alarm timeline', e, stackTrace);
+      return [];
+    }
+  }
+
+  // ============================================
+  // ALARM DISTRIBUTION (alarms + alarm_histories)
+  // ============================================
+
+  /// Alarm dağılımı - aktif vs reset
+  ///
+  /// activeCount: alarms tablosu (active = true)
+  /// resetCount: alarm_histories tablosu (son [days] gün, max 90)
+  /// acknowledgedCount: alarms tablosu (acknowledge_time != null)
+  Future<AlarmDistribution> getAlarmDistribution({
+    String? controllerId,
+    String? siteId,
+    int days = 90,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = days.clamp(1, 90);
+    final filterKey = controllerId ?? siteId ?? 'all';
+    final cacheKey =
+        'alarm_dist_${_currentTenantId}_${filterKey}_${effectiveDays}d';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return AlarmDistribution(
+          activeCount: cached['activeCount'] as int,
+          resetCount: cached['resetCount'] as int,
+          acknowledgedCount: cached['acknowledgedCount'] as int? ?? 0,
+        );
+      }
+    }
+
+    try {
+      // Aktif alarm sayısı (alarms tablosu)
+      var activeQuery = _supabase
+          .from('alarms')
+          .select('id')
+          .eq('active', true);
+
+      if (controllerId != null) {
+        activeQuery = activeQuery.eq('controller_id', controllerId);
+      }
+
+      final activeResponse = await activeQuery;
+      final activeCount = (activeResponse as List).length;
+
+      // Onaylı aktif alarm sayısı
+      var ackQuery = _supabase
+          .from('alarms')
+          .select('id')
+          .eq('active', true)
+          .not('local_acknowledge_time', 'is', null);
+
+      if (controllerId != null) {
+        ackQuery = ackQuery.eq('controller_id', controllerId);
+      }
+
+      final ackResponse = await ackQuery;
+      final acknowledgedCount = (ackResponse as List).length;
+
+      // Resetli alarm sayısı (alarm_histories tablosu)
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      var resetQuery = _supabase
+          .from('alarm_histories')
+          .select('id')
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        resetQuery = resetQuery.eq('tenant_id', _currentTenantId!);
+      }
+      if (controllerId != null) {
+        resetQuery = resetQuery.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        resetQuery = resetQuery.eq('site_id', siteId);
+      }
+
+      final resetResponse = await resetQuery;
+      final resetCount = (resetResponse as List).length;
+
+      final distribution = AlarmDistribution(
+        activeCount: activeCount,
+        resetCount: resetCount,
+        acknowledgedCount: acknowledgedCount,
+      );
+
+      await _cacheManager.set(
+        cacheKey,
+        {
+          'activeCount': activeCount,
+          'resetCount': resetCount,
+          'acknowledgedCount': acknowledgedCount,
+        },
+        ttl: const Duration(minutes: 5),
+      );
+
+      return distribution;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get alarm distribution', e, stackTrace);
+      return const AlarmDistribution(
+        activeCount: 0,
+        resetCount: 0,
+        acknowledgedCount: 0,
+      );
     }
   }
 

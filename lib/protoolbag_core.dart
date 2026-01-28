@@ -132,10 +132,12 @@ export 'src/core/priority/priority_service.dart';
 export 'src/core/alarm/alarm_model.dart';
 export 'src/core/alarm/alarm_history_model.dart';
 export 'src/core/alarm/alarm_service.dart';
+export 'src/core/alarm/alarm_stats_model.dart';
 
 // Core - IoT Log (Operational Logs)
 export 'src/core/iot_log/iot_log_model.dart';
 export 'src/core/iot_log/iot_log_service.dart';
+export 'src/core/iot_log/iot_log_stats_model.dart';
 
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
@@ -158,6 +160,7 @@ export 'src/presentation/widgets/cards/metric_card.dart';
 // Presentation - Widgets - Lists
 export 'src/presentation/widgets/lists/app_list_tile.dart';
 export 'src/presentation/widgets/lists/app_section_header.dart';
+export 'src/presentation/widgets/lists/reset_alarm_list.dart';
 
 // Presentation - Widgets - Navigation
 export 'src/presentation/widgets/navigation/app_scaffold.dart';
@@ -173,6 +176,14 @@ export 'src/presentation/widgets/feedback/app_snackbar.dart';
 export 'src/presentation/widgets/feedback/notification_badge.dart';
 export 'src/presentation/widgets/feedback/offline_indicator.dart';
 export 'src/presentation/widgets/feedback/error_boundary.dart';
+
+// Presentation - Widgets - Charts
+export 'src/presentation/widgets/charts/chart_container.dart';
+export 'src/presentation/widgets/charts/alarm_bar_chart.dart';
+export 'src/presentation/widgets/charts/alarm_pie_chart.dart';
+export 'src/presentation/widgets/charts/log_line_chart.dart';
+export 'src/presentation/widgets/charts/log_onoff_chart.dart';
+export 'src/presentation/widgets/charts/multi_line_chart.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';

@@ -44,6 +44,9 @@ dependencies:
   # Biometric
   local_auth: ^2.2.0
 
+  # Charts
+  fl_chart: ^0.69.0
+
   # UI Helpers
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0

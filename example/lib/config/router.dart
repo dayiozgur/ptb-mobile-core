@@ -11,6 +11,8 @@ import '../features/iot/screens/controllers_screen.dart';
 import '../features/iot/screens/providers_screen.dart';
 import '../features/iot/screens/variables_screen.dart';
 import '../features/iot/screens/workflows_screen.dart';
+import '../features/iot/screens/alarm_dashboard_screen.dart';
+import '../features/iot/screens/controller_logs_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
@@ -187,6 +189,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/iot/workflows',
         name: 'iot-workflows',
         builder: (context, state) => const WorkflowsScreen(),
+      ),
+      GoRoute(
+        path: '/iot/alarms',
+        name: 'iot-alarms',
+        builder: (context, state) => const AlarmDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/iot/controllers/:id/logs',
+        name: 'controller-logs',
+        builder: (context, state) {
+          final controllerId = state.pathParameters['id']!;
+          final controllerName = state.uri.queryParameters['name'];
+          return ControllerLogsScreen(
+            controllerId: controllerId,
+            controllerName: controllerName,
+          );
+        },
       ),
     ],
 
