@@ -108,11 +108,17 @@ class ControllerService {
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
       if (cached != null) {
-        _controllers = cached
-            .map((e) => Controller.fromJson(e as Map<String, dynamic>))
-            .toList();
-        _controllersController.add(_controllers);
-        return _controllers;
+        try {
+          _controllers = cached
+              .map((e) => Controller.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _controllersController.add(_controllers);
+          return _controllers;
+        } catch (cacheError) {
+          Logger.warning('Failed to parse controllers from cache, fetching fresh: $cacheError');
+          // Cache bozuksa temizle ve DB'den yükle
+          await _cacheManager.remove(cacheKey);
+        }
       }
     }
 
@@ -135,10 +141,18 @@ class ControllerService {
       // Filtreleme client-side yapılır.
 
       final response = await query.order('name');
+      final responseList = response as List;
+      Logger.debug('Controllers query returned ${responseList.length} records for tenant: $_currentTenantId');
 
-      var controllers = (response as List)
-          .map((e) => Controller.fromJson(e as Map<String, dynamic>))
-          .toList();
+      var controllers = <Controller>[];
+      for (final e in responseList) {
+        try {
+          controllers.add(Controller.fromJson(e as Map<String, dynamic>));
+        } catch (parseError) {
+          Logger.warning('Failed to parse controller: $parseError, data: ${(e as Map)['id'] ?? 'unknown'}');
+        }
+      }
+      Logger.debug('Parsed ${controllers.length}/${responseList.length} controllers successfully');
 
       // Client-side filtreleme
       if (status != null) {

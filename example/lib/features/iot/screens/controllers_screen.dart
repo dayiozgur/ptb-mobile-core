@@ -40,7 +40,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
     } catch (e) {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
-        setState(() => _errorMessage = 'Controllerlar yüklenemedi');
+        setState(() => _errorMessage = 'Controllerlar yüklenemedi: $e');
       }
     }
 
