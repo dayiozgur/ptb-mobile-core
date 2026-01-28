@@ -183,10 +183,10 @@ class _AlarmBarChartState extends State<AlarmBarChart> {
                     },
                   ),
                 ),
-                topTitles: const AxisTitles(
+                topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: const AxisTitles(
+                rightTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),

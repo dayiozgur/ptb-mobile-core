@@ -84,7 +84,7 @@ class LogOnOffChart extends StatelessWidget {
               maxY: 1.1,
               minX: 0,
               maxX: timeRange,
-              clipData: const FlClipData.all(),
+              clipData: FlClipData.all(),
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchTooltipData: LineTouchTooltipData(
@@ -120,7 +120,7 @@ class LogOnOffChart extends StatelessWidget {
                   },
                 ),
               ),
-              gridData: const FlGridData(show: false),
+              gridData: FlGridData(show: false),
               titlesData: FlTitlesData(
                 show: true,
                 bottomTitles: AxisTitles(
@@ -134,7 +134,7 @@ class LogOnOffChart extends StatelessWidget {
                       }
                       final ms = firstTime + value.toInt();
                       final dt =
-                          DateTime.fromMillisecondsSinceEpoch(ms);
+                          DateTime.fromMillisecondsSinceEpoch(ms.toInt());
                       final format = timeRange >
                               const Duration(days: 3)
                                   .inMilliseconds
@@ -190,10 +190,10 @@ class LogOnOffChart extends StatelessWidget {
                     },
                   ),
                 ),
-                topTitles: const AxisTitles(
+                topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: const AxisTitles(
+                rightTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
@@ -205,7 +205,7 @@ class LogOnOffChart extends StatelessWidget {
                   isStepLineChart: true,
                   color: onColor,
                   barWidth: 2,
-                  dotData: const FlDotData(show: false),
+                  dotData: FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
                     gradient: LinearGradient(

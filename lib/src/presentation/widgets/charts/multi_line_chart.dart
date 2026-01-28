@@ -125,7 +125,7 @@ class _MultiLineChartState extends State<MultiLineChart> {
               maxY: yMax,
               minX: 0,
               maxX: timeRange,
-              clipData: const FlClipData.all(),
+              clipData: FlClipData.all(),
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchTooltipData: LineTouchTooltipData(
@@ -183,7 +183,7 @@ class _MultiLineChartState extends State<MultiLineChart> {
                       }
                       final ms = globalMinTime + value.toInt();
                       final dt =
-                          DateTime.fromMillisecondsSinceEpoch(ms);
+                          DateTime.fromMillisecondsSinceEpoch(ms.toInt());
                       final format = timeRange >
                               const Duration(days: 3)
                                   .inMilliseconds
@@ -222,10 +222,10 @@ class _MultiLineChartState extends State<MultiLineChart> {
                     },
                   ),
                 ),
-                topTitles: const AxisTitles(
+                topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: const AxisTitles(
+                rightTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
@@ -251,7 +251,7 @@ class _MultiLineChartState extends State<MultiLineChart> {
                   color: color,
                   barWidth: 2,
                   isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
+                  dotData: FlDotData(show: false),
                   belowBarData: BarAreaData(show: false),
                 );
               }).toList(),

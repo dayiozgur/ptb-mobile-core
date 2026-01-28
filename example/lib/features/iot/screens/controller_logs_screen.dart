@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
@@ -17,10 +16,7 @@ class ControllerLogsScreen extends StatefulWidget {
   State<ControllerLogsScreen> createState() => _ControllerLogsScreenState();
 }
 
-class _ControllerLogsScreenState extends State<ControllerLogsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _ControllerLogsScreenState extends State<ControllerLogsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -32,14 +28,7 @@ class _ControllerLogsScreenState extends State<ControllerLogsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -98,13 +87,11 @@ class _ControllerLogsScreenState extends State<ControllerLogsScreen>
   Widget build(BuildContext context) {
     return AppTabScaffold(
       title: widget.controllerName ?? 'Controller Logları',
-      onBack: () => context.pop(),
       tabs: const [
         Tab(text: 'Grafikler'),
         Tab(text: 'Log Listesi'),
       ],
-      tabController: _tabController,
-      children: [
+      tabViews: [
         // Tab 1: Grafikler
         _buildChartsTab(),
         // Tab 2: Log Listesi

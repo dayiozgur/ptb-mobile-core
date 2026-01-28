@@ -94,8 +94,8 @@ class ResetAlarmList extends StatelessWidget {
         return _ResetAlarmTile(
           alarm: alarm,
           priorityColor: _priorityColor(alarm),
-          priorityName: alarm.priorityId != null
-              ? priorities?[alarm.priorityId!]?.label
+          priorityName: (alarm.priorityId != null && priorities != null)
+              ? priorities![alarm.priorityId!]?.label
               : null,
           brightness: brightness,
           onTap: onAlarmTap != null ? () => onAlarmTap!(alarm) : null,

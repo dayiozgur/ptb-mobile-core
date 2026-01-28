@@ -100,7 +100,7 @@ class _LogLineChartState extends State<LogLineChart> {
           maxY: yMax,
           minX: 0,
           maxX: timeRange,
-          clipData: const FlClipData.all(),
+          clipData: FlClipData.all(),
           lineTouchData: LineTouchData(
             enabled: widget.config.enableTouch,
             touchTooltipData: LineTouchTooltipData(
@@ -182,9 +182,9 @@ class _LogLineChartState extends State<LogLineChart> {
                 reservedSize: 28,
                 interval: timeRange / 4,
                 getTitlesWidget: (value, meta) {
-                  final ms = firstTime + value.toInt();
+                  final ms = (firstTime + value.toInt());
                   final dt =
-                      DateTime.fromMillisecondsSinceEpoch(ms);
+                      DateTime.fromMillisecondsSinceEpoch(ms.toInt());
 
                   // İlk ve son etiket kontrolü
                   if (value == 0 || value >= timeRange) {
@@ -231,10 +231,10 @@ class _LogLineChartState extends State<LogLineChart> {
                 },
               ),
             ),
-            topTitles: const AxisTitles(
+            topTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
-            rightTitles: const AxisTitles(
+            rightTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
           ),
