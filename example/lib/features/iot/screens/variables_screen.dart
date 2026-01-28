@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class VariablesScreen extends StatefulWidget {
@@ -64,6 +65,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Değişkenler',
+      onBack: () => context.go('/iot'),
       actions: [
         AppIconButton(
           icon: Icons.filter_list,

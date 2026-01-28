@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class ControllersScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Controllers',
+      onBack: () => context.go('/iot'),
       actions: [
         AppIconButton(
           icon: Icons.add,

@@ -56,6 +56,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'IoT Yönetimi',
+      onBack: () => context.go('/home'),
       actions: [
         AppIconButton(
           icon: Icons.refresh,

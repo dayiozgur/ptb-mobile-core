@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class WorkflowsScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Workflows',
+      onBack: () => context.go('/iot'),
       actions: [
         AppIconButton(
           icon: Icons.add,

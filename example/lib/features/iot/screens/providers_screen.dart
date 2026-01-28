@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class ProvidersScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Veri Sağlayıcılar',
+      onBack: () => context.go('/iot'),
       actions: [
         AppIconButton(
           icon: Icons.add,
