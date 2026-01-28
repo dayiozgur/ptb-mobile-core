@@ -123,6 +123,7 @@ class ControllerService {
     }
 
     try {
+      // Primary query: tenant_id üzerinden sorgula
       var query = _supabase
           .from('controllers')
           .select()
@@ -141,15 +142,27 @@ class ControllerService {
       // Filtreleme client-side yapılır.
 
       final response = await query.order('name');
-      final responseList = response as List;
-      Logger.debug('Controllers query returned ${responseList.length} records for tenant: $_currentTenantId');
+      var responseList = response as List;
+      Logger.debug('Controllers query (tenant_id) returned ${responseList.length} records');
+
+      // Fallback: tenant_id NULL olabilir, site hiyerarşisi üzerinden sorgula
+      // Hiyerarşi: tenant → organizations → sites → controllers
+      if (responseList.isEmpty) {
+        Logger.debug('No controllers with tenant_id, trying site hierarchy fallback...');
+        responseList = await _queryControllersThroughSites(siteId: siteId, unitId: unitId);
+        Logger.debug('Site hierarchy fallback returned ${responseList.length} controllers');
+      }
 
       var controllers = <Controller>[];
-      for (final e in responseList) {
+      for (var i = 0; i < responseList.length; i++) {
         try {
-          controllers.add(Controller.fromJson(e as Map<String, dynamic>));
+          controllers.add(Controller.fromJson(responseList[i] as Map<String, dynamic>));
         } catch (parseError) {
-          Logger.warning('Failed to parse controller: $parseError, data: ${(e as Map)['id'] ?? 'unknown'}');
+          final record = responseList[i] as Map;
+          Logger.warning('Failed to parse controller[$i]: $parseError, id: ${record['id'] ?? 'unknown'}');
+          if (i == 0) {
+            Logger.debug('First failed record keys: ${record.keys.toList()}');
+          }
         }
       }
       Logger.debug('Parsed ${controllers.length}/${responseList.length} controllers successfully');
@@ -366,12 +379,20 @@ class ControllerService {
     }
 
     try {
-      final response = await _supabase
+      // Primary query: tenant_id üzerinden
+      var response = await _supabase
           .from('controllers')
           .select('id, is_enabled, is_canceled, active')
           .eq('tenant_id', _currentTenantId!);
 
-      final rows = response as List;
+      var rows = response as List;
+
+      // Fallback: tenant_id NULL olabilir, site hiyerarşisi üzerinden sorgula
+      if (rows.isEmpty) {
+        final siteControllers = await _queryControllersThroughSites();
+        rows = siteControllers;
+      }
+
       int enabledCount = 0;
       int disabledCount = 0;
       int canceledCount = 0;
@@ -444,6 +465,65 @@ class ControllerService {
   // ============================================
   // HELPERS
   // ============================================
+
+  /// Fallback: site hiyerarşisi üzerinden controller sorgula
+  /// tenant → organizations → sites → controllers
+  Future<List<dynamic>> _queryControllersThroughSites({
+    String? siteId,
+    String? unitId,
+  }) async {
+    try {
+      // Step 1: Tenant'ın organizasyonlarını bul
+      final orgsResponse = await _supabase
+          .from('organizations')
+          .select('id')
+          .eq('tenant_id', _currentTenantId!);
+      final orgIds = (orgsResponse as List)
+          .map((o) => o['id'] as String)
+          .toList();
+
+      if (orgIds.isEmpty) {
+        Logger.debug('No organizations found for tenant: $_currentTenantId');
+        return [];
+      }
+
+      // Step 2: Organizasyonların site'larını bul
+      final sitesResponse = await _supabase
+          .from('sites')
+          .select('id')
+          .inFilter('organization_id', orgIds);
+      final siteIds = (sitesResponse as List)
+          .map((s) => s['id'] as String)
+          .toList();
+
+      if (siteIds.isEmpty) {
+        Logger.debug('No sites found for ${orgIds.length} organizations');
+        return [];
+      }
+
+      Logger.debug('Found ${siteIds.length} sites for tenant, querying controllers...');
+
+      // Step 3: Bu site'lardaki controller'ları getir
+      var query = _supabase
+          .from('controllers')
+          .select()
+          .inFilter('site_id', siteIds);
+
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+
+      if (unitId != null) {
+        query = query.eq('unit_id', unitId);
+      }
+
+      final response = await query.order('name');
+      return response as List;
+    } catch (e) {
+      Logger.warning('Site hierarchy fallback failed: $e');
+      return [];
+    }
+  }
 
   /// Cache'i temizle
   Future<void> _invalidateCache() async {
