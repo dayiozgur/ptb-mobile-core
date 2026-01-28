@@ -304,13 +304,53 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _ProviderDetailSheet extends StatelessWidget {
+class _ProviderDetailSheet extends StatefulWidget {
   final DataProvider provider;
 
   const _ProviderDetailSheet({required this.provider});
 
   @override
+  State<_ProviderDetailSheet> createState() => _ProviderDetailSheetState();
+}
+
+class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
+  int _alarmCount = 0;
+  int _logCount = 0;
+  List<AlarmHistory> _recentAlarms = [];
+  bool _loadingExtras = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExtras();
+  }
+
+  Future<void> _loadExtras() async {
+    try {
+      final alarmCount = await alarmService.getActiveAlarmCountByProvider(widget.provider.id);
+      final logCount = await iotLogService.getLogCountByProvider(widget.provider.id, lastHours: 24);
+      final recentAlarms = await alarmService.getHistory(
+        providerId: widget.provider.id,
+        limit: 5,
+      );
+      if (mounted) {
+        setState(() {
+          _alarmCount = alarmCount;
+          _logCount = logCount;
+          _recentAlarms = recentAlarms;
+          _loadingExtras = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingExtras = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = widget.provider;
     return AppBottomSheet(
       title: provider.name,
       child: SingleChildScrollView(
@@ -318,7 +358,7 @@ class _ProviderDetailSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status card
+            // Durum & Tip
             AppCard(
               variant: AppCardVariant.filled,
               child: Padding(
@@ -344,7 +384,69 @@ class _ProviderDetailSheet extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Connection info
+            // Alarm & Log Sayıları
+            if (!_loadingExtras) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: AppCard(
+                      child: Padding(
+                        padding: AppSpacing.cardInsets,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: _alarmCount > 0 ? AppColors.error : AppColors.tertiaryLabel(context),
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Aktif Alarm', style: AppTypography.caption2.copyWith(
+                                  color: AppColors.secondaryLabel(context),
+                                )),
+                                Text('$_alarmCount', style: AppTypography.headline),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppCard(
+                      child: Padding(
+                        padding: AppSpacing.cardInsets,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.article_outlined,
+                              color: AppColors.tertiaryLabel(context),
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Log (24s)', style: AppTypography.caption2.copyWith(
+                                  color: AppColors.secondaryLabel(context),
+                                )),
+                                Text('$_logCount', style: AppTypography.headline),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
+            // Bağlantı Bilgileri
             AppSectionHeader(title: 'Bağlantı Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
@@ -352,23 +454,11 @@ class _ProviderDetailSheet extends StatelessWidget {
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(
-                      label: 'IP Adresi',
-                      value: provider.ip ?? '-',
-                    ),
-                    _InfoRow(
-                      label: 'Hostname',
-                      value: provider.hostname ?? '-',
-                    ),
-                    _InfoRow(
-                      label: 'MAC',
-                      value: provider.mac ?? '-',
-                    ),
+                    _InfoRow(label: 'IP Adresi', value: provider.ip ?? '-'),
+                    _InfoRow(label: 'Hostname', value: provider.hostname ?? '-'),
+                    _InfoRow(label: 'MAC', value: provider.mac ?? '-'),
                     if (provider.code != null)
-                      _InfoRow(
-                        label: 'Kod',
-                        value: provider.code!,
-                      ),
+                      _InfoRow(label: 'Kod', value: provider.code!),
                   ],
                 ),
               ),
@@ -389,25 +479,61 @@ class _ProviderDetailSheet extends StatelessWidget {
               ),
             ],
 
+            // Son Alarmlar
+            if (_recentAlarms.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              AppSectionHeader(title: 'Son Alarmlar'),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                child: Padding(
+                  padding: AppSpacing.cardInsets,
+                  child: Column(
+                    children: _recentAlarms.map((alarm) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              alarm.isResolved ? Icons.check_circle_outline : Icons.warning_amber,
+                              size: 16,
+                              color: alarm.isResolved ? AppColors.success : AppColors.error,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                alarm.name ?? alarm.code ?? '-',
+                                style: AppTypography.caption1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              alarm.durationFormatted,
+                              style: AppTypography.caption2.copyWith(
+                                color: AppColors.secondaryLabel(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: AppSpacing.md),
 
-            // Metadata
-            AppSectionHeader(title: 'Bilgiler'),
+            // Kayıt Bilgileri
+            AppSectionHeader(title: 'Kayıt Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(
-                      label: 'Oluşturulma',
-                      value: _formatDate(provider.createdAt),
-                    ),
+                    _InfoRow(label: 'Oluşturulma', value: _formatDate(provider.createdAt)),
                     if (provider.updatedAt != null)
-                      _InfoRow(
-                        label: 'Güncelleme',
-                        value: _formatDate(provider.updatedAt!),
-                      ),
+                      _InfoRow(label: 'Güncelleme', value: _formatDate(provider.updatedAt!)),
                   ],
                 ),
               ),

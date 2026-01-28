@@ -19,6 +19,20 @@ class _OrganizationSelectorScreenState
   @override
   void initState() {
     super.initState();
+    _checkRestoredOrganization();
+  }
+
+  /// Daha önce kaydedilmiş organizasyon varsa direkt site seçimine geç
+  Future<void> _checkRestoredOrganization() async {
+    final currentOrg = organizationService.currentOrganization;
+    if (currentOrg != null && currentOrg.active) {
+      // Organizasyon zaten restore edilmiş, direkt site'lara git
+      if (mounted) {
+        context.go('/sites');
+        return;
+      }
+    }
+    // Restore edilmemiş, normal yükleme yap
     _loadOrganizations();
   }
 

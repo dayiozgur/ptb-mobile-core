@@ -124,6 +124,19 @@ export 'src/core/iot_realtime/iot_realtime_service.dart';
 export 'src/core/workflow/workflow_model.dart';
 export 'src/core/workflow/workflow_service.dart';
 
+// Core - Priority (Alarm Priorities)
+export 'src/core/priority/priority_model.dart';
+export 'src/core/priority/priority_service.dart';
+
+// Core - Alarm (Active Alarms & History)
+export 'src/core/alarm/alarm_model.dart';
+export 'src/core/alarm/alarm_history_model.dart';
+export 'src/core/alarm/alarm_service.dart';
+
+// Core - IoT Log (Operational Logs)
+export 'src/core/iot_log/iot_log_model.dart';
+export 'src/core/iot_log/iot_log_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';

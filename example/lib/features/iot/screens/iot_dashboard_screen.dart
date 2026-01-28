@@ -17,6 +17,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
   int _workflowCount = 0;
   int _activeControllers = 0;
   int _activeWorkflows = 0;
+  int _activeAlarmCount = 0;
 
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
       dataProviderService.setTenant(tenantId);
       variableService.setTenant(tenantId);
       workflowService.setTenant(tenantId);
+      alarmService.setTenant(tenantId);
     }
 
     // Her servisi bağımsız yükle - biri başarısız olursa diğerleri etkilenmesin
@@ -65,6 +67,14 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
       Logger.error('Failed to load workflows', e);
     }
 
+    int activeAlarmCount = 0;
+    try {
+      final alarms = await alarmService.getActiveAlarms();
+      activeAlarmCount = alarms.length;
+    } catch (e) {
+      Logger.error('Failed to load alarms', e);
+    }
+
     if (mounted) {
       setState(() {
         _controllerCount = controllers.length;
@@ -73,6 +83,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
         _workflowCount = workflows.length;
         _activeControllers = controllers.where((c) => c.status == ControllerStatus.online).length;
         _activeWorkflows = workflows.where((w) => w.status == WorkflowStatus.active).length;
+        _activeAlarmCount = activeAlarmCount;
       });
     }
 
@@ -106,6 +117,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
                 totalControllers: _controllerCount,
                 activeWorkflows: _activeWorkflows,
                 totalWorkflows: _workflowCount,
+                activeAlarmCount: _activeAlarmCount,
                 isLoading: _isLoading,
               ),
 
@@ -152,6 +164,7 @@ class _StatusOverview extends StatelessWidget {
   final int totalControllers;
   final int activeWorkflows;
   final int totalWorkflows;
+  final int activeAlarmCount;
   final bool isLoading;
 
   const _StatusOverview({
@@ -159,6 +172,7 @@ class _StatusOverview extends StatelessWidget {
     required this.totalControllers,
     required this.activeWorkflows,
     required this.totalWorkflows,
+    required this.activeAlarmCount,
     required this.isLoading,
   });
 
@@ -189,6 +203,19 @@ class _StatusOverview extends StatelessWidget {
                 label: 'Aktif Workflow',
                 value: isLoading ? '-' : '$activeWorkflows / $totalWorkflows',
                 color: AppColors.info,
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 50,
+              color: AppColors.separator(context),
+            ),
+            Expanded(
+              child: _StatusItem(
+                icon: Icons.warning_amber_rounded,
+                label: 'Aktif Alarm',
+                value: isLoading ? '-' : '$activeAlarmCount',
+                color: activeAlarmCount > 0 ? AppColors.error : AppColors.success,
               ),
             ),
           ],

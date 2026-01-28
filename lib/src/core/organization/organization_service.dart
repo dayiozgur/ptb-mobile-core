@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
+import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
 import 'organization_model.dart';
 
@@ -27,6 +28,7 @@ import 'organization_model.dart';
 class OrganizationService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
+  final SecureStorage _secureStorage;
 
   // State
   Organization? _currentOrganization;
@@ -46,8 +48,10 @@ class OrganizationService {
   OrganizationService({
     required SupabaseClient supabase,
     required CacheManager cacheManager,
+    required SecureStorage secureStorage,
   })  : _supabase = supabase,
-        _cacheManager = cacheManager;
+        _cacheManager = cacheManager,
+        _secureStorage = secureStorage;
 
   // ============================================
   // GETTERS
@@ -165,7 +169,7 @@ class OrganizationService {
     }
   }
 
-  /// Organizasyon seç
+  /// Organizasyon seç ve persistent olarak kaydet
   Future<bool> selectOrganization(String organizationId) async {
     try {
       final organization = await getOrganization(organizationId);
@@ -182,6 +186,9 @@ class OrganizationService {
       _currentOrganization = organization;
       _organizationController.add(organization);
 
+      // SecureStorage'a kaydet (uygulama yeniden açıldığında hatırlansın)
+      await _secureStorage.write(key: _currentOrgKey, value: organizationId);
+
       Logger.info('Organization selected: ${organization.name}');
       return true;
     } catch (e) {
@@ -190,10 +197,53 @@ class OrganizationService {
     }
   }
 
+  /// Son seçili organizasyonu geri yükle
+  Future<Organization?> restoreLastOrganization() async {
+    try {
+      final organizationId = await _secureStorage.read(_currentOrgKey);
+      if (organizationId == null) {
+        Logger.debug('No saved organization to restore');
+        return null;
+      }
+
+      // Cache'den dene
+      final cached = await _cacheManager.getTyped<Organization>(
+        key: 'organization_$organizationId',
+        fromJson: Organization.fromJson,
+      );
+      if (cached != null && cached.active) {
+        _currentOrganization = cached;
+        _organizationController.add(cached);
+        Logger.debug('Organization restored from cache: ${cached.name}');
+        return cached;
+      }
+
+      // Supabase'den getir
+      final organization = await getOrganization(organizationId);
+      if (organization != null && organization.active) {
+        _currentOrganization = organization;
+        _organizationController.add(organization);
+        Logger.debug('Organization restored from API: ${organization.name}');
+        return organization;
+      }
+
+      // Organizasyon artık geçerli değil, temizle
+      Logger.debug('Saved organization no longer valid, clearing');
+      await _secureStorage.write(key: _currentOrgKey, value: '');
+      return null;
+    } catch (e) {
+      Logger.warning('Failed to restore organization: $e');
+      return null;
+    }
+  }
+
   /// Organizasyon seçimini temizle
-  void clearOrganization() {
+  Future<void> clearOrganization() async {
     _currentOrganization = null;
     _organizationController.add(null);
+    try {
+      await _secureStorage.write(key: _currentOrgKey, value: '');
+    } catch (_) {}
     Logger.debug('Organization cleared');
   }
 
@@ -345,7 +395,7 @@ class OrganizationService {
 
       // Mevcut organizasyon ise temizle
       if (_currentOrganization?.id == organizationId) {
-        clearOrganization();
+        await clearOrganization();
       }
 
       Logger.info('Organization deleted (soft): $organizationId');

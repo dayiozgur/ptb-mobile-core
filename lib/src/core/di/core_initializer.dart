@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../alarm/alarm_service.dart';
 import '../auth/auth_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../controller/controller_service.dart';
+import '../iot_log/iot_log_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
 import '../localization/localization_service.dart';
 import '../notification/notification_service.dart';
@@ -274,6 +276,14 @@ class CoreInitializer {
         }
       }
 
+      // Step 12: Organization restore
+      if (tenantRestored && sessionRestored) {
+        onProgress?.call('Organization restore');
+        final orgService = sl<OrganizationService>();
+        final org = await orgService.restoreLastOrganization();
+        Logger.debug('Organization restore: ${org != null ? 'success (${org.name})' : 'failed'}');
+      }
+
       stopwatch.stop();
       _isInitialized = true;
 
@@ -307,6 +317,8 @@ class CoreInitializer {
       sl<VariableService>().setTenant(tenantId);
       sl<IoTRealtimeService>().setTenant(tenantId);
       sl<WorkflowService>().setTenant(tenantId);
+      sl<AlarmService>().setTenant(tenantId);
+      sl<IoTLogService>().setTenant(tenantId);
       Logger.debug('Tenant propagated to IoT services: $tenantId');
     } catch (e) {
       Logger.warning('Failed to propagate tenant to IoT services: $e');
@@ -364,6 +376,10 @@ class CoreInitializer {
       // Tenant temizle
       final tenantService = sl<TenantService>();
       await tenantService.clearTenant();
+
+      // Organization temizle
+      final orgService = sl<OrganizationService>();
+      await orgService.clearOrganization();
 
       // Cache temizle
       final cacheManager = sl<CacheManager>();

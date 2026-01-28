@@ -26,7 +26,10 @@ import '../storage/secure_storage.dart';
 import '../tenant/tenant_service.dart';
 import '../unit/unit_service.dart';
 import '../utils/logger.dart';
+import '../alarm/alarm_service.dart';
 import '../controller/controller_service.dart';
+import '../iot_log/iot_log_service.dart';
+import '../priority/priority_service.dart';
 import '../provider/provider_service.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
@@ -148,6 +151,7 @@ Future<void> setupServiceLocator({
     () => OrganizationService(
       supabase: sl<SupabaseClient>(),
       cacheManager: sl<CacheManager>(),
+      secureStorage: sl<SecureStorage>(),
     ),
   );
 
@@ -335,6 +339,27 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  sl.registerLazySingleton<PriorityService>(
+    () => PriorityService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<AlarmService>(
+    () => AlarmService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<IoTLogService>(
+    () => IoTLogService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -401,3 +426,6 @@ DataProviderService get dataProviderService => sl<DataProviderService>();
 VariableService get variableService => sl<VariableService>();
 IoTRealtimeService get iotRealtimeService => sl<IoTRealtimeService>();
 WorkflowService get workflowService => sl<WorkflowService>();
+PriorityService get priorityService => sl<PriorityService>();
+AlarmService get alarmService => sl<AlarmService>();
+IoTLogService get iotLogService => sl<IoTLogService>();

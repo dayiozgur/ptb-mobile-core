@@ -305,7 +305,7 @@ class _ControllerDetailSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status card
+            // Durum & Temel Bilgiler
             AppCard(
               variant: AppCardVariant.filled,
               child: Padding(
@@ -320,8 +320,8 @@ class _ControllerDetailSheet extends StatelessWidget {
                     ),
                     Expanded(
                       child: _DetailItem(
-                        label: 'Tip',
-                        value: controller.type.label,
+                        label: 'Aktif',
+                        value: controller.active ? 'Evet' : 'Hayır',
                       ),
                     ),
                   ],
@@ -331,17 +331,46 @@ class _ControllerDetailSheet extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Connection info
-            AppSectionHeader(title: 'Bağlantı Bilgileri'),
+            // Cihaz Bilgileri
+            AppSectionHeader(title: 'Cihaz Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'IP Adresi', value: controller.ipAddress ?? '-'),
-                    _InfoRow(label: 'Port', value: controller.port?.toString() ?? '-'),
-                    _InfoRow(label: 'Protokol', value: controller.protocol.label),
+                    if (controller.code != null)
+                      _InfoRow(label: 'Kod', value: controller.code!),
+                    _InfoRow(label: 'IP', value: controller.ipAddress ?? '-'),
+                    if (controller.serialNumber != null)
+                      _InfoRow(label: 'Seri No', value: controller.serialNumber!),
+                    if (controller.model != null)
+                      _InfoRow(label: 'Model', value: controller.model!),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            // İletişim Bilgileri
+            AppSectionHeader(title: 'İletişim Bilgileri'),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: Padding(
+                padding: AppSpacing.cardInsets,
+                child: Column(
+                  children: [
+                    if (controller.lastConnectedAt != null)
+                      _InfoRow(
+                        label: 'Son Bağlantı',
+                        value: _formatDate(controller.lastConnectedAt!),
+                      ),
+                    if (controller.lastDataAt != null)
+                      _InfoRow(
+                        label: 'Son İletişim',
+                        value: _formatDate(controller.lastDataAt!),
+                      ),
                   ],
                 ),
               ),
@@ -364,8 +393,8 @@ class _ControllerDetailSheet extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Metadata
-            AppSectionHeader(title: 'Bilgiler'),
+            // Zaman Bilgileri
+            AppSectionHeader(title: 'Kayıt Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -380,11 +409,6 @@ class _ControllerDetailSheet extends StatelessWidget {
                       _InfoRow(
                         label: 'Güncelleme',
                         value: _formatDate(controller.updatedAt!),
-                      ),
-                    if (controller.lastConnectedAt != null)
-                      _InfoRow(
-                        label: 'Son Bağlantı',
-                        value: _formatDate(controller.lastConnectedAt!),
                       ),
                   ],
                 ),

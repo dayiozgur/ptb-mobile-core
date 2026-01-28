@@ -13,6 +13,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   List<Site> _sites = [];
   bool _isLoading = true;
   String? _error;
+  Map<String, int> _siteAlarmCounts = {};
 
   @override
   void initState() {
@@ -42,12 +43,28 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
         _sites = sites;
         _isLoading = false;
       });
+
+      // Alarm sayılarını arka planda yükle
+      _loadAlarmCounts(sites);
     } catch (e) {
       Logger.error('Failed to load sites', e);
       setState(() {
         _error = 'Siteler yüklenemedi';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadAlarmCounts(List<Site> sites) async {
+    for (final site in sites) {
+      try {
+        final count = await alarmService.getActiveAlarmCountBySite(site.id);
+        if (mounted && count > 0) {
+          setState(() {
+            _siteAlarmCounts[site.id] = count;
+          });
+        }
+      } catch (_) {}
     }
   }
 
@@ -125,6 +142,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
               ),
               child: _SiteCard(
                 site: site,
+                alarmCount: _siteAlarmCounts[site.id] ?? 0,
                 onTap: () => _selectSite(site),
               ),
             );
@@ -284,10 +302,12 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
 
 class _SiteCard extends StatelessWidget {
   final Site site;
+  final int alarmCount;
   final VoidCallback onTap;
 
   const _SiteCard({
     required this.site,
+    this.alarmCount = 0,
     required this.onTap,
   });
 
@@ -386,7 +406,31 @@ class _SiteCard extends StatelessWidget {
               ),
             ),
 
-            // Arrow
+            // Alarm indicator & Arrow
+            if (alarmCount > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning_amber, size: 14, color: AppColors.error),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$alarmCount',
+                      style: AppTypography.caption2.copyWith(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
             Icon(
               Icons.chevron_right,
               color: AppColors.tertiaryLabel(context),
