@@ -27,6 +27,12 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     });
 
     try {
+      // Tenant context'i IoT servisine aktar
+      final tenantId = tenantService.currentTenantId;
+      if (tenantId != null) {
+        dataProviderService.setTenant(tenantId);
+      }
+
       final providers = await dataProviderService.getAll();
       if (mounted) {
         setState(() => _providers = providers);

@@ -27,6 +27,12 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
     });
 
     try {
+      // Tenant context'i IoT servisine aktar
+      final tenantId = tenantService.currentTenantId;
+      if (tenantId != null) {
+        workflowService.setTenant(tenantId);
+      }
+
       final workflows = await workflowService.getAll();
       if (mounted) {
         setState(() => _workflows = workflows);

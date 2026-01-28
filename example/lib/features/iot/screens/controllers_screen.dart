@@ -27,6 +27,12 @@ class _ControllersScreenState extends State<ControllersScreen> {
     });
 
     try {
+      // Tenant context'i IoT servisine aktar
+      final tenantId = tenantService.currentTenantId;
+      if (tenantId != null) {
+        controllerService.setTenant(tenantId);
+      }
+
       final controllers = await controllerService.getAll();
       if (mounted) {
         setState(() => _controllers = controllers);

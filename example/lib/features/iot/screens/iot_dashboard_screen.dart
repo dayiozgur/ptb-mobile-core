@@ -28,6 +28,15 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Tenant context'i tüm IoT servislerine aktar
+      final tenantId = tenantService.currentTenantId;
+      if (tenantId != null) {
+        controllerService.setTenant(tenantId);
+        dataProviderService.setTenant(tenantId);
+        variableService.setTenant(tenantId);
+        workflowService.setTenant(tenantId);
+      }
+
       final controllers = await controllerService.getAll();
       final providers = await dataProviderService.getAll();
       final variables = await variableService.getAll();

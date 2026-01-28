@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
+import '../controller/controller_service.dart';
+import '../iot_realtime/iot_realtime_service.dart';
 import '../localization/localization_service.dart';
 import '../notification/notification_service.dart';
 import '../organization/organization_service.dart';
+import '../provider/provider_service.dart';
 import '../push/push_notification_service.dart';
 import '../search/search_service.dart';
 import '../site/site_service.dart';
@@ -15,6 +18,8 @@ import '../tenant/tenant_service.dart';
 import '../theme/theme_service.dart';
 import '../unit/unit_service.dart';
 import '../utils/logger.dart';
+import '../variable/variable_service.dart';
+import '../workflow/workflow_service.dart';
 import 'service_locator.dart';
 
 /// Core konfigürasyonu
@@ -262,6 +267,11 @@ class CoreInitializer {
         final tenant = await tenantService.restoreLastTenant();
         tenantRestored = tenant != null;
         Logger.debug('Tenant restore: ${tenantRestored ? 'success' : 'failed'}');
+
+        // Tenant context'i IoT servislerine aktar
+        if (tenantRestored && tenant != null) {
+          _propagateTenantToServices(tenant.id);
+        }
       }
 
       stopwatch.stop();
@@ -286,6 +296,20 @@ class CoreInitializer {
         errorMessage: e.toString(),
         duration: stopwatch.elapsed,
       );
+    }
+  }
+
+  /// Tenant context'ini tüm IoT servislerine aktar
+  static void _propagateTenantToServices(String tenantId) {
+    try {
+      sl<ControllerService>().setTenant(tenantId);
+      sl<DataProviderService>().setTenant(tenantId);
+      sl<VariableService>().setTenant(tenantId);
+      sl<IoTRealtimeService>().setTenant(tenantId);
+      sl<WorkflowService>().setTenant(tenantId);
+      Logger.debug('Tenant propagated to IoT services: $tenantId');
+    } catch (e) {
+      Logger.warning('Failed to propagate tenant to IoT services: $e');
     }
   }
 
