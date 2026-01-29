@@ -1376,25 +1376,25 @@ class _AlarmListsShowcase extends StatelessWidget {
     final mockPriorities = <String, Priority>{
       'critical': Priority(
         id: 'critical',
-        label: 'Kritik',
+        name: 'Kritik',
         level: 1,
         color: '#FF3B30',
       ),
       'high': Priority(
         id: 'high',
-        label: 'Yuksek',
+        name: 'Yuksek',
         level: 2,
         color: '#FF9500',
       ),
       'medium': Priority(
         id: 'medium',
-        label: 'Orta',
+        name: 'Orta',
         level: 3,
         color: '#FFCC00',
       ),
       'low': Priority(
         id: 'low',
-        label: 'Dusuk',
+        name: 'Dusuk',
         level: 4,
         color: '#34C759',
       ),

@@ -283,7 +283,7 @@ class _ActiveAlarmTile extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 20,
-              color: AppColors.tertiaryLabel(brightness),
+              color: AppColors.systemGray,
             ),
           ],
         ),

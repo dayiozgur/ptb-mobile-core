@@ -58,7 +58,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   Future<void> _loadAlarmCounts(List<Site> sites) async {
     for (final site in sites) {
       try {
-        final count = await alarmService.getActiveAlarmCountBySite(site.id);
+        final count = await alarmService.getResetAlarmCountBySite(site.id);
         if (mounted && count > 0) {
           setState(() {
             _siteAlarmCounts[site.id] = count;

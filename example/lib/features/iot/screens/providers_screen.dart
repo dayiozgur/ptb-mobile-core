@@ -327,7 +327,7 @@ class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
 
   Future<void> _loadExtras() async {
     try {
-      final alarmCount = await alarmService.getActiveAlarmCountByProvider(widget.provider.id);
+      final alarmCount = await alarmService.getResetAlarmCountByProvider(widget.provider.id);
       final logCount = await iotLogService.getLogCountByProvider(widget.provider.id, lastHours: 24);
       final recentAlarms = await alarmService.getHistory(
         providerId: widget.provider.id,
