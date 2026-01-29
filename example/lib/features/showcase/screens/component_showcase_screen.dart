@@ -325,7 +325,7 @@ class _TextFieldsShowcaseState extends State<_TextFieldsShowcase> {
             AppTextField(
               label: 'Hatali Alan',
               placeholder: 'Bu alan hatali',
-              errorText: 'Bu alan zorunludur',
+              helperText: 'Hata durumu validator ile gosterilir',
               prefixIcon: Icons.error_outline,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -425,10 +425,10 @@ class _DropdownShowcaseState extends State<_DropdownShowcase> {
               placeholder: 'Sehir secin',
               value: _selectedCity,
               items: const [
-                DropdownMenuItem(value: 'istanbul', child: Text('Istanbul')),
-                DropdownMenuItem(value: 'ankara', child: Text('Ankara')),
-                DropdownMenuItem(value: 'izmir', child: Text('Izmir')),
-                DropdownMenuItem(value: 'bursa', child: Text('Bursa')),
+                AppDropdownItem(value: 'istanbul', label: 'Istanbul'),
+                AppDropdownItem(value: 'ankara', label: 'Ankara'),
+                AppDropdownItem(value: 'izmir', label: 'Izmir'),
+                AppDropdownItem(value: 'bursa', label: 'Bursa'),
               ],
               onChanged: (val) => setState(() => _selectedCity = val),
             ),
@@ -438,9 +438,9 @@ class _DropdownShowcaseState extends State<_DropdownShowcase> {
               placeholder: 'Rol secin',
               value: _selectedRole,
               items: const [
-                DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                DropdownMenuItem(value: 'editor', child: Text('Editor')),
-                DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
+                AppDropdownItem(value: 'admin', label: 'Admin'),
+                AppDropdownItem(value: 'editor', label: 'Editor'),
+                AppDropdownItem(value: 'viewer', label: 'Viewer'),
               ],
               onChanged: (val) => setState(() => _selectedRole = val),
             ),
@@ -1274,7 +1274,7 @@ class _SearchBarShowcaseState extends State<_SearchBarShowcase> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppSearchBar(
-              hint: 'Bilesen ara...',
+              placeholder: 'Bilesen ara...',
               onChanged: (val) => setState(() => _searchQuery = val),
             ),
             if (_searchQuery.isNotEmpty) ...[
