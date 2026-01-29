@@ -13,6 +13,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
   bool _isLoading = true;
   List<Controller> _controllers = [];
   String? _errorMessage;
+  String _statusFilter = 'all';
 
   @override
   void initState() {
@@ -101,19 +102,94 @@ class _ControllersScreenState extends State<ControllersScreen> {
       );
     }
 
+    final filtered = _statusFilter == 'all'
+        ? _controllers
+        : _controllers.where((c) {
+            switch (_statusFilter) {
+              case 'online':
+                return c.status == ControllerStatus.online;
+              case 'offline':
+                return c.status == ControllerStatus.offline;
+              case 'error':
+                return c.status == ControllerStatus.error;
+              default:
+                return true;
+            }
+          }).toList();
+
+    final onlineCount = _controllers.where((c) => c.status == ControllerStatus.online).length;
+    final offlineCount = _controllers.where((c) => c.status == ControllerStatus.offline).length;
+
     return RefreshIndicator(
       onRefresh: _loadControllers,
-      child: ListView.separated(
-        padding: AppSpacing.screenPadding,
-        itemCount: _controllers.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final controller = _controllers[index];
-          return _ControllerCard(
-            controller: controller,
-            onTap: () => _showControllerDetail(controller),
-          );
-        },
+      child: Column(
+        children: [
+          // Status filter chips
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Summary chips
+                Row(
+                  children: [
+                    AppChip(
+                      label: '${_controllers.length} Toplam',
+                      variant: AppChipVariant.tonal,
+                      color: AppColors.primary,
+                      small: true,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    AppChip(
+                      label: '$onlineCount Online',
+                      variant: AppChipVariant.tonal,
+                      color: AppColors.success,
+                      icon: Icons.circle,
+                      small: true,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    AppChip(
+                      label: '$offlineCount Offline',
+                      variant: AppChipVariant.tonal,
+                      color: AppColors.error,
+                      small: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                // Filter
+                AppChoiceChips<String>(
+                  selectedValue: _statusFilter,
+                  onSelected: (val) => setState(() => _statusFilter = val),
+                  scrollable: true,
+                  items: const [
+                    AppChoiceChipItem(value: 'all', label: 'Tümü'),
+                    AppChoiceChipItem(value: 'online', label: 'Online'),
+                    AppChoiceChipItem(value: 'offline', label: 'Offline'),
+                    AppChoiceChipItem(value: 'error', label: 'Hata'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(
+            child: ListView.separated(
+              padding: AppSpacing.screenPadding,
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final controller = filtered[index];
+                return _ControllerCard(
+                  controller: controller,
+                  onTap: () => _showControllerDetail(controller),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -422,8 +498,21 @@ class _ControllerDetailSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: AppButton(
-                    label: 'Bağlantı Test Et',
+                    label: 'Logları Gör',
                     variant: AppButtonVariant.secondary,
+                    icon: Icons.timeline,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push(
+                        '/iot/controllers/${controller.id}/logs?name=${Uri.encodeComponent(controller.name)}',
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: 'Test Et',
                     icon: Icons.wifi_find,
                     onPressed: () {
                       Navigator.pop(context);

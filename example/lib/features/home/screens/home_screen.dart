@@ -197,6 +197,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // UI Component Showcase
+              AppSectionHeader(title: 'Geliştirici Araçları'),
+              const SizedBox(height: AppSpacing.sm),
+              _DevToolsCard(),
+
+              const SizedBox(height: AppSpacing.lg),
+
               // Hierarchy navigation
               AppSectionHeader(title: 'Hiyerarşi'),
               const SizedBox(height: AppSpacing.sm),
@@ -458,20 +465,20 @@ class _DashboardStats extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatCard(
-                icon: Icons.apartment,
+              child: MetricCard(
+                title: 'Organizasyon',
                 value: isLoading ? '-' : '$organizationCount',
-                label: 'Organizasyon',
+                icon: Icons.apartment,
                 color: Colors.blue,
                 onTap: () => context.go('/organizations'),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _StatCard(
-                icon: Icons.location_city,
+              child: MetricCard(
+                title: 'Site',
                 value: isLoading ? '-' : '$siteCount',
-                label: 'Site',
+                icon: Icons.location_city,
                 color: Colors.green,
                 onTap: () => context.go('/sites'),
               ),
@@ -482,20 +489,20 @@ class _DashboardStats extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatCard(
-                icon: Icons.space_dashboard,
+              child: MetricCard(
+                title: 'Alan',
                 value: isLoading ? '-' : '$unitCount',
-                label: 'Alan',
+                icon: Icons.space_dashboard,
                 color: Colors.orange,
                 onTap: () => context.go('/units'),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _StatCard(
-                icon: Icons.people,
+              child: MetricCard(
+                title: 'Üye',
                 value: isLoading ? '-' : '$memberCount',
-                label: 'Üye',
+                icon: Icons.people,
                 color: Colors.purple,
                 onTap: () => context.go('/members'),
               ),
@@ -503,58 +510,6 @@ class _DashboardStats extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onTap,
-      child: Padding(
-        padding: AppSpacing.cardInsets,
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              value,
-              style: AppTypography.title1.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              label,
-              style: AppTypography.caption1.copyWith(
-                color: AppColors.secondaryLabel(context),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -1031,5 +986,31 @@ class _RecentActivity extends StatelessWidget {
       default:
         return AppColors.primary;
     }
+  }
+}
+
+class _DevToolsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          AppListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.palette_outlined, color: Colors.deepPurple),
+            ),
+            title: 'Bileşen Kataloğu',
+            subtitle: 'Tüm UI bileşenlerini keşfedin',
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/showcase'),
+          ),
+        ],
+      ),
+    );
   }
 }

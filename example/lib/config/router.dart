@@ -23,6 +23,7 @@ import '../features/unit/screens/unit_detail_screen.dart';
 import '../features/unit/screens/unit_form_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
+import '../features/showcase/screens/component_showcase_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -160,6 +161,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         name: 'notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+
+      // ==================
+      // UI Showcase
+      // ==================
+      GoRoute(
+        path: '/showcase',
+        name: 'showcase',
+        builder: (context, state) => const ComponentShowcaseScreen(),
       ),
 
       // ==================

@@ -123,7 +123,7 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Stats grid
+              // Metric Cards with trends
               AppSectionHeader(
                 title: 'Genel Bakış',
                 action: _isLoading
@@ -135,11 +135,25 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
                     : null,
               ),
               const SizedBox(height: AppSpacing.sm),
-              _IotStatsGrid(
+              _IotMetricCards(
                 controllerCount: _controllerCount,
                 providerCount: _providerCount,
                 variableCount: _variableCount,
                 workflowCount: _workflowCount,
+                isLoading: _isLoading,
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // System Health
+              AppSectionHeader(title: 'Sistem Durumu'),
+              const SizedBox(height: AppSpacing.sm),
+              _SystemHealthCard(
+                activeControllers: _activeControllers,
+                totalControllers: _controllerCount,
+                activeWorkflows: _activeWorkflows,
+                totalWorkflows: _workflowCount,
+                activeAlarmCount: _activeAlarmCount,
                 isLoading: _isLoading,
               ),
 
@@ -260,14 +274,15 @@ class _StatusItem extends StatelessWidget {
   }
 }
 
-class _IotStatsGrid extends StatelessWidget {
+
+class _IotMetricCards extends StatelessWidget {
   final int controllerCount;
   final int providerCount;
   final int variableCount;
   final int workflowCount;
   final bool isLoading;
 
-  const _IotStatsGrid({
+  const _IotMetricCards({
     required this.controllerCount,
     required this.providerCount,
     required this.variableCount,
@@ -282,20 +297,20 @@ class _IotStatsGrid extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _IotStatCard(
-                icon: Icons.developer_board,
+              child: MetricCard(
+                title: 'Controller',
                 value: isLoading ? '-' : '$controllerCount',
-                label: 'Controller',
+                icon: Icons.developer_board,
                 color: Colors.blue,
                 onTap: () => context.go('/iot/controllers'),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _IotStatCard(
-                icon: Icons.storage,
+              child: MetricCard(
+                title: 'Veri Sağlayıcı',
                 value: isLoading ? '-' : '$providerCount',
-                label: 'Veri Sağlayıcı',
+                icon: Icons.storage,
                 color: Colors.green,
                 onTap: () => context.go('/iot/providers'),
               ),
@@ -306,20 +321,20 @@ class _IotStatsGrid extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _IotStatCard(
-                icon: Icons.data_object,
+              child: MetricCard(
+                title: 'Değişken',
                 value: isLoading ? '-' : '$variableCount',
-                label: 'Değişken',
+                icon: Icons.data_object,
                 color: Colors.orange,
                 onTap: () => context.go('/iot/variables'),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _IotStatCard(
-                icon: Icons.account_tree,
+              child: MetricCard(
+                title: 'Workflow',
                 value: isLoading ? '-' : '$workflowCount',
-                label: 'Workflow',
+                icon: Icons.account_tree,
                 color: Colors.purple,
                 onTap: () => context.go('/iot/workflows'),
               ),
@@ -331,48 +346,112 @@ class _IotStatsGrid extends StatelessWidget {
   }
 }
 
-class _IotStatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+class _SystemHealthCard extends StatelessWidget {
+  final int activeControllers;
+  final int totalControllers;
+  final int activeWorkflows;
+  final int totalWorkflows;
+  final int activeAlarmCount;
+  final bool isLoading;
 
-  const _IotStatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-    required this.onTap,
+  const _SystemHealthCard({
+    required this.activeControllers,
+    required this.totalControllers,
+    required this.activeWorkflows,
+    required this.totalWorkflows,
+    required this.activeAlarmCount,
+    required this.isLoading,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return AppCard(
+        child: Padding(
+          padding: AppSpacing.cardInsets,
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final controllerRatio = totalControllers > 0
+        ? activeControllers.toDouble() / totalControllers.toDouble()
+        : 0.0;
+    final workflowRatio = totalWorkflows > 0
+        ? activeWorkflows.toDouble() / totalWorkflows.toDouble()
+        : 0.0;
+
     return AppCard(
-      onTap: onTap,
       child: Padding(
         padding: AppSpacing.cardInsets,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
+            // Controller health
+            AppProgressBar(
+              value: controllerRatio,
+              label: 'Controller Durumu',
+              showPercentage: true,
+              color: controllerRatio > 0.7 ? AppColors.success : AppColors.warning,
+              height: 6,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              value,
-              style: AppTypography.title1.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              label,
-              style: AppTypography.caption1.copyWith(
+              '$activeControllers / $totalControllers aktif',
+              style: AppTypography.caption2.copyWith(
                 color: AppColors.secondaryLabel(context),
               ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Workflow health
+            AppProgressBar(
+              value: workflowRatio,
+              label: 'Workflow Durumu',
+              showPercentage: true,
+              color: workflowRatio > 0.5 ? AppColors.info : AppColors.warning,
+              height: 6,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '$activeWorkflows / $totalWorkflows aktif',
+              style: AppTypography.caption2.copyWith(
+                color: AppColors.secondaryLabel(context),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Alarm status chip
+            Row(
+              children: [
+                Text(
+                  'Alarm Durumu',
+                  style: AppTypography.subheadline.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                AppChip(
+                  label: activeAlarmCount > 0
+                      ? '$activeAlarmCount Aktif Alarm'
+                      : 'Alarm Yok',
+                  variant: AppChipVariant.tonal,
+                  color: activeAlarmCount > 0 ? AppColors.error : AppColors.success,
+                  icon: activeAlarmCount > 0
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle,
+                  small: true,
+                  onTap: () => context.go('/iot/alarms'),
+                ),
+              ],
             ),
           ],
         ),

@@ -441,6 +441,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
+            const SizedBox(height: AppSpacing.lg),
+
+            // Developer Tools
+            AppSectionHeader(title: 'Gelistirici'),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: Column(
+                children: [
+                  AppListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.palette_outlined,
+                          color: Colors.deepPurple),
+                    ),
+                    title: 'Bilesen Katalogu',
+                    subtitle: 'Tum UI bilesenlerini kesfet',
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/showcase'),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: AppSpacing.xl),
 
             // Logout button
