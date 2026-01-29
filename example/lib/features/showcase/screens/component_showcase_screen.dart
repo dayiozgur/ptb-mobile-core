@@ -137,6 +137,15 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             const SizedBox(height: AppSpacing.sm),
             _SearchBarShowcase(),
 
+            const SizedBox(height: AppSpacing.xl),
+
+            // ==================
+            // ALARM LISTS
+            // ==================
+            AppSectionHeader(title: 'Alarm Listeleri'),
+            const SizedBox(height: AppSpacing.sm),
+            _AlarmListsShowcase(),
+
             const SizedBox(height: AppSpacing.xxl),
           ],
         ),
@@ -1289,6 +1298,197 @@ class _SearchBarShowcaseState extends State<_SearchBarShowcase> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ============================================================================
+// ALARM LISTS SHOWCASE
+// ============================================================================
+class _AlarmListsShowcase extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Mock aktif alarmlar (alarms tablosundan gelir)
+    final mockActiveAlarms = [
+      Alarm(
+        id: '1',
+        name: 'Yuksek Sicaklik Alarmi',
+        code: 'HT-001',
+        description: 'Reaktor sicakligi ust limite ulasti',
+        active: true,
+        startTime: DateTime.now().subtract(const Duration(hours: 2, minutes: 15)),
+        priorityId: 'critical',
+      ),
+      Alarm(
+        id: '2',
+        name: 'Basinc Uyarisi',
+        code: 'PR-002',
+        active: true,
+        startTime: DateTime.now().subtract(const Duration(minutes: 45)),
+        localAcknowledgeTime: DateTime.now().subtract(const Duration(minutes: 30)),
+        localAcknowledgeUser: 'operator1',
+        priorityId: 'high',
+      ),
+      Alarm(
+        id: '3',
+        name: 'Seviye Dusuk',
+        code: 'LV-003',
+        active: true,
+        startTime: DateTime.now().subtract(const Duration(hours: 1, minutes: 5)),
+        priorityId: 'medium',
+      ),
+    ];
+
+    // Mock resetlenmiş alarmlar (alarm_histories tablosundan gelir)
+    final mockResetAlarms = [
+      AlarmHistory(
+        id: 'h1',
+        name: 'Motor Asiri Akim',
+        code: 'MC-101',
+        startTime: DateTime.now().subtract(const Duration(hours: 5)),
+        endTime: DateTime.now().subtract(const Duration(hours: 4, minutes: 30)),
+        resetTime: DateTime.now().subtract(const Duration(hours: 4, minutes: 30)),
+        resetUser: 'teknisyen1',
+        priorityId: 'high',
+      ),
+      AlarmHistory(
+        id: 'h2',
+        name: 'Iletisim Hatasi',
+        code: 'CM-202',
+        startTime: DateTime.now().subtract(const Duration(hours: 8)),
+        endTime: DateTime.now().subtract(const Duration(hours: 7)),
+        resetTime: DateTime.now().subtract(const Duration(hours: 7)),
+        priorityId: 'medium',
+      ),
+      AlarmHistory(
+        id: 'h3',
+        name: 'Dusuk Gerilim',
+        code: 'PW-303',
+        startTime: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
+        endTime: DateTime.now().subtract(const Duration(days: 1)),
+        resetTime: DateTime.now().subtract(const Duration(days: 1)),
+        resetUser: 'sistem',
+        priorityId: 'low',
+      ),
+    ];
+
+    // Mock priority map
+    final mockPriorities = <String, Priority>{
+      'critical': Priority(
+        id: 'critical',
+        label: 'Kritik',
+        level: 1,
+        color: '#FF3B30',
+      ),
+      'high': Priority(
+        id: 'high',
+        label: 'Yuksek',
+        level: 2,
+        color: '#FF9500',
+      ),
+      'medium': Priority(
+        id: 'medium',
+        label: 'Orta',
+        level: 3,
+        color: '#FFCC00',
+      ),
+      'low': Priority(
+        id: 'low',
+        label: 'Dusuk',
+        level: 4,
+        color: '#34C759',
+      ),
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Aktif Alarm Listesi
+        Text('Aktif Alarmlar (alarms tablosu)', style: AppTypography.caption1.copyWith(
+          color: AppColors.secondaryLabel(context),
+          fontWeight: FontWeight.w600,
+        )),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Backend alarm resetlendiginde alarms → alarm_histories tasimasi yapar',
+          style: AppTypography.caption2.copyWith(
+            color: AppColors.tertiaryLabel(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: ActiveAlarmList(
+            alarms: mockActiveAlarms,
+            priorities: mockPriorities,
+            onAlarmTap: (alarm) {
+              ActiveAlarmDetailSheet.show(
+                context,
+                alarm: alarm,
+                priority: mockPriorities[alarm.priorityId],
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.lg),
+
+        // Resetlenmiş Alarm Listesi
+        Text('Resetlenmis Alarmlar (alarm_histories tablosu)', style: AppTypography.caption1.copyWith(
+          color: AppColors.secondaryLabel(context),
+          fontWeight: FontWeight.w600,
+        )),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Sadece resetlenmis alarmlar bu tabloda bulunur',
+          style: AppTypography.caption2.copyWith(
+            color: AppColors.tertiaryLabel(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: ResetAlarmList(
+            alarms: mockResetAlarms,
+            priorities: mockPriorities,
+            onAlarmTap: (alarm) {
+              AlarmDetailSheet.show(
+                context,
+                alarm: alarm,
+                priority: mockPriorities[alarm.priorityId],
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.lg),
+
+        // Bos durum ornekleri
+        Text('Bos Durum Ornekleri', style: AppTypography.caption1.copyWith(
+          color: AppColors.secondaryLabel(context),
+          fontWeight: FontWeight.w600,
+        )),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: AppCard(
+                child: ActiveAlarmList(
+                  alarms: const [],
+                  emptyMessage: 'Aktif alarm yok',
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: AppCard(
+                child: ResetAlarmList(
+                  alarms: const [],
+                  emptyMessage: 'Reset alarm yok',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

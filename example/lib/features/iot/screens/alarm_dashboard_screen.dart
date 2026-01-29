@@ -13,12 +13,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  int _selectedTabIndex = 0; // 0: Aktif, 1: Resetlenmiş
   int _selectedDays = 30;
   AlarmDistribution _distribution = const AlarmDistribution(
     activeCount: 0,
     resetCount: 0,
   );
   List<AlarmTimelineEntry> _timeline = [];
+  List<Alarm> _activeAlarms = [];
   List<AlarmHistory> _resetAlarms = [];
   Map<String, Priority> _priorityMap = {};
 
@@ -48,6 +50,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
       }
 
       // Paralel yükleme - forceRefresh ile cache bypass
+      // Aktif alarmlar: alarms tablosundan
+      // Resetlenmiş alarmlar: alarm_histories tablosundan
       final results = await Future.wait([
         alarmService.getAlarmDistribution(
           days: _selectedDays,
@@ -57,9 +61,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           days: _selectedDays,
           forceRefresh: true,
         ),
-        alarmService.getResetAlarms(
+        alarmService.getActiveAlarms(), // alarms tablosu
+        alarmService.getResetAlarms(    // alarm_histories tablosu
           days: _selectedDays,
-          limit: 20,
+          limit: 50,
           forceRefresh: true,
         ),
       ]);
@@ -69,7 +74,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           _priorityMap = pMap;
           _distribution = results[0] as AlarmDistribution;
           _timeline = results[1] as List<AlarmTimelineEntry>;
-          _resetAlarms = results[2] as List<AlarmHistory>;
+          _activeAlarms = results[2] as List<Alarm>;
+          _resetAlarms = results[3] as List<AlarmHistory>;
           _isLoading = false;
         });
       }
@@ -192,39 +198,85 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         const SizedBox(height: AppSpacing.md),
 
-                        // Bölüm 4: Resetli Alarm Listesi
+                        // Bölüm 4: Alarm Listeleri (Tab ile)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.screenHorizontal,
                           ),
-                          child: AppSectionHeader(
-                            title: 'Resetlenmiş Alarmlar',
-                            subtitle:
-                                'alarm_histories - Son $_selectedDays gün',
+                          child: _AlarmListTabs(
+                            selectedIndex: _selectedTabIndex,
+                            activeCount: _activeAlarms.length,
+                            resetCount: _resetAlarms.length,
+                            onTabChanged: (index) {
+                              setState(() => _selectedTabIndex = index);
+                            },
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.screenHorizontal,
-                          ),
-                          child: AppCard(
-                            child: ResetAlarmList(
-                              alarms: _resetAlarms,
-                              priorities: _priorityMap,
-                              onAlarmTap: (alarm) {
-                                AlarmDetailSheet.show(
-                                  context,
-                                  alarm: alarm,
-                                  priority: alarm.priorityId != null
-                                      ? _priorityMap[
-                                          alarm.priorityId!]
-                                      : null,
-                                );
-                              },
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Tab içeriği
+                        if (_selectedTabIndex == 0) ...[
+                          // Aktif Alarmlar (alarms tablosu)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.screenHorizontal,
+                            ),
+                            child: AppCard(
+                              child: ActiveAlarmList(
+                                alarms: _activeAlarms,
+                                priorities: _priorityMap,
+                                emptyMessage: 'Aktif alarm bulunmuyor',
+                                onAlarmTap: (alarm) {
+                                  ActiveAlarmDetailSheet.show(
+                                    context,
+                                    alarm: alarm,
+                                    priority: alarm.priorityId != null
+                                        ? _priorityMap[alarm.priorityId!]
+                                        : null,
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
+                        ] else ...[
+                          // Resetlenmiş Alarmlar (alarm_histories tablosu)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.screenHorizontal,
+                            ),
+                            child: Text(
+                              'Son $_selectedDays gün',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary(
+                                  Theme.of(context).brightness,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.screenHorizontal,
+                            ),
+                            child: AppCard(
+                              child: ResetAlarmList(
+                                alarms: _resetAlarms,
+                                priorities: _priorityMap,
+                                emptyMessage: 'Resetlenmiş alarm bulunmuyor',
+                                onAlarmTap: (alarm) {
+                                  AlarmDetailSheet.show(
+                                    context,
+                                    alarm: alarm,
+                                    priority: alarm.priorityId != null
+                                        ? _priorityMap[alarm.priorityId!]
+                                        : null,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
 
                         const SizedBox(height: AppSpacing.xl),
                       ],
@@ -272,6 +324,142 @@ class _SummaryCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary(brightness),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Alarm listesi tab seçici widget'ı
+class _AlarmListTabs extends StatelessWidget {
+  final int selectedIndex;
+  final int activeCount;
+  final int resetCount;
+  final ValueChanged<int> onTabChanged;
+
+  const _AlarmListTabs({
+    required this.selectedIndex,
+    required this.activeCount,
+    required this.resetCount,
+    required this.onTabChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.systemGray6,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _TabButton(
+              label: 'Aktif',
+              count: activeCount,
+              isSelected: selectedIndex == 0,
+              color: AppColors.error,
+              brightness: brightness,
+              onTap: () => onTabChanged(0),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _TabButton(
+              label: 'Resetlenmiş',
+              count: resetCount,
+              isSelected: selectedIndex == 1,
+              color: AppColors.success,
+              brightness: brightness,
+              onTap: () => onTabChanged(1),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isSelected;
+  final Color color;
+  final Brightness brightness;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.color,
+    required this.brightness,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (brightness == Brightness.light ? Colors.white : AppColors.systemGray5)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.textPrimary(brightness)
+                    : AppColors.textSecondary(brightness),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? color.withValues(alpha: 0.15)
+                    : AppColors.systemGray5,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : AppColors.textSecondary(brightness),
+                ),
               ),
             ),
           ],

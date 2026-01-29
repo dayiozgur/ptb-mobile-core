@@ -10,14 +10,18 @@ import 'alarm_stats_model.dart';
 
 /// Alarm Service
 ///
-/// Aktif alarm ve alarm geçmişi verilerini yönetir.
+/// Aktif alarm ve resetlenmiş alarm verilerini yönetir.
 /// DB tabloları:
-///   - alarms: Aktif alarmlar (tenant_id, site_id, provider_id YOK!)
-///   - alarm_histories: Alarm geçmişi (tenant_id, site_id, provider_id VAR)
+///   - alarms: Sadece AKTİF alarmlar (tenant_id, site_id, provider_id YOK!)
+///   - alarm_histories: Sadece RESETLENMİŞ alarmlar (tenant_id, site_id, provider_id VAR)
+///
+/// Backend tarafından yönetilen senkronizasyon:
+///   - Alarm aktif olduğunda → alarms tablosunda
+///   - Alarm resetlendiğinde → alarm_histories tablosuna taşınır
 ///
 /// NOT: alarms tablosunda tenant_id kolonu bulunmaz.
-/// Aktif alarmları tenant bazlı filtrelemek için alarm_histories
-/// tablosundan end_time IS NULL olanlar kullanılır (henüz kapanmamış).
+/// Aktif alarm sayısı için alarms tablosu kullanılır.
+/// Resetlenmiş alarm geçmişi için alarm_histories tablosu kullanılır.
 class AlarmService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
@@ -58,8 +62,9 @@ class AlarmService {
 
   /// Aktif alarmları getir (controller bazlı)
   ///
-  /// alarms tablosu üzerinden çalışır.
+  /// alarms tablosu üzerinden çalışır (sadece aktif alarmlar burada).
   /// NOT: alarms tablosunda tenant_id yok, sadece controller_id ile filtrelenir.
+  /// Backend, alarm resetlendiğinde alarms → alarm_histories taşımasını yapar.
   Future<List<Alarm>> getActiveAlarms({
     String? controllerId,
     String? variableId,
@@ -129,10 +134,10 @@ class AlarmService {
   // ALARM HISTORY
   // ============================================
 
-  /// Alarm geçmişini getir (alarm_histories tablosu)
+  /// Resetlenmiş alarm geçmişini getir (alarm_histories tablosu)
   ///
-  /// alarm_histories tablosunda tenant_id, site_id, provider_id mevcut.
-  /// Tenant bazlı filtreleme burada yapılabilir.
+  /// alarm_histories tablosu sadece resetlenmiş alarmları içerir.
+  /// tenant_id, site_id, provider_id ile filtreleme yapılabilir.
   Future<List<AlarmHistory>> getHistory({
     String? siteId,
     String? providerId,
@@ -208,34 +213,38 @@ class AlarmService {
     }
   }
 
-  /// Site bazlı alarm sayısı (alarm_histories üzerinden, end_time NULL olanlar)
-  Future<int> getActiveAlarmCountBySite(String siteId) async {
+  /// Site bazlı resetlenmiş alarm sayısı (alarm_histories tablosu)
+  ///
+  /// NOT: Aktif alarmlar için alarms tablosu kullanılır ve orada site_id yok.
+  /// Bu metod sadece resetlenmiş alarm geçmişi için kullanılabilir.
+  Future<int> getResetAlarmCountBySite(String siteId) async {
     try {
       final response = await _supabase
           .from('alarm_histories')
           .select('id')
-          .eq('site_id', siteId)
-          .isFilter('end_time', null);
+          .eq('site_id', siteId);
 
       return (response as List).length;
     } catch (e) {
-      Logger.warning('Failed to get alarm count for site: $e');
+      Logger.warning('Failed to get reset alarm count for site: $e');
       return 0;
     }
   }
 
-  /// Provider bazlı alarm sayısı
-  Future<int> getActiveAlarmCountByProvider(String providerId) async {
+  /// Provider bazlı resetlenmiş alarm sayısı (alarm_histories tablosu)
+  ///
+  /// NOT: Aktif alarmlar için alarms tablosu kullanılır ve orada provider_id yok.
+  /// Bu metod sadece resetlenmiş alarm geçmişi için kullanılabilir.
+  Future<int> getResetAlarmCountByProvider(String providerId) async {
     try {
       final response = await _supabase
           .from('alarm_histories')
           .select('id')
-          .eq('provider_id', providerId)
-          .isFilter('end_time', null);
+          .eq('provider_id', providerId);
 
       return (response as List).length;
     } catch (e) {
-      Logger.warning('Failed to get alarm count for provider: $e');
+      Logger.warning('Failed to get reset alarm count for provider: $e');
       return 0;
     }
   }
@@ -244,10 +253,12 @@ class AlarmService {
   // RESET ALARMS (alarm_histories tablosu)
   // ============================================
 
-  /// Resetli alarmları getir (alarm_histories tablosu)
+  /// Resetlenmiş alarmları getir (alarm_histories tablosu)
+  ///
+  /// alarm_histories tablosu sadece resetlenmiş alarmları içerir.
+  /// Backend, alarm resetlendiğinde alarms → alarm_histories taşıması yapar.
   ///
   /// Son [days] gün içindeki resetlenmiş alarmları döner (max 90 gün).
-  /// Reset olmuş: reset_time NOT NULL
   /// created_at üzerinden zaman filtresi (start_time NULL olabilir).
   /// Sıralama: created_at DESC
   Future<List<AlarmHistory>> getResetAlarms({
@@ -328,9 +339,10 @@ class AlarmService {
   // ALARM TIMELINE (alarm_histories tablosu)
   // ============================================
 
-  /// Alarm zaman çizelgesi - günlük gruplandırılmış alarm sayıları
+  /// Resetlenmiş alarm zaman çizelgesi - günlük gruplandırılmış alarm sayıları
   ///
-  /// alarm_histories tablosundan son [days] gün (max 90) verileri çeker,
+  /// alarm_histories tablosundan son [days] gün (max 90) verileri çeker.
+  /// alarm_histories sadece resetlenmiş alarmları içerir.
   /// client-side günlük gruplandırma yapar.
   /// Her gün için priority bazlı ayrıntı içerir.
   /// created_at üzerinden filtrele (start_time NULL olabilir).
@@ -455,13 +467,14 @@ class AlarmService {
 
   /// Alarm dağılımı - aktif vs reset
   ///
-  /// Tüm sayımlar alarm_histories tablosundan yapılır (tenant_id desteği var).
-  /// activeCount: alarm_histories (end_time IS NULL → henüz kapanmamış)
-  /// resetCount: alarm_histories (reset_time IS NOT NULL → resetlenmiş)
-  /// acknowledgedCount: alarm_histories (local_acknowledge_time IS NOT NULL)
+  /// Aktif alarmlar: alarms tablosundan (sadece aktif alarmlar bu tabloda)
+  /// Resetlenmiş alarmlar: alarm_histories tablosundan (sadece resetli alarmlar)
   ///
-  /// NOT: alarms tablosunda tenant_id yok, bu yüzden alarm_histories
-  /// üzerinden tutarlı tenant scoping yapılır.
+  /// activeCount: alarms tablosu (tüm kayıtlar aktif)
+  /// resetCount: alarm_histories (reset_time NOT NULL, son N gün)
+  /// acknowledgedCount: alarms tablosundan (local_acknowledge_time NOT NULL)
+  ///
+  /// NOT: alarms tablosunda tenant_id yok, controller_id ile filtrelenir.
   Future<AlarmDistribution> getAlarmDistribution({
     String? controllerId,
     String? siteId,
@@ -489,47 +502,38 @@ class AlarmService {
           .subtract(Duration(days: effectiveDays))
           .toIso8601String();
 
-      // --- Aktif alarm sayısı (alarm_histories: end_time IS NULL) ---
-      // alarm_histories üzerinden tenant filtrelemesi mümkün
+      // --- Aktif alarm sayısı (alarms tablosu) ---
+      // alarms tablosu sadece aktif alarmları içerir
+      // NOT: alarms tablosunda tenant_id, site_id yok
       var activeQuery = _supabase
-          .from('alarm_histories')
+          .from('alarms')
           .select('id')
-          .isFilter('end_time', null);
+          .eq('active', true);
 
-      if (_currentTenantId != null) {
-        activeQuery = activeQuery.eq('tenant_id', _currentTenantId!);
-      }
       if (controllerId != null) {
         activeQuery = activeQuery.eq('controller_id', controllerId);
       }
-      if (siteId != null) {
-        activeQuery = activeQuery.eq('site_id', siteId);
-      }
+      // site_id alarms tablosunda yok, filtreleme yapılamaz
 
       final activeResponse = await activeQuery;
       final activeCount = (activeResponse as List).length;
 
-      // --- Onaylı aktif alarm sayısı ---
+      // --- Onaylı aktif alarm sayısı (alarms tablosu) ---
       var ackQuery = _supabase
-          .from('alarm_histories')
+          .from('alarms')
           .select('id')
-          .isFilter('end_time', null)
+          .eq('active', true)
           .not('local_acknowledge_time', 'is', null);
 
-      if (_currentTenantId != null) {
-        ackQuery = ackQuery.eq('tenant_id', _currentTenantId!);
-      }
       if (controllerId != null) {
         ackQuery = ackQuery.eq('controller_id', controllerId);
-      }
-      if (siteId != null) {
-        ackQuery = ackQuery.eq('site_id', siteId);
       }
 
       final ackResponse = await ackQuery;
       final acknowledgedCount = (ackResponse as List).length;
 
-      // --- Resetli alarm sayısı (alarm_histories: son N gün) ---
+      // --- Resetli alarm sayısı (alarm_histories tablosu: son N gün) ---
+      // alarm_histories sadece resetlenmiş alarmları içerir
       var resetQuery = _supabase
           .from('alarm_histories')
           .select('id')

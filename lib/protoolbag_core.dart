@@ -160,6 +160,7 @@ export 'src/presentation/widgets/cards/metric_card.dart';
 // Presentation - Widgets - Lists
 export 'src/presentation/widgets/lists/app_list_tile.dart';
 export 'src/presentation/widgets/lists/app_section_header.dart';
+export 'src/presentation/widgets/lists/active_alarm_list.dart';
 export 'src/presentation/widgets/lists/reset_alarm_list.dart';
 
 // Presentation - Widgets - Navigation
