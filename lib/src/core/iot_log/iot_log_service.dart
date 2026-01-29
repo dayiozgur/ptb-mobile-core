@@ -11,6 +11,13 @@ import 'iot_log_stats_model.dart';
 ///
 /// Operasyonel log kayıtlarını yönetir.
 /// DB tablosu: logs
+///
+/// NOT: logs tablosunda dual kolon yapısı vardır:
+///   - datetime (legacy) / date_time (current) → zaman damgası
+///   - onoff (legacy) / on_off (current) → on/off durumu
+/// Her iki kolon da veritabanında mevcuttur. Backend uygulaması
+/// verilerini legacy veya current kolona yazabilir.
+/// Bu servis her iki kolonu da destekler.
 class IoTLogService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
@@ -48,6 +55,9 @@ class IoTLogService {
   // ============================================
 
   /// Log kayıtlarını getir
+  ///
+  /// Tüm kolonları çeker, IoTLog.fromJson hem date_time hem datetime
+  /// kolonlarını fallback olarak destekler.
   Future<List<IoTLog>> getLogs({
     String? controllerId,
     String? providerId,
@@ -70,6 +80,7 @@ class IoTLogService {
     }
 
     try {
+      // Tüm kolonları seç → fromJson hem date_time hem datetime'ı handle eder
       var query = _supabase.from('logs').select();
 
       if (_currentTenantId != null) {
@@ -88,8 +99,10 @@ class IoTLogService {
         query = query.eq('variable_id', variableId);
       }
 
+      // created_at her zaman dolu olduğu için güvenilir sıralama sağlar.
+      // (date_time NULL olabilir, datetime NULL olabilir, ama created_at her zaman var)
       final response = await query
-          .order('date_time', ascending: false)
+          .order('created_at', ascending: false)
           .limit(limit);
 
       final logs = <IoTLog>[];
@@ -127,7 +140,8 @@ class IoTLogService {
         final since = DateTime.now()
             .subtract(Duration(hours: lastHours))
             .toIso8601String();
-        query = query.gte('date_time', since);
+        // created_at her zaman dolu - güvenilir zaman filtresi
+        query = query.gte('created_at', since);
       }
 
       final response = await query;
@@ -151,7 +165,8 @@ class IoTLogService {
         final since = DateTime.now()
             .subtract(Duration(hours: lastHours))
             .toIso8601String();
-        query = query.gte('date_time', since);
+        // created_at her zaman dolu - güvenilir zaman filtresi
+        query = query.gte('created_at', since);
       }
 
       final response = await query;
@@ -168,8 +183,10 @@ class IoTLogService {
 
   /// Log zaman serisi verileri (line chart için)
   ///
-  /// IoTLog.value → double parse ile numerik dönüşüm yapar.
-  /// Sıralama: date_time ASC (chart'ta kronolojik görüntü).
+  /// DB'deki logs tablosunda hem 'date_time' hem 'datetime' (legacy) kolon var.
+  /// Backend verilerini hangi kolona yazdığı bilinemediğinden,
+  /// tüm kolonları çekip client-side fallback yapılır.
+  /// Sıralama: created_at ASC (chart'ta kronolojik görüntü).
   Future<List<LogTimeSeriesEntry>> getLogTimeSeries({
     required String controllerId,
     String? variableId,
@@ -200,11 +217,13 @@ class IoTLogService {
           .subtract(Duration(days: days))
           .toIso8601String();
 
+      // Tüm kolonları çek - hem date_time hem datetime (legacy) destekle
+      // created_at üzerinden filtrele (her zaman dolu)
       var query = _supabase
           .from('logs')
-          .select('date_time,value,on_off')
+          .select()
           .eq('controller_id', controllerId)
-          .gte('date_time', since);
+          .gte('created_at', since);
 
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
@@ -214,12 +233,15 @@ class IoTLogService {
       }
 
       final response =
-          await query.order('date_time', ascending: true);
+          await query.order('created_at', ascending: true);
 
       final entries = <LogTimeSeriesEntry>[];
       for (final e in (response as List)) {
         final row = e as Map<String, dynamic>;
-        final dateStr = row['date_time'] as String?;
+
+        // Zaman damgası: date_time (current) veya datetime (legacy) fallback
+        final dateStr = row['date_time'] as String?
+            ?? row['datetime'] as String?;
         if (dateStr == null) continue;
 
         final dt = DateTime.tryParse(dateStr);
@@ -228,6 +250,8 @@ class IoTLogService {
         final rawValue = row['value'] as String?;
         final numericValue =
             rawValue != null ? double.tryParse(rawValue) : null;
+
+        // on_off (current) veya onoff (legacy) fallback
         final onOff = row['on_off'] as int? ?? row['onoff'] as int?;
 
         entries.add(LogTimeSeriesEntry(
@@ -261,7 +285,8 @@ class IoTLogService {
   /// Tarih aralığına göre log kayıtları
   ///
   /// [from] ve [to] arasındaki logları getirir.
-  /// Sıralama: date_time ASC (chart uyumlu).
+  /// created_at üzerinden filtreleme yapılır (date_time NULL olabilir).
+  /// Sıralama: created_at ASC (chart uyumlu).
   Future<List<IoTLog>> getLogsByTimeRange({
     required String controllerId,
     String? variableId,
@@ -270,12 +295,13 @@ class IoTLogService {
     int limit = 500,
   }) async {
     try {
+      // created_at üzerinden filtrele - her zaman dolu
       var query = _supabase
           .from('logs')
           .select()
           .eq('controller_id', controllerId)
-          .gte('date_time', from.toIso8601String())
-          .lte('date_time', to.toIso8601String());
+          .gte('created_at', from.toIso8601String())
+          .lte('created_at', to.toIso8601String());
 
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
@@ -285,7 +311,7 @@ class IoTLogService {
       }
 
       final response = await query
-          .order('date_time', ascending: true)
+          .order('created_at', ascending: true)
           .limit(limit);
 
       final logs = <IoTLog>[];

@@ -43,10 +43,12 @@ class _ControllerLogsScreenState extends State<ControllerLogsScreen> {
     }
 
     try {
+      // forceRefresh: true → cache bypass, her zaman taze veri
       final results = await Future.wait([
         iotLogService.getLogTimeSeries(
           controllerId: widget.controllerId,
           days: _selectedDays,
+          forceRefresh: true,
         ),
         iotLogService.getLogValueStats(
           controllerId: widget.controllerId,

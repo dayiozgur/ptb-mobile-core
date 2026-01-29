@@ -47,11 +47,21 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
         pMap[p.id] = p;
       }
 
-      // Paralel yükleme
+      // Paralel yükleme - forceRefresh ile cache bypass
       final results = await Future.wait([
-        alarmService.getAlarmDistribution(days: _selectedDays),
-        alarmService.getAlarmTimeline(days: _selectedDays),
-        alarmService.getResetAlarms(days: _selectedDays, limit: 20),
+        alarmService.getAlarmDistribution(
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
+        alarmService.getAlarmTimeline(
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
+        alarmService.getResetAlarms(
+          days: _selectedDays,
+          limit: 20,
+          forceRefresh: true,
+        ),
       ]);
 
       if (mounted) {
