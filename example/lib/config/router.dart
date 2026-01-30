@@ -12,6 +12,8 @@ import '../features/iot/screens/providers_screen.dart';
 import '../features/iot/screens/variables_screen.dart';
 import '../features/iot/screens/workflows_screen.dart';
 import '../features/iot/screens/alarm_dashboard_screen.dart';
+import '../features/iot/screens/active_alarms_screen.dart';
+import '../features/iot/screens/reset_alarms_screen.dart';
 import '../features/iot/screens/controller_logs_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/organization/screens/organization_selector_screen.dart';
@@ -204,6 +206,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/iot/alarms',
         name: 'iot-alarms',
         builder: (context, state) => const AlarmDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/iot/alarms/active',
+        name: 'active-alarms',
+        builder: (context, state) => const ActiveAlarmsScreen(),
+      ),
+      GoRoute(
+        path: '/iot/alarms/history',
+        name: 'alarm-history',
+        builder: (context, state) => const ResetAlarmsScreen(),
       ),
       GoRoute(
         path: '/iot/controllers/:id/logs',

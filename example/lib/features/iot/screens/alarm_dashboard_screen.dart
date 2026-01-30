@@ -124,7 +124,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                       children: [
                         const SizedBox(height: AppSpacing.sm),
 
-                        // Bölüm 1: Özet MetricCards
+                        // Bölüm 1: Özet MetricCards (tıklanabilir)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.screenHorizontal,
@@ -137,6 +137,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                                   value: _distribution.activeCount,
                                   color: AppColors.error,
                                   icon: Icons.warning_amber_rounded,
+                                  onTap: () => context.go('/iot/alarms/active'),
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
@@ -146,6 +147,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                                   value: _distribution.resetCount,
                                   color: AppColors.success,
                                   icon: Icons.restart_alt,
+                                  onTap: () => context.go('/iot/alarms/history'),
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
@@ -203,13 +205,59 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.screenHorizontal,
                           ),
-                          child: _AlarmListTabs(
-                            selectedIndex: _selectedTabIndex,
-                            activeCount: _activeAlarms.length,
-                            resetCount: _resetAlarms.length,
-                            onTabChanged: (index) {
-                              setState(() => _selectedTabIndex = index);
-                            },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _AlarmListTabs(
+                                  selectedIndex: _selectedTabIndex,
+                                  activeCount: _activeAlarms.length,
+                                  resetCount: _resetAlarms.length,
+                                  onTabChanged: (index) {
+                                    setState(() => _selectedTabIndex = index);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              // Tümünü Gör butonu
+                              GestureDetector(
+                                onTap: () {
+                                  if (_selectedTabIndex == 0) {
+                                    context.go('/iot/alarms/active');
+                                  } else {
+                                    context.go('/iot/alarms/history');
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.sm,
+                                    vertical: AppSpacing.xs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Tümü',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 12,
+                                        color: AppColors.primary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -223,7 +271,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             ),
                             child: AppCard(
                               child: ActiveAlarmList(
-                                alarms: _activeAlarms,
+                                alarms: _activeAlarms.take(5).toList(),
                                 priorities: _priorityMap,
                                 emptyMessage: 'Aktif alarm bulunmuyor',
                                 onAlarmTap: (alarm) {
@@ -238,6 +286,23 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               ),
                             ),
                           ),
+                          // Daha fazla alarm varsa göster
+                          if (_activeAlarms.length > 5)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.screenHorizontal,
+                              ),
+                              child: TextButton(
+                                onPressed: () => context.go('/iot/alarms/active'),
+                                child: Text(
+                                  '${_activeAlarms.length - 5} alarm daha...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ] else ...[
                           // Resetlenmiş Alarmlar (alarm_histories tablosu)
                           Padding(
@@ -261,7 +326,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             ),
                             child: AppCard(
                               child: ResetAlarmList(
-                                alarms: _resetAlarms,
+                                alarms: _resetAlarms.take(5).toList(),
                                 priorities: _priorityMap,
                                 emptyMessage: 'Resetlenmiş alarm bulunmuyor',
                                 onAlarmTap: (alarm) {
@@ -276,6 +341,23 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               ),
                             ),
                           ),
+                          // Daha fazla alarm varsa göster
+                          if (_resetAlarms.length > 5)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.screenHorizontal,
+                              ),
+                              child: TextButton(
+                                onPressed: () => context.go('/iot/alarms/history'),
+                                child: Text(
+                                  '${_resetAlarms.length - 5} alarm daha...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
 
                         const SizedBox(height: AppSpacing.xl),
@@ -292,12 +374,14 @@ class _SummaryCard extends StatelessWidget {
   final int value;
   final Color color;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _SummaryCard({
     required this.label,
     required this.value,
     required this.color,
     required this.icon,
+    this.onTap,
   });
 
   @override
@@ -305,6 +389,7 @@ class _SummaryCard extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
 
     return AppCard(
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.sm),
         child: Column(
@@ -319,12 +404,25 @@ class _SummaryCard extends StatelessWidget {
                 color: AppColors.textPrimary(brightness),
               ),
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary(brightness),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(brightness),
+                  ),
+                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 10,
+                    color: AppColors.textSecondary(brightness),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
