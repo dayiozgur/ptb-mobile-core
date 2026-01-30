@@ -128,9 +128,9 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
           return pA.compareTo(pB);
         });
       case _SortOption.durationDesc:
-        filtered.sort((a, b) => b.duration.compareTo(a.duration));
+        filtered.sort((a, b) => (b.duration ?? Duration.zero).compareTo(a.duration ?? Duration.zero));
       case _SortOption.durationAsc:
-        filtered.sort((a, b) => a.duration.compareTo(b.duration));
+        filtered.sort((a, b) => (a.duration ?? Duration.zero).compareTo(b.duration ?? Duration.zero));
     }
 
     _filteredAlarms = filtered;
@@ -418,7 +418,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: AppSearchBar(
-              hint: 'Alarm ara...',
+              placeholder: 'Alarm ara...',
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
