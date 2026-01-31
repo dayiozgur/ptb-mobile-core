@@ -2,6 +2,11 @@
 ///
 /// DB tablosu: alarms
 /// Controller ve variable ile ilişkili, priority_id ile öncelik belirlenir.
+///
+/// Description Kaynağı:
+///   - description: Doğrudan alarms tablosundan gelen açıklama
+///   - variableName/variableDescription: Variable JOIN ile çekilirse doldurulur
+///   - effectiveDescription: description ?? variableDescription (öncelikli)
 class Alarm {
   final String id;
   final String? name;
@@ -39,6 +44,11 @@ class Alarm {
   final String? priorityId;
   final String? realtimeId;
 
+  // Variable ilişkisinden gelen bilgiler (JOIN ile)
+  final String? variableName;
+  final String? variableDescription;
+  final String? variableUnit;
+
   // Zaman damgaları
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -71,9 +81,19 @@ class Alarm {
     this.variableId,
     this.priorityId,
     this.realtimeId,
+    this.variableName,
+    this.variableDescription,
+    this.variableUnit,
     this.createdAt,
     this.updatedAt,
   });
+
+  /// Etkin açıklama - öncelik: alarms.description → variable.description → name
+  String? get effectiveDescription =>
+      description ?? variableDescription ?? name;
+
+  /// Etkin isim - öncelik: alarms.name → variable.name → code
+  String? get effectiveName => name ?? variableName ?? code;
 
   /// Alarm aktif mi (henüz kapanmamış)?
   bool get isActive => endTime == null && status != 'resolved';
@@ -99,6 +119,9 @@ class Alarm {
   }
 
   factory Alarm.fromJson(Map<String, dynamic> json) {
+    // Variable JOIN ile geldiyse nested object olarak gelir
+    final variable = json['variable'] as Map<String, dynamic>?;
+
     return Alarm(
       id: json['id'] as String,
       name: json['name'] as String?,
@@ -151,6 +174,10 @@ class Alarm {
       variableId: json['variable_id'] as String?,
       priorityId: json['priority_id'] as String?,
       realtimeId: json['realtime_id'] as String?,
+      // Variable bilgileri (JOIN ile gelirse)
+      variableName: variable?['name'] as String?,
+      variableDescription: variable?['description'] as String?,
+      variableUnit: variable?['unit'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -161,7 +188,7 @@ class Alarm {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'id': id,
       'name': name,
       'code': code,
@@ -178,6 +205,17 @@ class Alarm {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
+
+    // Variable bilgileri varsa ekle (cache için)
+    if (variableName != null || variableDescription != null || variableUnit != null) {
+      json['variable'] = {
+        'name': variableName,
+        'description': variableDescription,
+        'unit': variableUnit,
+      };
+    }
+
+    return json;
   }
 
   @override

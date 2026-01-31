@@ -22,6 +22,11 @@ import 'alarm_stats_model.dart';
 /// NOT: alarms tablosunda tenant_id kolonu bulunmaz.
 /// Aktif alarm sayısı için alarms tablosu kullanılır.
 /// Resetlenmiş alarm geçmişi için alarm_histories tablosu kullanılır.
+///
+/// Description Kaynağı:
+///   - alarms.description / alarm_histories.description: Doğrudan tabloda saklanır
+///   - variable_id → variables.description: Variable ile ilişkili açıklama
+///   Supabase JOIN ile variable description'ı da çekilebilir.
 class AlarmService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
@@ -65,14 +70,22 @@ class AlarmService {
   /// alarms tablosu üzerinden çalışır (sadece aktif alarmlar burada).
   /// NOT: alarms tablosunda tenant_id yok, sadece controller_id ile filtrelenir.
   /// Backend, alarm resetlendiğinde alarms → alarm_histories taşımasını yapar.
+  ///
+  /// [includeVariable]: true ise variable bilgisini JOIN ile çeker (description için)
   Future<List<Alarm>> getActiveAlarms({
     String? controllerId,
     String? variableId,
+    bool includeVariable = false,
   }) async {
     try {
+      // Variable JOIN opsiyonel: variable description'ı çekmek için
+      final selectClause = includeVariable
+          ? '*, variable:variables(id, name, description, unit)'
+          : '*';
+
       var query = _supabase
           .from('alarms')
-          .select()
+          .select(selectClause)
           .eq('active', true);
 
       if (controllerId != null) {
@@ -99,6 +112,18 @@ class AlarmService {
       Logger.error('Failed to get active alarms', e, stackTrace);
       return [];
     }
+  }
+
+  /// Aktif alarmları variable description ile birlikte getir
+  Future<List<Alarm>> getActiveAlarmsWithVariable({
+    String? controllerId,
+    String? variableId,
+  }) async {
+    return getActiveAlarms(
+      controllerId: controllerId,
+      variableId: variableId,
+      includeVariable: true,
+    );
   }
 
   /// Controller ID listesi ile aktif alarmları getir
@@ -138,6 +163,8 @@ class AlarmService {
   ///
   /// alarm_histories tablosu sadece resetlenmiş alarmları içerir.
   /// tenant_id, site_id, provider_id ile filtreleme yapılabilir.
+  ///
+  /// [includeVariable]: true ise variable bilgisini JOIN ile çeker (description için)
   Future<List<AlarmHistory>> getHistory({
     String? siteId,
     String? providerId,
@@ -145,9 +172,10 @@ class AlarmService {
     String? variableId,
     int limit = 50,
     bool forceRefresh = false,
+    bool includeVariable = false,
   }) async {
     final filterKey = siteId ?? providerId ?? controllerId ?? 'all';
-    final cacheKey = 'alarm_history_${_currentTenantId}_$filterKey';
+    final cacheKey = 'alarm_history_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
@@ -161,9 +189,14 @@ class AlarmService {
     }
 
     try {
+      // Variable JOIN opsiyonel: variable description'ı çekmek için
+      final selectClause = includeVariable
+          ? '*, variable:variables(id, name, description, unit)'
+          : '*';
+
       var query = _supabase
           .from('alarm_histories')
-          .select();
+          .select(selectClause);
 
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
@@ -211,6 +244,26 @@ class AlarmService {
       Logger.error('Failed to get alarm history', e, stackTrace);
       return [];
     }
+  }
+
+  /// Alarm geçmişini variable description ile birlikte getir
+  Future<List<AlarmHistory>> getHistoryWithVariable({
+    String? siteId,
+    String? providerId,
+    String? controllerId,
+    String? variableId,
+    int limit = 50,
+    bool forceRefresh = false,
+  }) async {
+    return getHistory(
+      siteId: siteId,
+      providerId: providerId,
+      controllerId: controllerId,
+      variableId: variableId,
+      limit: limit,
+      forceRefresh: forceRefresh,
+      includeVariable: true,
+    );
   }
 
   /// Site bazlı resetlenmiş alarm sayısı (alarm_histories tablosu)

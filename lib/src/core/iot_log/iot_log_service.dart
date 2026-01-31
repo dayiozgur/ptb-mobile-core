@@ -18,6 +18,11 @@ import 'iot_log_stats_model.dart';
 /// Her iki kolon da veritabanında mevcuttur. Backend uygulaması
 /// verilerini legacy veya current kolona yazabilir.
 /// Bu servis her iki kolonu da destekler.
+///
+/// Description Kaynağı:
+///   - logs.description: Doğrudan tabloda saklanır
+///   - logs.variable_id → variables.description: Variable ile ilişkili açıklama
+///   Supabase JOIN ile variable description'ı da çekilebilir.
 class IoTLogService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
@@ -58,15 +63,20 @@ class IoTLogService {
   ///
   /// Tüm kolonları çeker, IoTLog.fromJson hem date_time hem datetime
   /// kolonlarını fallback olarak destekler.
+  ///
+  /// [includeVariable]: true ise variable bilgisini JOIN ile çeker
+  /// [activeOnly]: true ise sadece active=true kayıtları getirir (default: false)
   Future<List<IoTLog>> getLogs({
     String? controllerId,
     String? providerId,
     String? variableId,
     int limit = 50,
     bool forceRefresh = false,
+    bool includeVariable = false,
+    bool activeOnly = false,
   }) async {
     final filterKey = controllerId ?? providerId ?? variableId ?? 'all';
-    final cacheKey = 'iot_logs_${_currentTenantId}_$filterKey';
+    final cacheKey = 'iot_logs_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
@@ -80,8 +90,18 @@ class IoTLogService {
     }
 
     try {
-      // Tüm kolonları seç → fromJson hem date_time hem datetime'ı handle eder
-      var query = _supabase.from('logs').select();
+      // Variable JOIN opsiyonel: variable description'ı çekmek için
+      final selectClause = includeVariable
+          ? '*, variable:variables(id, name, description, unit)'
+          : '*';
+
+      var query = _supabase.from('logs').select(selectClause);
+
+      // Active filtresi - bazı sistemlerde active null olabilir
+      // Bu yüzden varsayılan olarak false, isteğe bağlı aktifleştirilebilir
+      if (activeOnly) {
+        query = query.eq('active', true);
+      }
 
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
@@ -126,6 +146,27 @@ class IoTLogService {
       Logger.error('Failed to get IoT logs', e, stackTrace);
       return [];
     }
+  }
+
+  /// Log kayıtlarını variable description ile birlikte getir
+  ///
+  /// Variable tablosundan description, name ve unit bilgilerini de çeker.
+  /// Description önceliği: logs.description → variable.description
+  Future<List<IoTLog>> getLogsWithVariable({
+    String? controllerId,
+    String? providerId,
+    String? variableId,
+    int limit = 50,
+    bool forceRefresh = false,
+  }) async {
+    return getLogs(
+      controllerId: controllerId,
+      providerId: providerId,
+      variableId: variableId,
+      limit: limit,
+      forceRefresh: forceRefresh,
+      includeVariable: true,
+    );
   }
 
   /// Provider bazlı log sayısı
