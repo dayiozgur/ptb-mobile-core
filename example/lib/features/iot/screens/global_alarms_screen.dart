@@ -150,8 +150,9 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       }).toList();
     }
 
-    // Site filter - Alarm modelinde siteId yok, controllerId üzerinden filtreleme yapılabilir
-    // Şimdilik site filtrelemesi aktif alarmlar için devre dışı
+    // Site filter - Alarm tablosunda siteId yok
+    // Aktif alarmları site bazlı filtrelemek için controller üzerinden gitmek gerekir
+    // Bu, ayrı bir API çağrısı gerektirir ve şu an client-side yapılamaz
 
     // Priority filter
     if (_selectedPriorityId != null) {

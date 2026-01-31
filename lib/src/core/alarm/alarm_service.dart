@@ -355,12 +355,13 @@ class AlarmService {
           .subtract(Duration(days: effectiveDays))
           .toIso8601String();
 
-      // reset_time NOT NULL → resetlenmiş alarmlar
+      // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
+      // (backend tarafından yönetilen taşıma: alarm resetlenince alarms → alarm_histories)
+      // reset_time filtresi KALDIRILDI - bazı kayıtlarda reset_time NULL olabiliyor
       // created_at üzerinden filtrele (start_time NULL olabilir)
       var query = _supabase
           .from('alarm_histories')
           .select()
-          .not('reset_time', 'is', null)
           .gte('created_at', since);
 
       if (_currentTenantId != null) {
@@ -600,11 +601,12 @@ class AlarmService {
       final acknowledgedCount = (ackResponse as List).length;
 
       // --- Resetli alarm sayısı (alarm_histories tablosu: son N gün) ---
-      // alarm_histories sadece resetlenmiş alarmları içerir
+      // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
+      // (backend tarafından yönetilen taşıma: alarm resetlenince alarms → alarm_histories)
+      // reset_time filtresi KALDIRILDI - bazı kayıtlarda reset_time NULL olabiliyor
       var resetQuery = _supabase
           .from('alarm_histories')
           .select('id')
-          .not('reset_time', 'is', null)
           .gte('created_at', since);
 
       if (_currentTenantId != null) {

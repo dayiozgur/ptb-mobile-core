@@ -134,9 +134,19 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
   Future<List<Alarm>> _loadActiveAlarms() async {
     try {
-      // Alarm modelinde dataProviderId yok
-      // Provider'a ait alarmları filtrelemek için controller veya realtimeId kullanılabilir
-      return await alarmService.getActiveAlarms();
+      // Alarm tablosunda provider_id yok, controller_id üzerinden filtreleme yapıyoruz
+      // Önce provider'a ait controller'ları buluyoruz
+      final allControllers = await controllerService.getAll();
+      final providerControllers = allControllers
+          .where((c) => c.providerId == widget.providerId)
+          .toList();
+
+      if (providerControllers.isEmpty) {
+        return [];
+      }
+
+      final controllerIds = providerControllers.map((c) => c.id).toList();
+      return await alarmService.getActiveAlarmsByControllers(controllerIds);
     } catch (_) {
       return [];
     }

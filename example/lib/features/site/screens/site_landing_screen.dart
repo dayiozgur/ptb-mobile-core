@@ -146,9 +146,20 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   Future<List<Alarm>> _loadActiveAlarms() async {
     try {
-      // Alarm modelinde siteId yok, controllerId üzerinden filtreleme yapılabilir
-      // Şimdilik tüm aktif alarmları yüklüyoruz
-      return await alarmService.getActiveAlarms();
+      // Alarm tablosunda site_id yok, controller_id üzerinden filtreleme yapıyoruz
+      // Önce site'a ait controller'ları yüklüyoruz (_loadControllers zaten çağrıldı)
+      // Sonra bu controller'ların alarm'larını çekiyoruz
+      final siteControllers = await controllerService.getAll();
+      final filteredControllers = siteControllers
+          .where((c) => c.siteId == widget.siteId)
+          .toList();
+
+      if (filteredControllers.isEmpty) {
+        return [];
+      }
+
+      final controllerIds = filteredControllers.map((c) => c.id).toList();
+      return await alarmService.getActiveAlarmsByControllers(controllerIds);
     } catch (_) {
       return [];
     }
