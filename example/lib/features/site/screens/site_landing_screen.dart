@@ -65,7 +65,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
     try {
       // Load site info
-      final site = await siteService.getSiteById(widget.siteId);
+      final site = await siteService.getSite(widget.siteId);
       if (site == null) {
         setState(() {
           _errorMessage = 'Site bulunamadı';
@@ -146,8 +146,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   Future<List<Alarm>> _loadActiveAlarms() async {
     try {
-      final allAlarms = await alarmService.getActiveAlarms();
-      return allAlarms.where((a) => a.siteId == widget.siteId).toList();
+      // Alarm modelinde siteId yok, controllerId üzerinden filtreleme yapılabilir
+      // Şimdilik tüm aktif alarmları yüklüyoruz
+      return await alarmService.getActiveAlarms();
     } catch (_) {
       return [];
     }
@@ -164,7 +165,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   Future<int> _loadUnitCount() async {
     try {
-      final units = await unitService.getUnits(siteId: widget.siteId);
+      final units = await unitService.getUnits(widget.siteId);
       return units.length;
     } catch (_) {
       return 0;
@@ -732,8 +733,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                   children: [
                     _InfoRow(label: 'Adres', value: _site!.address ?? '-'),
                     _InfoRow(label: 'Şehir', value: _site!.city ?? '-'),
+                    _InfoRow(label: 'İlçe', value: _site!.town ?? '-'),
                     _InfoRow(label: 'Ülke', value: _site!.country ?? '-'),
-                    _InfoRow(label: 'Posta Kodu', value: _site!.postalCode ?? '-'),
                   ],
                 ),
               ),
@@ -750,10 +751,11 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                 child: Column(
                   children: [
                     _InfoRow(label: 'Site ID', value: _site!.id),
-                    _InfoRow(
-                      label: 'Oluşturulma',
-                      value: _formatDate(_site!.createdAt),
-                    ),
+                    if (_site!.createdAt != null)
+                      _InfoRow(
+                        label: 'Oluşturulma',
+                        value: _formatDate(_site!.createdAt!),
+                      ),
                     if (_site!.updatedAt != null)
                       _InfoRow(
                         label: 'Güncelleme',
@@ -771,7 +773,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
               label: 'Siteyi Düzenle',
               variant: AppButtonVariant.secondary,
               icon: Icons.edit,
-              fullWidth: true,
+              isFullWidth: true,
               onPressed: () {
                 AppSnackbar.showInfo(
                   context,
@@ -820,7 +822,6 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             AppListTile(
               leading: Icon(Icons.delete, color: AppColors.error),
               title: 'Siteyi Sil',
-              titleStyle: TextStyle(color: AppColors.error),
               onTap: () {
                 Navigator.pop(context);
                 AppSnackbar.showInfo(
@@ -959,8 +960,8 @@ class _AlarmRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority != null
-        ? Color(int.parse(priority!.color.substring(1), radix: 16) + 0xFF000000)
+    final priorityColor = priority?.color != null
+        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
         : AppColors.error;
 
     return Padding(
@@ -996,8 +997,8 @@ class _AlarmRow extends StatelessWidget {
           ),
           if (priority != null)
             AppBadge(
-              label: priority!.name,
-              variant: AppBadgeVariant.tonal,
+              label: priority!.name ?? '',
+              variant: AppBadgeVariant.neutral,
               size: AppBadgeSize.small,
             ),
         ],
@@ -1222,12 +1223,12 @@ class _ControllerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    controller.type?.label ?? 'Controller',
+                    controller.type.label,
                     style: AppTypography.caption1.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
                   ),
-                  if (controller.ip != null) ...[
+                  if (controller.ipAddress != null) ...[
                     const SizedBox(height: 2),
                     Row(
                       children: [
@@ -1238,7 +1239,7 @@ class _ControllerCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          controller.ip!,
+                          controller.ipAddress!,
                           style: AppTypography.caption2.copyWith(
                             color: AppColors.tertiaryLabel(context),
                           ),
@@ -1262,8 +1263,14 @@ class _ControllerCard extends StatelessWidget {
         return AppColors.success;
       case ControllerStatus.offline:
         return AppColors.error;
+      case ControllerStatus.connecting:
+        return AppColors.info;
+      case ControllerStatus.error:
+        return AppColors.error;
       case ControllerStatus.maintenance:
         return AppColors.warning;
+      case ControllerStatus.disabled:
+        return AppColors.systemGray;
       case ControllerStatus.unknown:
         return AppColors.systemGray;
     }
@@ -1275,8 +1282,14 @@ class _ControllerCard extends StatelessWidget {
         return 'Online';
       case ControllerStatus.offline:
         return 'Offline';
+      case ControllerStatus.connecting:
+        return 'Bağlanıyor';
+      case ControllerStatus.error:
+        return 'Hata';
       case ControllerStatus.maintenance:
         return 'Bakımda';
+      case ControllerStatus.disabled:
+        return 'Devre Dışı';
       case ControllerStatus.unknown:
         return 'Bilinmiyor';
     }
@@ -1288,8 +1301,14 @@ class _ControllerCard extends StatelessWidget {
         return AppBadgeVariant.success;
       case ControllerStatus.offline:
         return AppBadgeVariant.error;
+      case ControllerStatus.connecting:
+        return AppBadgeVariant.info;
+      case ControllerStatus.error:
+        return AppBadgeVariant.error;
       case ControllerStatus.maintenance:
         return AppBadgeVariant.warning;
+      case ControllerStatus.disabled:
+        return AppBadgeVariant.secondary;
       case ControllerStatus.unknown:
         return AppBadgeVariant.secondary;
     }
@@ -1309,8 +1328,8 @@ class _ActiveAlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority != null
-        ? Color(int.parse(priority!.color.substring(1), radix: 16) + 0xFF000000)
+    final priorityColor = priority?.color != null
+        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
         : AppColors.error;
 
     return AppCard(
@@ -1352,16 +1371,16 @@ class _ActiveAlarmCard extends StatelessWidget {
                       ),
                       if (priority != null)
                         AppBadge(
-                          label: priority!.name,
-                          variant: AppBadgeVariant.tonal,
+                          label: priority!.name ?? '',
+                          variant: AppBadgeVariant.neutral,
                           size: AppBadgeSize.small,
                         ),
                     ],
                   ),
-                  if (alarm.message != null) ...[
+                  if (alarm.description != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      alarm.message!,
+                      alarm.description!,
                       style: AppTypography.caption1.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),

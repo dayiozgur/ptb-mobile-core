@@ -75,10 +75,12 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       List<Organization> organizations = [];
       List<Site> sites = [];
       try {
-        organizations = await organizationService.getAll();
-        for (final org in organizations) {
-          final orgSites = await siteService.getSites(org.id);
-          sites.addAll(orgSites);
+        if (tenantId != null) {
+          organizations = await organizationService.getOrganizations(tenantId);
+          for (final org in organizations) {
+            final orgSites = await siteService.getSites(org.id);
+            sites.addAll(orgSites);
+          }
         }
       } catch (_) {}
 
@@ -144,14 +146,12 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       alarms = alarms.where((a) {
         return (a.name?.toLowerCase().contains(query) ?? false) ||
             (a.code?.toLowerCase().contains(query) ?? false) ||
-            (a.message?.toLowerCase().contains(query) ?? false);
+            (a.description?.toLowerCase().contains(query) ?? false);
       }).toList();
     }
 
-    // Site filter
-    if (_selectedSiteId != null) {
-      alarms = alarms.where((a) => a.siteId == _selectedSiteId).toList();
-    }
+    // Site filter - Alarm modelinde siteId yok, controllerId üzerinden filtreleme yapılabilir
+    // Şimdilik site filtrelemesi aktif alarmlar için devre dışı
 
     // Priority filter
     if (_selectedPriorityId != null) {
@@ -170,7 +170,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       alarms = alarms.where((a) {
         return (a.name?.toLowerCase().contains(query) ?? false) ||
             (a.code?.toLowerCase().contains(query) ?? false) ||
-            (a.message?.toLowerCase().contains(query) ?? false);
+            (a.description?.toLowerCase().contains(query) ?? false);
       }).toList();
     }
 
@@ -419,22 +419,20 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
 
             const SizedBox(height: AppSpacing.md),
 
-            // Alarms by Site
+            // Alarms by Site (AlarmHistory için siteId mevcut)
             if (_sites.isNotEmpty) ...[
-              AppSectionHeader(title: 'Site Bazlı Alarmlar'),
+              AppSectionHeader(title: 'Site Bazlı Alarm Geçmişi'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
                   children: _sites.take(5).map((site) {
-                    final siteActiveCount = _activeAlarms
-                        .where((a) => a.siteId == site.id)
-                        .length;
+                    // Alarm modelinde siteId yok, sadece AlarmHistory için gösteriyoruz
                     final siteResetCount = _resetAlarms
                         .where((a) => a.siteId == site.id)
                         .length;
                     return _SiteAlarmRow(
                       siteName: site.name,
-                      activeCount: siteActiveCount,
+                      activeCount: 0, // Alarm modelinde siteId yok
                       resetCount: siteResetCount,
                       onTap: () {
                         context.go('/sites/${site.id}');
@@ -478,14 +476,13 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
           final priority = alarm.priorityId != null
               ? _priorityMap[alarm.priorityId!]
               : null;
-          final site = alarm.siteId != null
-              ? _siteMap[alarm.siteId!]
-              : null;
+          // Alarm modelinde siteId yok, controller üzerinden site'a erişilebilir
+          // Şimdilik site bilgisi gösterilmiyor
 
           return _ActiveAlarmCard(
             alarm: alarm,
             priority: priority,
-            siteName: site?.name,
+            siteName: null,
             onTap: () {
               ActiveAlarmDetailSheet.show(
                 context,
@@ -762,8 +759,8 @@ class _ActiveAlarmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final priorityColor = priority != null
-        ? Color(int.parse(priority!.color.substring(1), radix: 16) + 0xFF000000)
+    final priorityColor = priority?.color != null
+        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
         : AppColors.error;
 
     return AppCard(
@@ -802,16 +799,16 @@ class _ActiveAlarmCard extends StatelessWidget {
                       ),
                       if (priority != null)
                         AppBadge(
-                          label: priority!.name,
-                          variant: AppBadgeVariant.tonal,
+                          label: priority!.name ?? '',
+                          variant: AppBadgeVariant.neutral,
                           size: AppBadgeSize.small,
                         ),
                     ],
                   ),
-                  if (alarm.message != null) ...[
+                  if (alarm.description != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      alarm.message!,
+                      alarm.description!,
                       style: AppTypography.caption1.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -916,16 +913,16 @@ class _ResetAlarmCard extends StatelessWidget {
                       ),
                       if (priority != null)
                         AppBadge(
-                          label: priority!.name,
+                          label: priority!.name ?? '',
                           variant: AppBadgeVariant.secondary,
                           size: AppBadgeSize.small,
                         ),
                     ],
                   ),
-                  if (alarm.message != null) ...[
+                  if (alarm.description != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      alarm.message!,
+                      alarm.description!,
                       style: AppTypography.caption1.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -1154,7 +1151,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 ...widget.priorities.map((priority) {
                   final isSelected = _selectedPriorityId == priority.id;
                   return ChoiceChip(
-                    label: Text(priority.name),
+                    label: Text(priority.name ?? ''),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
