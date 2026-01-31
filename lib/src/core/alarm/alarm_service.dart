@@ -83,10 +83,11 @@ class AlarmService {
           ? '*, variable:variables(id, name, description, unit)'
           : '*';
 
+      // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
+      // active filtresi kaldırıldı - tabloda active kolonu NULL olabiliyor
       var query = _supabase
           .from('alarms')
-          .select(selectClause)
-          .eq('active', true);
+          .select(selectClause);
 
       if (controllerId != null) {
         query = query.eq('controller_id', controllerId);
@@ -132,10 +133,10 @@ class AlarmService {
     if (controllerIds.isEmpty) return [];
 
     try {
+      // alarms tablosu zaten sadece aktif alarmları içerir
       final response = await _supabase
           .from('alarms')
           .select()
-          .eq('active', true)
           .inFilter('controller_id', controllerIds)
           .order('start_time', ascending: false);
 
@@ -571,12 +572,12 @@ class AlarmService {
           .toIso8601String();
 
       // --- Aktif alarm sayısı (alarms tablosu) ---
-      // alarms tablosu sadece aktif alarmları içerir
+      // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
+      // active filtresi kaldırıldı - tabloda active kolonu NULL olabiliyor
       // NOT: alarms tablosunda tenant_id, site_id yok
       var activeQuery = _supabase
           .from('alarms')
-          .select('id')
-          .eq('active', true);
+          .select('id');
 
       if (controllerId != null) {
         activeQuery = activeQuery.eq('controller_id', controllerId);
@@ -590,7 +591,6 @@ class AlarmService {
       var ackQuery = _supabase
           .from('alarms')
           .select('id')
-          .eq('active', true)
           .not('local_acknowledge_time', 'is', null);
 
       if (controllerId != null) {
