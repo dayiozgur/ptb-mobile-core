@@ -1442,9 +1442,9 @@ class _LogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              _getLevelIcon(),
+              _getIcon(),
               size: 16,
-              color: _getLevelColor(),
+              color: _getColor(),
             ),
             const SizedBox(width: AppSpacing.xs),
             Expanded(
@@ -1452,12 +1452,12 @@ class _LogCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    log.message ?? '-',
+                    log.description ?? log.name ?? log.value ?? '-',
                     style: AppTypography.caption1,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formatTime(log.createdAt),
+                    _formatTime(log.dateTime ?? log.createdAt),
                     style: AppTypography.caption2.copyWith(
                       color: AppColors.tertiaryLabel(context),
                     ),
@@ -1471,37 +1471,24 @@ class _LogCard extends StatelessWidget {
     );
   }
 
-  IconData _getLevelIcon() {
-    switch (log.level) {
-      case LogLevel.error:
-        return Icons.error;
-      case LogLevel.warning:
-        return Icons.warning;
-      case LogLevel.info:
-        return Icons.info;
-      case LogLevel.debug:
-        return Icons.bug_report;
-      default:
-        return Icons.article;
-    }
+  IconData _getIcon() {
+    // OnOff durumuna göre ikon
+    if (log.onOff == 1) return Icons.toggle_on;
+    if (log.onOff == 0) return Icons.toggle_off;
+    if (log.maintenance != null) return Icons.build;
+    return Icons.article;
   }
 
-  Color _getLevelColor() {
-    switch (log.level) {
-      case LogLevel.error:
-        return AppColors.error;
-      case LogLevel.warning:
-        return AppColors.warning;
-      case LogLevel.info:
-        return AppColors.info;
-      case LogLevel.debug:
-        return AppColors.systemGray;
-      default:
-        return AppColors.systemGray;
-    }
+  Color _getColor() {
+    // OnOff durumuna göre renk
+    if (log.onOff == 1) return AppColors.success;
+    if (log.onOff == 0) return AppColors.systemGray;
+    if (log.maintenance != null) return AppColors.warning;
+    return AppColors.info;
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(DateTime? time) {
+    if (time == null) return '-';
     return '${time.hour}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
   }
 }
