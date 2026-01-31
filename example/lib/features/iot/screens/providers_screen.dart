@@ -126,6 +126,11 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
   }
 
   void _showProviderDetail(DataProvider provider) {
+    // Go to provider landing page
+    context.go('/iot/providers/${provider.id}');
+  }
+
+  void _showProviderDetailSheet(DataProvider provider) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

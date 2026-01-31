@@ -144,6 +144,8 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
                 site: site,
                 alarmCount: _siteAlarmCounts[site.id] ?? 0,
                 onTap: () => _selectSite(site),
+                onLongPress: () => _showSiteOptions(site),
+                onInfoTap: () => context.go('/sites/${site.id}'),
               ),
             );
           }),
@@ -198,6 +200,50 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
               onPressed: () => context.go('/organizations'),
               child: const Text('Değiştir'),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSiteOptions(Site site) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => AppBottomSheet(
+        title: site.name,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppListTile(
+              leading: const Icon(Icons.check_circle),
+              title: 'Bu Siteyi Seç',
+              subtitle: 'Ana sayfa için bu siteyi kullan',
+              onTap: () {
+                Navigator.pop(context);
+                _selectSite(site);
+              },
+            ),
+            AppListTile(
+              leading: const Icon(Icons.info_outline),
+              title: 'Site Detayları',
+              subtitle: 'Dashboard, alarmlar, controllers...',
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/sites/${site.id}');
+              },
+            ),
+            AppListTile(
+              leading: const Icon(Icons.edit),
+              title: 'Siteyi Düzenle',
+              onTap: () {
+                Navigator.pop(context);
+                AppSnackbar.showInfo(
+                  context,
+                  message: 'Düzenleme özelliği yakında',
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),
@@ -304,138 +350,166 @@ class _SiteCard extends StatelessWidget {
   final Site site;
   final int alarmCount;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onInfoTap;
 
   const _SiteCard({
     required this.site,
     this.alarmCount = 0,
     required this.onTap,
+    this.onLongPress,
+    this.onInfoTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onTap,
-      child: Padding(
-        padding: AppSpacing.cardInsets,
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: _getColorFromString(site.color),
-                borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: AppCard(
+        onTap: onTap,
+        child: Padding(
+          padding: AppSpacing.cardInsets,
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _getColorFromString(site.color),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: site.imagePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            site.imagePath!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildIcon(),
+                          ),
+                        )
+                      : _buildIcon(),
+                ),
               ),
-              child: Center(
-                child: site.imagePath != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          site.imagePath!,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildIcon(),
-                        ),
-                      )
-                    : _buildIcon(),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
 
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    site.name,
-                    style: AppTypography.headline,
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Row(
-                    children: [
-                      if (site.floorCount != null) ...[
-                        _InfoChip(
-                          icon: Icons.layers,
-                          label: '${site.floorCount} Kat',
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                      ],
-                      if (site.grossAreaSqm != null) ...[
-                        _InfoChip(
-                          icon: Icons.square_foot,
-                          label: '${site.grossAreaSqm!.toInt()} m²',
-                        ),
-                      ],
-                      if (site.energyCertificateClass != null) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        _InfoChip(
-                          icon: Icons.eco,
-                          label: site.energyCertificateClass!.value,
-                          color: _getEnergyColor(site.energyCertificateClass!),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (site.address != null) ...[
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      site.name,
+                      style: AppTypography.headline,
+                    ),
                     const SizedBox(height: AppSpacing.xxs),
                     Row(
                       children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: AppColors.tertiaryLabel(context),
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            site.fullAddress,
-                            style: AppTypography.caption2.copyWith(
-                              color: AppColors.tertiaryLabel(context),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        if (site.floorCount != null) ...[
+                          _InfoChip(
+                            icon: Icons.layers,
+                            label: '${site.floorCount} Kat',
                           ),
-                        ),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        if (site.grossAreaSqm != null) ...[
+                          _InfoChip(
+                            icon: Icons.square_foot,
+                            label: '${site.grossAreaSqm!.toInt()} m²',
+                          ),
+                        ],
+                        if (site.energyCertificateClass != null) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          _InfoChip(
+                            icon: Icons.eco,
+                            label: site.energyCertificateClass!.value,
+                            color: _getEnergyColor(site.energyCertificateClass!),
+                          ),
+                        ],
                       ],
                     ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Alarm indicator & Arrow
-            if (alarmCount > 0) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.warning_amber, size: 14, color: AppColors.error),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$alarmCount',
-                      style: AppTypography.caption2.copyWith(
-                        color: AppColors.error,
-                        fontWeight: FontWeight.w600,
+                    if (site.address != null) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: AppColors.tertiaryLabel(context),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              site.fullAddress,
+                              style: AppTypography.caption2.copyWith(
+                                color: AppColors.tertiaryLabel(context),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+
+              // Alarm indicator
+              if (alarmCount > 0) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning_amber, size: 14, color: AppColors.error),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$alarmCount',
+                        style: AppTypography.caption2.copyWith(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+
+              // Info button
+              if (onInfoTap != null) ...[
+                GestureDetector(
+                  onTap: onInfoTap,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.tertiaryLabel(context),
+              ),
             ],
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.tertiaryLabel(context),
-            ),
-          ],
+          ),
         ),
       ),
     );

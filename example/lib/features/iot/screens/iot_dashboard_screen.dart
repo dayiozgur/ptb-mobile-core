@@ -497,6 +497,22 @@ class _IotModules extends StatelessWidget {
             subtitle: 'Otomasyon senaryolarını oluşturun',
             onTap: () => context.go('/iot/workflows'),
           ),
+          Divider(height: 1, color: AppColors.separator(context)),
+          _IotModuleItem(
+            icon: Icons.warning_amber_rounded,
+            color: Colors.red,
+            title: 'Alarm Yönetimi',
+            subtitle: 'Alarmları görüntüleyin ve yönetin',
+            onTap: () => context.go('/iot/alarms'),
+          ),
+          Divider(height: 1, color: AppColors.separator(context)),
+          _IotModuleItem(
+            icon: Icons.notifications_active,
+            color: Colors.deepOrange,
+            title: 'Global Alarmlar',
+            subtitle: 'Tüm site ve provider alarmları',
+            onTap: () => context.go('/iot/alarms/global'),
+          ),
         ],
       ),
     );

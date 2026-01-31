@@ -15,7 +15,10 @@ import '../features/iot/screens/alarm_dashboard_screen.dart';
 import '../features/iot/screens/active_alarms_screen.dart';
 import '../features/iot/screens/reset_alarms_screen.dart';
 import '../features/iot/screens/controller_logs_screen.dart';
+import '../features/iot/screens/global_alarms_screen.dart';
+import '../features/iot/screens/provider_landing_screen.dart';
 import '../features/members/screens/members_screen.dart';
+import '../features/site/screens/site_landing_screen.dart';
 import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/site/screens/site_selector_screen.dart';
@@ -95,12 +98,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
-      // Site Selection
+      // Site Selection & Landing
       // ==================
       GoRoute(
         path: '/sites',
         name: 'sites',
         builder: (context, state) => const SiteSelectorScreen(),
+      ),
+      GoRoute(
+        path: '/sites/:id',
+        name: 'site-landing',
+        builder: (context, state) {
+          final siteId = state.pathParameters['id']!;
+          return SiteLandingScreen(siteId: siteId);
+        },
       ),
 
       // ==================
@@ -193,6 +204,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProvidersScreen(),
       ),
       GoRoute(
+        path: '/iot/providers/:id',
+        name: 'provider-landing',
+        builder: (context, state) {
+          final providerId = state.pathParameters['id']!;
+          return ProviderLandingScreen(providerId: providerId);
+        },
+      ),
+      GoRoute(
         path: '/iot/variables',
         name: 'iot-variables',
         builder: (context, state) => const VariablesScreen(),
@@ -206,6 +225,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/iot/alarms',
         name: 'iot-alarms',
         builder: (context, state) => const AlarmDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/iot/alarms/global',
+        name: 'global-alarms',
+        builder: (context, state) => const GlobalAlarmsScreen(),
       ),
       GoRoute(
         path: '/iot/alarms/active',
