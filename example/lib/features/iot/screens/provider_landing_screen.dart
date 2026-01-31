@@ -146,7 +146,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     try {
       return await alarmService.getHistory(
         providerId: widget.providerId,
-        limit: 50,
+        limit: 100,
+        forceRefresh: true,
       );
     } catch (_) {
       return [];

@@ -156,8 +156,13 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   Future<List<AlarmHistory>> _loadResetAlarms() async {
     try {
-      final allAlarms = await alarmService.getResetAlarms(days: 30, limit: 50);
-      return allAlarms.where((a) => a.siteId == widget.siteId).toList();
+      // siteId parametresini direkt gönder - client-side filtreleme yerine
+      // server-side filtreleme yap
+      return await alarmService.getHistory(
+        siteId: widget.siteId,
+        limit: 100,
+        forceRefresh: true,
+      );
     } catch (_) {
       return [];
     }

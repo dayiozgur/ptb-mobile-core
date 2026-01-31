@@ -270,13 +270,20 @@ class AlarmService {
   ///
   /// NOT: Aktif alarmlar için alarms tablosu kullanılır ve orada site_id yok.
   /// Bu metod sadece resetlenmiş alarm geçmişi için kullanılabilir.
+  /// getHistory() metodu ile tutarlı filtreler kullanır (tenant_id dahil).
   Future<int> getResetAlarmCountBySite(String siteId) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('alarm_histories')
           .select('id')
           .eq('site_id', siteId);
 
+      // tenant_id filtresi - getHistory() ile tutarlı
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      final response = await query;
       return (response as List).length;
     } catch (e) {
       Logger.warning('Failed to get reset alarm count for site: $e');
@@ -288,13 +295,20 @@ class AlarmService {
   ///
   /// NOT: Aktif alarmlar için alarms tablosu kullanılır ve orada provider_id yok.
   /// Bu metod sadece resetlenmiş alarm geçmişi için kullanılabilir.
+  /// getHistory() metodu ile tutarlı filtreler kullanır (tenant_id dahil).
   Future<int> getResetAlarmCountByProvider(String providerId) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('alarm_histories')
           .select('id')
           .eq('provider_id', providerId);
 
+      // tenant_id filtresi - getHistory() ile tutarlı
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      final response = await query;
       return (response as List).length;
     } catch (e) {
       Logger.warning('Failed to get reset alarm count for provider: $e');
