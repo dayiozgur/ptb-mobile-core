@@ -198,7 +198,7 @@ class WorkRequestService {
       await _cacheManager.set(
         cacheKey,
         responseList,
-        duration: const Duration(minutes: 5),
+        ttl: const Duration(minutes: 5),
       );
 
       _requestsController.add(_requests);

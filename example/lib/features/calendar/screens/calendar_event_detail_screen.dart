@@ -189,7 +189,7 @@ class _CalendarEventDetailScreenState extends State<CalendarEventDetailScreen> {
     if (newDate != null) {
       await _performAction(
         'Ertele',
-        () => calendarService.postpone(widget.eventId, newDate: newDate),
+        () => calendarService.postpone(widget.eventId, newDate),
       );
     }
   }
@@ -862,7 +862,7 @@ class _AttendeeItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppAvatar(name: attendee.userName, size: AppAvatarSize.small),
+          AppAvatar(name: attendee.userName ?? 'Katılımcı', size: AppAvatarSize.small),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -871,7 +871,7 @@ class _AttendeeItem extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      attendee.userName,
+                      attendee.userName ?? 'Bilinmeyen Katılımcı',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

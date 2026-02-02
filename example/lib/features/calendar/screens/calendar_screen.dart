@@ -290,7 +290,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Ayırıcı
           Container(
             height: 1,
-            color: AppColors.separator(brightness),
+            color: AppColors.separator(context),
           ),
 
           // Seçili gün başlığı

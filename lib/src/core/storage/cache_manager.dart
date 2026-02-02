@@ -287,6 +287,21 @@ class CacheManager {
     await deleteByPattern('^$prefix');
   }
 
+  /// Koşula göre anahtarları sil
+  Future<void> deleteWhere(bool Function(String key) test) async {
+    _ensureInitialized();
+
+    final keysToDelete = _cacheBox!.keys
+        .where((key) => test(key.toString()))
+        .toList();
+
+    for (final key in keysToDelete) {
+      await delete(key.toString());
+    }
+
+    Logger.debug('Cache deleted by condition (${keysToDelete.length} keys)');
+  }
+
   // ============================================
   // CACHE INFO
   // ============================================
