@@ -148,6 +148,16 @@ class UserProfile {
   /// Silinme tarihi (soft delete)
   final DateTime? deletedAt;
 
+  // ============================================
+  // ORGANİZASYON İLİŞKİLERİ
+  // ============================================
+
+  /// Varsayılan organizasyon ID
+  final String? organizationId;
+
+  /// Varsayılan site ID
+  final String? defaultSiteId;
+
   const UserProfile({
     required this.id,
     required this.email,
@@ -177,6 +187,8 @@ class UserProfile {
     required this.createdAt,
     this.updatedAt,
     this.deletedAt,
+    this.organizationId,
+    this.defaultSiteId,
   });
 
   // ============================================
@@ -234,6 +246,12 @@ class UserProfile {
     return age;
   }
 
+  /// Organizasyon atanmış mı?
+  bool get hasOrganization => organizationId != null && organizationId!.isNotEmpty;
+
+  /// Varsayılan site atanmış mı?
+  bool get hasDefaultSite => defaultSiteId != null && defaultSiteId!.isNotEmpty;
+
   // ============================================
   // JSON SERIALIZATION
   // ============================================
@@ -283,6 +301,8 @@ class UserProfile {
       deletedAt: json['deleted_at'] != null
           ? DateTime.tryParse(json['deleted_at'] as String)
           : null,
+      organizationId: json['organization_id'] as String?,
+      defaultSiteId: json['default_site_id'] as String?,
     );
   }
 
@@ -316,6 +336,8 @@ class UserProfile {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'deleted_at': deletedAt?.toIso8601String(),
+      'organization_id': organizationId,
+      'default_site_id': defaultSiteId,
     };
   }
 
@@ -373,6 +395,8 @@ class UserProfile {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? deletedAt,
+    String? organizationId,
+    String? defaultSiteId,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -403,6 +427,8 @@ class UserProfile {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      organizationId: organizationId ?? this.organizationId,
+      defaultSiteId: defaultSiteId ?? this.defaultSiteId,
     );
   }
 
