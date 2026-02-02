@@ -197,6 +197,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // Work Management Section
+              AppSectionHeader(
+                title: 'İş Yönetimi',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _WorkManagementSection(),
+
+              const SizedBox(height: AppSpacing.lg),
+
               // UI Component Showcase
               AppSectionHeader(title: 'Geliştirici Araçları'),
               const SizedBox(height: AppSpacing.sm),
@@ -1010,6 +1019,77 @@ class _DevToolsCard extends StatelessWidget {
             onTap: () => context.push('/showcase'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WorkManagementSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _WorkManagementCard(
+            icon: Icons.assignment_outlined,
+            label: 'İş Talepleri',
+            color: Colors.indigo,
+            onTap: () => context.go('/work-requests'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _WorkManagementCard(
+            icon: Icons.calendar_month_outlined,
+            label: 'Takvim',
+            color: Colors.teal,
+            onTap: () => context.go('/calendar'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkManagementCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _WorkManagementCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.md),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              label,
+              style: AppTypography.subheadline.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

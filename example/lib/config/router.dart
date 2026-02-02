@@ -29,6 +29,12 @@ import '../features/unit/screens/unit_form_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/showcase/screens/component_showcase_screen.dart';
+import '../features/work_request/screens/work_requests_screen.dart';
+import '../features/work_request/screens/work_request_detail_screen.dart';
+import '../features/work_request/screens/work_request_form_screen.dart';
+import '../features/calendar/screens/calendar_screen.dart';
+import '../features/calendar/screens/calendar_event_detail_screen.dart';
+import '../features/calendar/screens/calendar_event_form_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -251,6 +257,66 @@ final routerProvider = Provider<GoRouter>((ref) {
             controllerId: controllerId,
             controllerName: controllerName,
           );
+        },
+      ),
+
+      // ==================
+      // Work Request Routes
+      // ==================
+      GoRoute(
+        path: '/work-requests',
+        name: 'work-requests',
+        builder: (context, state) => const WorkRequestsScreen(),
+      ),
+      GoRoute(
+        path: '/work-requests/new',
+        name: 'work-request-new',
+        builder: (context, state) => const WorkRequestFormScreen(),
+      ),
+      GoRoute(
+        path: '/work-requests/:id',
+        name: 'work-request-detail',
+        builder: (context, state) {
+          final requestId = state.pathParameters['id']!;
+          return WorkRequestDetailScreen(requestId: requestId);
+        },
+      ),
+      GoRoute(
+        path: '/work-requests/:id/edit',
+        name: 'work-request-edit',
+        builder: (context, state) {
+          final requestId = state.pathParameters['id']!;
+          return WorkRequestFormScreen(requestId: requestId);
+        },
+      ),
+
+      // ==================
+      // Calendar Routes
+      // ==================
+      GoRoute(
+        path: '/calendar',
+        name: 'calendar',
+        builder: (context, state) => const CalendarScreen(),
+      ),
+      GoRoute(
+        path: '/calendar/new',
+        name: 'calendar-event-new',
+        builder: (context, state) => const CalendarEventFormScreen(),
+      ),
+      GoRoute(
+        path: '/calendar/:id',
+        name: 'calendar-event-detail',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return CalendarEventDetailScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/calendar/:id/edit',
+        name: 'calendar-event-edit',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return CalendarEventFormScreen(eventId: eventId);
         },
       ),
     ],
