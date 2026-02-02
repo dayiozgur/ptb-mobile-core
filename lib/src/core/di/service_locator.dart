@@ -34,6 +34,8 @@ import '../provider/provider_service.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
+import '../work_request/work_request_service.dart';
+import '../calendar/calendar_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -360,6 +362,28 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // WORK REQUEST SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<WorkRequestService>(
+    () => WorkRequestService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // CALENDAR SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<CalendarService>(
+    () => CalendarService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -429,3 +453,7 @@ WorkflowService get workflowService => sl<WorkflowService>();
 PriorityService get priorityService => sl<PriorityService>();
 AlarmService get alarmService => sl<AlarmService>();
 IoTLogService get iotLogService => sl<IoTLogService>();
+
+// Business Services
+WorkRequestService get workRequestService => sl<WorkRequestService>();
+CalendarService get calendarService => sl<CalendarService>();

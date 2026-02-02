@@ -201,11 +201,15 @@ lib/src/core/
 
 ---
 
-## Faz 4 - Advanced Modules ⏳
+## Faz 4 - Advanced Modules ⏸️
 
-**Durum:** Gelecek
+**Durum:** Ertelendi (Stabilizasyon öncelikli)
+**Detaylı Plan:** [PHASE4_PLANNING.md](PHASE4_PLANNING.md)
 
-### Planlanan Görevler
+> **Not:** Faz 4, mevcut modüllerin tam olarak stabilize edilmesinden sonra başlayacaktır.
+> Proje bütünlüğünü korumak ve teknik borcu minimize etmek amacıyla bu karar alınmıştır.
+
+### Ertelenen Modüller
 
 #### 4.1 Energy & KPI Module
 - [ ] Energy consumption tracking
@@ -238,6 +242,12 @@ lib/src/core/
 - [ ] Payment tracking
 - [ ] Budget management
 - [ ] Financial reports
+
+### Başlama Koşulları
+- [ ] Faz 1-3 modülleri %100 stabil
+- [ ] Tüm testler geçiyor
+- [ ] Dokümantasyon güncel
+- [ ] Teknik borç minimize edilmiş
 
 ---
 

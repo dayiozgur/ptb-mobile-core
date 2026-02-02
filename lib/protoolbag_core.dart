@@ -140,6 +140,14 @@ export 'src/core/iot_log/iot_log_model.dart';
 export 'src/core/iot_log/iot_log_service.dart';
 export 'src/core/iot_log/iot_log_stats_model.dart';
 
+// Core - Work Request (İş Talepleri)
+export 'src/core/work_request/work_request_model.dart';
+export 'src/core/work_request/work_request_service.dart';
+
+// Core - Calendar (Takvim)
+export 'src/core/calendar/calendar_event_model.dart';
+export 'src/core/calendar/calendar_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
