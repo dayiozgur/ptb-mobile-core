@@ -12,16 +12,18 @@ import 'alarm_stats_model.dart';
 ///
 /// Aktif alarm ve resetlenmiş alarm verilerini yönetir.
 /// DB tabloları:
-///   - alarms: Sadece AKTİF alarmlar (tenant_id, site_id, provider_id YOK!)
-///   - alarm_histories: Sadece RESETLENMİŞ alarmlar (tenant_id, site_id, provider_id VAR)
+///   - alarms: Sadece AKTİF alarmlar (tenant_id, organization_id, site_id, provider_id VAR)
+///   - alarm_histories: Sadece RESETLENMİŞ alarmlar (tenant_id, organization_id, site_id, provider_id VAR)
 ///
 /// Backend tarafından yönetilen senkronizasyon:
 ///   - Alarm aktif olduğunda → alarms tablosunda
 ///   - Alarm resetlendiğinde → alarm_histories tablosuna taşınır
 ///
-/// NOT: alarms tablosunda tenant_id kolonu bulunmaz.
-/// Aktif alarm sayısı için alarms tablosu kullanılır.
-/// Resetlenmiş alarm geçmişi için alarm_histories tablosu kullanılır.
+/// Multi-Tenant İzolasyon:
+///   - tenant_id: Zorunlu - tenant bazlı izolasyon
+///   - organization_id: Opsiyonel - organization bazlı filtreleme
+///   - site_id: Opsiyonel - site bazlı filtreleme
+///   - provider_id: Opsiyonel - provider bazlı filtreleme
 ///
 /// Description Kaynağı:
 ///   - alarms.description / alarm_histories.description: Doğrudan tabloda saklanır
@@ -31,7 +33,10 @@ class AlarmService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
 
+  // Multi-Tenant İzolasyon Context
   String? _currentTenantId;
+  String? _currentOrganizationId;
+  String? _currentSiteId;
 
   final _alarmsController = StreamController<List<Alarm>>.broadcast();
   final _historyController = StreamController<List<AlarmHistory>>.broadcast();
@@ -50,25 +55,63 @@ class AlarmService {
   Stream<List<AlarmHistory>> get historyStream => _historyController.stream;
 
   // ============================================
-  // TENANT CONTEXT
+  // MULTI-TENANT ISOLATION CONTEXT
   // ============================================
 
+  /// Tenant context ayarla - zorunlu izolasyon katmanı
   void setTenant(String tenantId) {
     _currentTenantId = tenantId;
   }
 
+  /// Tenant context temizle
   void clearTenant() {
     _currentTenantId = null;
   }
+
+  /// Organization context ayarla - opsiyonel izolasyon katmanı
+  void setOrganization(String organizationId) {
+    _currentOrganizationId = organizationId;
+  }
+
+  /// Organization context temizle
+  void clearOrganization() {
+    _currentOrganizationId = null;
+  }
+
+  /// Site context ayarla - opsiyonel izolasyon katmanı
+  void setSite(String siteId) {
+    _currentSiteId = siteId;
+  }
+
+  /// Site context temizle
+  void clearSite() {
+    _currentSiteId = null;
+  }
+
+  /// Tüm izolasyon context'lerini temizle
+  void clearAllContexts() {
+    _currentTenantId = null;
+    _currentOrganizationId = null;
+    _currentSiteId = null;
+  }
+
+  /// Mevcut tenant ID
+  String? get currentTenantId => _currentTenantId;
+
+  /// Mevcut organization ID
+  String? get currentOrganizationId => _currentOrganizationId;
+
+  /// Mevcut site ID
+  String? get currentSiteId => _currentSiteId;
 
   // ============================================
   // ACTIVE ALARMS
   // ============================================
 
-  /// Aktif alarmları getir (controller bazlı)
+  /// Aktif alarmları getir
   ///
   /// alarms tablosu üzerinden çalışır (sadece aktif alarmlar burada).
-  /// NOT: alarms tablosunda tenant_id yok, sadece controller_id ile filtrelenir.
+  /// Multi-tenant izolasyon: tenant_id, organization_id, site_id ile filtrelenir.
   /// Backend, alarm resetlendiğinde alarms → alarm_histories taşımasını yapar.
   ///
   /// [includeVariable]: true ise variable bilgisini JOIN ile çeker (description için)
@@ -84,11 +127,24 @@ class AlarmService {
           : '*';
 
       // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
-      // active filtresi kaldırıldı - tabloda active kolonu NULL olabiliyor
       var query = _supabase
           .from('alarms')
           .select(selectClause);
 
+      // Multi-Tenant İzolasyon Filtreleri
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (controllerId != null) {
         query = query.eq('controller_id', controllerId);
       }
@@ -134,11 +190,25 @@ class AlarmService {
 
     try {
       // alarms tablosu zaten sadece aktif alarmları içerir
-      final response = await _supabase
+      var query = _supabase
           .from('alarms')
           .select()
-          .inFilter('controller_id', controllerIds)
-          .order('start_time', ascending: false);
+          .inFilter('controller_id', controllerIds);
+
+      // Multi-Tenant İzolasyon Filtreleri
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      final response = await query.order('start_time', ascending: false);
 
       final alarms = <Alarm>[];
       for (final e in (response as List)) {
@@ -199,10 +269,20 @@ class AlarmService {
           .from('alarm_histories')
           .select(selectClause);
 
+      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
       }
 
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler (parametre olarak geçilenler)
       if (siteId != null) {
         query = query.eq('site_id', siteId);
       }
@@ -573,16 +653,31 @@ class AlarmService {
 
       // --- Aktif alarm sayısı (alarms tablosu) ---
       // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
-      // active filtresi kaldırıldı - tabloda active kolonu NULL olabiliyor
-      // NOT: alarms tablosunda tenant_id, site_id yok
       var activeQuery = _supabase
           .from('alarms')
           .select('id');
 
+      // Multi-Tenant İzolasyon Filtreleri
+      if (_currentTenantId != null) {
+        activeQuery = activeQuery.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        activeQuery = activeQuery.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        activeQuery = activeQuery.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (controllerId != null) {
         activeQuery = activeQuery.eq('controller_id', controllerId);
       }
-      // site_id alarms tablosunda yok, filtreleme yapılamaz
+
+      if (siteId != null) {
+        activeQuery = activeQuery.eq('site_id', siteId);
+      }
 
       final activeResponse = await activeQuery;
       final activeCount = (activeResponse as List).length;
@@ -593,8 +688,26 @@ class AlarmService {
           .select('id')
           .not('local_acknowledge_time', 'is', null);
 
+      // Multi-Tenant İzolasyon Filtreleri
+      if (_currentTenantId != null) {
+        ackQuery = ackQuery.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        ackQuery = ackQuery.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        ackQuery = ackQuery.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (controllerId != null) {
         ackQuery = ackQuery.eq('controller_id', controllerId);
+      }
+
+      if (siteId != null) {
+        ackQuery = ackQuery.eq('site_id', siteId);
       }
 
       final ackResponse = await ackQuery;
@@ -602,19 +715,29 @@ class AlarmService {
 
       // --- Resetli alarm sayısı (alarm_histories tablosu: son N gün) ---
       // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
-      // (backend tarafından yönetilen taşıma: alarm resetlenince alarms → alarm_histories)
-      // reset_time filtresi KALDIRILDI - bazı kayıtlarda reset_time NULL olabiliyor
       var resetQuery = _supabase
           .from('alarm_histories')
           .select('id')
           .gte('created_at', since);
 
+      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
         resetQuery = resetQuery.eq('tenant_id', _currentTenantId!);
       }
+
+      if (_currentOrganizationId != null) {
+        resetQuery = resetQuery.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        resetQuery = resetQuery.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (controllerId != null) {
         resetQuery = resetQuery.eq('controller_id', controllerId);
       }
+
       if (siteId != null) {
         resetQuery = resetQuery.eq('site_id', siteId);
       }

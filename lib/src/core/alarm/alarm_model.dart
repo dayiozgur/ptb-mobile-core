@@ -50,6 +50,12 @@ class Alarm {
   final String? priorityId;
   final String? realtimeId;
 
+  // İzolasyon alanları (Multi-Tenant Support)
+  final String? tenantId;
+  final String? organizationId;
+  final String? siteId;
+  final String? providerId;
+
   // Variable ilişkisinden gelen bilgiler (JOIN ile)
   final String? variableName;
   final String? variableDescription;
@@ -87,6 +93,10 @@ class Alarm {
     this.variableId,
     this.priorityId,
     this.realtimeId,
+    this.tenantId,
+    this.organizationId,
+    this.siteId,
+    this.providerId,
     this.variableName,
     this.variableDescription,
     this.variableUnit,
@@ -177,6 +187,11 @@ class Alarm {
       variableId: json['variable_id'] as String?,
       priorityId: json['priority_id'] as String?,
       realtimeId: json['realtime_id'] as String?,
+      // İzolasyon alanları
+      tenantId: json['tenant_id'] as String?,
+      organizationId: json['organization_id'] as String?,
+      siteId: json['site_id'] as String?,
+      providerId: json['provider_id'] as String?,
       // Variable bilgileri (JOIN ile gelirse)
       variableName: variable?['name'] as String?,
       variableDescription: variable?['description'] as String?,
@@ -205,6 +220,10 @@ class Alarm {
       'variable_id': variableId,
       'priority_id': priorityId,
       'realtime_id': realtimeId,
+      'tenant_id': tenantId,
+      'organization_id': organizationId,
+      'site_id': siteId,
+      'provider_id': providerId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

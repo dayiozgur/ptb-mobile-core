@@ -37,6 +37,10 @@ class IoTLog {
   final String? variableId;
   final String? realtimeId;
 
+  // İzolasyon alanları (Multi-Tenant Support)
+  final String? organizationId;
+  final String? siteId;
+
   // Variable ilişkisinden gelen bilgiler (JOIN ile)
   final String? variableName;
   final String? variableDescription;
@@ -64,6 +68,8 @@ class IoTLog {
     this.providerId,
     this.variableId,
     this.realtimeId,
+    this.organizationId,
+    this.siteId,
     this.variableName,
     this.variableDescription,
     this.variableUnit,
@@ -111,6 +117,9 @@ class IoTLog {
       providerId: json['provider_id'] as String?,
       variableId: json['variable_id'] as String?,
       realtimeId: json['realtime_id'] as String?,
+      // İzolasyon alanları
+      organizationId: json['organization_id'] as String?,
+      siteId: json['site_id'] as String?,
       // Variable bilgileri (JOIN ile gelirse)
       variableName: variable?['name'] as String?,
       variableDescription: variable?['description'] as String?,
@@ -143,6 +152,8 @@ class IoTLog {
       'provider_id': providerId,
       'variable_id': variableId,
       'realtime_id': realtimeId,
+      'organization_id': organizationId,
+      'site_id': siteId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

@@ -325,6 +325,71 @@ class CoreInitializer {
     }
   }
 
+  /// Organization context'ini tüm IoT servislerine aktar
+  ///
+  /// Tenant → Organization hiyerarşisinde organization seviyesinde filtreleme
+  /// için kullanılır. Opsiyonel izolasyon katmanıdır.
+  static void propagateOrganizationToServices(String organizationId) {
+    try {
+      sl<AlarmService>().setOrganization(organizationId);
+      sl<IoTLogService>().setOrganization(organizationId);
+      Logger.debug('Organization propagated to IoT services: $organizationId');
+    } catch (e) {
+      Logger.warning('Failed to propagate organization to IoT services: $e');
+    }
+  }
+
+  /// Organization context'ini tüm IoT servislerinden temizle
+  static void clearOrganizationFromServices() {
+    try {
+      sl<AlarmService>().clearOrganization();
+      sl<IoTLogService>().clearOrganization();
+      Logger.debug('Organization cleared from IoT services');
+    } catch (e) {
+      Logger.warning('Failed to clear organization from IoT services: $e');
+    }
+  }
+
+  /// Site context'ini tüm IoT servislerine aktar
+  ///
+  /// Tenant → Organization → Site hiyerarşisinde site seviyesinde filtreleme
+  /// için kullanılır. Opsiyonel izolasyon katmanıdır.
+  static void propagateSiteToServices(String siteId) {
+    try {
+      sl<AlarmService>().setSite(siteId);
+      sl<IoTLogService>().setSite(siteId);
+      Logger.debug('Site propagated to IoT services: $siteId');
+    } catch (e) {
+      Logger.warning('Failed to propagate site to IoT services: $e');
+    }
+  }
+
+  /// Site context'ini tüm IoT servislerinden temizle
+  static void clearSiteFromServices() {
+    try {
+      sl<AlarmService>().clearSite();
+      sl<IoTLogService>().clearSite();
+      Logger.debug('Site cleared from IoT services');
+    } catch (e) {
+      Logger.warning('Failed to clear site from IoT services: $e');
+    }
+  }
+
+  /// Tüm izolasyon context'lerini (organization, site) temizle
+  ///
+  /// Tenant context'i korur, sadece alt seviye izolasyonları temizler.
+  static void clearSubTenantContexts() {
+    try {
+      sl<AlarmService>().clearOrganization();
+      sl<AlarmService>().clearSite();
+      sl<IoTLogService>().clearOrganization();
+      sl<IoTLogService>().clearSite();
+      Logger.debug('Sub-tenant contexts cleared from IoT services');
+    } catch (e) {
+      Logger.warning('Failed to clear sub-tenant contexts: $e');
+    }
+  }
+
   /// Core'u sıfırla (test için)
   static Future<void> reset() async {
     if (!_isInitialized) return;

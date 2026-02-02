@@ -20,6 +20,12 @@ import 'iot_log_stats_model.dart';
 /// verilerini legacy veya current kolona yazabilir.
 /// Bu servis her iki kolonu da destekler.
 ///
+/// Multi-Tenant İzolasyon:
+///   - tenant_id: Zorunlu - tenant bazlı izolasyon
+///   - organization_id: Opsiyonel - organization bazlı filtreleme
+///   - site_id: Opsiyonel - site bazlı filtreleme
+///   - provider_id: Opsiyonel - provider bazlı filtreleme
+///
 /// Description Kaynağı:
 ///   - logs.description: Doğrudan tabloda saklanır
 ///   - logs.variable_id → variables.description: Variable ile ilişkili açıklama
@@ -28,7 +34,10 @@ class IoTLogService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
 
+  // Multi-Tenant İzolasyon Context
   String? _currentTenantId;
+  String? _currentOrganizationId;
+  String? _currentSiteId;
 
   final _logsController = StreamController<List<IoTLog>>.broadcast();
 
@@ -45,16 +54,54 @@ class IoTLogService {
   Stream<List<IoTLog>> get logsStream => _logsController.stream;
 
   // ============================================
-  // TENANT CONTEXT
+  // MULTI-TENANT ISOLATION CONTEXT
   // ============================================
 
+  /// Tenant context ayarla - zorunlu izolasyon katmanı
   void setTenant(String tenantId) {
     _currentTenantId = tenantId;
   }
 
+  /// Tenant context temizle
   void clearTenant() {
     _currentTenantId = null;
   }
+
+  /// Organization context ayarla - opsiyonel izolasyon katmanı
+  void setOrganization(String organizationId) {
+    _currentOrganizationId = organizationId;
+  }
+
+  /// Organization context temizle
+  void clearOrganization() {
+    _currentOrganizationId = null;
+  }
+
+  /// Site context ayarla - opsiyonel izolasyon katmanı
+  void setSite(String siteId) {
+    _currentSiteId = siteId;
+  }
+
+  /// Site context temizle
+  void clearSite() {
+    _currentSiteId = null;
+  }
+
+  /// Tüm izolasyon context'lerini temizle
+  void clearAllContexts() {
+    _currentTenantId = null;
+    _currentOrganizationId = null;
+    _currentSiteId = null;
+  }
+
+  /// Mevcut tenant ID
+  String? get currentTenantId => _currentTenantId;
+
+  /// Mevcut organization ID
+  String? get currentOrganizationId => _currentOrganizationId;
+
+  /// Mevcut site ID
+  String? get currentSiteId => _currentSiteId;
 
   // ============================================
   // OPERATIONS
@@ -104,10 +151,20 @@ class IoTLogService {
         query = query.eq('active', true);
       }
 
+      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
       }
 
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (controllerId != null) {
         query = query.eq('controller_id', controllerId);
       }
@@ -171,12 +228,27 @@ class IoTLogService {
   }
 
   /// Provider bazlı log sayısı
+  ///
+  /// Multi-tenant izolasyon: tenant_id, organization_id, site_id ile filtrelenir.
   Future<int> getLogCountByProvider(String providerId, {int? lastHours}) async {
     try {
       var query = _supabase
           .from('logs')
           .select('id')
           .eq('provider_id', providerId);
+
+      // Multi-Tenant İzolasyon Filtreleri (KRİTİK: Önceden eksikti!)
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
 
       if (lastHours != null) {
         final since = DateTime.now()
@@ -195,6 +267,8 @@ class IoTLogService {
   }
 
   /// Controller bazlı log sayısı
+  ///
+  /// Multi-tenant izolasyon: tenant_id, organization_id, site_id ile filtrelenir.
   Future<int> getLogCountByController(String controllerId,
       {int? lastHours}) async {
     try {
@@ -202,6 +276,19 @@ class IoTLogService {
           .from('logs')
           .select('id')
           .eq('controller_id', controllerId);
+
+      // Multi-Tenant İzolasyon Filtreleri (KRİTİK: Önceden eksikti!)
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
 
       if (lastHours != null) {
         final since = DateTime.now()
@@ -267,9 +354,20 @@ class IoTLogService {
           .eq('controller_id', controllerId)
           .gte('created_at', since);
 
+      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
       }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (variableId != null) {
         query = query.eq('variable_id', variableId);
       }
@@ -341,9 +439,20 @@ class IoTLogService {
           .gte('created_at', from.toIso8601String())
           .lte('created_at', to.toIso8601String());
 
+      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
         query = query.eq('tenant_id', _currentTenantId!);
       }
+
+      if (_currentOrganizationId != null) {
+        query = query.eq('organization_id', _currentOrganizationId!);
+      }
+
+      if (_currentSiteId != null) {
+        query = query.eq('site_id', _currentSiteId!);
+      }
+
+      // Ek filtreler
       if (variableId != null) {
         query = query.eq('variable_id', variableId);
       }
