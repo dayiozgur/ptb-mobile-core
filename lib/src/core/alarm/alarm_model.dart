@@ -1,3 +1,5 @@
+import '../utils/db_field_helpers.dart';
+
 /// Aktif alarm modeli
 ///
 /// DB tablosu: alarms
@@ -7,6 +9,10 @@
 ///   - description: Doğrudan alarms tablosundan gelen açıklama
 ///   - variableName/variableDescription: Variable JOIN ile çekilirse doldurulur
 ///   - effectiveDescription: description ?? variableDescription (öncelikli)
+///
+/// NOT: DB'de dual column yapısı vardır:
+///   - arrival_endtime (legacy) / arrival_end_time (current)
+/// DbFieldHelpers kullanılarak her iki kolon da desteklenir.
 class Alarm {
   final String id;
   final String? name;
@@ -139,11 +145,8 @@ class Alarm {
       arrivalStartTime: json['arrival_start_time'] != null
           ? DateTime.tryParse(json['arrival_start_time'] as String)
           : null,
-      arrivalEndTime: json['arrival_endtime'] != null
-          ? DateTime.tryParse(json['arrival_endtime'] as String)
-          : json['arrival_end_time'] != null
-              ? DateTime.tryParse(json['arrival_end_time'] as String)
-              : null,
+      // Dual column: arrival_endtime (legacy) / arrival_end_time (current)
+      arrivalEndTime: DbFieldHelpers.parseAlarmArrivalEndTime(json),
       inhibitTime: json['inhibit_time'] != null
           ? DateTime.tryParse(json['inhibit_time'] as String)
           : null,

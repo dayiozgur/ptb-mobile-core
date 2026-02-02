@@ -1,3 +1,5 @@
+import '../utils/db_field_helpers.dart';
+
 /// Controller durumu
 enum ControllerStatus {
   /// Çevrimiçi
@@ -383,11 +385,14 @@ class Controller {
       description: json['description'] as String?,
       type: ControllerType.fromString(json['type'] as String?),
       brand: json['brand'] as String?,
-      model: json['model_code'] as String? ?? json['model'] as String?,
-      serialNumber: json['serial'] as String? ?? json['serial_number'] as String?,
+      // Dual column: model_code (legacy) / model (current)
+      model: DbFieldHelpers.parseControllerModel(json),
+      // Dual column: serial (legacy) / serial_number (current)
+      serialNumber: DbFieldHelpers.parseControllerSerial(json),
       firmwareVersion: json['firmware_version'] as String?,
       protocol: CommunicationProtocol.fromString(json['protocol'] as String?),
-      ipAddress: json['ip'] as String? ?? json['ip_address'] as String?,
+      // Dual column: ip (legacy) / ip_address (current)
+      ipAddress: DbFieldHelpers.parseControllerIp(json),
       port: json['port'] as int?,
       slaveId: json['slave_id'] as int?,
       connectionString: json['connection_string'] as String?,
@@ -397,16 +402,10 @@ class Controller {
       retryInterval: json['retry_interval'] as int? ?? 1000,
       status: _statusFromJson(json),
       active: json['active'] as bool? ?? true,
-      lastConnectedAt: json['last_connection_time'] != null
-          ? DateTime.tryParse(json['last_connection_time'] as String)
-          : json['last_connected_at'] != null
-              ? DateTime.tryParse(json['last_connected_at'] as String)
-              : null,
-      lastDataAt: json['last_communication_time'] != null
-          ? DateTime.tryParse(json['last_communication_time'] as String)
-          : json['last_data_at'] != null
-              ? DateTime.tryParse(json['last_data_at'] as String)
-              : null,
+      // Dual column: last_connection_time (legacy) / last_connected_at (current)
+      lastConnectedAt: DbFieldHelpers.parseControllerLastConnection(json),
+      // Dual column: last_communication_time (legacy) / last_data_at (current)
+      lastDataAt: DbFieldHelpers.parseControllerLastData(json),
       lastError: json['last_error'] as String?,
       lastErrorAt: json['last_error_at'] != null
           ? DateTime.tryParse(json['last_error_at'] as String)

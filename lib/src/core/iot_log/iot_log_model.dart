@@ -1,3 +1,5 @@
+import '../utils/db_field_helpers.dart';
+
 /// IoT Log modeli
 ///
 /// DB tablosu: logs
@@ -7,6 +9,11 @@
 ///   - description: Doğrudan logs tablosundan gelen açıklama
 ///   - variableName/variableDescription: Variable JOIN ile çekilirse doldurulur
 ///   - effectiveDescription: description ?? variableDescription (öncelikli)
+///
+/// NOT: DB'de dual column yapısı vardır:
+///   - datetime (legacy) / date_time (current) → zaman damgası
+///   - onoff (legacy) / on_off (current) → on/off durumu
+/// DbFieldHelpers kullanılarak her iki kolon da desteklenir.
 class IoTLog {
   final String id;
   final String? name;
@@ -91,16 +98,14 @@ class IoTLog {
       description: json['description'] as String?,
       value: json['value'] as String?,
       maintenance: json['maintenance'] as String?,
-      onOff: json['on_off'] as int? ?? json['onoff'] as int?,
+      // Dual column: on_off (current) / onoff (legacy)
+      onOff: DbFieldHelpers.parseLogOnOff(json),
       active: json['active'] as bool? ?? true,
       cancelled: json['cancelled'] as bool?,
       isArchive: json['is_archive'] as bool?,
       archiveGroup: json['archive_group'] as String?,
-      dateTime: json['date_time'] != null
-          ? DateTime.tryParse(json['date_time'] as String)
-          : json['datetime'] != null
-              ? DateTime.tryParse(json['datetime'] as String)
-              : null,
+      // Dual column: date_time (current) / datetime (legacy)
+      dateTime: DbFieldHelpers.parseLogDateTime(json),
       tenantId: json['tenant_id'] as String?,
       controllerId: json['controller_id'] as String?,
       providerId: json['provider_id'] as String?,
@@ -130,11 +135,14 @@ class IoTLog {
       'on_off': onOff,
       'active': active,
       'cancelled': cancelled,
+      'is_archive': isArchive,
+      'archive_group': archiveGroup,
       'date_time': dateTime?.toIso8601String(),
       'tenant_id': tenantId,
       'controller_id': controllerId,
       'provider_id': providerId,
       'variable_id': variableId,
+      'realtime_id': realtimeId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

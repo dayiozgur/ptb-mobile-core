@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
+import '../utils/db_field_helpers.dart';
 import '../utils/logger.dart';
 import 'iot_log_model.dart';
 import 'iot_log_stats_model.dart';
@@ -280,20 +281,16 @@ class IoTLogService {
       for (final e in (response as List)) {
         final row = e as Map<String, dynamic>;
 
-        // Zaman damgası: date_time (current) veya datetime (legacy) fallback
-        final dateStr = row['date_time'] as String?
-            ?? row['datetime'] as String?;
-        if (dateStr == null) continue;
-
-        final dt = DateTime.tryParse(dateStr);
+        // Dual column: date_time (current) / datetime (legacy)
+        final dt = DbFieldHelpers.parseLogDateTime(row);
         if (dt == null) continue;
 
         final rawValue = row['value'] as String?;
         final numericValue =
             rawValue != null ? double.tryParse(rawValue) : null;
 
-        // on_off (current) veya onoff (legacy) fallback
-        final onOff = row['on_off'] as int? ?? row['onoff'] as int?;
+        // Dual column: on_off (current) / onoff (legacy)
+        final onOff = DbFieldHelpers.parseLogOnOff(row);
 
         entries.add(LogTimeSeriesEntry(
           dateTime: dt,

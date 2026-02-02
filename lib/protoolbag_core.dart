@@ -17,6 +17,7 @@ export 'src/core/theme/theme_service.dart';
 export 'src/core/utils/validators.dart';
 export 'src/core/utils/formatters.dart';
 export 'src/core/utils/logger.dart';
+export 'src/core/utils/db_field_helpers.dart';
 
 // Core - Extensions
 export 'src/core/extensions/context_extensions.dart';
