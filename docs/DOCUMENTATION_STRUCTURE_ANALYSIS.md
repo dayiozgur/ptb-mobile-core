@@ -1,8 +1,8 @@
 # Protoolbag Mobile Core - Dokümantasyon Yapısı Analizi
 
-> **Analiz Tarihi:** 2 Şubat 2026
-> **Proje Versiyonu:** 1.2.0
-> **Toplam Dokümantasyon:** 9,766+ satır, 19+ markdown dosyası
+> **Analiz Tarihi:** 9 Şubat 2026
+> **Proje Versiyonu:** 1.3.0
+> **Toplam Dokümantasyon:** 10,580+ satır, 22+ markdown dosyası
 
 ---
 
@@ -16,9 +16,10 @@
 | **Tip** | Enterprise-grade Flutter SaaS Foundation Library |
 | **Platform** | Dart/Flutter (v3.19+) |
 | **Lisans** | MIT |
-| **Toplam Dart Dosyası** | 153 |
-| **Core Modül Sayısı** | 32 |
+| **Toplam Dart Dosyası** | 111 (lib/src) + 36 (example) = 147 |
+| **Core Modül Sayısı** | 34 |
 | **UI Widget Sayısı** | 32 |
+| **Toplam Export** | 85 |
 
 ### 1.2 Kök Dizin Yapısı
 
@@ -116,14 +117,14 @@ database/
 
 ```
 lib/
-├── protoolbag_core.dart              # Ana export dosyası (194+ export)
+├── protoolbag_core.dart              # Ana export dosyası (85 export)
 └── src/
-    ├── core/                         # 32 core servis modülü
+    ├── core/                         # 34 core servis modülü
     └── presentation/                 # UI bileşenleri
         └── widgets/                  # 32 production-ready widget
 ```
 
-### 3.2 Core Modüller (32 Modül)
+### 3.2 Core Modüller (34 Modül)
 
 #### Kimlik Doğrulama & Yetkilendirme
 | Modül | Açıklama |
@@ -165,6 +166,8 @@ lib/
 | `activity/` | Aktivite takibi |
 | `notification/` | Bildirim yönetimi |
 | `workflow/` | İş akışı orkestrasyonu |
+| `work_request/` | İş talepleri yönetimi (Phase 3) |
+| `calendar/` | Takvim ve etkinlik yönetimi (Phase 3) |
 | `reporting/` | Analitik |
 | `search/` | Tam metin arama |
 | `invitation/` | Kullanıcı davetleri |
@@ -421,8 +424,8 @@ test/
 
 Protoolbag Mobile Core, **enterprise-grade** bir Flutter SaaS temel kütüphanesidir ve şu özellikleri içerir:
 
-- **Kapsamlı Dokümantasyon**: 9,766+ satır, 30+ markdown dosyası
-- **Modüler Mimari**: 32 core modül + 32 UI widget
+- **Kapsamlı Dokümantasyon**: 10,580+ satır, 22+ markdown dosyası
+- **Modüler Mimari**: 34 core modül + 32 UI widget
 - **Multi-Tenant Destek**: Veritabanı seviyesinde izolasyon
 - **Offline-First**: Tam offline operasyon desteği
 - **IoT Entegrasyonu**: Gerçek zamanlı IoT veri yönetimi
@@ -432,4 +435,4 @@ Bu kütüphane, kompleks enterprise mobil uygulamalar geliştirmek için sağlam
 
 ---
 
-*Bu analiz otomatik olarak oluşturulmuştur. Son güncelleme: 2 Şubat 2026*
+*Bu analiz otomatik olarak oluşturulmuştur. Son güncelleme: 9 Şubat 2026*
