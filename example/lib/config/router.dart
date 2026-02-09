@@ -35,6 +35,10 @@ import '../features/work_request/screens/work_request_form_screen.dart';
 import '../features/calendar/screens/calendar_screen.dart';
 import '../features/calendar/screens/calendar_event_detail_screen.dart';
 import '../features/calendar/screens/calendar_event_form_screen.dart';
+import '../features/search/screens/global_search_screen.dart';
+import '../features/activity/screens/activity_log_screen.dart';
+import '../features/settings/screens/language_settings_screen.dart';
+import '../features/reports/screens/reports_dashboard_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -318,6 +322,42 @@ final routerProvider = Provider<GoRouter>((ref) {
           final eventId = state.pathParameters['id']!;
           return CalendarEventFormScreen(eventId: eventId);
         },
+      ),
+
+      // ==================
+      // Search Routes
+      // ==================
+      GoRoute(
+        path: '/search',
+        name: 'search',
+        builder: (context, state) => const GlobalSearchScreen(),
+      ),
+
+      // ==================
+      // Activity Routes
+      // ==================
+      GoRoute(
+        path: '/activity',
+        name: 'activity',
+        builder: (context, state) => const ActivityLogScreen(),
+      ),
+
+      // ==================
+      // Reports Routes
+      // ==================
+      GoRoute(
+        path: '/reports',
+        name: 'reports',
+        builder: (context, state) => const ReportsDashboardScreen(),
+      ),
+
+      // ==================
+      // Language Settings Route
+      // ==================
+      GoRoute(
+        path: '/settings/language',
+        name: 'language-settings',
+        builder: (context, state) => const LanguageSettingsScreen(),
       ),
     ],
 

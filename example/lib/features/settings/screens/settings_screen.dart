@@ -293,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Dil',
                     subtitle: _getLanguageName(_selectedLanguage),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showLanguageSelector(),
+                    onTap: () => context.push('/settings/language'),
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(

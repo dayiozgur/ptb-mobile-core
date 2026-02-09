@@ -120,6 +120,10 @@ class _HomeScreenState extends State<HomeScreen> {
       title: tenant?.name ?? 'Ana Sayfa',
       showBackButton: false,
       actions: [
+        AppIconButton(
+          icon: Icons.search,
+          onPressed: () => context.push('/search'),
+        ),
         NotificationIconBadge(
           count: _unreadNotifications,
           onTap: () => context.push('/notifications'),
@@ -229,9 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Son Aktiviteler',
                 action: _recentActivities.isNotEmpty
                     ? TextButton(
-                        onPressed: () {
-                          // TODO: Navigate to activity list
-                        },
+                        onPressed: () => context.push('/activity'),
                         child: const Text('Tümünü Gör'),
                       )
                     : null,
@@ -1017,6 +1019,21 @@ class _DevToolsCard extends StatelessWidget {
             subtitle: 'Tüm UI bileşenlerini keşfedin',
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/showcase'),
+          ),
+          Divider(height: 1, color: AppColors.separator(context)),
+          AppListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.analytics_outlined, color: Colors.amber),
+            ),
+            title: 'Raporlar',
+            subtitle: 'İstatistikler ve analizler',
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/reports'),
           ),
         ],
       ),
