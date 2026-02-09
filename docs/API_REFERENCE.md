@@ -5,10 +5,12 @@
 1. [Core Module](#core-module)
 2. [Authentication](#authentication)
 3. [API Client](#api-client)
-4. [Storage](#storage)
-5. [Theme](#theme)
-6. [Utilities](#utilities)
-7. [Widgets](#widgets)
+4. [Calendar Service](#calendar-service)
+5. [Work Request Service](#work-request-service)
+6. [Storage](#storage)
+7. [Theme](#theme)
+8. [Utilities](#utilities)
+9. [Widgets](#widgets)
 
 ## 🔧 Core Module
 
@@ -263,6 +265,603 @@ class LoggerInterceptor extends Interceptor {
   
   @override
   void onError(DioException err, ErrorInterceptorHandler handler)
+}
+```
+
+---
+
+## 📅 Calendar Service
+
+### CalendarService
+
+Takvim etkinliklerini yönetir. CRUD operasyonları, tekrarlayan etkinlikler, hatırlatıcılar ve katılımcı yönetimi sağlar.
+
+```dart
+class CalendarService {
+  // Streams
+  Stream<List<CalendarEvent>> get eventsStream
+  Stream<CalendarEvent?> get selectedStream
+
+  // Getters
+  List<CalendarEvent> get events
+  CalendarEvent? get selected
+  List<CalendarEvent> get todayEvents
+  List<CalendarEvent> get upcomingEvents
+  List<CalendarEvent> get maintenanceEvents
+  List<CalendarEvent> get meetingEvents
+
+  // Context
+  void setTenant(String tenantId)
+  void setUser(String userId)
+  void clearContext()
+
+  // CRUD
+  Future<List<CalendarEvent>> getEvents({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? siteId,
+    CalendarEventType? type,
+    CalendarEventStatus? status,
+    bool forceRefresh = false,
+  })
+
+  Future<List<CalendarEvent>> getEventsForMonth(int year, int month, {String? siteId})
+  Future<List<CalendarEvent>> getTodayEvents({String? siteId})
+  Future<List<CalendarEvent>> getUpcomingEvents({int days = 7, String? siteId})
+  Future<CalendarEvent?> getById(String id)
+
+  Future<CalendarEvent> create({
+    required String title,
+    String? description,
+    CalendarEventType type = CalendarEventType.other,
+    required DateTime startTime,
+    DateTime? endTime,
+    bool isAllDay = false,
+    String? location,
+    String? meetingUrl,
+    String? siteId,
+    String? unitId,
+    String? controllerId,
+    RecurrenceFrequency recurrence = RecurrenceFrequency.none,
+    int? recurrenceInterval,
+    DateTime? recurrenceEndDate,
+    List<int>? recurrenceDays,
+    List<EventReminder>? reminders,
+    List<EventAttendee>? attendees,
+    String? color,
+    List<String>? tags,
+    Map<String, dynamic>? metadata,
+  })
+
+  Future<CalendarEvent> update(String id, {...})
+  Future<void> delete(String id)
+
+  // Status Operations
+  Future<CalendarEvent> confirm(String id)
+  Future<CalendarEvent> start(String id)
+  Future<CalendarEvent> complete(String id)
+  Future<CalendarEvent> cancel(String id)
+  Future<CalendarEvent> postpone(String id, DateTime newStartTime, {DateTime? newEndTime})
+
+  // Attendee Operations
+  Future<CalendarEvent> addAttendee(String eventId, EventAttendee attendee)
+  Future<CalendarEvent> updateAttendeeStatus(String eventId, String userId, AttendeeStatus status)
+  Future<CalendarEvent> removeAttendee(String eventId, String userId)
+
+  // Reminder Operations
+  Future<CalendarEvent> addReminder(String eventId, EventReminder reminder)
+  Future<CalendarEvent> removeReminder(String eventId, String reminderId)
+
+  // Statistics
+  Future<CalendarStats> getStats({String? siteId, DateTime? fromDate, DateTime? toDate})
+
+  // Selection
+  void selectEvent(CalendarEvent? event)
+  void dispose()
+}
+```
+
+**Example:**
+```dart
+final calendarService = getIt<CalendarService>();
+
+// Set context
+calendarService.setTenant('tenant-123');
+calendarService.setUser('user-456');
+
+// Get events for current month
+final events = await calendarService.getEventsForMonth(2025, 6);
+
+// Create a maintenance event
+final event = await calendarService.create(
+  title: 'HVAC Maintenance',
+  description: 'Quarterly maintenance check',
+  type: CalendarEventType.maintenance,
+  startTime: DateTime(2025, 6, 15, 10, 0),
+  endTime: DateTime(2025, 6, 15, 12, 0),
+  siteId: 'site-123',
+  recurrence: RecurrenceFrequency.monthly,
+  reminders: [
+    EventReminder(id: 'r1', minutesBefore: 60, type: ReminderType.notification),
+    EventReminder(id: 'r2', minutesBefore: 1440, type: ReminderType.email),
+  ],
+  attendees: [
+    EventAttendee(userId: 'tech-1', userName: 'John Technician', isRequired: true),
+  ],
+);
+
+// Update status
+await calendarService.confirm(event.id);
+await calendarService.start(event.id);
+await calendarService.complete(event.id);
+
+// Listen to event changes
+calendarService.eventsStream.listen((events) {
+  print('Events updated: ${events.length}');
+});
+```
+
+### CalendarEvent
+
+Takvim etkinliği modeli.
+```dart
+class CalendarEvent {
+  final String id;
+  final String title;
+  final String? description;
+  final CalendarEventType type;
+  final CalendarEventStatus status;
+  final DateTime startTime;
+  final DateTime? endTime;
+  final bool isAllDay;
+  final RecurrenceFrequency recurrence;
+  final String? location;
+  final String? meetingUrl;
+  final String tenantId;
+  final String? siteId;
+  final String? unitId;
+  final List<EventReminder> reminders;
+  final List<EventAttendee> attendees;
+  final List<String> tags;
+  final Map<String, dynamic> metadata;
+
+  // Computed Properties
+  Duration? get duration
+  String get durationFormatted
+  bool get isPast
+  bool get isOngoing
+  bool get isFuture
+  bool get isToday
+  bool get isRecurring
+  bool get isOnlineMeeting
+  bool get hasLocation
+  bool get hasAttendees
+  int get confirmedAttendeesCount
+  bool get isActive
+}
+```
+
+### CalendarEventType
+
+Etkinlik tipleri.
+```dart
+enum CalendarEventType {
+  maintenance,  // Bakım planı
+  meeting,      // Toplantı
+  inspection,   // Denetim
+  training,     // Eğitim
+  deadline,     // Son tarih
+  holiday,      // Tatil
+  reminder,     // Hatırlatıcı
+  task,         // Görev
+  other,        // Diğer
+}
+```
+
+### CalendarEventStatus
+
+Etkinlik durumları.
+```dart
+enum CalendarEventStatus {
+  scheduled,    // Planlandı
+  confirmed,    // Onaylandı
+  inProgress,   // Devam ediyor
+  completed,    // Tamamlandı
+  cancelled,    // İptal edildi
+  postponed,    // Ertelendi
+
+  bool get isActive  // scheduled, confirmed, inProgress için true
+}
+```
+
+### RecurrenceFrequency
+
+Tekrar sıklığı.
+```dart
+enum RecurrenceFrequency {
+  none,     // Tekrar yok
+  daily,    // Günlük
+  weekly,   // Haftalık
+  monthly,  // Aylık
+  yearly,   // Yıllık
+  custom,   // Özel
+}
+```
+
+### EventReminder
+
+Hatırlatıcı modeli.
+```dart
+class EventReminder {
+  final String id;
+  final int minutesBefore;     // 15, 30, 60, 1440 (1 gün)
+  final ReminderType type;     // notification, email, sms
+  final bool sent;
+  final DateTime? sentAt;
+
+  String get formattedTime     // "15 dakika önce", "1 saat önce"
+}
+```
+
+### EventAttendee
+
+Katılımcı modeli.
+```dart
+class EventAttendee {
+  final String userId;
+  final String? userName;
+  final String? email;
+  final AttendeeStatus status;  // pending, accepted, declined, tentative
+  final bool isRequired;
+  final DateTime? respondedAt;
+  final String? note;
+}
+```
+
+### CalendarStats
+
+Takvim istatistikleri.
+```dart
+class CalendarStats {
+  final int totalEvents;
+  final int thisMonthEvents;
+  final int upcomingEvents;
+  final int completedEvents;
+  final int maintenanceEvents;
+  final int meetingEvents;
+}
+```
+
+---
+
+## 🔧 Work Request Service
+
+### WorkRequestService
+
+İş taleplerini yönetir. CRUD operasyonları, durum geçişleri, atama ve onay işlemleri sağlar.
+
+```dart
+class WorkRequestService {
+  // Streams
+  Stream<List<WorkRequest>> get requestsStream
+  Stream<WorkRequest?> get selectedStream
+
+  // Getters
+  List<WorkRequest> get requests
+  WorkRequest? get selected
+  List<WorkRequest> get pendingRequests
+  List<WorkRequest> get activeRequests
+  List<WorkRequest> get overdueRequests
+  List<WorkRequest> get myAssignedRequests
+  List<WorkRequest> get myCreatedRequests
+
+  // Context
+  void setTenant(String tenantId)
+  void setUser(String userId)
+  void clearContext()
+
+  // CRUD
+  Future<List<WorkRequest>> getAll({
+    String? siteId,
+    String? unitId,
+    WorkRequestStatus? status,
+    WorkRequestType? type,
+    WorkRequestPriority? priority,
+    String? assignedToId,
+    DateTime? fromDate,
+    DateTime? toDate,
+    bool forceRefresh = false,
+  })
+
+  Future<WorkRequest?> getById(String id)
+
+  Future<WorkRequest> create({
+    required String title,
+    String? description,
+    WorkRequestType type = WorkRequestType.general,
+    WorkRequestPriority priority = WorkRequestPriority.normal,
+    String? siteId,
+    String? unitId,
+    String? controllerId,
+    DateTime? expectedCompletionDate,
+    int? estimatedDuration,
+    double? estimatedCost,
+    String? categoryId,
+    List<String>? tags,
+    Map<String, dynamic>? metadata,
+  })
+
+  Future<WorkRequest> update(String id, {...})
+  Future<void> delete(String id)
+
+  // Status Transitions
+  Future<WorkRequest> submit(String id)           // draft → submitted
+  Future<WorkRequest> approve(String id, {String? note})   // submitted → approved
+  Future<WorkRequest> reject(String id, {required String reason})
+  Future<WorkRequest> assign(String id, {String? assignedToId, String? assignedTeamId})
+  Future<WorkRequest> startWork(String id)        // assigned → in_progress
+  Future<WorkRequest> putOnHold(String id)        // in_progress → on_hold
+  Future<WorkRequest> resume(String id)           // on_hold → in_progress
+  Future<WorkRequest> complete(String id, {int? actualDuration, double? actualCost})
+  Future<WorkRequest> cancel(String id, {String? reason})
+  Future<WorkRequest> close(String id)            // completed → closed
+
+  // Notes
+  Future<WorkRequest> addNote(String requestId, {
+    required String content,
+    WorkRequestNoteType type = WorkRequestNoteType.comment,
+  })
+
+  // Statistics
+  Future<WorkRequestStats> getStats({String? siteId, DateTime? fromDate, DateTime? toDate})
+
+  // Selection
+  void selectRequest(WorkRequest? request)
+  void dispose()
+}
+```
+
+**Example:**
+```dart
+final workRequestService = getIt<WorkRequestService>();
+
+// Set context
+workRequestService.setTenant('tenant-123');
+workRequestService.setUser('user-456');
+
+// Create a breakdown request
+final request = await workRequestService.create(
+  title: 'AC Unit Not Working',
+  description: 'Conference room AC stopped cooling',
+  type: WorkRequestType.breakdown,
+  priority: WorkRequestPriority.high,
+  siteId: 'site-123',
+  unitId: 'unit-456',
+  expectedCompletionDate: DateTime.now().add(Duration(days: 2)),
+  estimatedDuration: 120,  // minutes
+  estimatedCost: 500.0,
+  tags: ['hvac', 'urgent'],
+);
+
+// Submit for approval
+await workRequestService.submit(request.id);
+
+// Approve and assign
+await workRequestService.approve(request.id, note: 'Approved for immediate action');
+await workRequestService.assign(request.id, assignedToId: 'technician-789');
+
+// Start work
+await workRequestService.startWork(request.id);
+
+// Add progress note
+await workRequestService.addNote(
+  request.id,
+  content: 'Replaced compressor unit',
+  type: WorkRequestNoteType.comment,
+);
+
+// Complete with actual values
+await workRequestService.complete(
+  request.id,
+  actualDuration: 90,
+  actualCost: 450.0,
+);
+
+// Get statistics
+final stats = await workRequestService.getStats(siteId: 'site-123');
+print('Completion rate: ${stats.completionRate}%');
+
+// Filter requests
+final overdueRequests = workRequestService.overdueRequests;
+final myTasks = workRequestService.myAssignedRequests;
+```
+
+### WorkRequest
+
+İş talebi modeli.
+```dart
+class WorkRequest {
+  final String id;
+  final String? requestNumber;
+  final String title;
+  final String? description;
+  final WorkRequestType type;
+  final WorkRequestStatus status;
+  final WorkRequestPriority priority;
+
+  // Talep Bilgileri
+  final String requestedById;
+  final String? requestedByName;
+  final DateTime requestedAt;
+  final DateTime? expectedCompletionDate;
+  final DateTime? actualCompletionDate;
+
+  // Atama Bilgileri
+  final String? assignedToId;
+  final String? assignedToName;
+  final String? assignedTeamId;
+  final DateTime? assignedAt;
+
+  // Onay Bilgileri
+  final String? approvedById;
+  final DateTime? approvedAt;
+  final String? approvalNote;
+  final String? rejectionReason;
+
+  // Konum Bilgileri
+  final String tenantId;
+  final String? siteId;
+  final String? siteName;
+  final String? unitId;
+  final String? unitName;
+  final String? controllerId;
+
+  // Süre ve Maliyet
+  final int? estimatedDuration;
+  final int? actualDuration;
+  final double? estimatedCost;
+  final double? actualCost;
+  final String? currency;
+
+  // Ekler ve Notlar
+  final List<WorkRequestAttachment> attachments;
+  final List<WorkRequestNote> notes;
+  final List<String> tags;
+  final Map<String, dynamic> metadata;
+
+  // İlişkiler
+  final String? workOrderId;
+  final String? parentRequestId;
+  final String? alarmId;
+
+  // Computed Properties
+  bool get isEditable
+  bool get isActionable
+  bool get isFinished
+  bool get isAssigned
+  bool get isApproved
+  bool get isOverdue
+  Duration? get overdueBy
+  String get locationSummary
+  String get estimatedDurationFormatted
+  String get actualDurationFormatted
+  String get costSummary
+  bool get hasWorkOrder
+  bool get hasAttachments
+  bool get hasNotes
+  List<WorkRequestStatus> get allowedTransitions
+  bool canTransitionTo(WorkRequestStatus newStatus)
+}
+```
+
+### WorkRequestStatus
+
+Talep durumları ve geçişleri.
+```dart
+enum WorkRequestStatus {
+  draft,        // Taslak - düzenlenebilir
+  submitted,    // Gönderildi - onay bekliyor
+  approved,     // Onaylandı - atama bekliyor
+  rejected,     // Reddedildi - düzenlenebilir
+  assigned,     // Atandı - işlem bekliyor
+  inProgress,   // Devam ediyor
+  onHold,       // Beklemede
+  completed,    // Tamamlandı - kapatma bekliyor
+  cancelled,    // İptal edildi - final
+  closed,       // Kapatıldı - final
+
+  bool get isEditable    // draft, submitted, rejected
+  bool get isActionable  // approved, assigned, inProgress
+  bool get isFinished    // completed, cancelled, closed
+}
+```
+
+**Status Transitions (Durum Geçişleri):**
+```
+draft → submitted → approved → assigned → inProgress → completed → closed
+                  ↘ rejected ↗         ↘ onHold ↗
+
+Any → cancelled (iptal herhangi bir durumdan yapılabilir)
+```
+
+### WorkRequestType
+
+Talep tipleri.
+```dart
+enum WorkRequestType {
+  breakdown,     // Arıza bildirimi
+  maintenance,   // Bakım talebi
+  service,       // Servis talebi
+  inspection,    // Denetim talebi
+  installation,  // Kurulum talebi
+  modification,  // Değişiklik talebi
+  general,       // Genel talep
+}
+```
+
+### WorkRequestPriority
+
+Öncelik seviyeleri.
+```dart
+enum WorkRequestPriority {
+  low,       // Düşük (level: 1)
+  normal,    // Normal (level: 2)
+  high,      // Yüksek (level: 3)
+  urgent,    // Acil (level: 4)
+  critical,  // Kritik (level: 5)
+
+  int get level
+  bool isHigherThan(WorkRequestPriority other)
+}
+```
+
+### WorkRequestAttachment
+
+Ek dosya modeli.
+```dart
+class WorkRequestAttachment {
+  final String id;
+  final String fileName;
+  final String fileUrl;
+  final int? fileSize;
+  final String? mimeType;
+  final String? description;
+  final String? uploadedById;
+  final DateTime uploadedAt;
+
+  String get fileSizeFormatted  // "1.5 MB"
+  bool get isImage
+}
+```
+
+### WorkRequestNote
+
+Not modeli.
+```dart
+class WorkRequestNote {
+  final String id;
+  final String content;
+  final WorkRequestNoteType type;  // comment, system, statusChange, assignment, approval
+  final String authorId;
+  final String? authorName;
+  final DateTime createdAt;
+}
+```
+
+### WorkRequestStats
+
+İş talebi istatistikleri.
+```dart
+class WorkRequestStats {
+  final int totalCount;
+  final int pendingCount;
+  final int activeCount;
+  final int completedCount;
+  final int overdueCount;
+  final Map<WorkRequestPriority, int> byPriority;
+  final Map<WorkRequestType, int> byType;
+
+  double get completionRate  // (completedCount / totalCount) * 100
 }
 ```
 
