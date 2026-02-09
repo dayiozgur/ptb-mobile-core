@@ -63,8 +63,14 @@ class AppTextField extends StatefulWidget {
   /// Sol ikon
   final IconData? prefixIcon;
 
+  /// Sol widget (prefixIcon yerine custom widget kullanmak için)
+  final Widget? prefixWidget;
+
   /// Sağ ikon
   final IconData? suffixIcon;
+
+  /// Sağ widget (suffixIcon yerine custom widget kullanmak için)
+  final Widget? suffixWidget;
 
   /// Sağ ikon tıklama callback'i
   final VoidCallback? onSuffixIconPressed;
@@ -107,7 +113,9 @@ class AppTextField extends StatefulWidget {
     this.minLines,
     this.maxLength,
     this.prefixIcon,
+    this.prefixWidget,
     this.suffixIcon,
+    this.suffixWidget,
     this.onSuffixIconPressed,
     this.enabled = true,
     this.readOnly = false,
@@ -197,15 +205,16 @@ class _AppTextFieldState extends State<AppTextField> {
               errorBorder: _buildBorder(brightness, false, true),
               focusedErrorBorder: _buildBorder(brightness, true, true),
               disabledBorder: _buildBorder(brightness, false, false),
-              prefixIcon: widget.prefixIcon != null
-                  ? Icon(
-                      widget.prefixIcon,
-                      color: _isFocused
-                          ? AppColors.primary
-                          : AppColors.textSecondary(brightness),
-                      size: 20,
-                    )
-                  : null,
+              prefixIcon: widget.prefixWidget ??
+                  (widget.prefixIcon != null
+                      ? Icon(
+                          widget.prefixIcon,
+                          color: _isFocused
+                              ? AppColors.primary
+                              : AppColors.textSecondary(brightness),
+                          size: 20,
+                        )
+                      : null),
               suffixIcon: _buildSuffixIcon(brightness),
               counterText: widget.showCounter ? null : '',
               errorStyle: AppTypography.caption1.copyWith(
@@ -276,6 +285,14 @@ class _AppTextFieldState extends State<AppTextField> {
         onPressed: () {
           setState(() => _obscureText = !_obscureText);
         },
+      );
+    }
+
+    // Custom suffix widget
+    if (widget.suffixWidget != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: widget.suffixWidget,
       );
     }
 

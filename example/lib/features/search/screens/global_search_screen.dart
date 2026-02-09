@@ -240,8 +240,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   controller: _searchController,
                   focusNode: _focusNode,
                   placeholder: 'Organizasyon, tesis, ünite veya kullanıcı ara...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _isLoading
+                  prefixIcon: Icons.search,
+                  suffixWidget: _isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
