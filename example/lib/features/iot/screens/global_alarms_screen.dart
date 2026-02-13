@@ -873,20 +873,36 @@ class _ResetAlarmCard extends StatelessWidget {
     required this.onTap,
   });
 
+  Color get _priorityColor {
+    if (priority?.color != null) {
+      final hex = priority!.color!.replaceFirst('#', '');
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      }
+    }
+    if (priority != null) {
+      if (priority!.isCritical) return AppColors.error;
+      if (priority!.isHigh) return AppColors.warning;
+    }
+    return AppColors.systemGray;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final priorityColor = _priorityColor;
+
     return AppCard(
       onTap: onTap,
       child: Padding(
         padding: AppSpacing.cardInsets,
         child: Row(
           children: [
-            // Status indicator
+            // Status indicator with priority color
             Container(
               width: 4,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.success,
+                color: priorityColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -913,10 +929,23 @@ class _ResetAlarmCard extends StatelessWidget {
                         ),
                       ),
                       if (priority != null)
-                        AppBadge(
-                          label: priority!.name ?? '',
-                          variant: AppBadgeVariant.secondary,
-                          size: AppBadgeSize.small,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: priorityColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            priority!.name ?? '',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: priorityColor,
+                            ),
+                          ),
                         ),
                     ],
                   ),
