@@ -49,25 +49,39 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
         pMap[p.id] = p;
       }
 
+      // Controller bazlı sorgulama - alarms tablosunda tenant_id null olabilir
+      final controllers = await controllerService.getAll();
+      final controllerIds = controllers.map((c) => c.id).toList();
+
       // Paralel yükleme - forceRefresh ile cache bypass
-      // Aktif alarmlar: alarms tablosundan
+      // Aktif alarmlar: alarms tablosundan (controller bazlı)
       // Resetlenmiş alarmlar: alarm_histories tablosundan
-      final results = await Future.wait([
-        alarmService.getAlarmDistribution(
-          days: _selectedDays,
-          forceRefresh: true,
-        ),
-        alarmService.getAlarmTimeline(
-          days: _selectedDays,
-          forceRefresh: true,
-        ),
-        alarmService.getActiveAlarms(), // alarms tablosu
-        alarmService.getResetAlarms(    // alarm_histories tablosu
-          days: _selectedDays,
-          limit: 50,
-          forceRefresh: true,
-        ),
-      ]);
+      final List<dynamic> results;
+      if (controllerIds.isNotEmpty) {
+        results = await Future.wait([
+          alarmService.getAlarmDistribution(
+            days: _selectedDays,
+            forceRefresh: true,
+          ),
+          alarmService.getAlarmTimeline(
+            days: _selectedDays,
+            forceRefresh: true,
+          ),
+          alarmService.getActiveAlarmsByControllers(controllerIds),
+          alarmService.getResetAlarms(
+            days: _selectedDays,
+            limit: 50,
+            forceRefresh: true,
+          ),
+        ]);
+      } else {
+        results = [
+          const AlarmDistribution(activeCount: 0, resetCount: 0, acknowledgedCount: 0),
+          <AlarmTimelineEntry>[],
+          <Alarm>[],
+          <AlarmHistory>[],
+        ];
+      }
 
       if (mounted) {
         setState(() {

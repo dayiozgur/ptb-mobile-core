@@ -94,23 +94,39 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
         orgMap[org.id] = org;
       }
 
+      // Load controllers for alarm queries
+      // alarms tablosunda tenant_id null olabileceğinden, controller bazlı sorgulama yapıyoruz
+      final controllers = await controllerService.getAll();
+      final controllerIds = controllers.map((c) => c.id).toList();
+
       // Load alarms data
-      final results = await Future.wait([
-        alarmService.getAlarmDistribution(
-          days: _selectedDays,
-          forceRefresh: true,
-        ),
-        alarmService.getAlarmTimeline(
-          days: _selectedDays,
-          forceRefresh: true,
-        ),
-        alarmService.getActiveAlarms(),
-        alarmService.getResetAlarms(
-          days: _selectedDays,
-          limit: 100,
-          forceRefresh: true,
-        ),
-      ]);
+      final List<dynamic> results;
+      if (controllerIds.isNotEmpty) {
+        results = await Future.wait([
+          alarmService.getAlarmDistribution(
+            days: _selectedDays,
+            forceRefresh: true,
+          ),
+          alarmService.getAlarmTimeline(
+            days: _selectedDays,
+            forceRefresh: true,
+          ),
+          alarmService.getActiveAlarmsByControllers(controllerIds),
+          alarmService.getResetAlarms(
+            days: _selectedDays,
+            limit: 100,
+            forceRefresh: true,
+          ),
+        ]);
+      } else {
+        // Controller yoksa boş sonuç döndür
+        results = [
+          const AlarmDistribution(activeCount: 0, resetCount: 0, acknowledgedCount: 0),
+          <AlarmTimelineEntry>[],
+          <Alarm>[],
+          <AlarmHistory>[],
+        ];
+      }
 
       if (mounted) {
         setState(() {
