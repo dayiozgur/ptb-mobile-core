@@ -316,13 +316,23 @@ class IoTLogService {
   /// Backend verilerini hangi kolona yazdığı bilinemediğinden,
   /// tüm kolonları çekip client-side fallback yapılır.
   /// Sıralama: created_at ASC (chart'ta kronolojik görüntü).
+  ///
+  /// [controllerId] ve [variableId] parametrelerinden en az biri gereklidir.
+  /// Variable bazlı grafik gösterimi için sadece variableId yeterlidir.
+  /// Logs tablosunda: logs → variables → device_models → controllers → providers
   Future<List<LogTimeSeriesEntry>> getLogTimeSeries({
-    required String controllerId,
+    String? controllerId,
     String? variableId,
     int days = 7,
     bool forceRefresh = false,
   }) async {
-    final filterKey = variableId ?? controllerId;
+    // En az bir filtre gerekli
+    if (controllerId == null && variableId == null) {
+      Logger.warning('getLogTimeSeries: controllerId or variableId required');
+      return [];
+    }
+
+    final filterKey = variableId ?? controllerId ?? 'unknown';
     final cacheKey =
         'log_ts_${_currentTenantId}_${filterKey}_${days}d';
 
@@ -351,8 +361,17 @@ class IoTLogService {
       var query = _supabase
           .from('logs')
           .select()
-          .eq('controller_id', controllerId)
           .gte('created_at', since);
+
+      // Birincil filtre: controllerId veya variableId
+      if (variableId != null) {
+        // Variable bazlı sorgulama - logs.variable_id üzerinden
+        query = query.eq('variable_id', variableId);
+      }
+      if (controllerId != null) {
+        // Controller bazlı sorgulama
+        query = query.eq('controller_id', controllerId);
+      }
 
       // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
@@ -365,11 +384,6 @@ class IoTLogService {
 
       if (_currentSiteId != null) {
         query = query.eq('site_id', _currentSiteId!);
-      }
-
-      // Ek filtreler
-      if (variableId != null) {
-        query = query.eq('variable_id', variableId);
       }
 
       final response =
@@ -423,21 +437,36 @@ class IoTLogService {
   /// [from] ve [to] arasındaki logları getirir.
   /// created_at üzerinden filtreleme yapılır (date_time NULL olabilir).
   /// Sıralama: created_at ASC (chart uyumlu).
+  ///
+  /// [controllerId] ve [variableId] parametrelerinden en az biri gereklidir.
   Future<List<IoTLog>> getLogsByTimeRange({
-    required String controllerId,
+    String? controllerId,
     String? variableId,
     required DateTime from,
     required DateTime to,
     int limit = 500,
   }) async {
+    // En az bir filtre gerekli
+    if (controllerId == null && variableId == null) {
+      Logger.warning('getLogsByTimeRange: controllerId or variableId required');
+      return [];
+    }
+
     try {
       // created_at üzerinden filtrele - her zaman dolu
       var query = _supabase
           .from('logs')
           .select()
-          .eq('controller_id', controllerId)
           .gte('created_at', from.toIso8601String())
           .lte('created_at', to.toIso8601String());
+
+      // Birincil filtreler: controllerId veya variableId
+      if (variableId != null) {
+        query = query.eq('variable_id', variableId);
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
 
       // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
@@ -450,11 +479,6 @@ class IoTLogService {
 
       if (_currentSiteId != null) {
         query = query.eq('site_id', _currentSiteId!);
-      }
-
-      // Ek filtreler
-      if (variableId != null) {
-        query = query.eq('variable_id', variableId);
       }
 
       final response = await query
@@ -481,8 +505,10 @@ class IoTLogService {
   ///
   /// Controller/variable bazlı min, max, avg, son değer hesaplar.
   /// Client-side hesaplama (Supabase aggregate fonksiyonları yerine).
+  ///
+  /// [controllerId] ve [variableId] parametrelerinden en az biri gereklidir.
   Future<LogValueStats> getLogValueStats({
-    required String controllerId,
+    String? controllerId,
     String? variableId,
     int days = 7,
   }) async {

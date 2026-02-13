@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/alarm/alarm_stats_model.dart';
+import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
@@ -10,14 +11,22 @@ import '../../../core/theme/app_spacing.dart';
 /// Alarm dağılımını (aktif vs reset) donut chart olarak gösterir.
 /// Merkez: toplam alarm sayısı.
 /// Aktif alarmlar: alarms tablosu, Reset alarmlar: alarm_histories tablosu.
+///
+/// Priority bazlı renklendirme:
+/// - priorities parametresi verilirse, aktif alarmlar priority rengine göre gösterilir
+/// - verilmezse varsayılan renkler kullanılır (aktif=error, reset=success)
 class AlarmPieChart extends StatefulWidget {
   final AlarmDistribution distribution;
+  final Map<String, Priority>? priorities;
   final double size;
+  final bool showPriorityBreakdown;
 
   const AlarmPieChart({
     super.key,
     required this.distribution,
+    this.priorities,
     this.size = 200,
+    this.showPriorityBreakdown = false,
   });
 
   @override
@@ -105,32 +114,11 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
 
         // Legend
         const SizedBox(height: AppSpacing.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _LegendItem(
-              color: AppColors.error,
-              label: 'Aktif',
-              value: dist.activeCount,
-              brightness: brightness,
-            ),
-            const SizedBox(width: AppSpacing.lg),
-            _LegendItem(
-              color: AppColors.success,
-              label: 'Reset',
-              value: dist.resetCount,
-              brightness: brightness,
-            ),
-            if (dist.acknowledgedCount > 0) ...[
-              const SizedBox(width: AppSpacing.lg),
-              _LegendItem(
-                color: AppColors.info,
-                label: 'Onaylı',
-                value: dist.acknowledgedCount,
-                brightness: brightness,
-              ),
-            ],
-          ],
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.lg,
+          runSpacing: AppSpacing.xs,
+          children: _buildPriorityLegend(brightness),
         ),
       ],
     );
@@ -140,7 +128,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
     final dist = widget.distribution;
     final sections = <PieChartSectionData>[];
 
-    void addSection(int index, int count, Color color, String label) {
+    void addSection(int count, Color color) {
       if (count <= 0) return;
       final isTouched = _touchedIndex == sections.length;
       final radius = isTouched
@@ -152,7 +140,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
         color: color,
         radius: radius,
         title: isTouched ? '$count' : '',
-        titleStyle: TextStyle(
+        titleStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -161,14 +149,84 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
       ));
     }
 
-    addSection(0, dist.activeCount, AppColors.error, 'Aktif');
-    addSection(1, dist.resetCount, AppColors.success, 'Reset');
-    if (dist.acknowledgedCount > 0) {
-      addSection(
-          2, dist.acknowledgedCount, AppColors.info, 'Onaylı');
+    // Priority breakdown gösterilecekse ve priority dağılımı varsa
+    if (widget.showPriorityBreakdown &&
+        dist.hasPriorityDistribution &&
+        widget.priorities != null) {
+      // Aktif alarmlar priority bazında
+      for (final entry in dist.activeByPriority.entries) {
+        final priority = widget.priorities![entry.key];
+        final color = priority?.displayColor ?? AppColors.error;
+        addSection(entry.value, color);
+      }
+      // Reset alarmlar (gri tonlarında)
+      addSection(dist.resetCount, AppColors.success);
+    } else {
+      // Varsayılan davranış: Aktif vs Reset
+      addSection(dist.activeCount, AppColors.error);
+      addSection(dist.resetCount, AppColors.success);
+      if (dist.acknowledgedCount > 0) {
+        addSection(dist.acknowledgedCount, AppColors.info);
+      }
     }
 
     return sections;
+  }
+
+  /// Priority bazlı legend öğeleri oluştur
+  List<Widget> _buildPriorityLegend(Brightness brightness) {
+    final dist = widget.distribution;
+    final items = <Widget>[];
+
+    if (widget.showPriorityBreakdown &&
+        dist.hasPriorityDistribution &&
+        widget.priorities != null) {
+      // Aktif alarmlar priority bazında
+      for (final entry in dist.activeByPriority.entries) {
+        final priority = widget.priorities![entry.key];
+        final color = priority?.displayColor ?? AppColors.error;
+        final label = priority?.label ?? 'Bilinmeyen';
+        items.add(_LegendItem(
+          color: color,
+          label: label,
+          value: entry.value,
+          brightness: brightness,
+        ));
+      }
+      // Reset alarmlar
+      if (dist.resetCount > 0) {
+        items.add(_LegendItem(
+          color: AppColors.success,
+          label: 'Reset',
+          value: dist.resetCount,
+          brightness: brightness,
+        ));
+      }
+    } else {
+      // Varsayılan legend
+      items.add(_LegendItem(
+        color: AppColors.error,
+        label: 'Aktif',
+        value: dist.activeCount,
+        brightness: brightness,
+      ));
+      items.add(_LegendItem(
+        color: AppColors.success,
+        label: 'Reset',
+        value: dist.resetCount,
+        brightness: brightness,
+      ));
+      if (dist.acknowledgedCount > 0) {
+        items.add(_LegendItem(
+          color: AppColors.info,
+          label: 'Onaylı',
+          value: dist.acknowledgedCount,
+          brightness: brightness,
+        ));
+      }
+    }
+
+    return items;
   }
 }
 

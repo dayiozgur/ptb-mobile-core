@@ -32,16 +32,16 @@ class _AlarmBarChartState extends State<AlarmBarChart> {
   int? _touchedIndex;
 
   /// Priority renklerini belirle
+  ///
+  /// Priority modeline eklenen displayColor getter kullanılır.
+  /// Priority bulunamazsa index'e göre fallback renk döner.
   Color _priorityColor(String priorityId, int index) {
     final priority = widget.priorities?[priorityId];
-    if (priority?.color != null) {
-      final hex = priority!.color!.replaceFirst('#', '');
-      if (hex.length == 6) {
-        return Color(int.parse('FF$hex', radix: 16));
-      }
+    if (priority != null) {
+      return priority.displayColor;
     }
 
-    // Fallback renkleri
+    // Fallback renkleri (priority tanımsız ise)
     const fallbackColors = [
       AppColors.error,
       AppColors.warning,

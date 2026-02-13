@@ -324,6 +324,41 @@ class IoTRealtimeService {
     }
   }
 
+  /// Variable ID ile realtime (controller bağlantısı) getir
+  ///
+  /// Variable'ın hangi controller'a bağlı olduğunu bulmak için kullanılır.
+  /// Log grafiklerinde variable bazlı sorgulama için controller bilgisine ihtiyaç duyulabilir.
+  Future<IoTRealtime?> getByVariableId(String variableId) async {
+    // Önce memory cache'den kontrol
+    final cached = _realtimes.where((r) => r.variableId == variableId).firstOrNull;
+    if (cached != null) return cached;
+
+    try {
+      final response = await _supabase
+          .from('realtimes')
+          .select('*, variables(*)')
+          .eq('variable_id', variableId)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return IoTRealtime.fromJson(response);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get realtime by variable_id', e, stackTrace);
+      return null;
+    }
+  }
+
+  /// Variable ID ile controller ID getir
+  ///
+  /// Variable'ın bağlı olduğu controller'ın ID'sini döner.
+  /// Log grafiklerinde hiyerarşi takibi için kullanılır:
+  /// Provider → Controller → Device Model → Variable → Logs
+  Future<String?> getControllerIdByVariable(String variableId) async {
+    final realtime = await getByVariableId(variableId);
+    return realtime?.controllerId;
+  }
+
   // ============================================
   // STATISTICS
   // ============================================

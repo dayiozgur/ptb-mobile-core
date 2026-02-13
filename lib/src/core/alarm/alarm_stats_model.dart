@@ -37,6 +37,14 @@ class AlarmDistribution {
   /// Onaylanmış alarm sayısı
   final int acknowledgedCount;
 
+  /// Priority bazlı aktif alarm dağılımı
+  /// Key: priority_id, Value: alarm sayısı
+  final Map<String, int> activeByPriority;
+
+  /// Priority bazlı reset alarm dağılımı
+  /// Key: priority_id, Value: alarm sayısı
+  final Map<String, int> resetByPriority;
+
   /// Toplam
   int get totalCount => activeCount + resetCount;
 
@@ -44,7 +52,13 @@ class AlarmDistribution {
     required this.activeCount,
     required this.resetCount,
     this.acknowledgedCount = 0,
+    this.activeByPriority = const {},
+    this.resetByPriority = const {},
   });
+
+  /// Priority bazlı dağılım var mı?
+  bool get hasPriorityDistribution =>
+      activeByPriority.isNotEmpty || resetByPriority.isNotEmpty;
 
   /// Aktif yüzde
   double get activePercent =>

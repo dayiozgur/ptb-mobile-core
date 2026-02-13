@@ -29,15 +29,8 @@ class ResetAlarmList extends StatelessWidget {
   Color _priorityColor(AlarmHistory alarm) {
     if (alarm.priorityId != null && priorities != null) {
       final priority = priorities![alarm.priorityId!];
-      if (priority?.color != null) {
-        final hex = priority!.color!.replaceFirst('#', '');
-        if (hex.length == 6) {
-          return Color(int.parse('FF$hex', radix: 16));
-        }
-      }
       if (priority != null) {
-        if (priority.isCritical) return AppColors.error;
-        if (priority.isHigh) return AppColors.warning;
+        return priority.displayColor;
       }
     }
     return AppColors.systemGray;
@@ -370,11 +363,7 @@ class AlarmDetailSheet extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       _StatusBadge(
                         label: priority!.label,
-                        color: priority!.isCritical
-                            ? AppColors.error
-                            : priority!.isHigh
-                                ? AppColors.warning
-                                : AppColors.info,
+                        color: priority!.displayColor,
                       ),
                     ],
                     const Spacer(),

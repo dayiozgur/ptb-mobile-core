@@ -1,3 +1,7 @@
+import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
+
 /// Alarm öncelik (priority) modeli
 ///
 /// DB tablosu: priorities
@@ -33,6 +37,41 @@ class Priority {
 
   /// Kritik mi?
   bool get isCritical => (level ?? 0) >= 4;
+
+  /// Renk değeri olarak Color objesi döner
+  ///
+  /// HEX formatındaki color string'ini (#RRGGBB veya RRGGBB) Flutter Color'a çevirir.
+  /// Color değeri yoksa level'a göre fallback renk döner:
+  /// - level >= 4 (Critical): AppColors.error
+  /// - level >= 3 (High): AppColors.warning
+  /// - level >= 2 (Medium): AppColors.info
+  /// - level < 2 (Low): AppColors.success
+  Color get displayColor {
+    // HEX renk varsa parse et
+    if (color != null && color!.isNotEmpty) {
+      final hex = color!.replaceFirst('#', '');
+      if (hex.length == 6) {
+        try {
+          return Color(int.parse('FF$hex', radix: 16));
+        } catch (_) {
+          // Parse hatası olursa fallback'e düş
+        }
+      }
+    }
+
+    // Level'a göre fallback renkler
+    if (isCritical) return AppColors.error;
+    if (isHigh) return AppColors.warning;
+    if ((level ?? 0) >= 2) return AppColors.info;
+    return AppColors.success;
+  }
+
+  /// Geçerli HEX renk değeri var mı?
+  bool get hasCustomColor {
+    if (color == null || color!.isEmpty) return false;
+    final hex = color!.replaceFirst('#', '');
+    return hex.length == 6;
+  }
 
   factory Priority.fromJson(Map<String, dynamic> json) {
     return Priority(

@@ -642,6 +642,10 @@ class AlarmService {
           activeCount: cached['activeCount'] as int,
           resetCount: cached['resetCount'] as int,
           acknowledgedCount: cached['acknowledgedCount'] as int? ?? 0,
+          activeByPriority: (cached['activeByPriority'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v as int)) ?? {},
+          resetByPriority: (cached['resetByPriority'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v as int)) ?? {},
         );
       }
     }
@@ -651,11 +655,11 @@ class AlarmService {
           .subtract(Duration(days: effectiveDays))
           .toIso8601String();
 
-      // --- Aktif alarm sayısı (alarms tablosu) ---
+      // --- Aktif alarm sayısı ve priority dağılımı (alarms tablosu) ---
       // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
       var activeQuery = _supabase
           .from('alarms')
-          .select('id');
+          .select('id,priority_id');
 
       // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
@@ -680,7 +684,17 @@ class AlarmService {
       }
 
       final activeResponse = await activeQuery;
-      final activeCount = (activeResponse as List).length;
+      final activeList = activeResponse as List;
+      final activeCount = activeList.length;
+
+      // Priority bazlı aktif alarm dağılımı
+      final activeByPriority = <String, int>{};
+      for (final row in activeList) {
+        final priorityId = (row as Map<String, dynamic>)['priority_id'] as String?;
+        if (priorityId != null) {
+          activeByPriority[priorityId] = (activeByPriority[priorityId] ?? 0) + 1;
+        }
+      }
 
       // --- Onaylı aktif alarm sayısı (alarms tablosu) ---
       var ackQuery = _supabase
@@ -713,11 +727,11 @@ class AlarmService {
       final ackResponse = await ackQuery;
       final acknowledgedCount = (ackResponse as List).length;
 
-      // --- Resetli alarm sayısı (alarm_histories tablosu: son N gün) ---
+      // --- Resetli alarm sayısı ve priority dağılımı (alarm_histories tablosu: son N gün) ---
       // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
       var resetQuery = _supabase
           .from('alarm_histories')
-          .select('id')
+          .select('id,priority_id')
           .gte('created_at', since);
 
       // Multi-Tenant İzolasyon Filtreleri
@@ -743,12 +757,24 @@ class AlarmService {
       }
 
       final resetResponse = await resetQuery;
-      final resetCount = (resetResponse as List).length;
+      final resetList = resetResponse as List;
+      final resetCount = resetList.length;
+
+      // Priority bazlı reset alarm dağılımı
+      final resetByPriority = <String, int>{};
+      for (final row in resetList) {
+        final priorityId = (row as Map<String, dynamic>)['priority_id'] as String?;
+        if (priorityId != null) {
+          resetByPriority[priorityId] = (resetByPriority[priorityId] ?? 0) + 1;
+        }
+      }
 
       final distribution = AlarmDistribution(
         activeCount: activeCount,
         resetCount: resetCount,
         acknowledgedCount: acknowledgedCount,
+        activeByPriority: activeByPriority,
+        resetByPriority: resetByPriority,
       );
 
       await _cacheManager.set(
@@ -757,6 +783,8 @@ class AlarmService {
           'activeCount': activeCount,
           'resetCount': resetCount,
           'acknowledgedCount': acknowledgedCount,
+          'activeByPriority': activeByPriority,
+          'resetByPriority': resetByPriority,
         },
         ttl: const Duration(minutes: 5),
       );

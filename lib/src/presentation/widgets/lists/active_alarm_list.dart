@@ -32,15 +32,8 @@ class ActiveAlarmList extends StatelessWidget {
   Color _priorityColor(Alarm alarm) {
     if (alarm.priorityId != null && priorities != null) {
       final priority = priorities![alarm.priorityId!];
-      if (priority?.color != null) {
-        final hex = priority!.color!.replaceFirst('#', '');
-        if (hex.length == 6) {
-          return Color(int.parse('FF$hex', radix: 16));
-        }
-      }
       if (priority != null) {
-        if (priority.isCritical) return AppColors.error;
-        if (priority.isHigh) return AppColors.warning;
+        return priority.displayColor;
       }
     }
     return AppColors.error;
@@ -335,19 +328,7 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
 
-    Color priorityColor = AppColors.error;
-    if (priority != null) {
-      if (priority!.color != null) {
-        final hex = priority!.color!.replaceFirst('#', '');
-        if (hex.length == 6) {
-          priorityColor = Color(int.parse('FF$hex', radix: 16));
-        }
-      } else if (priority!.isCritical) {
-        priorityColor = AppColors.error;
-      } else if (priority!.isHigh) {
-        priorityColor = AppColors.warning;
-      }
-    }
+    final priorityColor = priority?.displayColor ?? AppColors.error;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
