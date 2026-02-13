@@ -1108,11 +1108,12 @@ class _AlarmRow extends StatelessWidget {
 
   const _AlarmRow({required this.alarm, this.priority});
 
+  /// Priority rengi - Priority modelindeki displayColor getter kullanılır
+  Color get _priorityColor => priority?.displayColor ?? AppColors.error;
+
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.color != null
-        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
-        : AppColors.error;
+    final priorityColor = _priorityColor;
 
     return Padding(
       padding: AppSpacing.cardInsets,
@@ -1278,11 +1279,12 @@ class _ActiveAlarmCard extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Priority rengi - Priority modelindeki displayColor getter kullanılır
+  Color get _priorityColor => priority?.displayColor ?? AppColors.error;
+
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.color != null
-        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
-        : AppColors.error;
+    final priorityColor = _priorityColor;
 
     return AppCard(
       onTap: onTap,

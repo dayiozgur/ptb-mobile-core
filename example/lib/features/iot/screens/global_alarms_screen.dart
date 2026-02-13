@@ -757,12 +757,18 @@ class _ActiveAlarmCard extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Priority rengi - Priority modelindeki displayColor getter kullanılır
+  Color get _priorityColor {
+    if (priority != null) {
+      return priority!.displayColor;
+    }
+    return AppColors.error;
+  }
+
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final priorityColor = priority?.color != null
-        ? Color(int.parse(priority!.color!.substring(1), radix: 16) + 0xFF000000)
-        : AppColors.error;
+    final priorityColor = _priorityColor;
 
     return AppCard(
       onTap: onTap,
