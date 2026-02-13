@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/iot_config.dart';
 import '../storage/cache_manager.dart';
 import '../utils/db_field_helpers.dart';
 import '../utils/logger.dart';
@@ -118,7 +119,7 @@ class IoTLogService {
     String? controllerId,
     String? providerId,
     String? variableId,
-    int limit = 50,
+    int limit = IoTConfig.defaultListLimit,
     bool forceRefresh = false,
     bool includeVariable = false,
     bool activeOnly = false,
@@ -214,7 +215,7 @@ class IoTLogService {
     String? controllerId,
     String? providerId,
     String? variableId,
-    int limit = 50,
+    int limit = IoTConfig.defaultListLimit,
     bool forceRefresh = false,
   }) async {
     return getLogs(
@@ -323,7 +324,7 @@ class IoTLogService {
   Future<List<LogTimeSeriesEntry>> getLogTimeSeries({
     String? controllerId,
     String? variableId,
-    int days = 7,
+    int days = IoTConfig.defaultDaysRange,
     bool forceRefresh = false,
   }) async {
     // En az bir filtre gerekli
@@ -332,9 +333,10 @@ class IoTLogService {
       return [];
     }
 
+    final effectiveDays = IoTConfig.clampDaysRange(days);
     final filterKey = variableId ?? controllerId ?? 'unknown';
     final cacheKey =
-        'log_ts_${_currentTenantId}_${filterKey}_${days}d';
+        'log_ts_${_currentTenantId}_${filterKey}_${effectiveDays}d';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
@@ -353,7 +355,7 @@ class IoTLogService {
 
     try {
       final since = DateTime.now()
-          .subtract(Duration(days: days))
+          .subtract(Duration(days: effectiveDays))
           .toIso8601String();
 
       // Tüm kolonları çek - hem date_time hem datetime (legacy) destekle
@@ -444,7 +446,7 @@ class IoTLogService {
     String? variableId,
     required DateTime from,
     required DateTime to,
-    int limit = 500,
+    int limit = IoTConfig.maxListLimit,
   }) async {
     // En az bir filtre gerekli
     if (controllerId == null && variableId == null) {
@@ -510,7 +512,7 @@ class IoTLogService {
   Future<LogValueStats> getLogValueStats({
     String? controllerId,
     String? variableId,
-    int days = 7,
+    int days = IoTConfig.defaultDaysRange,
   }) async {
     try {
       final entries = await getLogTimeSeries(

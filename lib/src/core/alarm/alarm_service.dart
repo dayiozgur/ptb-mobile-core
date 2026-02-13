@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/iot_config.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'alarm_model.dart';
@@ -406,18 +407,18 @@ class AlarmService {
   /// alarm_histories tablosu sadece resetlenmiş alarmları içerir.
   /// Backend, alarm resetlendiğinde alarms → alarm_histories taşıması yapar.
   ///
-  /// Son [days] gün içindeki resetlenmiş alarmları döner (max 90 gün).
+  /// Son [days] gün içindeki resetlenmiş alarmları döner (max [IoTConfig.maxDaysRange] gün).
   /// created_at üzerinden zaman filtresi (start_time NULL olabilir).
   /// Sıralama: created_at DESC
   Future<List<AlarmHistory>> getResetAlarms({
     String? controllerId,
     String? siteId,
     String? providerId,
-    int days = 90,
-    int limit = 50,
+    int days = IoTConfig.defaultResetAlarmDays,
+    int limit = IoTConfig.defaultListLimit,
     bool forceRefresh = false,
   }) async {
-    final effectiveDays = days.clamp(1, 90);
+    final effectiveDays = IoTConfig.clampDaysRange(days);
     final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
     final cacheKey =
         'reset_alarms_${_currentTenantId}_${filterKey}_${effectiveDays}d';
@@ -490,7 +491,7 @@ class AlarmService {
 
   /// Resetlenmiş alarm zaman çizelgesi - günlük gruplandırılmış alarm sayıları
   ///
-  /// alarm_histories tablosundan son [days] gün (max 90) verileri çeker.
+  /// alarm_histories tablosundan son [days] gün (max [IoTConfig.maxDaysRange]) verileri çeker.
   /// alarm_histories sadece resetlenmiş alarmları içerir.
   /// client-side günlük gruplandırma yapar.
   /// Her gün için priority bazlı ayrıntı içerir.
@@ -499,10 +500,10 @@ class AlarmService {
     String? controllerId,
     String? siteId,
     String? providerId,
-    int days = 30,
+    int days = IoTConfig.defaultAlarmTimelineDays,
     bool forceRefresh = false,
   }) async {
-    final effectiveDays = days.clamp(1, 90);
+    final effectiveDays = IoTConfig.clampDaysRange(days);
     final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
     final cacheKey =
         'alarm_timeline_${_currentTenantId}_${filterKey}_${effectiveDays}d';
@@ -627,10 +628,10 @@ class AlarmService {
   Future<AlarmDistribution> getAlarmDistribution({
     String? controllerId,
     String? siteId,
-    int days = 90,
+    int days = IoTConfig.defaultAlarmDistributionDays,
     bool forceRefresh = false,
   }) async {
-    final effectiveDays = days.clamp(1, 90);
+    final effectiveDays = IoTConfig.clampDaysRange(days);
     final filterKey = controllerId ?? siteId ?? 'all';
     final cacheKey =
         'alarm_dist_${_currentTenantId}_${filterKey}_${effectiveDays}d';
