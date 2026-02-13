@@ -278,6 +278,12 @@ class AppTabScaffold extends StatelessWidget {
   /// Bottom navigation bar
   final Widget? bottomNavigationBar;
 
+  /// Back button göster
+  final bool showBackButton;
+
+  /// Back button callback
+  final VoidCallback? onBack;
+
   const AppTabScaffold({
     super.key,
     this.title,
@@ -287,11 +293,16 @@ class AppTabScaffold extends StatelessWidget {
     this.onTabChanged,
     this.actions,
     this.bottomNavigationBar,
+    this.showBackButton = true,
+    this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final canPop = Navigator.of(context).canPop();
+    // Show back button if: showBackButton is true AND (canPop OR onBack is provided)
+    final showBack = showBackButton && (canPop || onBack != null);
 
     return DefaultTabController(
       length: tabs.length,
@@ -302,6 +313,16 @@ class AppTabScaffold extends StatelessWidget {
           backgroundColor: AppColors.surface(brightness),
           elevation: 0,
           centerTitle: true,
+          leading: showBack
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  onPressed: onBack ?? () => Navigator.of(context).pop(),
+                )
+              : null,
           title: title != null
               ? Text(
                   title!,
