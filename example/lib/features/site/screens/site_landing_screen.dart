@@ -1503,7 +1503,7 @@ class _ResetAlarmCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            priority!.name,
+                            priority!.name ?? '',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
