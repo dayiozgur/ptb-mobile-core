@@ -69,12 +69,8 @@ class _IotDashboardScreenState extends State<IotDashboardScreen> {
 
     int activeAlarmCount = 0;
     try {
-      // Controller bazlı sorgulama - alarms tablosunda tenant_id null olabilir
-      final controllerIds = controllers.map((c) => c.id).toList();
-      if (controllerIds.isNotEmpty) {
-        final alarms = await alarmService.getActiveAlarmsByControllers(controllerIds);
-        activeAlarmCount = alarms.length;
-      }
+      final alarms = await alarmService.getActiveAlarms();
+      activeAlarmCount = alarms.length;
     } catch (e) {
       Logger.error('Failed to load alarms', e);
     }

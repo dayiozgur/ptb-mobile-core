@@ -47,15 +47,9 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
     }
 
     try {
-      // Controller bazlı sorgulama - alarms tablosunda tenant_id null olabilir
-      final controllers = await controllerService.getAll();
-      final controllerIds = controllers.map((c) => c.id).toList();
-
       final results = await Future.wait([
         priorityService.getAll(),
-        controllerIds.isNotEmpty
-            ? alarmService.getActiveAlarmsByControllers(controllerIds)
-            : Future.value(<Alarm>[]),
+        alarmService.getActiveAlarms(),
       ]);
 
       final priorities = results[0] as List<Priority>;

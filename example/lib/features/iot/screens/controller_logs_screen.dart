@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
@@ -90,7 +89,6 @@ class _ControllerLogsScreenState extends State<ControllerLogsScreen> {
   Widget build(BuildContext context) {
     return AppTabScaffold(
       title: widget.controllerName ?? 'Controller Logları',
-      onBack: () => context.pop(),
       tabs: const [
         Tab(text: 'Grafikler'),
         Tab(text: 'Log Listesi'),

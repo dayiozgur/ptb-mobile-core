@@ -94,39 +94,23 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
         orgMap[org.id] = org;
       }
 
-      // Load controllers for alarm queries
-      // alarms tablosunda tenant_id null olabileceğinden, controller bazlı sorgulama yapıyoruz
-      final controllers = await controllerService.getAll();
-      final controllerIds = controllers.map((c) => c.id).toList();
-
       // Load alarms data
-      final List<dynamic> results;
-      if (controllerIds.isNotEmpty) {
-        results = await Future.wait([
-          alarmService.getAlarmDistribution(
-            days: _selectedDays,
-            forceRefresh: true,
-          ),
-          alarmService.getAlarmTimeline(
-            days: _selectedDays,
-            forceRefresh: true,
-          ),
-          alarmService.getActiveAlarmsByControllers(controllerIds),
-          alarmService.getResetAlarms(
-            days: _selectedDays,
-            limit: 100,
-            forceRefresh: true,
-          ),
-        ]);
-      } else {
-        // Controller yoksa boş sonuç döndür
-        results = [
-          const AlarmDistribution(activeCount: 0, resetCount: 0, acknowledgedCount: 0),
-          <AlarmTimelineEntry>[],
-          <Alarm>[],
-          <AlarmHistory>[],
-        ];
-      }
+      final results = await Future.wait([
+        alarmService.getAlarmDistribution(
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
+        alarmService.getAlarmTimeline(
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
+        alarmService.getActiveAlarms(),
+        alarmService.getResetAlarms(
+          days: _selectedDays,
+          limit: 100,
+          forceRefresh: true,
+        ),
+      ]);
 
       if (mounted) {
         setState(() {
@@ -815,23 +799,10 @@ class _ActiveAlarmCard extends StatelessWidget {
                         ),
                       ),
                       if (priority != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: priorityColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            priority!.name ?? '',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: priorityColor,
-                            ),
-                          ),
+                        AppBadge(
+                          label: priority!.name ?? '',
+                          variant: AppBadgeVariant.neutral,
+                          size: AppBadgeSize.small,
                         ),
                     ],
                   ),
@@ -902,36 +873,20 @@ class _ResetAlarmCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color get _priorityColor {
-    if (priority?.color != null) {
-      final hex = priority!.color!.replaceFirst('#', '');
-      if (hex.length == 6) {
-        return Color(int.parse('FF$hex', radix: 16));
-      }
-    }
-    if (priority != null) {
-      if (priority!.isCritical) return AppColors.error;
-      if (priority!.isHigh) return AppColors.warning;
-    }
-    return AppColors.systemGray;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final priorityColor = _priorityColor;
-
     return AppCard(
       onTap: onTap,
       child: Padding(
         padding: AppSpacing.cardInsets,
         child: Row(
           children: [
-            // Status indicator with priority color
+            // Status indicator
             Container(
               width: 4,
               height: 48,
               decoration: BoxDecoration(
-                color: priorityColor,
+                color: AppColors.success,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -958,23 +913,10 @@ class _ResetAlarmCard extends StatelessWidget {
                         ),
                       ),
                       if (priority != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: priorityColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            priority!.name ?? '',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: priorityColor,
-                            ),
-                          ),
+                        AppBadge(
+                          label: priority!.name ?? '',
+                          variant: AppBadgeVariant.secondary,
+                          size: AppBadgeSize.small,
                         ),
                     ],
                   ),
