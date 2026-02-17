@@ -33,19 +33,22 @@ class Priority {
   String get label => name ?? code ?? 'Bilinmiyor';
 
   /// Yüksek öncelikli mi?
-  bool get isHigh => (level ?? 0) >= 3;
+  /// DB level sıralaması: 0=Technical, 1=Very High, 2=High, 3=Medium, 4=Low
+  /// Düşük level = yüksek öncelik
+  bool get isHigh => level != null && level! <= 2;
 
-  /// Kritik mi?
-  bool get isCritical => (level ?? 0) >= 4;
+  /// Kritik mi? (Very High veya Technical)
+  bool get isCritical => level != null && level! <= 1;
 
   /// Renk değeri olarak Color objesi döner
   ///
   /// HEX formatındaki color string'ini (#RRGGBB veya RRGGBB) Flutter Color'a çevirir.
   /// Color değeri yoksa level'a göre fallback renk döner:
-  /// - level >= 4 (Critical): AppColors.error
-  /// - level >= 3 (High): AppColors.warning
-  /// - level >= 2 (Medium): AppColors.info
-  /// - level < 2 (Low): AppColors.success
+  /// DB level sıralaması: 0=Technical, 1=Very High, 2=High, 3=Medium, 4=Low
+  /// - level <= 1 (Very High/Technical): AppColors.error
+  /// - level == 2 (High): AppColors.warning
+  /// - level == 3 (Medium): AppColors.info
+  /// - level >= 4 (Low): AppColors.success
   Color get displayColor {
     // HEX renk varsa parse et
     if (color != null && color!.isNotEmpty) {
@@ -59,10 +62,10 @@ class Priority {
       }
     }
 
-    // Level'a göre fallback renkler
+    // Level'a göre fallback renkler (düşük level = yüksek öncelik)
     if (isCritical) return AppColors.error;
     if (isHigh) return AppColors.warning;
-    if ((level ?? 0) >= 2) return AppColors.info;
+    if ((level ?? 5) <= 3) return AppColors.info;
     return AppColors.success;
   }
 

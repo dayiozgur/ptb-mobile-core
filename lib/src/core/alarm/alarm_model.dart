@@ -56,6 +56,14 @@ class Alarm {
   final String? siteId;
   final String? providerId;
 
+  // FK ilişkileri (DB uyumluluk)
+  final String? txnId;
+  final String? contractorId;
+  final String? canceledControllerId;
+
+  // Sıralama
+  final int? rowId;
+
   // Variable ilişkisinden gelen bilgiler (JOIN ile)
   final String? variableName;
   final String? variableDescription;
@@ -97,6 +105,10 @@ class Alarm {
     this.organizationId,
     this.siteId,
     this.providerId,
+    this.txnId,
+    this.contractorId,
+    this.canceledControllerId,
+    this.rowId,
     this.variableName,
     this.variableDescription,
     this.variableUnit,
@@ -192,6 +204,10 @@ class Alarm {
       organizationId: json['organization_id'] as String?,
       siteId: json['site_id'] as String?,
       providerId: json['provider_id'] as String?,
+      txnId: json['txn_id'] as String?,
+      contractorId: json['contractor_id'] as String?,
+      canceledControllerId: json['canceled_controller_id'] as String?,
+      rowId: json['row_id'] as int?,
       // Variable bilgileri (JOIN ile gelirse)
       variableName: variable?['name'] as String?,
       variableDescription: variable?['description'] as String?,
@@ -224,6 +240,10 @@ class Alarm {
       'organization_id': organizationId,
       'site_id': siteId,
       'provider_id': providerId,
+      'txn_id': txnId,
+      'contractor_id': contractorId,
+      'canceled_controller_id': canceledControllerId,
+      'row_id': rowId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

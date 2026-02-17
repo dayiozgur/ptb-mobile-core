@@ -22,6 +22,12 @@ class ControllerService {
   /// Mevcut tenant ID
   String? _currentTenantId;
 
+  /// Mevcut organization ID (opsiyonel izolasyon)
+  String? _currentOrganizationId;
+
+  /// Mevcut site ID (opsiyonel izolasyon)
+  String? _currentSiteId;
+
   /// Mevcut controller listesi
   List<Controller> _controllers = [];
 
@@ -80,10 +86,40 @@ class ControllerService {
   /// Tenant context'ini temizle
   void clearTenant() {
     _currentTenantId = null;
+    _currentOrganizationId = null;
+    _currentSiteId = null;
     _controllers = [];
     _selected = null;
     _controllersController.add(_controllers);
     _selectedController.add(_selected);
+  }
+
+  // ============================================
+  // ORGANIZATION/SITE CONTEXT
+  // ============================================
+
+  /// Organization context'ini ayarla
+  void setOrganization(String organizationId) {
+    _currentOrganizationId = organizationId;
+    Logger.debug('ControllerService: Organization set to $organizationId');
+  }
+
+  /// Organization context'ini temizle
+  void clearOrganization() {
+    _currentOrganizationId = null;
+    Logger.debug('ControllerService: Organization cleared');
+  }
+
+  /// Site context'ini ayarla
+  void setSite(String siteId) {
+    _currentSiteId = siteId;
+    Logger.debug('ControllerService: Site set to $siteId');
+  }
+
+  /// Site context'ini temizle
+  void clearSite() {
+    _currentSiteId = null;
+    Logger.debug('ControllerService: Site cleared');
   }
 
   // ============================================
@@ -102,7 +138,11 @@ class ControllerService {
       throw Exception('Tenant context is not set');
     }
 
-    final cacheKey = 'controllers_${_currentTenantId}_${siteId ?? 'all'}_${unitId ?? 'all'}';
+    // Organization/site context'ten gelen değerleri parametre olarak kullan (parametre öncelikli)
+    final effectiveSiteId = siteId ?? _currentSiteId;
+    final effectiveOrgId = _currentOrganizationId;
+
+    final cacheKey = 'controllers_${_currentTenantId}_${effectiveOrgId ?? 'all'}_${effectiveSiteId ?? 'all'}_${unitId ?? 'all'}';
 
     // Cache kontrolü
     if (!forceRefresh) {
@@ -129,8 +169,13 @@ class ControllerService {
           .select()
           .eq('tenant_id', _currentTenantId!);
 
-      if (siteId != null) {
-        query = query.eq('site_id', siteId);
+      // Organization filtresi
+      if (effectiveOrgId != null) {
+        query = query.eq('organization_id', effectiveOrgId);
+      }
+
+      if (effectiveSiteId != null) {
+        query = query.eq('site_id', effectiveSiteId);
       }
 
       if (unitId != null) {
@@ -149,7 +194,7 @@ class ControllerService {
       // Hiyerarşi: tenant → organizations → sites → controllers
       if (responseList.isEmpty) {
         Logger.debug('No controllers with tenant_id, trying site hierarchy fallback...');
-        responseList = await _queryControllersThroughSites(siteId: siteId, unitId: unitId);
+        responseList = await _queryControllersThroughSites(siteId: effectiveSiteId, unitId: unitId);
         Logger.debug('Site hierarchy fallback returned ${responseList.length} controllers');
       }
 

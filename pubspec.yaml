@@ -47,6 +47,13 @@ dependencies:
   # Charts
   fl_chart: ^0.69.0
 
+  # Map
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  flutter_map_marker_cluster: ^8.2.2
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+
   # UI Helpers
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0

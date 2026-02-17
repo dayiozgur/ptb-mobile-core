@@ -226,4 +226,20 @@ class AppColors {
         ? const Color(0xFFFFFFFF)
         : const Color(0xFF2C2C2E);
   }
+
+  /// Segmented control / inner tab bar background (iOS tarz)
+  static Color segmentedBackground(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFF2F2F7) // systemGray6 light
+        : const Color(0xFF2C2C2E); // elevated surface dark
+  }
+
+  /// Segmented control / inner tab bar seçili indicator rengi
+  static Color segmentedIndicator(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.light
+        ? const Color(0xFFFFFFFF) // white
+        : const Color(0xFF3A3A3C); // systemGray dark
+  }
 }

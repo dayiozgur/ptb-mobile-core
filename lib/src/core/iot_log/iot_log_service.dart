@@ -178,10 +178,9 @@ class IoTLogService {
         query = query.eq('variable_id', variableId);
       }
 
-      // created_at her zaman dolu olduğu için güvenilir sıralama sağlar.
-      // (date_time NULL olabilir, datetime NULL olabilir, ama created_at her zaman var)
+      // DB'de created_at NULL olabilir, date_time dolu - date_time üzerinden sırala
       final response = await query
-          .order('created_at', ascending: false)
+          .order('date_time', ascending: false)
           .limit(limit);
 
       final logs = <IoTLog>[];
@@ -255,8 +254,8 @@ class IoTLogService {
         final since = DateTime.now()
             .subtract(Duration(hours: lastHours))
             .toIso8601String();
-        // created_at her zaman dolu - güvenilir zaman filtresi
-        query = query.gte('created_at', since);
+        // DB'de created_at NULL - date_time üzerinden filtrele
+        query = query.gte('date_time', since);
       }
 
       final response = await query;
@@ -295,8 +294,8 @@ class IoTLogService {
         final since = DateTime.now()
             .subtract(Duration(hours: lastHours))
             .toIso8601String();
-        // created_at her zaman dolu - güvenilir zaman filtresi
-        query = query.gte('created_at', since);
+        // DB'de created_at NULL - date_time üzerinden filtrele
+        query = query.gte('date_time', since);
       }
 
       final response = await query;
@@ -359,11 +358,11 @@ class IoTLogService {
           .toIso8601String();
 
       // Tüm kolonları çek - hem date_time hem datetime (legacy) destekle
-      // created_at üzerinden filtrele (her zaman dolu)
+      // DB'de created_at NULL - date_time üzerinden filtrele
       var query = _supabase
           .from('logs')
           .select()
-          .gte('created_at', since);
+          .gte('date_time', since);
 
       // Birincil filtre: controllerId veya variableId
       if (variableId != null) {
@@ -389,7 +388,7 @@ class IoTLogService {
       }
 
       final response =
-          await query.order('created_at', ascending: true);
+          await query.order('date_time', ascending: true);
 
       final entries = <LogTimeSeriesEntry>[];
       for (final e in (response as List)) {
@@ -404,7 +403,15 @@ class IoTLogService {
             rawValue != null ? double.tryParse(rawValue) : null;
 
         // Dual column: on_off (current) / onoff (legacy)
-        final onOff = DbFieldHelpers.parseLogOnOff(row);
+        var onOff = DbFieldHelpers.parseLogOnOff(row);
+
+        // DB'de on_off/onoff NULL olabilir - digital variable'lar
+        // value alanında "0.0"/"1.0" tutar, bu durumda value'dan türet
+        if (onOff == null && numericValue != null) {
+          if (numericValue == 0.0 || numericValue == 1.0) {
+            onOff = numericValue.toInt();
+          }
+        }
 
         entries.add(LogTimeSeriesEntry(
           dateTime: dt,
@@ -455,12 +462,12 @@ class IoTLogService {
     }
 
     try {
-      // created_at üzerinden filtrele - her zaman dolu
+      // DB'de created_at NULL - date_time üzerinden filtrele
       var query = _supabase
           .from('logs')
           .select()
-          .gte('created_at', from.toIso8601String())
-          .lte('created_at', to.toIso8601String());
+          .gte('date_time', from.toIso8601String())
+          .lte('date_time', to.toIso8601String());
 
       // Birincil filtreler: controllerId veya variableId
       if (variableId != null) {
@@ -484,7 +491,7 @@ class IoTLogService {
       }
 
       final response = await query
-          .order('created_at', ascending: true)
+          .order('date_time', ascending: true)
           .limit(limit);
 
       final logs = <IoTLog>[];
@@ -556,6 +563,66 @@ class IoTLogService {
     } catch (e, stackTrace) {
       Logger.error('Failed to get log value stats', e, stackTrace);
       return const LogValueStats();
+    }
+  }
+
+  /// Controller'a ait loglanmış variable listesini getirir
+  ///
+  /// logs tablosundan DISTINCT variable_id'leri çeker ve
+  /// variables tablosu ile JOIN yaparak variable bilgilerini döner.
+  /// variable_type (ANALOG, DIGITAL, INTEGER, ALARM) ile filtreleme desteklenir.
+  Future<List<Map<String, dynamic>>> getLoggedVariables({
+    required String controllerId,
+    String? variableType,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = 'logged_vars_${controllerId}_${variableType ?? 'all'}';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached.cast<Map<String, dynamic>>();
+      }
+    }
+
+    try {
+      // Realtimes junction üzerinden controller'ın variable'larını çek
+      // variable bilgisi ile birlikte
+      var query = _supabase
+          .from('realtimes')
+          .select('variable_id, variable:variables(id, name, description, variable_type, measure_unit, unit, minimum, maximum)')
+          .eq('controller_id', controllerId);
+
+      final response = await query;
+      final results = <Map<String, dynamic>>[];
+      final seenIds = <String>{};
+
+      for (final row in (response as List)) {
+        final variable = row['variable'] as Map<String, dynamic>?;
+        if (variable == null) continue;
+
+        final varId = variable['id'] as String?;
+        if (varId == null || seenIds.contains(varId)) continue;
+
+        // variable_type filtresi
+        final vType = variable['variable_type'] as String?;
+        if (variableType != null && vType != variableType) continue;
+
+        seenIds.add(varId);
+        results.add(variable);
+      }
+
+      // İsme göre sırala
+      results.sort((a, b) =>
+          (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
+
+      await _cacheManager.set(cacheKey, results,
+          ttl: const Duration(minutes: 10));
+
+      return results;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get logged variables', e, stackTrace);
+      return [];
     }
   }
 

@@ -224,6 +224,18 @@ class DataProvider {
   /// MAC adresi (DB: mac)
   final String? mac;
 
+  /// Brand ID (DB: brand_id FK)
+  final String? brandId;
+
+  /// Uygulama versiyonu (DB: app_version)
+  final String? appVersion;
+
+  /// Sistem versiyonu (DB: sys_version)
+  final String? sysVersion;
+
+  /// Uptime (DB: uptime)
+  final String? uptime;
+
   // ============================================
   // METADATA
   // ============================================
@@ -249,6 +261,9 @@ class DataProvider {
 
   /// Güncelleyen kullanıcı
   final String? updatedBy;
+
+  /// Row ID (sıralama için)
+  final int? rowId;
 
   const DataProvider({
     required this.id,
@@ -282,12 +297,17 @@ class DataProvider {
     this.ip,
     this.hostname,
     this.mac,
+    this.brandId,
+    this.appVersion,
+    this.sysVersion,
+    this.uptime,
     this.config = const {},
     this.tags = const [],
     required this.createdAt,
     this.updatedAt,
     this.createdBy,
     this.updatedBy,
+    this.rowId,
   });
 
   // ============================================
@@ -366,6 +386,10 @@ class DataProvider {
       ip: json['ip'] as String?,
       hostname: json['hostname'] as String?,
       mac: json['mac'] as String?,
+      brandId: json['brand_id'] as String?,
+      appVersion: json['app_version'] as String?,
+      sysVersion: json['sys_version'] as String?,
+      uptime: json['uptime'] as String?,
       config: json['config'] as Map<String, dynamic>? ?? const {},
       tags: json['tags'] != null && json['tags'] is List
           ? List<String>.from(json['tags'] as List)
@@ -378,6 +402,7 @@ class DataProvider {
           : null,
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
+      rowId: json['row_id'] as int?,
     );
   }
 
@@ -425,12 +450,17 @@ class DataProvider {
       'ip': ip,
       'hostname': hostname,
       'mac': mac,
+      'brand_id': brandId,
+      'app_version': appVersion,
+      'sys_version': sysVersion,
+      'uptime': uptime,
       'config': config,
       'tags': tags,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
+      'row_id': rowId,
     };
   }
 
@@ -470,12 +500,17 @@ class DataProvider {
     String? ip,
     String? hostname,
     String? mac,
+    String? brandId,
+    String? appVersion,
+    String? sysVersion,
+    String? uptime,
     Map<String, dynamic>? config,
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
     String? updatedBy,
+    int? rowId,
   }) {
     return DataProvider(
       id: id ?? this.id,
@@ -509,12 +544,17 @@ class DataProvider {
       ip: ip ?? this.ip,
       hostname: hostname ?? this.hostname,
       mac: mac ?? this.mac,
+      brandId: brandId ?? this.brandId,
+      appVersion: appVersion ?? this.appVersion,
+      sysVersion: sysVersion ?? this.sysVersion,
+      uptime: uptime ?? this.uptime,
       config: config ?? this.config,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
+      rowId: rowId ?? this.rowId,
     );
   }
 

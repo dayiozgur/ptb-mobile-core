@@ -41,6 +41,12 @@ class IoTLog {
   final String? organizationId;
   final String? siteId;
 
+  // FK ilişkileri (DB uyumluluk)
+  final String? txnId;
+
+  // Sıralama
+  final int? rowId;
+
   // Variable ilişkisinden gelen bilgiler (JOIN ile)
   final String? variableName;
   final String? variableDescription;
@@ -70,6 +76,8 @@ class IoTLog {
     this.realtimeId,
     this.organizationId,
     this.siteId,
+    this.txnId,
+    this.rowId,
     this.variableName,
     this.variableDescription,
     this.variableUnit,
@@ -120,6 +128,8 @@ class IoTLog {
       // İzolasyon alanları
       organizationId: json['organization_id'] as String?,
       siteId: json['site_id'] as String?,
+      txnId: json['txn_id'] as String?,
+      rowId: json['row_id'] as int?,
       // Variable bilgileri (JOIN ile gelirse)
       variableName: variable?['name'] as String?,
       variableDescription: variable?['description'] as String?,
@@ -154,6 +164,8 @@ class IoTLog {
       'realtime_id': realtimeId,
       'organization_id': organizationId,
       'site_id': siteId,
+      'txn_id': txnId,
+      'row_id': rowId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

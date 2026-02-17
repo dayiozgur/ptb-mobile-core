@@ -148,6 +148,10 @@ export 'src/core/work_request/work_request_service.dart';
 export 'src/core/calendar/calendar_event_model.dart';
 export 'src/core/calendar/calendar_service.dart';
 
+// Core - Map
+export 'src/core/map/map_models.dart';
+export 'src/core/map/map_service.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -194,6 +198,16 @@ export 'src/presentation/widgets/charts/alarm_pie_chart.dart';
 export 'src/presentation/widgets/charts/log_line_chart.dart';
 export 'src/presentation/widgets/charts/log_onoff_chart.dart';
 export 'src/presentation/widgets/charts/multi_line_chart.dart';
+export 'src/presentation/widgets/charts/multi_log_line_chart.dart';
+export 'src/presentation/widgets/charts/multi_log_onoff_chart.dart';
+
+// Presentation - Widgets - Map
+export 'src/presentation/widgets/map/app_map.dart';
+export 'src/presentation/widgets/map/app_map_controller.dart';
+export 'src/presentation/widgets/map/map_marker_widget.dart';
+export 'src/presentation/widgets/map/map_container.dart';
+export 'src/presentation/widgets/map/map_controls.dart';
+export 'src/presentation/widgets/map/geofence_circle.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';

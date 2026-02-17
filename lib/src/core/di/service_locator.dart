@@ -36,6 +36,7 @@ import '../workflow/workflow_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
 import '../work_request/work_request_service.dart';
 import '../calendar/calendar_service.dart';
+import '../map/map_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -384,6 +385,16 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // MAP SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<MapService>(
+    () => MapService(
+      siteService: sl<SiteService>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -457,3 +468,6 @@ IoTLogService get iotLogService => sl<IoTLogService>();
 // Business Services
 WorkRequestService get workRequestService => sl<WorkRequestService>();
 CalendarService get calendarService => sl<CalendarService>();
+
+// Map Service
+MapService get mapService => sl<MapService>();

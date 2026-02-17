@@ -244,6 +244,12 @@ class Controller {
   /// Bağlı olduğu Tenant ID
   final String tenantId;
 
+  /// Organization ID (organization filtresi için)
+  final String? organizationId;
+
+  /// Contractor ID (yüklenici)
+  final String? contractorId;
+
   /// Provider ID (veri sağlayıcı)
   final String? providerId;
 
@@ -278,6 +284,9 @@ class Controller {
   /// Güncelleyen kullanıcı
   final String? updatedBy;
 
+  /// Row ID (sıralama için)
+  final int? rowId;
+
   const Controller({
     required this.id,
     required this.name,
@@ -307,6 +316,8 @@ class Controller {
     this.uptimeSeconds,
     this.unitId,
     this.siteId,
+    this.organizationId,
+    this.contractorId,
     this.providerId,
     this.deviceModelId,
     this.tags = const [],
@@ -315,6 +326,7 @@ class Controller {
     this.updatedAt,
     this.createdBy,
     this.updatedBy,
+    this.rowId,
   });
 
   // ============================================
@@ -413,6 +425,8 @@ class Controller {
       uptimeSeconds: json['uptime_seconds'] as int?,
       unitId: json['unit_id'] as String?,
       siteId: json['site_id'] as String?,
+      organizationId: json['organization_id'] as String?,
+      contractorId: json['contractor_id'] as String?,
       providerId: json['provider_id'] as String?,
       deviceModelId: json['device_model_id'] as String?,
       tags: json['tags'] != null && json['tags'] is List
@@ -427,6 +441,7 @@ class Controller {
           : null,
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
+      rowId: json['row_id'] as int?,
     );
   }
 
@@ -474,6 +489,8 @@ class Controller {
       'uptime_seconds': uptimeSeconds,
       'unit_id': unitId,
       'site_id': siteId,
+      'organization_id': organizationId,
+      'contractor_id': contractorId,
       'provider_id': providerId,
       'device_model_id': deviceModelId,
       'tags': tags,
@@ -482,6 +499,7 @@ class Controller {
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
+      'row_id': rowId,
     };
   }
 
@@ -518,6 +536,8 @@ class Controller {
     int? uptimeSeconds,
     String? unitId,
     String? siteId,
+    String? organizationId,
+    String? contractorId,
     String? providerId,
     String? deviceModelId,
     List<String>? tags,
@@ -526,6 +546,7 @@ class Controller {
     DateTime? updatedAt,
     String? createdBy,
     String? updatedBy,
+    int? rowId,
   }) {
     return Controller(
       id: id ?? this.id,
@@ -556,6 +577,8 @@ class Controller {
       uptimeSeconds: uptimeSeconds ?? this.uptimeSeconds,
       unitId: unitId ?? this.unitId,
       siteId: siteId ?? this.siteId,
+      organizationId: organizationId ?? this.organizationId,
+      contractorId: contractorId ?? this.contractorId,
       providerId: providerId ?? this.providerId,
       deviceModelId: deviceModelId ?? this.deviceModelId,
       tags: tags ?? this.tags,
@@ -564,6 +587,7 @@ class Controller {
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
+      rowId: rowId ?? this.rowId,
     );
   }
 

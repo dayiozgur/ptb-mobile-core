@@ -104,6 +104,28 @@ class Organization {
   final int? zoom;
 
   // ============================================
+  // İLETİŞİM BİLGİLERİ
+  // ============================================
+
+  /// İletişim kişisi
+  final String? contactPerson;
+
+  /// İletişim email
+  final String? contactEmail;
+
+  /// İletişim telefon
+  final String? contactPhone;
+
+  /// Web sitesi
+  final String? website;
+
+  /// Vergi numarası
+  final String? taxNumber;
+
+  /// Sicil numarası
+  final String? registrationNumber;
+
+  // ============================================
   // İLİŞKİLER
   // ============================================
 
@@ -163,6 +185,12 @@ class Organization {
     this.latitude,
     this.longitude,
     this.zoom,
+    this.contactPerson,
+    this.contactEmail,
+    this.contactPhone,
+    this.website,
+    this.taxNumber,
+    this.registrationNumber,
     this.financialId,
     this.markerId,
     this.createdAt,
@@ -207,6 +235,12 @@ class Organization {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       zoom: json['zoom'] as int?,
+      contactPerson: json['contact_person'] as String?,
+      contactEmail: json['contact_email'] as String?,
+      contactPhone: json['contact_phone'] as String?,
+      website: json['website'] as String?,
+      taxNumber: json['tax_number'] as String?,
+      registrationNumber: json['registration_number'] as String?,
       financialId: json['financial_id'] as String?,
       markerId: json['marker_id'] as String?,
       createdAt: json['created_at'] != null
@@ -246,6 +280,12 @@ class Organization {
       'latitude': latitude,
       'longitude': longitude,
       'zoom': zoom,
+      'contact_person': contactPerson,
+      'contact_email': contactEmail,
+      'contact_phone': contactPhone,
+      'website': website,
+      'tax_number': taxNumber,
+      'registration_number': registrationNumber,
       'financial_id': financialId,
       'marker_id': markerId,
       'created_at': createdAt?.toIso8601String(),
@@ -284,6 +324,12 @@ class Organization {
     double? latitude,
     double? longitude,
     int? zoom,
+    String? contactPerson,
+    String? contactEmail,
+    String? contactPhone,
+    String? website,
+    String? taxNumber,
+    String? registrationNumber,
     String? financialId,
     String? markerId,
     DateTime? createdAt,
@@ -316,6 +362,12 @@ class Organization {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       zoom: zoom ?? this.zoom,
+      contactPerson: contactPerson ?? this.contactPerson,
+      contactEmail: contactEmail ?? this.contactEmail,
+      contactPhone: contactPhone ?? this.contactPhone,
+      website: website ?? this.website,
+      taxNumber: taxNumber ?? this.taxNumber,
+      registrationNumber: registrationNumber ?? this.registrationNumber,
       financialId: financialId ?? this.financialId,
       markerId: markerId ?? this.markerId,
       createdAt: createdAt ?? this.createdAt,

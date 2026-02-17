@@ -51,10 +51,12 @@ class PriorityService {
     }
 
     try {
+      // NOT: DB'de active alanı NULL olabilir, bu yüzden
+      // active=false olanları hariç tut (NULL ve true dahil)
       final response = await _supabase
           .from('priorities')
           .select()
-          .eq('active', true)
+          .or('active.eq.true,active.is.null')
           .order('level');
 
       _priorities = (response as List)

@@ -188,6 +188,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // Map Section
+              AppSectionHeader(title: 'Harita'),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                onTap: () => context.push('/map'),
+                child: Padding(
+                  padding: AppSpacing.cardInsets,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.map_rounded, color: Colors.teal),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Site Haritasi',
+                              style: AppTypography.headline,
+                            ),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(
+                              'Tum siteleri harita uzerinde gorun',
+                              style: AppTypography.subheadline.copyWith(
+                                color: AppColors.secondaryLabel(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppColors.tertiaryLabel(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
               // IoT Section
               AppSectionHeader(
                 title: 'IoT Yönetimi',

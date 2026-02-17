@@ -309,6 +309,9 @@ class Variable {
   /// Priority ID (DB: priority_id FK)
   final String? priorityId;
 
+  /// Origin Priority ID (DB: origin_priority_id FK)
+  final String? originPriorityId;
+
   // ============================================
   // ZAMAN DAMGALARI
   // ============================================
@@ -324,6 +327,9 @@ class Variable {
 
   /// Güncelleyen kullanıcı
   final String? updatedBy;
+
+  /// Row ID (sıralama için)
+  final int? rowId;
 
   const Variable({
     required this.id,
@@ -374,10 +380,12 @@ class Variable {
     this.delta,
     this.deviceModelId,
     this.priorityId,
+    this.originPriorityId,
     this.createdAt,
     this.updatedAt,
     this.createdBy,
     this.updatedBy,
+    this.rowId,
   });
 
   // ============================================
@@ -511,6 +519,7 @@ class Variable {
       delta: json['delta'] as String?,
       deviceModelId: json['device_model_id'] as String?,
       priorityId: json['priority_id'] as String?,
+      originPriorityId: json['origin_priority_id'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -519,6 +528,7 @@ class Variable {
           : null,
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
+      rowId: json['row_id'] as int?,
     );
   }
 
@@ -571,10 +581,12 @@ class Variable {
       'delta': delta,
       'device_model_id': deviceModelId,
       'priority_id': priorityId,
+      'origin_priority_id': originPriorityId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
+      'row_id': rowId,
     };
   }
 
@@ -631,10 +643,12 @@ class Variable {
     String? delta,
     String? deviceModelId,
     String? priorityId,
+    String? originPriorityId,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
     String? updatedBy,
+    int? rowId,
   }) {
     return Variable(
       id: id ?? this.id,
@@ -685,10 +699,12 @@ class Variable {
       delta: delta ?? this.delta,
       deviceModelId: deviceModelId ?? this.deviceModelId,
       priorityId: priorityId ?? this.priorityId,
+      originPriorityId: originPriorityId ?? this.originPriorityId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
+      rowId: rowId ?? this.rowId,
     );
   }
 

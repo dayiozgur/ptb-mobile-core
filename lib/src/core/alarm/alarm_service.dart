@@ -133,12 +133,10 @@ class AlarmService {
           .select(selectClause);
 
       // Multi-Tenant İzolasyon Filtreleri
+      // NOT: alarms tablosunda tenant_id NULL olabilir, bu yüzden
+      // tenant_id varsa filtrele, yoksa tüm kayıtları getir
       if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        query = query.eq('organization_id', _currentOrganizationId!);
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -191,18 +189,15 @@ class AlarmService {
 
     try {
       // alarms tablosu zaten sadece aktif alarmları içerir
+      // Variable JOIN: description bilgisini çekmek için
       var query = _supabase
           .from('alarms')
-          .select()
+          .select('*, variable:variables(id, name, description, unit)')
           .inFilter('controller_id', controllerIds);
 
-      // Multi-Tenant İzolasyon Filtreleri
+      // Multi-Tenant İzolasyon: tenant_id NULL olabilir
       if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        query = query.eq('organization_id', _currentOrganizationId!);
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -270,13 +265,9 @@ class AlarmService {
           .from('alarm_histories')
           .select(selectClause);
 
-      // Multi-Tenant İzolasyon Filtreleri
+      // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        query = query.eq('organization_id', _currentOrganizationId!);
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -300,9 +291,9 @@ class AlarmService {
         query = query.eq('variable_id', variableId);
       }
 
-      // created_at fallback sıralama: start_time NULL olabilir
+      // start_time ile sırala (created_at NULL olabilir DB'de)
       final response = await query
-          .order('created_at', ascending: false)
+          .order('start_time', ascending: false)
           .limit(limit);
 
       final history = <AlarmHistory>[];
@@ -438,16 +429,16 @@ class AlarmService {
           .toIso8601String();
 
       // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
-      // (backend tarafından yönetilen taşıma: alarm resetlenince alarms → alarm_histories)
-      // reset_time filtresi KALDIRILDI - bazı kayıtlarda reset_time NULL olabiliyor
-      // created_at üzerinden filtrele (start_time NULL olabilir)
+      // DB'de created_at NULL, start_time dolu - start_time üzerinden filtrele
+      // Variable JOIN: description bilgisini çekmek için
       var query = _supabase
           .from('alarm_histories')
-          .select()
-          .gte('created_at', since);
+          .select('*, variable:variables(id, name, description, unit)')
+          .gte('start_time', since);
 
+      // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
       if (controllerId != null) {
         query = query.eq('controller_id', controllerId);
@@ -460,7 +451,7 @@ class AlarmService {
       }
 
       final response = await query
-          .order('created_at', ascending: false)
+          .order('start_time', ascending: false)
           .limit(limit);
 
       final results = <AlarmHistory>[];
@@ -530,14 +521,15 @@ class AlarmService {
           .subtract(Duration(days: effectiveDays))
           .toIso8601String();
 
-      // created_at üzerinden filtrele (start_time NULL olabilir)
+      // DB'de created_at NULL - start_time üzerinden filtrele
       var query = _supabase
           .from('alarm_histories')
-          .select('id,start_time,created_at,priority_id')
-          .gte('created_at', since);
+          .select('id,start_time,priority_id')
+          .gte('start_time', since);
 
+      // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
       if (controllerId != null) {
         query = query.eq('controller_id', controllerId);
@@ -550,7 +542,7 @@ class AlarmService {
       }
 
       final response =
-          await query.order('created_at', ascending: true);
+          await query.order('start_time', ascending: true);
 
       // Client-side günlük gruplandırma
       final dailyMap = <String, Map<String, int>>{};
@@ -558,9 +550,7 @@ class AlarmService {
 
       for (final e in (response as List)) {
         final row = e as Map<String, dynamic>;
-        // start_time (tercihen) veya created_at (fallback) kullan
-        final timeStr = row['start_time'] as String?
-            ?? row['created_at'] as String?;
+        final timeStr = row['start_time'] as String?;
         if (timeStr == null) continue;
 
         final date = DateTime.tryParse(timeStr);
@@ -657,25 +647,19 @@ class AlarmService {
           .toIso8601String();
 
       // --- Aktif alarm sayısı ve priority dağılımı (alarms tablosu) ---
-      // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
       var activeQuery = _supabase
           .from('alarms')
           .select('id,priority_id');
 
-      // Multi-Tenant İzolasyon Filtreleri
+      // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
-        activeQuery = activeQuery.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        activeQuery = activeQuery.eq('organization_id', _currentOrganizationId!);
+        activeQuery = activeQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
         activeQuery = activeQuery.eq('site_id', _currentSiteId!);
       }
 
-      // Ek filtreler
       if (controllerId != null) {
         activeQuery = activeQuery.eq('controller_id', controllerId);
       }
@@ -703,20 +687,14 @@ class AlarmService {
           .select('id')
           .not('local_acknowledge_time', 'is', null);
 
-      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
-        ackQuery = ackQuery.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        ackQuery = ackQuery.eq('organization_id', _currentOrganizationId!);
+        ackQuery = ackQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
         ackQuery = ackQuery.eq('site_id', _currentSiteId!);
       }
 
-      // Ek filtreler
       if (controllerId != null) {
         ackQuery = ackQuery.eq('controller_id', controllerId);
       }
@@ -729,26 +707,20 @@ class AlarmService {
       final acknowledgedCount = (ackResponse as List).length;
 
       // --- Resetli alarm sayısı ve priority dağılımı (alarm_histories tablosu: son N gün) ---
-      // alarm_histories tablosu zaten sadece resetlenmiş alarmları içerir
+      // DB'de created_at NULL - start_time üzerinden filtrele
       var resetQuery = _supabase
           .from('alarm_histories')
           .select('id,priority_id')
-          .gte('created_at', since);
+          .gte('start_time', since);
 
-      // Multi-Tenant İzolasyon Filtreleri
       if (_currentTenantId != null) {
-        resetQuery = resetQuery.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        resetQuery = resetQuery.eq('organization_id', _currentOrganizationId!);
+        resetQuery = resetQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
         resetQuery = resetQuery.eq('site_id', _currentSiteId!);
       }
 
-      // Ek filtreler
       if (controllerId != null) {
         resetQuery = resetQuery.eq('controller_id', controllerId);
       }

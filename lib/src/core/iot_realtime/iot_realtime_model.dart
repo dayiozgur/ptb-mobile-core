@@ -73,6 +73,12 @@ class IoTRealtime {
   /// Güncelleyen kullanıcı
   final String? updatedBy;
 
+  /// Row ID (sıralama için)
+  final int? rowId;
+
+  /// Tenant ID
+  final String? tenantId;
+
   const IoTRealtime({
     required this.id,
     this.name,
@@ -90,6 +96,8 @@ class IoTRealtime {
     this.updatedAt,
     this.createdBy,
     this.updatedBy,
+    this.rowId,
+    this.tenantId,
   });
 
   // ============================================
@@ -120,6 +128,8 @@ class IoTRealtime {
           : null,
       createdBy: json['created_by'] as String?,
       updatedBy: json['updated_by'] as String?,
+      rowId: json['row_id'] as int?,
+      tenantId: json['tenant_id'] as String?,
     );
   }
 
@@ -140,6 +150,8 @@ class IoTRealtime {
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
+      'row_id': rowId,
+      'tenant_id': tenantId,
     };
   }
 
@@ -164,6 +176,8 @@ class IoTRealtime {
     DateTime? updatedAt,
     String? createdBy,
     String? updatedBy,
+    int? rowId,
+    String? tenantId,
   }) {
     return IoTRealtime(
       id: id ?? this.id,
@@ -182,6 +196,8 @@ class IoTRealtime {
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
+      rowId: rowId ?? this.rowId,
+      tenantId: tenantId ?? this.tenantId,
     );
   }
 

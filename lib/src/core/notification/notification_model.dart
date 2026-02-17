@@ -131,6 +131,18 @@ class AppNotification {
   /// Profil ID (alıcı)
   final String? profileId;
 
+  /// Gönderen ID
+  final String? senderId;
+
+  /// Alıcı ID
+  final String? recipientId;
+
+  /// Tenant ID
+  final String? tenantId;
+
+  /// Okunma tarihi
+  final DateTime? readAt;
+
   /// Oluşturan kullanıcı ID
   final String? createdBy;
 
@@ -165,6 +177,10 @@ class AppNotification {
     this.acknowledgedBy,
     this.platformId,
     this.profileId,
+    this.senderId,
+    this.recipientId,
+    this.tenantId,
+    this.readAt,
     this.createdBy,
     this.createdAt,
     this.updatedBy,
@@ -196,6 +212,12 @@ class AppNotification {
       acknowledgedBy: json['acknowledged_by'] as String?,
       platformId: json['platform_id'] as String?,
       profileId: json['profile_id'] as String?,
+      senderId: json['sender_id'] as String?,
+      recipientId: json['recipient_id'] as String?,
+      tenantId: json['tenant_id'] as String?,
+      readAt: json['read_at'] != null
+          ? DateTime.tryParse(json['read_at'] as String)
+          : null,
       createdBy: json['created_by'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
@@ -229,6 +251,10 @@ class AppNotification {
         'acknowledged_by': acknowledgedBy,
         'platform_id': platformId,
         'profile_id': profileId,
+        'sender_id': senderId,
+        'recipient_id': recipientId,
+        'tenant_id': tenantId,
+        'read_at': readAt?.toIso8601String(),
         'created_by': createdBy,
         'created_at': createdAt?.toIso8601String(),
         'updated_by': updatedBy,
@@ -254,6 +280,10 @@ class AppNotification {
     String? acknowledgedBy,
     String? platformId,
     String? profileId,
+    String? senderId,
+    String? recipientId,
+    String? tenantId,
+    DateTime? readAt,
     String? createdBy,
     DateTime? createdAt,
     String? updatedBy,
@@ -279,6 +309,10 @@ class AppNotification {
       acknowledgedBy: acknowledgedBy ?? this.acknowledgedBy,
       platformId: platformId ?? this.platformId,
       profileId: profileId ?? this.profileId,
+      senderId: senderId ?? this.senderId,
+      recipientId: recipientId ?? this.recipientId,
+      tenantId: tenantId ?? this.tenantId,
+      readAt: readAt ?? this.readAt,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       updatedBy: updatedBy ?? this.updatedBy,

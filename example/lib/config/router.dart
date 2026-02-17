@@ -39,6 +39,7 @@ import '../features/search/screens/global_search_screen.dart';
 import '../features/activity/screens/activity_log_screen.dart';
 import '../features/settings/screens/language_settings_screen.dart';
 import '../features/reports/screens/reports_dashboard_screen.dart';
+import '../features/map/screens/site_map_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -349,6 +350,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reports',
         name: 'reports',
         builder: (context, state) => const ReportsDashboardScreen(),
+      ),
+
+      // ==================
+      // Map Route
+      // ==================
+      GoRoute(
+        path: '/map',
+        name: 'map',
+        builder: (context, state) => const SiteMapScreen(),
       ),
 
       // ==================

@@ -70,8 +70,23 @@ class DbFieldHelpers {
   }
 
   /// Logs tablosu için on_off/onoff alanını parse et
+  ///
+  /// DB'de on_off ve onoff kolonları NULL olabilir.
+  /// Bu durumda value alanından türetme yapılır:
+  /// value="0.0" → 0, value="1.0" → 1
   static int? parseLogOnOff(Map<String, dynamic> json) {
-    return parseInt(json, 'on_off', 'onoff');
+    final result = parseInt(json, 'on_off', 'onoff');
+    if (result != null) return result;
+
+    // Fallback: value alanından türet (digital variable'lar için)
+    final value = json['value'] as String?;
+    if (value != null) {
+      final numVal = double.tryParse(value);
+      if (numVal != null && (numVal == 0.0 || numVal == 1.0)) {
+        return numVal.toInt();
+      }
+    }
+    return null;
   }
 
   // ============================================

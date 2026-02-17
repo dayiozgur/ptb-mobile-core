@@ -215,6 +215,12 @@ class CalendarEvent {
   /// Work Request ID (bağlı talep)
   final String? workRequestId;
 
+  /// Bağlı Todo ID
+  final String? linkedTodoId;
+
+  /// Tekrar istisnası tarihleri
+  final List<DateTime>? recurrenceExceptionDates;
+
   // ============================================
   // KATILIMCILAR
   // ============================================
@@ -290,6 +296,8 @@ class CalendarEvent {
     this.unitId,
     this.controllerId,
     this.workRequestId,
+    this.linkedTodoId,
+    this.recurrenceExceptionDates,
     required this.createdById,
     this.attendees = const [],
     this.color,
@@ -412,6 +420,12 @@ class CalendarEvent {
       unitId: json['unit_id'] as String?,
       controllerId: json['controller_id'] as String?,
       workRequestId: json['work_request_id'] as String?,
+      linkedTodoId: json['linked_todo_id'] as String?,
+      recurrenceExceptionDates: json['recurrence_exception_dates'] != null
+          ? (json['recurrence_exception_dates'] as List)
+              .map((e) => DateTime.parse(e as String))
+              .toList()
+          : null,
       createdById: json['created_by_id'] as String? ?? json['created_by'] as String? ?? '',
       attendees: json['attendees'] != null
           ? (json['attendees'] as List)
@@ -463,6 +477,10 @@ class CalendarEvent {
       'unit_id': unitId,
       'controller_id': controllerId,
       'work_request_id': workRequestId,
+      'linked_todo_id': linkedTodoId,
+      'recurrence_exception_dates': recurrenceExceptionDates
+          ?.map((e) => e.toIso8601String())
+          .toList(),
       'created_by_id': createdById,
       'attendees': attendees.map((e) => e.toJson()).toList(),
       'color': color,
@@ -509,6 +527,8 @@ class CalendarEvent {
     String? unitId,
     String? controllerId,
     String? workRequestId,
+    String? linkedTodoId,
+    List<DateTime>? recurrenceExceptionDates,
     String? createdById,
     List<EventAttendee>? attendees,
     String? color,
@@ -549,6 +569,8 @@ class CalendarEvent {
       unitId: unitId ?? this.unitId,
       controllerId: controllerId ?? this.controllerId,
       workRequestId: workRequestId ?? this.workRequestId,
+      linkedTodoId: linkedTodoId ?? this.linkedTodoId,
+      recurrenceExceptionDates: recurrenceExceptionDates ?? this.recurrenceExceptionDates,
       createdById: createdById ?? this.createdById,
       attendees: attendees ?? this.attendees,
       color: color ?? this.color,

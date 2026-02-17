@@ -341,6 +341,7 @@ class CoreInitializer {
     try {
       sl<AlarmService>().setOrganization(organizationId);
       sl<IoTLogService>().setOrganization(organizationId);
+      sl<ControllerService>().setOrganization(organizationId);
       Logger.debug('Organization propagated to IoT services: $organizationId');
     } catch (e) {
       Logger.warning('Failed to propagate organization to IoT services: $e');
@@ -352,6 +353,7 @@ class CoreInitializer {
     try {
       sl<AlarmService>().clearOrganization();
       sl<IoTLogService>().clearOrganization();
+      sl<ControllerService>().clearOrganization();
       Logger.debug('Organization cleared from IoT services');
     } catch (e) {
       Logger.warning('Failed to clear organization from IoT services: $e');
@@ -366,6 +368,7 @@ class CoreInitializer {
     try {
       sl<AlarmService>().setSite(siteId);
       sl<IoTLogService>().setSite(siteId);
+      sl<ControllerService>().setSite(siteId);
       Logger.debug('Site propagated to IoT services: $siteId');
     } catch (e) {
       Logger.warning('Failed to propagate site to IoT services: $e');
@@ -377,6 +380,7 @@ class CoreInitializer {
     try {
       sl<AlarmService>().clearSite();
       sl<IoTLogService>().clearSite();
+      sl<ControllerService>().clearSite();
       Logger.debug('Site cleared from IoT services');
     } catch (e) {
       Logger.warning('Failed to clear site from IoT services: $e');
@@ -392,6 +396,8 @@ class CoreInitializer {
       sl<AlarmService>().clearSite();
       sl<IoTLogService>().clearOrganization();
       sl<IoTLogService>().clearSite();
+      sl<ControllerService>().clearOrganization();
+      sl<ControllerService>().clearSite();
       Logger.debug('Sub-tenant contexts cleared from IoT services');
     } catch (e) {
       Logger.warning('Failed to clear sub-tenant contexts: $e');

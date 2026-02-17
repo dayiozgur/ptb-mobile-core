@@ -52,6 +52,13 @@ class AlarmHistory {
   final String? priorityId;
   final String? realtimeId;
 
+  // FK ilişkileri (DB uyumluluk)
+  final String? txnId;
+  final String? alarmOperationMethodToActions;
+
+  // Sıralama
+  final int? rowId;
+
   // Variable ilişkisinden gelen bilgiler (JOIN ile)
   final String? variableName;
   final String? variableDescription;
@@ -97,6 +104,9 @@ class AlarmHistory {
     this.variableId,
     this.priorityId,
     this.realtimeId,
+    this.txnId,
+    this.alarmOperationMethodToActions,
+    this.rowId,
     this.variableName,
     this.variableDescription,
     this.variableUnit,
@@ -190,6 +200,9 @@ class AlarmHistory {
       variableId: json['variable_id'] as String?,
       priorityId: json['priority_id'] as String?,
       realtimeId: json['realtime_id'] as String?,
+      txnId: json['txn_id'] as String?,
+      alarmOperationMethodToActions: json['alarm_operation_method_to_actions'] as String?,
+      rowId: json['row_id'] as int?,
       // Variable bilgileri (JOIN ile gelirse)
       variableName: variable?['name'] as String?,
       variableDescription: variable?['description'] as String?,
@@ -220,6 +233,9 @@ class AlarmHistory {
       'provider_id': providerId,
       'variable_id': variableId,
       'priority_id': priorityId,
+      'txn_id': txnId,
+      'alarm_operation_method_to_actions': alarmOperationMethodToActions,
+      'row_id': rowId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

@@ -62,6 +62,8 @@ class ActivityLog {
   final String? requestId;
   final DateTime createdAt;
   final String? createdBy;
+  final String? updatedBy;
+  final DateTime? updatedAt;
 
   // Joined data
   final String? userName;
@@ -82,6 +84,8 @@ class ActivityLog {
     this.requestId,
     required this.createdAt,
     this.createdBy,
+    this.updatedBy,
+    this.updatedAt,
     this.userName,
     this.userEmail,
     this.entityName,
@@ -103,6 +107,10 @@ class ActivityLog {
       requestId: json['request_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       createdBy: json['created_by'] as String?,
+      updatedBy: json['updated_by'] as String?,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
       userName: json['user_name'] as String? ??
                 (json['profiles'] as Map<String, dynamic>?)?['full_name'] as String?,
       userEmail: json['user_email'] as String?,
@@ -126,6 +134,8 @@ class ActivityLog {
       'request_id': requestId,
       'created_at': createdAt.toIso8601String(),
       'created_by': createdBy,
+      'updated_by': updatedBy,
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 
