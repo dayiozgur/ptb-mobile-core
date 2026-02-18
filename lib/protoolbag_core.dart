@@ -47,6 +47,7 @@ export 'src/core/auth/biometric_auth.dart';
 
 // Core - User
 export 'src/core/user/user_profile.dart';
+export 'src/core/user/profile_service.dart';
 
 // Core - Tenant
 export 'src/core/tenant/tenant_model.dart';
@@ -147,6 +148,18 @@ export 'src/core/work_request/work_request_service.dart';
 // Core - Calendar (Takvim)
 export 'src/core/calendar/calendar_event_model.dart';
 export 'src/core/calendar/calendar_service.dart';
+
+// Core - Todo
+export 'src/core/todo/todo_model.dart';
+export 'src/core/todo/todo_service.dart';
+
+// Core - Staff
+export 'src/core/staff/staff_model.dart';
+export 'src/core/staff/staff_service.dart';
+
+// Core - Team
+export 'src/core/team/team_model.dart';
+export 'src/core/team/team_service.dart';
 
 // Core - Map
 export 'src/core/map/map_models.dart';

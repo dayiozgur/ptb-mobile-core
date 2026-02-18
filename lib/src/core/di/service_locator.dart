@@ -37,6 +37,10 @@ import '../iot_realtime/iot_realtime_service.dart';
 import '../work_request/work_request_service.dart';
 import '../calendar/calendar_service.dart';
 import '../map/map_service.dart';
+import '../user/profile_service.dart';
+import '../todo/todo_service.dart';
+import '../staff/staff_service.dart';
+import '../team/team_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -395,6 +399,50 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // PROFILE SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<ProfileService>(
+    () => ProfileService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // TODO SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<TodoService>(
+    () => TodoService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // STAFF SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<StaffService>(
+    () => StaffService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // TEAM SERVICE
+  // ============================================
+
+  sl.registerLazySingleton<TeamService>(
+    () => TeamService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -471,3 +519,9 @@ CalendarService get calendarService => sl<CalendarService>();
 
 // Map Service
 MapService get mapService => sl<MapService>();
+
+// Profile, Todo, Staff, Team Services
+ProfileService get profileService => sl<ProfileService>();
+TodoService get todoService => sl<TodoService>();
+StaffService get staffService => sl<StaffService>();
+TeamService get teamService => sl<TeamService>();
