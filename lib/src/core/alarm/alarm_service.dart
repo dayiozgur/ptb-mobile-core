@@ -1058,6 +1058,117 @@ class AlarmService {
     }
   }
 
+  /// Site bazlı alarm sayıları (ranking chart verisi)
+  ///
+  /// alarm_histories tablosundan site_id bazlı gruplama yapılır (resetCount).
+  /// Aktif alarmlar alarms tablosundan site_id bazlı sayılır (activeCount).
+  /// Site adları siteNames parametresi ile eşleştirilir.
+  Future<List<SiteAlarmCount>> getAlarmCountsBySite({
+    required Map<String, String> siteNames,
+    int days = IoTConfig.defaultAlarmTimelineDays,
+    int limit = 10,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final cacheKey =
+        'alarm_site_ranking_${_currentTenantId}_${effectiveDays}d_$limit';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached.map((e) {
+          final m = e as Map<String, dynamic>;
+          return SiteAlarmCount(
+            siteId: m['siteId'] as String,
+            siteName: m['siteName'] as String,
+            resetCount: m['resetCount'] as int,
+            activeCount: m['activeCount'] as int,
+          );
+        }).toList();
+      }
+    }
+
+    try {
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      // Reset alarm sayıları (alarm_histories)
+      var resetQuery = _supabase
+          .from('alarm_histories')
+          .select('site_id')
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        resetQuery =
+            resetQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      }
+
+      final resetResponse = await resetQuery;
+      final resetRows = resetResponse as List;
+
+      final resetBySite = <String, int>{};
+      for (final row in resetRows) {
+        final siteId = (row as Map<String, dynamic>)['site_id'] as String?;
+        if (siteId != null) {
+          resetBySite[siteId] = (resetBySite[siteId] ?? 0) + 1;
+        }
+      }
+
+      // Aktif alarm sayıları (alarms)
+      var activeQuery = _supabase.from('alarms').select('site_id');
+
+      if (_currentTenantId != null) {
+        activeQuery =
+            activeQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      }
+
+      final activeResponse = await activeQuery;
+      final activeRows = activeResponse as List;
+
+      final activeBySite = <String, int>{};
+      for (final row in activeRows) {
+        final siteId = (row as Map<String, dynamic>)['site_id'] as String?;
+        if (siteId != null) {
+          activeBySite[siteId] = (activeBySite[siteId] ?? 0) + 1;
+        }
+      }
+
+      // Birleştir
+      final allSiteIds = <String>{...resetBySite.keys, ...activeBySite.keys};
+      final results = allSiteIds.map((siteId) {
+        return SiteAlarmCount(
+          siteId: siteId,
+          siteName: siteNames[siteId] ?? siteId,
+          resetCount: resetBySite[siteId] ?? 0,
+          activeCount: activeBySite[siteId] ?? 0,
+        );
+      }).toList();
+
+      // totalCount'a göre sırala
+      results.sort((a, b) => b.totalCount.compareTo(a.totalCount));
+      final topN = results.take(limit).toList();
+
+      await _cacheManager.set(
+        cacheKey,
+        topN
+            .map((e) => {
+                  'siteId': e.siteId,
+                  'siteName': e.siteName,
+                  'resetCount': e.resetCount,
+                  'activeCount': e.activeCount,
+                })
+            .toList(),
+        ttl: const Duration(minutes: 5),
+      );
+
+      return topN;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get alarm counts by site', e, stackTrace);
+      return [];
+    }
+  }
+
   /// Alarm heatmap verisi (7 gün x 24 saat)
   ///
   /// alarm_histories tablosundan 1 haftalık pencerede start_time bazlı dağılım.

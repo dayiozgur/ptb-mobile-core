@@ -32,6 +32,16 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   List<AlarmHistory> _resetAlarms = [];
   Map<String, Priority> _priorityMap = {};
 
+  // KPI data
+  List<AlarmTimelineEntry> _timeline = [];
+  AlarmMttrStats _mttrStats = const AlarmMttrStats(overallMttr: Duration.zero);
+  List<AlarmFrequency> _topAlarms = [];
+  AlarmHeatmapData _heatmapData = AlarmHeatmapData(
+    matrix: List.generate(7, (_) => List.filled(24, 0)),
+    maxCount: 0,
+    weekStart: DateTime.now(),
+  );
+
   // Stats
   int _activeControllerCount = 0;
   int _activeProviderCount = 0;
@@ -92,12 +102,16 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         pMap[p.id] = p;
       }
 
-      // Load IoT data in parallel
+      // Load IoT data + KPI data in parallel
       final results = await Future.wait([
         _loadProviders(),
         _loadControllers(),
         _loadActiveAlarms(),
         _loadResetAlarms(),
+        alarmService.getAlarmTimeline(siteId: widget.siteId, days: 30),
+        alarmService.getMttrStats(siteId: widget.siteId),
+        alarmService.getTopAlarms(siteId: widget.siteId),
+        alarmService.getAlarmHeatmap(siteId: widget.siteId),
       ]);
 
       if (mounted) {
@@ -109,6 +123,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           _controllers = results[1] as List<Controller>;
           _activeAlarms = results[2] as List<Alarm>;
           _resetAlarms = results[3] as List<AlarmHistory>;
+          _timeline = results[4] as List<AlarmTimelineEntry>;
+          _mttrStats = results[5] as AlarmMttrStats;
+          _topAlarms = results[6] as List<AlarmFrequency>;
+          _heatmapData = results[7] as AlarmHeatmapData;
           _activeControllerCount = _controllers
               .where((c) => c.status == ControllerStatus.online)
               .length;
@@ -321,6 +339,60 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                 ),
               ),
             ],
+
+            // KPI Widgets
+            const SizedBox(height: AppSpacing.md),
+
+            ChartContainer(
+              title: 'Priority Trendi',
+              subtitle: 'Son 30 gun',
+              isEmpty: _timeline.every((e) => e.totalCount == 0),
+              emptyMessage: 'Bu donemde alarm kaydi yok',
+              child: AlarmPriorityTrendChart(
+                entries: _timeline,
+                priorities: _priorityMap,
+                height: 180,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            ChartContainer(
+              title: 'Ortalama Cozum Suresi (MTTR)',
+              subtitle: 'Son 30 gun',
+              isEmpty: _mttrStats.totalAlarmCount == 0,
+              emptyMessage: 'Cozulmus alarm bulunamadi',
+              child: AlarmMttrCard(
+                stats: _mttrStats,
+                priorities: _priorityMap,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            ChartContainer(
+              title: 'En Sik Tekrarlayan Alarmlar',
+              subtitle: 'Son 30 gun - Top 10',
+              isEmpty: _topAlarms.isEmpty,
+              emptyMessage: 'Alarm verisi bulunamadi',
+              child: AlarmTopOffendersCard(
+                alarms: _topAlarms,
+                priorities: _priorityMap,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            ChartContainer(
+              title: 'Alarm Yogunluk Haritasi',
+              subtitle: 'Haftalik gun x saat dagilimi',
+              isEmpty: _heatmapData.totalCount == 0,
+              emptyMessage: 'Bu haftada alarm kaydi yok',
+              child: AlarmHeatmapChart(
+                data: _heatmapData,
+                height: 200,
+              ),
+            ),
 
             const SizedBox(height: AppSpacing.xl),
           ],

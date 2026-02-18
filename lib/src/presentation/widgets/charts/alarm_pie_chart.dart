@@ -15,11 +15,16 @@ import '../../../core/theme/app_spacing.dart';
 /// Priority bazlı renklendirme:
 /// - priorities parametresi verilirse, aktif alarmlar priority rengine göre gösterilir
 /// - verilmezse varsayılan renkler kullanılır (aktif=error, reset=success)
+///
+/// Toggle modu:
+/// - showToggle=true ise Aktif/Reset segmented control gösterilir
+/// - Her mod priority bazlı donut gösterir
 class AlarmPieChart extends StatefulWidget {
   final AlarmDistribution distribution;
   final Map<String, Priority>? priorities;
   final double size;
   final bool showPriorityBreakdown;
+  final bool showToggle;
 
   const AlarmPieChart({
     super.key,
@@ -27,6 +32,7 @@ class AlarmPieChart extends StatefulWidget {
     this.priorities,
     this.size = 200,
     this.showPriorityBreakdown = false,
+    this.showToggle = false,
   });
 
   @override
@@ -35,6 +41,7 @@ class AlarmPieChart extends StatefulWidget {
 
 class _AlarmPieChartState extends State<AlarmPieChart> {
   int? _touchedIndex;
+  int _selectedMode = 0; // 0=Aktif, 1=Reset
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +65,12 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
 
     return Column(
       children: [
+        // Toggle: Aktif / Reset
+        if (widget.showToggle) ...[
+          _buildToggle(brightness),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+
         SizedBox(
           height: widget.size,
           child: Stack(
@@ -87,12 +100,12 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
                 swapAnimationDuration:
                     const Duration(milliseconds: 300),
               ),
-              // Merkez: toplam sayı
+              // Merkez: sayı
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    dist.totalCount.toString(),
+                    _centerCount.toString(),
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -100,7 +113,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
                     ),
                   ),
                   Text(
-                    'Toplam',
+                    _centerLabel,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary(brightness),
@@ -121,6 +134,59 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
           children: _buildPriorityLegend(brightness),
         ),
       ],
+    );
+  }
+
+  /// Toggle moduna göre merkez sayı
+  int get _centerCount {
+    if (!widget.showToggle) return widget.distribution.totalCount;
+    return _selectedMode == 0
+        ? widget.distribution.activeCount
+        : widget.distribution.resetCount;
+  }
+
+  /// Toggle moduna göre merkez etiket
+  String get _centerLabel {
+    if (!widget.showToggle) return 'Toplam';
+    return _selectedMode == 0 ? 'Aktif' : 'Reset';
+  }
+
+  /// Aktif/Reset toggle segmented control
+  Widget _buildToggle(Brightness brightness) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.systemGray6,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ToggleButton(
+            label: 'Aktif',
+            count: widget.distribution.activeCount,
+            isSelected: _selectedMode == 0,
+            color: AppColors.error,
+            brightness: brightness,
+            onTap: () => setState(() {
+              _selectedMode = 0;
+              _touchedIndex = null;
+            }),
+          ),
+          const SizedBox(width: 4),
+          _ToggleButton(
+            label: 'Reset',
+            count: widget.distribution.resetCount,
+            isSelected: _selectedMode == 1,
+            color: AppColors.success,
+            brightness: brightness,
+            onTap: () => setState(() {
+              _selectedMode = 1;
+              _touchedIndex = null;
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -147,6 +213,27 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
         ),
         titlePositionPercentageOffset: 0.5,
       ));
+    }
+
+    // Toggle modu aktifse priority bazlı göster
+    if (widget.showToggle && widget.priorities != null) {
+      final byPriority = _selectedMode == 0
+          ? dist.activeByPriority
+          : dist.resetByPriority;
+
+      if (byPriority.isNotEmpty) {
+        for (final entry in byPriority.entries) {
+          final priority = widget.priorities![entry.key];
+          final color = priority?.displayColor ?? AppColors.systemGray;
+          addSection(entry.value, color);
+        }
+      } else {
+        // Fallback: priority dağılımı yoksa tek dilim
+        final count = _selectedMode == 0 ? dist.activeCount : dist.resetCount;
+        final color = _selectedMode == 0 ? AppColors.error : AppColors.success;
+        addSection(count, color);
+      }
+      return sections;
     }
 
     // Priority breakdown gösterilecekse ve priority dağılımı varsa
@@ -177,6 +264,38 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
   List<Widget> _buildPriorityLegend(Brightness brightness) {
     final dist = widget.distribution;
     final items = <Widget>[];
+
+    // Toggle modu: priority bazlı legend
+    if (widget.showToggle && widget.priorities != null) {
+      final byPriority = _selectedMode == 0
+          ? dist.activeByPriority
+          : dist.resetByPriority;
+
+      if (byPriority.isNotEmpty) {
+        for (final entry in byPriority.entries) {
+          final priority = widget.priorities![entry.key];
+          final color = priority?.displayColor ?? AppColors.systemGray;
+          final label = priority?.label ?? 'Bilinmeyen';
+          items.add(_LegendItem(
+            color: color,
+            label: label,
+            value: entry.value,
+            brightness: brightness,
+          ));
+        }
+      } else {
+        final count = _selectedMode == 0 ? dist.activeCount : dist.resetCount;
+        final color = _selectedMode == 0 ? AppColors.error : AppColors.success;
+        final label = _selectedMode == 0 ? 'Aktif' : 'Reset';
+        items.add(_LegendItem(
+          color: color,
+          label: label,
+          value: count,
+          brightness: brightness,
+        ));
+      }
+      return items;
+    }
 
     if (widget.showPriorityBreakdown &&
         dist.hasPriorityDistribution &&
@@ -227,6 +346,86 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
     }
 
     return items;
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isSelected;
+  final Color color;
+  final Brightness brightness;
+  final VoidCallback onTap;
+
+  const _ToggleButton({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.color,
+    required this.brightness,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (brightness == Brightness.light ? Colors.white : AppColors.systemGray5)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.textPrimary(brightness)
+                    : AppColors.textSecondary(brightness),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? color.withValues(alpha: 0.15)
+                    : AppColors.systemGray5,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : AppColors.textSecondary(brightness),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

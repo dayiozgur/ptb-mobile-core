@@ -24,6 +24,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
   Map<String, Priority> _priorityMap = {};
   AlarmMttrStats _mttrStats = const AlarmMttrStats(overallMttr: Duration.zero);
   List<AlarmFrequency> _topAlarms = [];
+  List<SiteAlarmCount> _siteAlarmCounts = [];
   AlarmHeatmapData _heatmapData = AlarmHeatmapData(
     matrix: List.generate(7, (_) => List.filled(24, 0)),
     maxCount: 0,
@@ -48,11 +49,19 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
     }
 
     try {
-      // Load priorities
-      final priorities = await priorityService.getAll(forceRefresh: true);
+      // Load priorities and sites
+      final orgId = organizationService.currentOrganizationId;
+      final prioritiesFuture = priorityService.getAll(forceRefresh: true);
+      final sitesFuture = orgId != null ? siteService.getSites(orgId) : Future.value(<Site>[]);
+      final priorities = await prioritiesFuture;
+      final sites = await sitesFuture;
       final pMap = <String, Priority>{};
       for (final p in priorities) {
         pMap[p.id] = p;
+      }
+      final siteNames = <String, String>{};
+      for (final s in sites) {
+        siteNames[s.id] = s.name;
       }
 
       // Parallel loading
@@ -81,6 +90,11 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           forceRefresh: true,
         ),
         alarmService.getAlarmHeatmap(forceRefresh: true),
+        alarmService.getAlarmCountsBySite(
+          siteNames: siteNames,
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
       ]);
 
       if (mounted) {
@@ -93,6 +107,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           _mttrStats = results[4] as AlarmMttrStats;
           _topAlarms = results[5] as List<AlarmFrequency>;
           _heatmapData = results[6] as AlarmHeatmapData;
+          _siteAlarmCounts = results[7] as List<SiteAlarmCount>;
           _isLoading = false;
         });
       }
@@ -190,6 +205,9 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           emptyMessage: 'Alarm kaydi bulunamadi',
                           child: AlarmPieChart(
                             distribution: _distribution,
+                            priorities: _priorityMap,
+                            showToggle: true,
+                            showPriorityBreakdown: true,
                             size: 180,
                           ),
                         ),
@@ -267,6 +285,20 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           child: AlarmHeatmapChart(
                             data: _heatmapData,
                             height: 200,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Site Alarm Ranking
+                        ChartContainer(
+                          title: 'Site Alarm Siralamasi',
+                          subtitle: 'Son $_selectedDays gun - Top 10',
+                          isEmpty: _siteAlarmCounts.isEmpty,
+                          emptyMessage: 'Site alarm verisi bulunamadi',
+                          child: AlarmSiteRankingChart(
+                            sites: _siteAlarmCounts,
+                            height: 300,
                           ),
                         ),
 

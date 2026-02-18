@@ -205,6 +205,7 @@ export 'src/presentation/widgets/charts/alarm_mttr_card.dart';
 export 'src/presentation/widgets/charts/alarm_top_offenders_card.dart';
 export 'src/presentation/widgets/charts/alarm_heatmap_chart.dart';
 export 'src/presentation/widgets/charts/alarm_priority_trend_chart.dart';
+export 'src/presentation/widgets/charts/alarm_site_ranking_chart.dart';
 
 // Presentation - Widgets - Map
 export 'src/presentation/widgets/map/app_map.dart';

@@ -150,6 +150,27 @@ class AlarmFrequency {
       'AlarmFrequency($alarmName, count: $count)';
 }
 
+/// Site bazlı alarm sayısı (ranking chart verisi)
+class SiteAlarmCount {
+  final String siteId;
+  final String siteName;
+  final int resetCount;
+  final int activeCount;
+
+  int get totalCount => resetCount + activeCount;
+
+  const SiteAlarmCount({
+    required this.siteId,
+    required this.siteName,
+    this.resetCount = 0,
+    this.activeCount = 0,
+  });
+
+  @override
+  String toString() =>
+      'SiteAlarmCount($siteName, active: $activeCount, reset: $resetCount)';
+}
+
 /// Saatlik alarm heatmap verisi (7 gün x 24 saat)
 class AlarmHeatmapData {
   /// 7x24 matris: [günIndex][saatIndex] = alarm sayısı
