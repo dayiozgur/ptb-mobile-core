@@ -200,6 +200,11 @@ export 'src/presentation/widgets/charts/log_onoff_chart.dart';
 export 'src/presentation/widgets/charts/multi_line_chart.dart';
 export 'src/presentation/widgets/charts/multi_log_line_chart.dart';
 export 'src/presentation/widgets/charts/multi_log_onoff_chart.dart';
+export 'src/presentation/widgets/charts/full_screen_chart_view.dart';
+export 'src/presentation/widgets/charts/alarm_mttr_card.dart';
+export 'src/presentation/widgets/charts/alarm_top_offenders_card.dart';
+export 'src/presentation/widgets/charts/alarm_heatmap_chart.dart';
+export 'src/presentation/widgets/charts/alarm_priority_trend_chart.dart';
 
 // Presentation - Widgets - Map
 export 'src/presentation/widgets/map/app_map.dart';

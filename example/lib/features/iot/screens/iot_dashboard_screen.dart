@@ -499,6 +499,14 @@ class _IotModules extends StatelessWidget {
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _IotModuleItem(
+            icon: Icons.list_alt,
+            color: Colors.cyan,
+            title: 'Loglar',
+            subtitle: 'Log kayitlarini goruntuleyin ve analiz edin',
+            onTap: () => context.go('/iot/logs'),
+          ),
+          Divider(height: 1, color: AppColors.separator(context)),
+          _IotModuleItem(
             icon: Icons.warning_amber_rounded,
             color: Colors.red,
             title: 'Alarm Yönetimi',

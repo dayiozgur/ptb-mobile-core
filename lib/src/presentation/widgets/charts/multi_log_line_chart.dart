@@ -35,6 +35,7 @@ class MultiLogLineChart extends StatefulWidget {
   final double height;
   final int maxDataPoints;
   final bool showLegend;
+  final ValueChanged<DateTime?>? onTouchTime;
 
   const MultiLogLineChart({
     super.key,
@@ -42,6 +43,7 @@ class MultiLogLineChart extends StatefulWidget {
     this.height = 240,
     this.maxDataPoints = 500,
     this.showLegend = true,
+    this.onTouchTime,
   });
 
   @override
@@ -209,6 +211,16 @@ class _MultiLogLineChartState extends State<MultiLogLineChart> {
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchSpotThreshold: 20,
+                touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+                  if (widget.onTouchTime == null) return;
+                  if (!event.isInterestedForInteractions || (response?.lineBarSpots?.isEmpty ?? true)) {
+                    widget.onTouchTime!(null);
+                    return;
+                  }
+                  final spot = response!.lineBarSpots!.first;
+                  final ms = globalFirstTime + spot.x.toInt();
+                  widget.onTouchTime!(DateTime.fromMillisecondsSinceEpoch(ms));
+                },
                 touchTooltipData: LineTouchTooltipData(
                   getTooltipColor: (_) => brightness == Brightness.light
                       ? Colors.white

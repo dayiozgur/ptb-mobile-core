@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-/// Renk paleti - çoklu variable serileri için
+/// Renk paleti - coklu variable serileri icin
 const _seriesColors = [
   Color(0xFF007AFF), // Blue
   Color(0xFFFF3B30), // Red
@@ -31,15 +30,15 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
   String? _selectedControllerId;
   int _selectedDays = 7;
 
-  // Variable selection - ayrı listeler analog/integer ve digital için
+  // Variable selection - ayri listeler analog/integer ve digital icin
   List<Map<String, dynamic>> _analogVars = [];
   List<Map<String, dynamic>> _digitalVars = [];
 
-  // Seçili variable'lar (multi-select)
+  // Secili variable'lar (multi-select)
   Set<String> _selectedAnalogIds = {};
   Set<String> _selectedDigitalIds = {};
 
-  // Chart verileri - her variable için ayrı time series
+  // Chart verileri - her variable icin ayri time series
   Map<String, List<LogTimeSeriesEntry>> _timeSeriesMap = {};
 
   static const _maxAnalogSelection = 5;
@@ -105,7 +104,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     });
 
     try {
-      // Analog + Integer ve Digital variable'ları paralel yükle
+      // Analog + Integer ve Digital variable'lari paralel yukle
       final results = await Future.wait([
         iotLogService.getLoggedVariables(
           controllerId: _selectedControllerId!,
@@ -125,7 +124,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       ]);
 
       if (mounted) {
-        // Analog + Integer birleştir
+        // Analog + Integer birlestir
         final analogVars = [...results[0], ...results[1]];
         analogVars.sort((a, b) =>
             (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
@@ -134,7 +133,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
           _analogVars = analogVars;
           _digitalVars = results[2];
 
-          // İlk analog variable'ı otomatik seç
+          // Ilk analog variable'i otomatik sec
           if (analogVars.isNotEmpty) {
             _selectedAnalogIds = {analogVars.first['id'] as String};
           }
@@ -316,7 +315,6 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
 
     return AppScaffold(
       title: 'Log Analiz',
-      onBack: () => context.go('/logs'),
       actions: [
         AppIconButton(
           icon: Icons.refresh,
@@ -523,7 +521,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       );
     }
 
-    // Seçili olanların index'ini bul - renk ataması için
+    // Secili olanlarin index'ini bul - renk atamasi icin
     final selectedList = selectedIds.toList();
 
     return Wrap(

@@ -773,8 +773,422 @@ class AlarmService {
     }
   }
 
+  // ============================================
+  // ALARM KPI STATS
+  // ============================================
+
+  /// MTTR (Mean Time To Resolve) istatistikleri
+  ///
+  /// alarm_histories tablosundan end_time NOT NULL kayıtlar üzerinden hesaplanır.
+  /// end_time - start_time ortalaması genel + priority bazlı + haftalık trend.
+  Future<AlarmMttrStats> getMttrStats({
+    int days = IoTConfig.defaultAlarmTimelineDays,
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
+    final cacheKey =
+        'alarm_mttr_${_currentTenantId}_${filterKey}_${effectiveDays}d';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return _parseMttrStatsFromCache(cached);
+      }
+    }
+
+    try {
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      var query = _supabase
+          .from('alarm_histories')
+          .select('start_time,end_time,priority_id')
+          .not('end_time', 'is', null)
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+      if (providerId != null) {
+        query = query.eq('provider_id', providerId);
+      }
+
+      final response = await query.order('start_time', ascending: true);
+      final rows = response as List;
+
+      // Genel MTTR hesaplama
+      int totalDurationMs = 0;
+      int totalCount = 0;
+      final priorityDurations = <String, List<int>>{};
+      final weeklyData = <String, List<int>>{}; // weekKey → durations list
+
+      for (final row in rows) {
+        final r = row as Map<String, dynamic>;
+        final startStr = r['start_time'] as String?;
+        final endStr = r['end_time'] as String?;
+        if (startStr == null || endStr == null) continue;
+
+        final start = DateTime.tryParse(startStr);
+        final end = DateTime.tryParse(endStr);
+        if (start == null || end == null) continue;
+
+        final durationMs = end.difference(start).inMilliseconds;
+        if (durationMs < 0) continue;
+
+        totalDurationMs += durationMs;
+        totalCount++;
+
+        final priorityId = r['priority_id'] as String? ?? 'unknown';
+        priorityDurations.putIfAbsent(priorityId, () => []).add(durationMs);
+
+        // Haftalık gruplama
+        final weekStart = start.subtract(Duration(days: start.weekday - 1));
+        final weekKey =
+            '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+        weeklyData.putIfAbsent(weekKey, () => []).add(durationMs);
+      }
+
+      final overallMttr = totalCount > 0
+          ? Duration(milliseconds: totalDurationMs ~/ totalCount)
+          : Duration.zero;
+
+      final mttrByPriority = <String, Duration>{};
+      for (final entry in priorityDurations.entries) {
+        final avg = entry.value.reduce((a, b) => a + b) ~/ entry.value.length;
+        mttrByPriority[entry.key] = Duration(milliseconds: avg);
+      }
+
+      // Haftalık trend
+      final sortedWeeks = weeklyData.keys.toList()..sort();
+      final trend = sortedWeeks.map((weekKey) {
+        final durations = weeklyData[weekKey]!;
+        final avg = durations.reduce((a, b) => a + b) ~/ durations.length;
+        return MttrTrendEntry(
+          date: DateTime.parse(weekKey),
+          avgMttr: Duration(milliseconds: avg),
+          alarmCount: durations.length,
+        );
+      }).toList();
+
+      final stats = AlarmMttrStats(
+        overallMttr: overallMttr,
+        mttrByPriority: mttrByPriority,
+        trend: trend,
+        totalAlarmCount: totalCount,
+      );
+
+      await _cacheManager.set(
+        cacheKey,
+        {
+          'overallMttrMs': overallMttr.inMilliseconds,
+          'totalAlarmCount': totalCount,
+          'mttrByPriority': mttrByPriority
+              .map((k, v) => MapEntry(k, v.inMilliseconds)),
+          'trend': trend
+              .map((e) => {
+                    'date': e.date.toIso8601String(),
+                    'avgMttrMs': e.avgMttr.inMilliseconds,
+                    'alarmCount': e.alarmCount,
+                  })
+              .toList(),
+        },
+        ttl: const Duration(minutes: 5),
+      );
+
+      return stats;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get MTTR stats', e, stackTrace);
+      return const AlarmMttrStats(overallMttr: Duration.zero);
+    }
+  }
+
+  AlarmMttrStats _parseMttrStatsFromCache(Map<String, dynamic> cached) {
+    return AlarmMttrStats(
+      overallMttr: Duration(milliseconds: cached['overallMttrMs'] as int? ?? 0),
+      totalAlarmCount: cached['totalAlarmCount'] as int? ?? 0,
+      mttrByPriority: (cached['mttrByPriority'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, Duration(milliseconds: v as int))) ??
+          {},
+      trend: (cached['trend'] as List<dynamic>?)
+              ?.map((e) {
+                final m = e as Map<String, dynamic>;
+                return MttrTrendEntry(
+                  date: DateTime.parse(m['date'] as String),
+                  avgMttr: Duration(milliseconds: m['avgMttrMs'] as int),
+                  alarmCount: m['alarmCount'] as int,
+                );
+              })
+              .toList() ??
+          [],
+    );
+  }
+
+  /// En sık tekrarlayan alarmlar (Top N)
+  ///
+  /// alarm_histories tablosundan variable_id bazlı gruplama yapılır.
+  Future<List<AlarmFrequency>> getTopAlarms({
+    int days = IoTConfig.defaultAlarmTimelineDays,
+    int limit = 10,
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
+    final cacheKey =
+        'alarm_top_${_currentTenantId}_${filterKey}_${effectiveDays}d_$limit';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached.map((e) {
+          final m = e as Map<String, dynamic>;
+          return AlarmFrequency(
+            variableId: m['variableId'] as String,
+            alarmName: m['alarmName'] as String,
+            alarmCode: m['alarmCode'] as String?,
+            priorityId: m['priorityId'] as String?,
+            count: m['count'] as int,
+            lastOccurrence: DateTime.parse(m['lastOccurrence'] as String),
+          );
+        }).toList();
+      }
+    }
+
+    try {
+      final since = DateTime.now()
+          .subtract(Duration(days: effectiveDays))
+          .toIso8601String();
+
+      var query = _supabase
+          .from('alarm_histories')
+          .select('variable_id,name,code,priority_id,start_time')
+          .gte('start_time', since);
+
+      if (_currentTenantId != null) {
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+      if (providerId != null) {
+        query = query.eq('provider_id', providerId);
+      }
+
+      final response = await query;
+      final rows = response as List;
+
+      // variable_id bazlı gruplama
+      final groups = <String, _AlarmGroup>{};
+      for (final row in rows) {
+        final r = row as Map<String, dynamic>;
+        final variableId = r['variable_id'] as String? ?? 'unknown';
+        final name = r['name'] as String? ?? 'Bilinmeyen';
+        final code = r['code'] as String?;
+        final priorityId = r['priority_id'] as String?;
+        final startTimeStr = r['start_time'] as String?;
+
+        final group = groups.putIfAbsent(
+          variableId,
+          () => _AlarmGroup(
+            variableId: variableId,
+            name: name,
+            code: code,
+            priorityId: priorityId,
+          ),
+        );
+        group.count++;
+        if (startTimeStr != null) {
+          final st = DateTime.tryParse(startTimeStr);
+          if (st != null && st.isAfter(group.lastOccurrence)) {
+            group.lastOccurrence = st;
+          }
+        }
+      }
+
+      final sorted = groups.values.toList()
+        ..sort((a, b) => b.count.compareTo(a.count));
+      final topN = sorted.take(limit).toList();
+
+      final results = topN
+          .map((g) => AlarmFrequency(
+                variableId: g.variableId,
+                alarmName: g.name,
+                alarmCode: g.code,
+                priorityId: g.priorityId,
+                count: g.count,
+                lastOccurrence: g.lastOccurrence,
+              ))
+          .toList();
+
+      await _cacheManager.set(
+        cacheKey,
+        results
+            .map((e) => {
+                  'variableId': e.variableId,
+                  'alarmName': e.alarmName,
+                  'alarmCode': e.alarmCode,
+                  'priorityId': e.priorityId,
+                  'count': e.count,
+                  'lastOccurrence': e.lastOccurrence.toIso8601String(),
+                })
+            .toList(),
+        ttl: const Duration(minutes: 5),
+      );
+
+      return results;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get top alarms', e, stackTrace);
+      return [];
+    }
+  }
+
+  /// Alarm heatmap verisi (7 gün x 24 saat)
+  ///
+  /// alarm_histories tablosundan 1 haftalık pencerede start_time bazlı dağılım.
+  Future<AlarmHeatmapData> getAlarmHeatmap({
+    DateTime? weekStart,
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+    bool forceRefresh = false,
+  }) async {
+    final effectiveWeekStart = weekStart ??
+        DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+    final weekStartNormalized = DateTime(
+      effectiveWeekStart.year,
+      effectiveWeekStart.month,
+      effectiveWeekStart.day,
+    );
+    final weekEnd = weekStartNormalized.add(const Duration(days: 7));
+
+    final filterKey = controllerId ?? siteId ?? providerId ?? 'all';
+    final cacheKey =
+        'alarm_heatmap_${_currentTenantId}_${filterKey}_${weekStartNormalized.toIso8601String()}';
+
+    if (!forceRefresh) {
+      final cached = await _cacheManager.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return _parseHeatmapFromCache(cached);
+      }
+    }
+
+    try {
+      var query = _supabase
+          .from('alarm_histories')
+          .select('start_time')
+          .gte('start_time', weekStartNormalized.toIso8601String())
+          .lt('start_time', weekEnd.toIso8601String());
+
+      if (_currentTenantId != null) {
+        query = query.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      }
+      if (controllerId != null) {
+        query = query.eq('controller_id', controllerId);
+      }
+      if (siteId != null) {
+        query = query.eq('site_id', siteId);
+      }
+      if (providerId != null) {
+        query = query.eq('provider_id', providerId);
+      }
+
+      final response = await query;
+      final rows = response as List;
+
+      // 7x24 matris oluştur
+      final matrix = List.generate(7, (_) => List.filled(24, 0));
+      int maxCount = 0;
+
+      for (final row in rows) {
+        final r = row as Map<String, dynamic>;
+        final startTimeStr = r['start_time'] as String?;
+        if (startTimeStr == null) continue;
+
+        final dt = DateTime.tryParse(startTimeStr);
+        if (dt == null) continue;
+
+        final dayIndex = (dt.weekday - 1).clamp(0, 6); // 0=Mon, 6=Sun
+        final hourIndex = dt.hour;
+
+        matrix[dayIndex][hourIndex]++;
+        if (matrix[dayIndex][hourIndex] > maxCount) {
+          maxCount = matrix[dayIndex][hourIndex];
+        }
+      }
+
+      final data = AlarmHeatmapData(
+        matrix: matrix,
+        maxCount: maxCount,
+        weekStart: weekStartNormalized,
+      );
+
+      await _cacheManager.set(
+        cacheKey,
+        {
+          'matrix': matrix,
+          'maxCount': maxCount,
+          'weekStart': weekStartNormalized.toIso8601String(),
+        },
+        ttl: const Duration(minutes: 5),
+      );
+
+      return data;
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get alarm heatmap', e, stackTrace);
+      return AlarmHeatmapData(
+        matrix: List.generate(7, (_) => List.filled(24, 0)),
+        maxCount: 0,
+        weekStart: weekStartNormalized,
+      );
+    }
+  }
+
+  AlarmHeatmapData _parseHeatmapFromCache(Map<String, dynamic> cached) {
+    final rawMatrix = cached['matrix'] as List<dynamic>;
+    final matrix = rawMatrix
+        .map((row) => (row as List<dynamic>).map((e) => e as int).toList())
+        .toList();
+    return AlarmHeatmapData(
+      matrix: matrix,
+      maxCount: cached['maxCount'] as int? ?? 0,
+      weekStart: DateTime.parse(cached['weekStart'] as String),
+    );
+  }
+
   void dispose() {
     _alarmsController.close();
     _historyController.close();
   }
+}
+
+class _AlarmGroup {
+  final String variableId;
+  final String name;
+  final String? code;
+  final String? priorityId;
+  int count = 0;
+  DateTime lastOccurrence = DateTime(2000);
+
+  _AlarmGroup({
+    required this.variableId,
+    required this.name,
+    this.code,
+    this.priorityId,
+  });
 }

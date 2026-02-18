@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -16,6 +18,7 @@ class MultiLogOnOffChart extends StatelessWidget {
   final double rowHeight;
   final Color onColor;
   final Color offColor;
+  final DateTime? crosshairTime;
 
   const MultiLogOnOffChart({
     super.key,
@@ -23,6 +26,7 @@ class MultiLogOnOffChart extends StatelessWidget {
     this.rowHeight = 36,
     this.onColor = AppColors.success,
     this.offColor = AppColors.systemGray4,
+    this.crosshairTime,
   });
 
   @override
@@ -176,6 +180,7 @@ class MultiLogOnOffChart extends StatelessWidget {
                               : AppColors.systemGray5,
                           borderColor: AppColors.divider(brightness),
                           borderRadius: 4,
+                          crosshairTime: crosshairTime,
                         ),
                       );
                     },
@@ -283,6 +288,7 @@ class _OnOffBandPainter extends CustomPainter {
   final Color offColor;
   final Color borderColor;
   final double borderRadius;
+  final DateTime? crosshairTime;
 
   _OnOffBandPainter({
     required this.data,
@@ -292,6 +298,7 @@ class _OnOffBandPainter extends CustomPainter {
     required this.offColor,
     required this.borderColor,
     this.borderRadius = 4,
+    this.crosshairTime,
   });
 
   @override
@@ -335,12 +342,77 @@ class _OnOffBandPainter extends CustomPainter {
     }
 
     canvas.restore();
+
+    // Crosshair dikey çizgi
+    if (crosshairTime != null) {
+      final crosshairMs = crosshairTime!.millisecondsSinceEpoch - globalFirstMs;
+      if (crosshairMs >= 0 && crosshairMs <= totalMs) {
+        final crossX = (crosshairMs / totalMs) * size.width;
+
+        // Dashed beyaz çizgi
+        final dashPaint = Paint()
+          ..color = Colors.white.withValues(alpha: 0.9)
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke;
+
+        const dashLen = 4.0;
+        const gapLen = 3.0;
+        var y = 0.0;
+        while (y < size.height) {
+          canvas.drawLine(
+            Offset(crossX, y),
+            Offset(crossX, (y + dashLen).clamp(0, size.height)),
+            dashPaint,
+          );
+          y += dashLen + gapLen;
+        }
+
+        // O andaki ON/OFF durumunu bul
+        bool isOn = false;
+        for (var i = data.length - 1; i >= 0; i--) {
+          if (data[i].dateTime.millisecondsSinceEpoch <= crosshairTime!.millisecondsSinceEpoch) {
+            isOn = data[i].onOff == 1;
+            break;
+          }
+        }
+
+        // ON/OFF etiketi
+        final label = isOn ? 'ON' : 'OFF';
+        final labelColor = isOn ? onColor : offColor;
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: ui.TextDirection.ltr,
+        )..layout();
+
+        final labelW = tp.width + 8;
+        final labelH = tp.height + 4;
+        final labelX = (crossX + 4 + labelW > size.width)
+            ? crossX - labelW - 4
+            : crossX + 4;
+        final labelY = (size.height - labelH) / 2;
+
+        final labelRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(labelX, labelY, labelW, labelH),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(labelRect, Paint()..color = labelColor);
+        tp.paint(canvas, Offset(labelX + 4, labelY + 2));
+      }
+    }
   }
 
   @override
   bool shouldRepaint(covariant _OnOffBandPainter oldDelegate) {
     return data != oldDelegate.data ||
         onColor != oldDelegate.onColor ||
-        totalMs != oldDelegate.totalMs;
+        totalMs != oldDelegate.totalMs ||
+        crosshairTime != oldDelegate.crosshairTime;
   }
 }

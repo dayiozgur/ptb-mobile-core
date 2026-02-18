@@ -23,6 +23,13 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
   List<Alarm> _activeAlarms = [];
   List<AlarmHistory> _resetAlarms = [];
   Map<String, Priority> _priorityMap = {};
+  AlarmMttrStats _mttrStats = const AlarmMttrStats(overallMttr: Duration.zero);
+  List<AlarmFrequency> _topAlarms = [];
+  AlarmHeatmapData _heatmapData = AlarmHeatmapData(
+    matrix: List.generate(7, (_) => List.filled(24, 0)),
+    maxCount: 0,
+    weekStart: DateTime.now(),
+  );
 
   @override
   void initState() {
@@ -67,6 +74,16 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           limit: 50,
           forceRefresh: true,
         ),
+        alarmService.getMttrStats(
+          days: _selectedDays,
+          forceRefresh: true,
+        ),
+        alarmService.getTopAlarms(
+          days: _selectedDays,
+          limit: 10,
+          forceRefresh: true,
+        ),
+        alarmService.getAlarmHeatmap(forceRefresh: true),
       ]);
 
       if (mounted) {
@@ -76,6 +93,9 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
           _timeline = results[1] as List<AlarmTimelineEntry>;
           _activeAlarms = results[2] as List<Alarm>;
           _resetAlarms = results[3] as List<AlarmHistory>;
+          _mttrStats = results[4] as AlarmMttrStats;
+          _topAlarms = results[5] as List<AlarmFrequency>;
+          _heatmapData = results[6] as AlarmHeatmapData;
           _isLoading = false;
         });
       }
@@ -195,6 +215,63 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             entries: _timeline,
                             priorities: _priorityMap,
                             height: 180,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Priority Trend (Stacked Area)
+                        ChartContainer(
+                          title: 'Priority Trendi',
+                          subtitle: 'Son $_selectedDays gün',
+                          isEmpty: _timeline.every((e) => e.totalCount == 0),
+                          emptyMessage: 'Bu dönemde alarm kaydı yok',
+                          child: AlarmPriorityTrendChart(
+                            entries: _timeline,
+                            priorities: _priorityMap,
+                            height: 180,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // MTTR Card
+                        ChartContainer(
+                          title: 'Ortalama Çözüm Süresi (MTTR)',
+                          subtitle: 'Son $_selectedDays gün',
+                          isEmpty: _mttrStats.totalAlarmCount == 0,
+                          emptyMessage: 'Çözülmüş alarm bulunamadı',
+                          child: AlarmMttrCard(
+                            stats: _mttrStats,
+                            priorities: _priorityMap,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Top Offenders
+                        ChartContainer(
+                          title: 'En Sık Tekrarlayan Alarmlar',
+                          subtitle: 'Son $_selectedDays gün - Top 10',
+                          isEmpty: _topAlarms.isEmpty,
+                          emptyMessage: 'Alarm verisi bulunamadı',
+                          child: AlarmTopOffendersCard(
+                            alarms: _topAlarms,
+                            priorities: _priorityMap,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Heatmap
+                        ChartContainer(
+                          title: 'Alarm Yoğunluk Haritası',
+                          subtitle: 'Haftalık gün x saat dağılımı',
+                          isEmpty: _heatmapData.totalCount == 0,
+                          emptyMessage: 'Bu haftada alarm kaydı yok',
+                          child: AlarmHeatmapChart(
+                            data: _heatmapData,
+                            height: 200,
                           ),
                         ),
 

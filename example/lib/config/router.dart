@@ -15,6 +15,8 @@ import '../features/iot/screens/alarm_dashboard_screen.dart';
 import '../features/iot/screens/active_alarms_screen.dart';
 import '../features/iot/screens/reset_alarms_screen.dart';
 import '../features/iot/screens/controller_logs_screen.dart';
+import '../features/iot/screens/log_viewer_screen.dart';
+import '../features/iot/screens/log_analytics_screen.dart';
 import '../features/iot/screens/global_alarms_screen.dart';
 import '../features/iot/screens/provider_landing_screen.dart';
 import '../features/members/screens/members_screen.dart';
@@ -263,6 +265,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             controllerName: controllerName,
           );
         },
+      ),
+      GoRoute(
+        path: '/iot/logs',
+        name: 'iot-logs',
+        builder: (context, state) => const LogViewerScreen(),
+      ),
+      GoRoute(
+        path: '/iot/logs/analytics',
+        name: 'iot-logs-analytics',
+        builder: (context, state) => const LogAnalyticsScreen(),
       ),
 
       // ==================
