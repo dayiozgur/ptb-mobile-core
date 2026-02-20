@@ -42,6 +42,15 @@ import '../features/activity/screens/activity_log_screen.dart';
 import '../features/settings/screens/language_settings_screen.dart';
 import '../features/reports/screens/reports_dashboard_screen.dart';
 import '../features/map/screens/site_map_screen.dart';
+import '../features/todo/screens/todos_screen.dart';
+import '../features/todo/screens/todo_detail_screen.dart';
+import '../features/todo/screens/todo_form_screen.dart';
+import '../features/staff/screens/staffs_screen.dart';
+import '../features/staff/screens/staff_detail_screen.dart';
+import '../features/staff/screens/staff_form_screen.dart';
+import '../features/team/screens/teams_screen.dart';
+import '../features/team/screens/team_detail_screen.dart';
+import '../features/team/screens/team_form_screen.dart';
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -371,6 +380,96 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/map',
         name: 'map',
         builder: (context, state) => const SiteMapScreen(),
+      ),
+
+      // ==================
+      // Todo Routes
+      // ==================
+      GoRoute(
+        path: '/todos',
+        name: 'todos',
+        builder: (context, state) => const TodosScreen(),
+      ),
+      GoRoute(
+        path: '/todos/new',
+        name: 'todo-new',
+        builder: (context, state) => const TodoFormScreen(),
+      ),
+      GoRoute(
+        path: '/todos/:id',
+        name: 'todo-detail',
+        builder: (context, state) {
+          final todoId = state.pathParameters['id']!;
+          return TodoDetailScreen(todoId: todoId);
+        },
+      ),
+      GoRoute(
+        path: '/todos/:id/edit',
+        name: 'todo-edit',
+        builder: (context, state) {
+          final todoId = state.pathParameters['id']!;
+          return TodoFormScreen(todoId: todoId);
+        },
+      ),
+
+      // ==================
+      // Staff Routes
+      // ==================
+      GoRoute(
+        path: '/staff',
+        name: 'staff',
+        builder: (context, state) => const StaffsScreen(),
+      ),
+      GoRoute(
+        path: '/staff/new',
+        name: 'staff-new',
+        builder: (context, state) => const StaffFormScreen(),
+      ),
+      GoRoute(
+        path: '/staff/:id',
+        name: 'staff-detail',
+        builder: (context, state) {
+          final staffId = state.pathParameters['id']!;
+          return StaffDetailScreen(staffId: staffId);
+        },
+      ),
+      GoRoute(
+        path: '/staff/:id/edit',
+        name: 'staff-edit',
+        builder: (context, state) {
+          final staffId = state.pathParameters['id']!;
+          return StaffFormScreen(staffId: staffId);
+        },
+      ),
+
+      // ==================
+      // Team Routes
+      // ==================
+      GoRoute(
+        path: '/teams',
+        name: 'teams',
+        builder: (context, state) => const TeamsScreen(),
+      ),
+      GoRoute(
+        path: '/teams/new',
+        name: 'team-new',
+        builder: (context, state) => const TeamFormScreen(),
+      ),
+      GoRoute(
+        path: '/teams/:id',
+        name: 'team-detail',
+        builder: (context, state) {
+          final teamId = state.pathParameters['id']!;
+          return TeamDetailScreen(teamId: teamId);
+        },
+      ),
+      GoRoute(
+        path: '/teams/:id/edit',
+        name: 'team-edit',
+        builder: (context, state) {
+          final teamId = state.pathParameters['id']!;
+          return TeamFormScreen(teamId: teamId);
+        },
       ),
 
       // ==================

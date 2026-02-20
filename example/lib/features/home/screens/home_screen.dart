@@ -1091,24 +1091,59 @@ class _DevToolsCard extends StatelessWidget {
 class _WorkManagementSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _WorkManagementCard(
-            icon: Icons.assignment_outlined,
-            label: 'İş Talepleri',
-            color: Colors.indigo,
-            onTap: () => context.go('/work-requests'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _WorkManagementCard(
+                icon: Icons.assignment_outlined,
+                label: 'İş Talepleri',
+                color: Colors.indigo,
+                onTap: () => context.go('/work-requests'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _WorkManagementCard(
+                icon: Icons.calendar_month_outlined,
+                label: 'Takvim',
+                color: Colors.teal,
+                onTap: () => context.go('/calendar'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _WorkManagementCard(
-            icon: Icons.calendar_month_outlined,
-            label: 'Takvim',
-            color: Colors.teal,
-            onTap: () => context.go('/calendar'),
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _WorkManagementCard(
+                icon: Icons.checklist_outlined,
+                label: 'Görevler',
+                color: Colors.orange,
+                onTap: () => context.go('/todos'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _WorkManagementCard(
+                icon: Icons.people_outlined,
+                label: 'Personel',
+                color: Colors.blue,
+                onTap: () => context.go('/staff'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _WorkManagementCard(
+                icon: Icons.groups_outlined,
+                label: 'Takımlar',
+                color: Colors.deepPurple,
+                onTap: () => context.go('/teams'),
+              ),
+            ),
+          ],
         ),
       ],
     );
