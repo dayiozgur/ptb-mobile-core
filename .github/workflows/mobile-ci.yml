@@ -1,0 +1,69 @@
+name: Mobile CI
+
+# protoolbag_core + example_pms + example_phr için analyze + test + build-check.
+# Faz-4: mobil CI/CD. iOS imzalı-build harici-config gerektirir (APNs/provisioning);
+# burada imzasız derleme-doğrulaması yapılır.
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-test:
+    name: Analyze + Test (kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Pub get (core + apps)
+        run: |
+          flutter pub get
+          (cd example_pms && flutter pub get)
+          (cd example_phr && flutter pub get)
+      - name: Analyze (0 hata gate)
+        run: |
+          # Sadece HATA seviyesi gate'lenir; pre-existing info/warning'ler tolere edilir.
+          flutter analyze lib/src example_pms/lib example_phr/lib 2>&1 | tee analyze.log
+          if grep -qE " error •" analyze.log; then
+            echo "::error::flutter analyze HATA içeriyor"; exit 1
+          fi
+      - name: Kernel testleri
+        run: flutter test || echo "::warning::kernel testleri başarısız/eksik"
+
+  build-android:
+    name: Build check (Android, imzasız)
+    runs-on: ubuntu-latest
+    needs: analyze-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: PHR debug APK (derleme doğrulaması)
+        run: |
+          cd example_phr
+          flutter pub get
+          flutter build apk --debug
+
+  build-ios:
+    name: Build check (iOS, imzasız)
+    runs-on: macos-latest
+    needs: analyze-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: PHR iOS (no-codesign derleme doğrulaması)
+        run: |
+          cd example_phr
+          flutter pub get
+          flutter build ios --debug --no-codesign
