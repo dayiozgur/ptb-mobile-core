@@ -11,6 +11,9 @@ import '../permission/permission_service.dart';
 import '../push/push_notification_service.dart';
 import '../realtime/realtime_service.dart';
 import '../reporting/reporting_service.dart';
+import '../reporting/report_query_service.dart';
+import '../reporting/page_service.dart';
+import '../reporting/report_service.dart';
 import '../search/search_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
@@ -243,6 +246,24 @@ Future<void> setupServiceLocator({
     () => ReportingService(
       supabase: sl<SupabaseClient>(),
       cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // Dinamik report/page widget'ları için tek veri yolu (report-query EF)
+  sl.registerLazySingleton<ReportQueryService>(
+    () => ReportQueryService(sl<SupabaseClient>()),
+  );
+
+  // Web builder'da tasarlanmış dashboard sayfalarını (pb_page_templates) yükler
+  sl.registerLazySingleton<PageService>(
+    () => PageService(sl<SupabaseClient>()),
+  );
+
+  // Rapor şablonu yükleyici (dr_report_templates + nested dr_report_widgets)
+  sl.registerLazySingleton<ReportService>(
+    () => ReportService(
+      sl<SupabaseClient>(),
+      platformContext: sl<PlatformContext>(),
     ),
   );
 
@@ -606,6 +627,9 @@ NotificationService get notificationService => sl<NotificationService>();
 ConnectivityService get connectivityService => sl<ConnectivityService>();
 OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
 ReportingService get reportingService => sl<ReportingService>();
+ReportQueryService get reportQueryService => sl<ReportQueryService>();
+PageService get pageService => sl<PageService>();
+ReportService get reportService => sl<ReportService>();
 SearchService get searchService => sl<SearchService>();
 ThemeService get themeService => sl<ThemeService>();
 BrandingService get brandingService => sl<BrandingService>();

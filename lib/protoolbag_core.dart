@@ -92,6 +92,9 @@ export 'src/core/connectivity/offline_sync_service.dart';
 // Core - Reporting (Analytics)
 export 'src/core/reporting/reporting_model.dart';
 export 'src/core/reporting/reporting_service.dart';
+export 'src/core/reporting/report_query_service.dart';
+export 'src/core/reporting/report_service.dart';
+export 'src/core/reporting/page_service.dart';
 
 // Core - Search
 export 'src/core/search/search_model.dart';
@@ -232,6 +235,17 @@ export 'src/presentation/widgets/navigation/app_bottom_sheet.dart';
 // Yalnız container widget'ı public API'ye çıkar; field-registry/context iç kalır
 // (böylece iç dosyaların relative sibling import'ları redundant olmaz).
 export 'src/presentation/dynamic_form/dynamic_form_widget.dart';
+
+// Presentation - Dynamic report/page widget primitives (stat/chart/table)
+export 'src/presentation/dyn_widgets/dyn_widgets.dart';
+
+// Page Viewer (web-designed dashboard page templates)
+export 'src/presentation/page_viewer/models/page_template.dart';
+export 'src/presentation/page_viewer/page_viewer_screen.dart';
+
+// Presentation - Report viewer (dr_report_templates → grid of dyn widgets)
+export 'src/presentation/report_viewer/models/report_template.dart';
+export 'src/presentation/report_viewer/report_viewer_screen.dart';
 
 // Presentation - Shell (platform-nötr ekranlar + resolver) — Faz-0
 // App-shell'ler (example_pms, example_phr…) bu ekranları paylaşır; domain

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/menu/menu_item.dart';
+import '../page_viewer/page_viewer_screen.dart';
+import '../report_viewer/report_viewer_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
 import 'organization/organization_selector_screen.dart';
@@ -54,7 +56,24 @@ class ScreenResolver {
     }
     final t = _parseEntityType(path);
     if (t != null && t.isNotEmpty) return EntityListScreen(typeCode: t);
+    // Report viewer (db-driven analitik/dashboard) — /report/<code> | /reports/<code>
+    if (p.startsWith('/report/') || p.startsWith('/reports/')) {
+      final code = _lastSegment(path);
+      if (code != null) return ReportViewerScreen(reportCode: code);
+    }
+    // Page viewer (db-driven sayfa) — /page/<code> | /pages/<code>
+    if (p.startsWith('/page/') || p.startsWith('/pages/')) {
+      final code = _lastSegment(path);
+      if (code != null) return PageViewerScreen(pageCode: code);
+    }
     return null;
+  }
+
+  /// Yolun (query'siz) son boş-olmayan segmenti.
+  static String? _lastSegment(String path) {
+    final noQuery = path.split('?').first;
+    final seg = noQuery.split('/').where((s) => s.isNotEmpty).toList();
+    return seg.isEmpty ? null : seg.last;
   }
 
   /// Bir yolun mobil karşılığı VAR MI? (domain resolver'lar + nötr çekirdek)
