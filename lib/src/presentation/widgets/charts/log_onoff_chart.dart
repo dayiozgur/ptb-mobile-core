@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/iot_log/iot_log_stats_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -67,7 +69,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                 ),
               ),
               Text(
-                'En az 2 veri noktası gerekli',
+                sl<LocalizationService>().translate('chart.min_two_points'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary(brightness).withValues(alpha: 0.7),
@@ -195,7 +197,8 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '$transitionCount geçiş',
+                      sl<LocalizationService>().translate('chart.transition_count',
+                          params: {'count': transitionCount}),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(brightness),

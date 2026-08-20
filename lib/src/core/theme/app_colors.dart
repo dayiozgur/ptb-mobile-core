@@ -11,14 +11,32 @@ class AppColors {
   // BRAND COLORS
   // ============================================
 
-  /// Primary brand color - iOS Blue
-  static const Color primary = Color(0xFF007AFF);
+  /// Primary brand color - iOS Blue (DB-driven branding ile değiştirilebilir)
+  static Color primary = _defaultPrimary;
 
-  /// Secondary brand color
-  static const Color secondary = Color(0xFF5856D6);
+  /// Secondary brand color (DB-driven branding ile değiştirilebilir)
+  static Color secondary = _defaultSecondary;
 
-  /// Accent color
-  static const Color accent = Color(0xFF5AC8FA);
+  /// Accent color (DB-driven branding ile değiştirilebilir)
+  static Color accent = _defaultAccent;
+
+  // Fabrika varsayılanları (branding yoksa / reset için)
+  static const Color _defaultPrimary = Color(0xFF007AFF);
+  static const Color _defaultSecondary = Color(0xFF5856D6);
+  static const Color _defaultAccent = Color(0xFF5AC8FA);
+
+  /// DB-driven branding renklerini uygula (null → varsayılan korunur).
+  static void applyBrand({Color? primary, Color? accent, Color? secondary}) {
+    AppColors.primary = primary ?? AppColors.primary;
+    AppColors.accent = accent ?? AppColors.accent;
+    AppColors.secondary = secondary ?? AppColors.secondary;
+  }
+
+  static void resetBrand() {
+    primary = _defaultPrimary;
+    secondary = _defaultSecondary;
+    accent = _defaultAccent;
+  }
 
   // ============================================
   // SEMANTIC COLORS

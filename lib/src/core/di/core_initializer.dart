@@ -19,6 +19,7 @@ import '../storage/cache_manager.dart';
 import '../tenant/tenant_service.dart';
 import '../theme/theme_service.dart';
 import '../unit/unit_service.dart';
+import '../user/profile_service.dart';
 import '../utils/logger.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
@@ -263,27 +264,66 @@ class CoreInitializer {
         Logger.debug('Session restore: ${sessionRestored ? 'success' : 'failed'}');
       }
 
-      // Step 11: Tenant restore
+      // Step 11: Profil bundle — PRIMARY cold-start yolu (tek round-trip:
+      // profil + tenant_name + organization_id + coarse_role). Başarısız/eksik
+      // olursa eski çok-sorgulu restore akışı fallback olarak çalışır.
       bool tenantRestored = false;
+      bool bundleTenantResolved = false;
       if (config.autoRestoreTenant && sessionRestored) {
-        onProgress?.call('Tenant restore');
-        final tenantService = sl<TenantService>();
-        final tenant = await tenantService.restoreLastTenant();
-        tenantRestored = tenant != null;
-        Logger.debug('Tenant restore: ${tenantRestored ? 'success' : 'failed'}');
+        onProgress?.call('Profile bundle');
+        try {
+          final profile = await sl<ProfileService>().getProfileBundle();
+          if (profile != null) {
+            Logger.debug(
+              'Profile bundle: ${profile.displayName} '
+              '(role=${profile.coarseRole}, tenant=${profile.tenantId})',
+            );
 
-        // Tenant context'i IoT servislerine aktar
-        if (tenantRestored && tenant != null) {
-          _propagateTenantToServices(tenant.id);
+            // Tenant context'i bundle'dan kur
+            if (profile.tenantId != null && profile.tenantId!.isNotEmpty) {
+              final ok = await sl<TenantService>().selectTenant(profile.tenantId!);
+              if (ok) {
+                tenantRestored = true;
+                bundleTenantResolved = true;
+                _propagateTenantToServices(profile.tenantId!);
+              }
+            }
+
+            // Organization context'i bundle'dan kur (≠1 staff satırı → null)
+            if (bundleTenantResolved &&
+                profile.organizationId != null &&
+                profile.organizationId!.isNotEmpty) {
+              final orgOk = await sl<OrganizationService>()
+                  .selectOrganization(profile.organizationId!);
+              if (orgOk) {
+                propagateOrganizationToServices(profile.organizationId!);
+                Logger.debug('Organization from bundle: ${profile.organizationId}');
+              }
+            }
+          }
+        } catch (e) {
+          Logger.warning('Profile bundle failed, using fallback restore: $e');
         }
       }
 
-      // Step 12: Organization restore
-      if (tenantRestored && sessionRestored) {
-        onProgress?.call('Organization restore');
-        final orgService = sl<OrganizationService>();
-        final org = await orgService.restoreLastOrganization();
-        Logger.debug('Organization restore: ${org != null ? 'success (${org.name})' : 'failed'}');
+      // Step 11b: FALLBACK — bundle tenant çözemediyse eski akış.
+      if (config.autoRestoreTenant && sessionRestored && !bundleTenantResolved) {
+        onProgress?.call('Tenant restore (fallback)');
+        final tenantService = sl<TenantService>();
+        final tenant = await tenantService.restoreLastTenant();
+        tenantRestored = tenant != null;
+        Logger.debug('Tenant restore (fallback): ${tenantRestored ? 'success' : 'failed'}');
+
+        if (tenant != null) {
+          _propagateTenantToServices(tenant.id);
+
+          // Organization restore (fallback)
+          onProgress?.call('Organization restore (fallback)');
+          final orgService = sl<OrganizationService>();
+          final org = await orgService.restoreLastOrganization();
+          Logger.debug('Organization restore (fallback): '
+              '${org != null ? 'success (${org.name})' : 'failed'}');
+        }
       }
 
       stopwatch.stop();
@@ -308,6 +348,38 @@ class CoreInitializer {
         errorMessage: e.toString(),
         duration: stopwatch.elapsed,
       );
+    }
+  }
+
+  /// Login sonrası (veya oturum tazelendikten sonra) tenant + organization
+  /// context'ini profile-bundle'dan çözer ve tüm servislere yayar — cold-start
+  /// (Step 11) ile AYNI mantık. Login akışı bunu ÇAĞIRMALIDIR; yoksa tenant/org
+  /// boş kalır ve router `/tenant-select` → `/organizations` (org bulunamadı)
+  /// ekranına sıkışır (fn_my_profile_bundle: tenant_id + organization_id).
+  /// Tenant çözülürse `true`, aksi halde `false` döner.
+  static Future<bool> resolveSessionContext() async {
+    try {
+      final profile = await sl<ProfileService>().getProfileBundle();
+      if (profile == null ||
+          profile.tenantId == null ||
+          profile.tenantId!.isEmpty) {
+        return false;
+      }
+      final ok = await sl<TenantService>().selectTenant(profile.tenantId!);
+      if (!ok) return false;
+      _propagateTenantToServices(profile.tenantId!);
+
+      if (profile.organizationId != null && profile.organizationId!.isNotEmpty) {
+        final orgOk = await sl<OrganizationService>()
+            .selectOrganization(profile.organizationId!);
+        if (orgOk) propagateOrganizationToServices(profile.organizationId!);
+      }
+      Logger.info('Session context resolved: tenant=${profile.tenantId}, '
+          'org=${profile.organizationId}, role=${profile.coarseRole}');
+      return true;
+    } catch (e) {
+      Logger.warning('resolveSessionContext failed: $e');
+      return false;
     }
   }
 

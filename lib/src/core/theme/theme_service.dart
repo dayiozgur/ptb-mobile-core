@@ -4,8 +4,10 @@ import 'package:flutter/material.dart' hide ThemeMode;
 import 'package:flutter/material.dart' as material show ThemeMode;
 import 'package:flutter/scheduler.dart';
 
+import '../branding/branding_config.dart';
 import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
+import 'app_colors.dart';
 import 'app_theme.dart';
 
 /// Tema modu
@@ -259,6 +261,32 @@ class ThemeService {
     _settingsController.add(_settings);
 
     Logger.info('Custom accent color changed');
+  }
+
+  // ============================================
+  // BRANDING (DB-driven, NOT persisted as user preference)
+  // ============================================
+
+  /// Konsol tarafından yönetilen marka renklerini temaya uygular.
+  ///
+  /// [BrandingConfig.primary] non-null ise `lightTheme`/`darkTheme` bu renkleri
+  /// yansıtır. Bu, kullanıcının kişisel tercihi DEĞİLDİR; bu yüzden diske
+  /// KAYDEDİLMEZ (yalnız bellekteki `_settings` güncellenir + stream'e yayınlanır).
+  /// Böylece kullanıcının seçtiği özel renk, storage'da korunur.
+  void applyBranding(BrandingConfig branding) {
+    final primary = branding.primary;
+    if (primary == null) return;
+
+    // Doğrudan AppColors kullanan widget'lar da (191 adet) renklensin diye
+    // mutable brand renklerini güncelle — bildirimden ÖNCE.
+    AppColors.applyBrand(primary: primary, accent: branding.accent);
+
+    _settings = _settings.copyWith(
+      customPrimaryColor: primary,
+      customAccentColor: branding.accent ?? primary,
+    );
+    _settingsController.add(_settings);
+    Logger.info('Branding colors applied to theme (not persisted)');
   }
 
   // ============================================

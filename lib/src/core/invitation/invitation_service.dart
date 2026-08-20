@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,42 +8,48 @@ import 'invitation_model.dart';
 
 /// Davet Servisi
 ///
-/// Kullanıcı davet işlemlerini yönetir.
-/// Email ile davet gönderme, kabul/red işlemleri.
+/// M3 (invite-only) sonrası bu servis **web ile aynı arka uca** bağlanır:
 ///
-/// Örnek kullanım:
-/// ```dart
-/// final invitationService = InvitationService(
-///   supabase: Supabase.instance.client,
-/// );
+/// - **Davet gönderme** artık client-side satır oluşturmaz. `invite-user`
+///   Edge Function'ı çağrılır (admin-only, rol-kademe korumalı). EF Supabase
+///   Auth `inviteUserByEmail` çalıştırır ve `tenant_users` üzerinde
+///   `invitation_token` + `invitation_expires_at` alanlarını doldurur.
+/// - **Bekleyen davetler** artık `tenant_users` (status='invited' veya
+///   `invitation_token` dolu) satırlarından okunur — e-posta/ad için
+///   `profiles` ayrı sorgu ile eşlenir.
+/// - **Kabul etme** mobilde deep-link + `AuthService.verifyOtp(OtpType.invite)`
+///   akışıyla yapılır (bkz. accept-invite ekranı); bu servisteki eski
+///   `acceptInvitation`/`rejectInvitation` yöntemleri artık kullanılmaz.
 ///
-/// // Davet gönder
-/// final invitation = await invitationService.createInvitation(
-///   email: 'user@example.com',
-///   tenantId: 'tenant-id',
-///   role: TenantRole.member,
-///   invitedBy: 'current-user-id',
-/// );
-///
-/// // Daveti kabul et
-/// await invitationService.acceptInvitation(token);
-/// ```
+/// NOT: Nonexistent `tenant_invitations` tablosuna yapılan tüm referanslar
+/// kaldırılmıştır.
 class InvitationService {
   final SupabaseClient _supabase;
 
   // Table names
-  static const String _invitationsTable = 'tenant_invitations';
   static const String _tenantUsersTable = 'tenant_users';
+  static const String _profilesTable = 'profiles';
+
+  /// Sunucu tarafı davet Edge Function'ı (web ile aynı).
+  static const String _inviteFunction = 'invite-user';
 
   InvitationService({
     required SupabaseClient supabase,
   }) : _supabase = supabase;
 
   // ============================================
-  // CREATE INVITATION
+  // CREATE INVITATION (invite-user Edge Function)
   // ============================================
 
-  /// Yeni davet oluştur
+  /// Yeni davet gönder.
+  ///
+  /// Web akışını birebir yansıtır: davet oluşturma **sunucuda** olur; burada
+  /// yalnızca `invite-user` Edge Function'ı tetiklenir. EF admin yetkisi ve
+  /// rol-kademesini kendisi doğrular.
+  ///
+  /// Dönüş: EF başarılıysa girdi alanlarından türetilmiş sentetik bir
+  /// [Invitation] (tüketiciler yalnızca null-değil kontrolü yapıp listeyi
+  /// yeniler); başarısızsa `null`.
   Future<Invitation?> createInvitation({
     required String email,
     required String tenantId,
@@ -52,62 +57,62 @@ class InvitationService {
     TenantRole role = TenantRole.member,
     String? message,
     int expirationDays = 7,
+    String? organizationId,
+    String? departmentId,
+    String? positionId,
   }) async {
+    final normalizedEmail = email.toLowerCase().trim();
     try {
-      // Email zaten bu tenant'ta mı kontrol et
-      final existingMember = await _checkExistingMember(email, tenantId);
+      // Zaten aktif üye mi? (EF de kontrol eder; burada daha net hata veririz)
+      final existingMember = await _checkExistingMember(normalizedEmail, tenantId);
       if (existingMember) {
-        Logger.warning('User is already a member of this tenant: $email');
+        Logger.warning('User is already a member of this tenant: $normalizedEmail');
         throw InvitationException('Bu kullanıcı zaten tenant üyesi');
       }
 
-      // Bekleyen davet var mı kontrol et
-      final existingInvitation = await _checkExistingInvitation(email, tenantId);
-      if (existingInvitation != null) {
-        Logger.warning('Pending invitation already exists for: $email');
-        throw InvitationException('Bu email için zaten bekleyen bir davet var');
+      final response = await _supabase.functions.invoke(
+        _inviteFunction,
+        body: {
+          'email': normalizedEmail,
+          'role': _dbRoleFromTenantRole(role),
+          if (organizationId != null) 'organization_id': organizationId,
+          if (departmentId != null) 'department_id': departmentId,
+          if (positionId != null) 'position_id': positionId,
+        },
+      );
+
+      // FunctionResponse: 2xx dışı zaten FunctionException fırlatır.
+      if (response.status >= 200 && response.status < 300) {
+        Logger.info('invite-user succeeded for: $normalizedEmail (tenant: $tenantId)');
+        return _syntheticInvitation(
+          email: normalizedEmail,
+          tenantId: tenantId,
+          invitedBy: invitedBy,
+          role: role,
+          message: message,
+          expirationDays: expirationDays,
+          data: response.data is Map<String, dynamic>
+              ? response.data as Map<String, dynamic>
+              : null,
+        );
       }
 
-      // Token oluştur
-      final token = _generateToken();
-      final now = DateTime.now();
-      final expiresAt = now.add(Duration(days: expirationDays));
-
-      final data = {
-        'email': email.toLowerCase().trim(),
-        'tenant_id': tenantId,
-        'role': role.value,
-        'status': InvitationStatus.pending.value,
-        'token': token,
-        'message': message,
-        'invited_by': invitedBy,
-        'created_at': now.toIso8601String(),
-        'expires_at': expiresAt.toIso8601String(),
-      };
-
-      final response = await _supabase
-          .from(_invitationsTable)
-          .insert(data)
-          .select('*, tenant:tenants(name), inviter:profiles!invited_by(full_name)')
-          .single();
-
-      final invitation = Invitation.fromJson(response);
-
-      Logger.info('Invitation created for: $email to tenant: $tenantId');
-
-      // TODO: Email gönderme işlemi (Edge Function veya harici servis)
-      // await _sendInvitationEmail(invitation);
-
-      return invitation;
+      Logger.warning('invite-user returned ${response.status} for: $normalizedEmail');
+      return null;
     } on InvitationException {
       rethrow;
+    } on FunctionException catch (e) {
+      // EF'in döndürdüğü hata gövdesinden anlamlı mesaj çıkar.
+      final msg = _messageFromFunctionError(e) ?? 'Davet gönderilemedi';
+      Logger.error('invite-user failed for: $normalizedEmail ($msg)');
+      throw InvitationException(msg);
     } catch (e) {
       Logger.error('Failed to create invitation', e);
       return null;
     }
   }
 
-  /// Toplu davet oluştur
+  /// Toplu davet gönder (her biri için [createInvitation]).
   Future<List<Invitation>> createBulkInvitations({
     required List<String> emails,
     required String tenantId,
@@ -141,95 +146,63 @@ class InvitationService {
   }
 
   // ============================================
-  // ACCEPT/REJECT INVITATION
+  // RESEND / REVOKE (tenant_users)
   // ============================================
 
-  /// Daveti kabul et
-  Future<bool> acceptInvitation(String token, String userId) async {
+  /// Daveti yeniden gönder.
+  ///
+  /// Bekleyen `tenant_users` satırından e-posta/rolü çözer ve `invite-user`
+  /// Edge Function'ını yeniden tetikler (Supabase davet e-postasını yeniden
+  /// yollar). Public imza [MembersScreen] tüketicisiyle uyumlu kalır.
+  Future<Invitation?> resendInvitation(String invitationId, String resendBy) async {
     try {
-      // Daveti getir
-      final invitation = await getInvitationByToken(token);
-      if (invitation == null) {
+      final row = await _supabase
+          .from(_tenantUsersTable)
+          .select('id, user_id, tenant_id, role, invitation_token')
+          .eq('id', invitationId)
+          .maybeSingle();
+
+      if (row == null) {
         throw InvitationException('Davet bulunamadı');
       }
 
-      // Geçerlilik kontrol
-      if (!invitation.isValid) {
-        if (invitation.isExpired) {
-          await _updateInvitationStatus(invitation.id, InvitationStatus.expired);
-          throw InvitationException('Davet süresi dolmuş');
-        }
-        throw InvitationException('Davet geçersiz: ${invitation.status.displayName}');
+      final userId = row['user_id'] as String?;
+      final tenantId = row['tenant_id'] as String? ?? '';
+      final dbRole = row['role'] as String?;
+
+      final email = userId != null ? await _emailForUser(userId) : null;
+      if (email == null || email.isEmpty) {
+        throw InvitationException('Davet için e-posta bulunamadı');
       }
 
-      // Kullanıcıyı tenant'a ekle
-      await _supabase.from(_tenantUsersTable).insert({
-        'user_id': userId,
-        'tenant_id': invitation.tenantId,
-        'role': invitation.role.value,
-        'status': TenantMemberStatus.active.value,
-        'is_default': false,
-        'invited_by': invitation.invitedBy,
-        'invited_at': invitation.createdAt.toIso8601String(),
-        'joined_at': DateTime.now().toIso8601String(),
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // Davet durumunu güncelle
-      await _supabase.from(_invitationsTable).update({
-        'status': InvitationStatus.accepted.value,
-        'responded_at': DateTime.now().toIso8601String(),
-        'accepted_user_id': userId,
-      }).eq('id', invitation.id);
-
-      Logger.info('Invitation accepted: ${invitation.email} joined tenant: ${invitation.tenantId}');
-      return true;
-    } on InvitationException {
-      rethrow;
+      return await createInvitation(
+        email: email,
+        tenantId: tenantId,
+        invitedBy: resendBy,
+        role: _tenantRoleFromDb(dbRole),
+      );
+    } on InvitationException catch (e) {
+      Logger.error('Failed to resend invitation: ${e.message}');
+      return null;
     } catch (e) {
-      Logger.error('Failed to accept invitation', e);
-      return false;
+      Logger.error('Failed to resend invitation', e);
+      return null;
     }
   }
 
-  /// Daveti reddet
-  Future<bool> rejectInvitation(String token, {String? reason}) async {
-    try {
-      final invitation = await getInvitationByToken(token);
-      if (invitation == null) {
-        throw InvitationException('Davet bulunamadı');
-      }
-
-      if (!invitation.isValid) {
-        throw InvitationException('Davet geçersiz');
-      }
-
-      await _supabase.from(_invitationsTable).update({
-        'status': InvitationStatus.rejected.value,
-        'responded_at': DateTime.now().toIso8601String(),
-        'metadata': reason != null ? {'rejection_reason': reason} : null,
-      }).eq('id', invitation.id);
-
-      Logger.info('Invitation rejected: ${invitation.email}');
-      return true;
-    } on InvitationException {
-      rethrow;
-    } catch (e) {
-      Logger.error('Failed to reject invitation', e);
-      return false;
-    }
-  }
-
-  /// Daveti iptal et (davet eden tarafından)
+  /// Daveti iptal et (revoke).
+  ///
+  /// Bekleyen `tenant_users` satırını (davet token'ı dolu olanı) siler.
+  /// Yalnızca henüz kabul edilmemiş (token dolu) davetleri etkiler.
   Future<bool> cancelInvitation(String invitationId, String cancelledBy) async {
     try {
-      await _supabase.from(_invitationsTable).update({
-        'status': InvitationStatus.cancelled.value,
-        'responded_at': DateTime.now().toIso8601String(),
-        'metadata': {'cancelled_by': cancelledBy},
-      }).eq('id', invitationId);
+      await _supabase
+          .from(_tenantUsersTable)
+          .delete()
+          .eq('id', invitationId)
+          .not('invitation_token', 'is', null);
 
-      Logger.info('Invitation cancelled: $invitationId');
+      Logger.info('Invitation revoked: $invitationId (by $cancelledBy)');
       return true;
     } catch (e) {
       Logger.error('Failed to cancel invitation', e);
@@ -237,113 +210,108 @@ class InvitationService {
     }
   }
 
-  /// Daveti yeniden gönder
-  Future<Invitation?> resendInvitation(String invitationId, String resendBy) async {
-    try {
-      // Eski daveti getir
-      final oldInvitation = await getInvitation(invitationId);
-      if (oldInvitation == null) {
-        throw InvitationException('Davet bulunamadı');
-      }
-
-      // Eski daveti iptal et
-      await cancelInvitation(invitationId, resendBy);
-
-      // Yeni davet oluştur
-      return await createInvitation(
-        email: oldInvitation.email,
-        tenantId: oldInvitation.tenantId,
-        invitedBy: resendBy,
-        role: oldInvitation.role,
-        message: oldInvitation.message,
-      );
-    } catch (e) {
-      Logger.error('Failed to resend invitation', e);
-      return null;
-    }
-  }
-
   // ============================================
-  // READ OPERATIONS
+  // READ OPERATIONS (tenant_users + profiles)
   // ============================================
 
-  /// Token ile davet getir
-  Future<Invitation?> getInvitationByToken(String token) async {
-    try {
-      final response = await _supabase
-          .from(_invitationsTable)
-          .select('*, tenant:tenants(name), inviter:profiles!invited_by(full_name)')
-          .eq('token', token)
-          .maybeSingle();
-
-      if (response == null) return null;
-      return Invitation.fromJson(response);
-    } catch (e) {
-      Logger.error('Failed to get invitation by token', e);
-      return null;
-    }
-  }
-
-  /// ID ile davet getir
-  Future<Invitation?> getInvitation(String invitationId) async {
-    try {
-      final response = await _supabase
-          .from(_invitationsTable)
-          .select('*, tenant:tenants(name), inviter:profiles!invited_by(full_name)')
-          .eq('id', invitationId)
-          .maybeSingle();
-
-      if (response == null) return null;
-      return Invitation.fromJson(response);
-    } catch (e) {
-      Logger.error('Failed to get invitation', e);
-      return null;
-    }
-  }
-
-  /// Tenant'ın davetlerini getir
+  /// Tenant'ın bekleyen davetlerini getir.
+  ///
+  /// `tenant_users` üzerinden `invitation_token` dolu (henüz kabul edilmemiş)
+  /// satırları okur; e-posta/ad için `profiles` ayrı sorgu ile eşlenir.
+  /// [status] verilirse yalnız [InvitationStatus.pending] anlamlıdır (bekleyen
+  /// davetler); farklı bir değer için boş liste döner.
   Future<List<Invitation>> getTenantInvitations(
     String tenantId, {
     InvitationStatus? status,
     int limit = 50,
   }) async {
+    if (status != null && status != InvitationStatus.pending) {
+      return [];
+    }
     try {
-      var query = _supabase
-          .from(_invitationsTable)
-          .select('*, tenant:tenants(name), inviter:profiles!invited_by(full_name)')
-          .eq('tenant_id', tenantId);
-
-      if (status != null) {
-        query = query.eq('status', status.value);
-      }
-
-      final response = await query
+      final rows = await _supabase
+          .from(_tenantUsersTable)
+          .select(
+            'id, user_id, tenant_id, role, status, invited_by, '
+            'invited_at, invitation_token, invitation_expires_at, created_at',
+          )
+          .eq('tenant_id', tenantId)
+          .not('invitation_token', 'is', null)
           .order('created_at', ascending: false)
           .limit(limit);
 
-      return response
-          .map<Invitation>((json) => Invitation.fromJson(json))
-          .toList();
+      return _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
     } catch (e) {
       Logger.error('Failed to get tenant invitations', e);
       return [];
     }
   }
 
-  /// Kullanıcının bekleyen davetlerini getir (email ile)
+  /// Token ile davet getir (`tenant_users.invitation_token`).
+  Future<Invitation?> getInvitationByToken(String token) async {
+    try {
+      final row = await _supabase
+          .from(_tenantUsersTable)
+          .select(
+            'id, user_id, tenant_id, role, status, invited_by, '
+            'invited_at, invitation_token, invitation_expires_at, created_at',
+          )
+          .eq('invitation_token', token)
+          .maybeSingle();
+
+      if (row == null) return null;
+      final mapped = await _mapRowsWithProfiles([Map<String, dynamic>.from(row)]);
+      return mapped.isEmpty ? null : mapped.first;
+    } catch (e) {
+      Logger.error('Failed to get invitation by token', e);
+      return null;
+    }
+  }
+
+  /// ID ile davet getir (`tenant_users.id`).
+  Future<Invitation?> getInvitation(String invitationId) async {
+    try {
+      final row = await _supabase
+          .from(_tenantUsersTable)
+          .select(
+            'id, user_id, tenant_id, role, status, invited_by, '
+            'invited_at, invitation_token, invitation_expires_at, created_at',
+          )
+          .eq('id', invitationId)
+          .maybeSingle();
+
+      if (row == null) return null;
+      final mapped = await _mapRowsWithProfiles([Map<String, dynamic>.from(row)]);
+      return mapped.isEmpty ? null : mapped.first;
+    } catch (e) {
+      Logger.error('Failed to get invitation', e);
+      return null;
+    }
+  }
+
+  /// Bir e-posta için bekleyen davetleri getir.
   Future<List<Invitation>> getPendingInvitationsForEmail(String email) async {
     try {
-      final response = await _supabase
-          .from(_invitationsTable)
-          .select('*, tenant:tenants(name), inviter:profiles!invited_by(full_name)')
+      final profile = await _supabase
+          .from(_profilesTable)
+          .select('id')
           .eq('email', email.toLowerCase().trim())
-          .eq('status', InvitationStatus.pending.value)
-          .gt('expires_at', DateTime.now().toIso8601String())
+          .maybeSingle();
+
+      if (profile == null) return [];
+      final userId = profile['id'] as String;
+
+      final rows = await _supabase
+          .from(_tenantUsersTable)
+          .select(
+            'id, user_id, tenant_id, role, status, invited_by, '
+            'invited_at, invitation_token, invitation_expires_at, created_at',
+          )
+          .eq('user_id', userId)
+          .not('invitation_token', 'is', null)
           .order('created_at', ascending: false);
 
-      return response
-          .map<Invitation>((json) => Invitation.fromJson(json))
-          .toList();
+      return _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
     } catch (e) {
       Logger.error('Failed to get pending invitations for email', e);
       return [];
@@ -351,22 +319,43 @@ class InvitationService {
   }
 
   // ============================================
+  // DEPRECATED (eski tenant_invitations akışı)
+  // ============================================
+
+  /// @deprecated Mobil kabul akışı artık deep-link + Supabase Auth
+  /// `verifyOtp(OtpType.invite)` ile yapılır (accept-invite ekranı). Bu yöntem
+  /// artık hiçbir DB yazması yapmaz.
+  @Deprecated('Kabul, deep-link + AuthService.verifyOtp(OtpType.invite) ile yapılır')
+  Future<bool> acceptInvitation(String token, String userId) async {
+    Logger.warning(
+      'InvitationService.acceptInvitation is deprecated — '
+      'use the accept-invite deep-link + verifyOtp flow instead.',
+    );
+    return false;
+  }
+
+  /// @deprecated Davet reddi mobil akışta desteklenmez.
+  @Deprecated('Davet reddi mobil akışta desteklenmez')
+  Future<bool> rejectInvitation(String token, {String? reason}) async {
+    Logger.warning('InvitationService.rejectInvitation is deprecated (no-op).');
+    return false;
+  }
+
+  // ============================================
   // VALIDATION HELPERS
   // ============================================
 
-  /// Email zaten tenant üyesi mi?
+  /// Email zaten aktif tenant üyesi mi?
   Future<bool> _checkExistingMember(String email, String tenantId) async {
     try {
-      // Önce profile'ı bul
       final profileResponse = await _supabase
-          .from('profiles')
+          .from(_profilesTable)
           .select('id')
           .eq('email', email.toLowerCase().trim())
           .maybeSingle();
 
       if (profileResponse == null) return false;
 
-      // tenant_users'da kontrol et
       final memberResponse = await _supabase
           .from(_tenantUsersTable)
           .select('id')
@@ -381,65 +370,156 @@ class InvitationService {
     }
   }
 
-  /// Bekleyen davet var mı?
-  Future<Invitation?> _checkExistingInvitation(String email, String tenantId) async {
-    try {
-      final response = await _supabase
-          .from(_invitationsTable)
-          .select()
-          .eq('email', email.toLowerCase().trim())
-          .eq('tenant_id', tenantId)
-          .eq('status', InvitationStatus.pending.value)
-          .gt('expires_at', DateTime.now().toIso8601String())
-          .maybeSingle();
+  // ============================================
+  // MAPPING HELPERS
+  // ============================================
 
-      if (response == null) return null;
-      return Invitation.fromJson(response);
+  /// `tenant_users` satırlarını e-posta/ad için `profiles` ile eşleyip
+  /// [Invitation] listesine dönüştürür.
+  Future<List<Invitation>> _mapRowsWithProfiles(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty) return [];
+
+    // İlgili user_id'ler için profilleri tek sorguda çek.
+    final userIds = rows
+        .map((r) => r['user_id'] as String?)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    final profilesById = <String, Map<String, dynamic>>{};
+    if (userIds.isNotEmpty) {
+      try {
+        final profiles = await _supabase
+            .from(_profilesTable)
+            .select('id, email, full_name')
+            .inFilter('id', userIds);
+        for (final p in List<Map<String, dynamic>>.from(profiles)) {
+          profilesById[p['id'] as String] = p;
+        }
+      } catch (e) {
+        Logger.warning('Failed to enrich invitations with profiles', e);
+      }
+    }
+
+    return rows.map((row) {
+      final userId = row['user_id'] as String?;
+      final profile = userId != null ? profilesById[userId] : null;
+      return _invitationFromTenantUser(row, profile);
+    }).toList();
+  }
+
+  /// Tek bir `tenant_users` satırını (+opsiyonel profil) [Invitation]'a çevirir.
+  Invitation _invitationFromTenantUser(
+    Map<String, dynamic> row,
+    Map<String, dynamic>? profile,
+  ) {
+    final createdAt = _parseDate(row['created_at']) ??
+        _parseDate(row['invited_at']) ??
+        DateTime.now();
+    final expiresAt = _parseDate(row['invitation_expires_at']) ??
+        createdAt.add(const Duration(days: 7));
+
+    return Invitation(
+      id: row['id'] as String,
+      email: (profile?['email'] as String?) ?? '',
+      tenantId: row['tenant_id'] as String? ?? '',
+      role: _tenantRoleFromDb(row['role'] as String?),
+      // Bekleyen davetler UI'da "pending" olarak listelenir.
+      status: InvitationStatus.pending,
+      token: (row['invitation_token'] as String?) ?? '',
+      invitedBy: row['invited_by'] as String? ?? '',
+      invitedByName: null,
+      createdAt: createdAt,
+      expiresAt: expiresAt,
+    );
+  }
+
+  /// EF başarılı olduğunda girdi alanlarından sentetik davet üretir.
+  Invitation _syntheticInvitation({
+    required String email,
+    required String tenantId,
+    required String invitedBy,
+    required TenantRole role,
+    String? message,
+    required int expirationDays,
+    Map<String, dynamic>? data,
+  }) {
+    final now = DateTime.now();
+    return Invitation(
+      id: (data?['id'] as String?) ?? '',
+      email: email,
+      tenantId: tenantId,
+      role: role,
+      status: InvitationStatus.pending,
+      token: '',
+      message: message,
+      invitedBy: invitedBy,
+      createdAt: now,
+      expiresAt: now.add(Duration(days: expirationDays)),
+    );
+  }
+
+  Future<String?> _emailForUser(String userId) async {
+    try {
+      final profile = await _supabase
+          .from(_profilesTable)
+          .select('email')
+          .eq('id', userId)
+          .maybeSingle();
+      return profile?['email'] as String?;
     } catch (e) {
       return null;
     }
   }
 
-  /// Davet durumunu güncelle
-  Future<void> _updateInvitationStatus(
-    String invitationId,
-    InvitationStatus status,
-  ) async {
-    await _supabase.from(_invitationsTable).update({
-      'status': status.value,
-    }).eq('id', invitationId);
-  }
-
-  /// Benzersiz token oluştur
-  String _generateToken() {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random.secure();
-    return List.generate(32, (_) => chars[random.nextInt(chars.length)]).join();
-  }
-
-  // ============================================
-  // CLEANUP
-  // ============================================
-
-  /// Süresi dolmuş davetleri temizle
-  Future<int> cleanupExpiredInvitations() async {
-    try {
-      final response = await _supabase
-          .from(_invitationsTable)
-          .update({'status': InvitationStatus.expired.value})
-          .eq('status', InvitationStatus.pending.value)
-          .lt('expires_at', DateTime.now().toIso8601String())
-          .select();
-
-      final count = response.length;
-      if (count > 0) {
-        Logger.info('Cleaned up $count expired invitations');
-      }
-      return count;
-    } catch (e) {
-      Logger.error('Failed to cleanup expired invitations', e);
-      return 0;
+  /// TenantRole → `tenant_users.role` (DB CHECK: ROLE_ADMIN|MANAGER|USER|CUSTOMER).
+  String _dbRoleFromTenantRole(TenantRole role) {
+    switch (role) {
+      case TenantRole.owner:
+      case TenantRole.admin:
+        return 'ROLE_ADMIN';
+      case TenantRole.manager:
+        return 'ROLE_MANAGER';
+      case TenantRole.member:
+        return 'ROLE_USER';
+      case TenantRole.viewer:
+        return 'ROLE_CUSTOMER';
     }
+  }
+
+  /// `tenant_users.role` → TenantRole (görüntüleme için).
+  TenantRole _tenantRoleFromDb(String? dbRole) {
+    switch (dbRole) {
+      case 'ROLE_ADMIN':
+        return TenantRole.admin;
+      case 'ROLE_MANAGER':
+        return TenantRole.manager;
+      case 'ROLE_CUSTOMER':
+        return TenantRole.viewer;
+      case 'ROLE_USER':
+      default:
+        return TenantRole.member;
+    }
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value.toString());
+  }
+
+  String? _messageFromFunctionError(FunctionException e) {
+    final details = e.details;
+    if (details is Map && details['error'] is String) {
+      return details['error'] as String;
+    }
+    if (details is Map && details['message'] is String) {
+      return details['message'] as String;
+    }
+    if (details is String && details.isNotEmpty) return details;
+    return e.reasonPhrase;
   }
 }
 

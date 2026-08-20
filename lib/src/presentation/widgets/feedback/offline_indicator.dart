@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/connectivity/connectivity_service.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
@@ -160,9 +162,10 @@ class _OfflineBanner extends StatelessWidget {
         ? AppColors.success
         : AppColors.warning;
 
+    final loc = sl<LocalizationService>();
     final text = showingOnlineMessage
-        ? 'Bağlantı kuruldu'
-        : message ?? 'İnternet bağlantısı yok';
+        ? loc.translate('offline.connected')
+        : message ?? loc.translate('error.network');
 
     final icon = showingOnlineMessage
         ? Icons.wifi

@@ -1,10 +1,28 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../platform/platform_context.dart';
+import '../tenant/tenant_service.dart';
+import '../user/profile_service.dart';
+import '../user/user_profile.dart';
 import '../utils/logger.dart';
+
+/// Storage yükleme bağlamı — çözülmüş `platformCode`/`tenant`/`org`.
+class _StorageContext {
+  final String platformCode;
+  final String? tenantId;
+  final String? organizationId;
+
+  const _StorageContext({
+    required this.platformCode,
+    required this.tenantId,
+    required this.organizationId,
+  });
+}
 
 /// Dosya türleri
 enum FileType {
@@ -254,78 +272,404 @@ class UploadResult {
   }
 }
 
-/// Supabase Storage Bucket'ları
+/// Storage erişim düzeyi (web `StorageAccessLevel` ile birebir).
+///
+/// Her düzey tek bir GERÇEK bucket'a ve bir yol şemasına eşlenir:
+/// - [public]    → `platform-public`    (CDN, `getPublicUrl`)
+/// - [protected] → `platform-protected` (authenticated, `createSignedUrl`)
+/// - [private]   → `platform-private`   (tenant/org-scoped, `createSignedUrl`)
+enum StorageAccessLevel {
+  /// Herkese açık — `platform-public`, imzasız CDN URL.
+  public,
+
+  /// Oturum açmış kullanıcı — `platform-protected`, imzalı URL.
+  protected,
+
+  /// Tenant/org-scoped — `platform-private`, imzalı URL.
+  private,
+}
+
+/// Storage kategorisi (web `StorageCategory` union'ı ile BİREBİR string'ler).
+///
+/// Yol şemalarındaki `{category}` segmenti bu [value]'lardan gelir. Web ile
+/// aynı string set → platformlar arası dosya organizasyonu tutarlı.
+enum StorageCategory {
+  bugReport('bug-report'),
+  avatar('avatar'),
+  platformAsset('platform-asset'),
+  document('document'),
+  image('image'),
+  logo('logo'),
+  banner('banner'),
+  icon('icon'),
+  firmware('firmware'),
+  datasheet('datasheet'),
+  certificate('certificate'),
+  manual('manual'),
+  formAttachment('form-attachment');
+
+  /// Yol segmentinde kullanılan ham string (web ile aynı).
+  final String value;
+
+  const StorageCategory(this.value);
+}
+
+/// Supabase Storage Bucket'ları — CANLI web kontratı (3 gerçek bucket).
+///
+/// Web uygulaması TÜM yeni yüklemeleri bu üç bucket'a yazar
+/// (`libs/core/services/.../storage.service.ts` → `StorageBucket` union'ı):
+/// `platform-public` (public), `platform-protected` + `platform-private`
+/// (ikisi de `public=false` → imzalı URL gerektirir).
+///
+/// NOT: CANLI `storage.buckets` tablosunda legacy public bucket'lar (`avatars`,
+/// `site-images`, …) hâlâ vardır ama web'in AKTİF yazım hedefi bu üçüdür; mobil
+/// de aynı hedeflere yazar ki dosyalar platformlar arası okunabilsin.
 class StorageBuckets {
-  /// Avatar resimleri
-  static const String avatars = 'avatars';
+  /// Public CDN bucket — imzasız `getPublicUrl`.
+  static const String platformPublic = 'platform-public';
 
-  /// Organizasyon dosyaları
-  static const String organizations = 'organization-files';
+  /// Protected bucket — web'in avatar/protected asset'leri burada
+  /// (`<PLATFORM>/protected/<category>/…`), signed-URL ile okunur.
+  static const String platformProtected = 'platform-protected';
 
-  /// Site dosyaları
-  static const String sites = 'site-files';
+  /// Private bucket — tenant/org hiyerarşisi
+  /// (`<PLATFORM>/<tenant>/<org>/<category>/…`), signed-URL ile okunur.
+  static const String platformPrivate = 'platform-private';
 
-  /// Unit dosyaları
-  static const String units = 'unit-files';
+  /// İmzalı URL gerektiren (private) bucket'lar — `getPublicUrl` bunlarda 403.
+  static const Set<String> private = {
+    platformProtected,
+    platformPrivate,
+  };
 
-  /// Dokümanlar
-  static const String documents = 'documents';
+  /// Bu bucket imzalı URL mi gerektiriyor?
+  static bool isPrivate(String bucket) => private.contains(bucket);
 
-  /// Geçici dosyalar
-  static const String temp = 'temp';
+  /// Erişim düzeyi → gerçek bucket adı.
+  static String forAccess(StorageAccessLevel access) {
+    switch (access) {
+      case StorageAccessLevel.public:
+        return platformPublic;
+      case StorageAccessLevel.protected:
+        return platformProtected;
+      case StorageAccessLevel.private:
+        return platformPrivate;
+    }
+  }
 }
 
 /// Dosya Depolama Servisi
 ///
-/// Supabase Storage ile dosya yükleme/indirme işlemleri.
+/// Supabase Storage ile dosya yükleme/indirme işlemleri. Yüklemeler CANLI web
+/// kontratının 3-bucket modeline (`platform-public`/`protected`/`private`) ve
+/// web `StorageService` yol şemalarına hizalanmıştır → mobilde yüklenen dosya
+/// web'de, web'de yüklenen dosya mobilde okunabilir.
+///
+/// `platformCode`/`tenant`/`org` bağlamı DI ile enjekte edilen
+/// [PlatformContext] / [TenantService] / [ProfileService]'ten ÇÖZÜLÜR — çağıran
+/// bunları geçmez.
 ///
 /// Örnek kullanım:
 /// ```dart
-/// final storageService = FileStorageService(supabase: Supabase.instance.client);
+/// final storageService = sl<FileStorageService>();
 ///
-/// // Dosya yükle
-/// final result = await storageService.uploadFile(
-///   bucket: StorageBuckets.avatars,
-///   path: 'user-123/avatar.png',
+/// // Avatar yükle (protected + category:avatar)
+/// final result = await storageService.uploadAvatar(
+///   userId: currentUserId,
 ///   file: imageFile,
 /// );
 ///
-/// if (result.success) {
-///   print('URL: ${result.publicUrl}');
-/// }
-///
-/// // Dosya indir
-/// final bytes = await storageService.downloadFile(
-///   bucket: StorageBuckets.avatars,
-///   path: 'user-123/avatar.png',
+/// // Genel dosya yükle (kategori + görünürlük ile)
+/// final doc = await storageService.uploadFile(
+///   file: pdfFile,
+///   category: StorageCategory.document,
+///   access: StorageAccessLevel.private,
 /// );
+///
+/// if (result.success) {
+///   // protected/private → signedUrl; public → publicUrl
+///   print('URL: ${result.signedUrl ?? result.publicUrl}');
+/// }
 /// ```
 class FileStorageService {
   final SupabaseClient _supabase;
+
+  /// Aktif platform kodu kaynağı (PMS/CRM/…). null → varsayılan `PMS`.
+  final PlatformContext? _platformContext;
+
+  /// Aktif tenant kaynağı (private yol hiyerarşisi için).
+  final TenantService? _tenantService;
+
+  /// Aktif organizasyon kaynağı (private yol hiyerarşisi için) — profilden.
+  final ProfileService? _profileService;
 
   // Varsayılan ayarlar
   static const int maxFileSizeMB = 50;
   static const Duration signedUrlExpiry = Duration(hours: 1);
 
+  /// Platform kodu çözülemezse kullanılacak varsayılan (tek tam-kurulu platform).
+  static const String _defaultPlatformCode = 'PMS';
+
+  /// PMS platform UUID — `PlatformContext.activePlatformId` yoksa
+  /// `storage_objects.platform_id` için fallback.
+  static const String _pmsPlatformId = 'f0113c6e-8000-4298-a07c-0fd90e406a7a';
+
+  /// Registry tablosu — protected/private SELECT RLS bunu metadata olarak
+  /// kontrol eder; kayıt olmadan `createSignedUrl` 403 döner.
+  static const String _registryTable = 'storage_objects';
+
   FileStorageService({
     required SupabaseClient supabase,
-  }) : _supabase = supabase;
+    PlatformContext? platformContext,
+    TenantService? tenantService,
+    ProfileService? profileService,
+  })  : _supabase = supabase,
+        _platformContext = platformContext,
+        _tenantService = tenantService,
+        _profileService = profileService;
+
+  // ============================================
+  // CONTEXT RESOLUTION (platformCode / tenant / org)
+  // ============================================
+
+  /// `platformCode`/`tenantId`/`organizationId` bağlamını enjekte edilen
+  /// kaynaklardan çöz. Web `StorageService` `ctx` ile aynı üç değer.
+  ///
+  /// - platformCode: [PlatformContext.activePlatformCode] (null → `PMS`).
+  /// - tenantId: [TenantService.currentTenantId] → yoksa profilin `tenantId`'si.
+  /// - organizationId: profilin `organizationId`'si (staffs'tan türetilmiş).
+  Future<_StorageContext> _resolveContext() async {
+    final platformCode =
+        _platformContext?.activePlatformCode ?? _defaultPlatformCode;
+
+    UserProfile? profile;
+    if (_profileService != null) {
+      try {
+        profile = await _profileService.getCurrentProfile();
+      } catch (e) {
+        Logger.debug('Storage context: profile resolve failed: $e');
+      }
+    }
+
+    final tenantId = _tenantService?.currentTenantId ?? profile?.tenantId;
+    final organizationId = profile?.organizationId;
+
+    return _StorageContext(
+      platformCode: platformCode,
+      tenantId: tenantId,
+      organizationId: organizationId,
+    );
+  }
+
+  // ============================================
+  // PATH BUILDERS (web `StorageService` ile birebir)
+  // ============================================
+
+  /// Rastgele benzersiz token (web `generateUUID` — v4). Yol `{unique}` segmenti.
+  static final Random _rnd = Random();
+  String _generateUnique() {
+    const hex = '0123456789abcdef';
+    final b = StringBuffer();
+    for (var i = 0; i < 32; i++) {
+      // 13. konum '4', 17. konum 8-b (v4 varyantı) — web ile aynı desen.
+      if (i == 12) {
+        b.write('4');
+      } else if (i == 16) {
+        b.write(hex[8 + _rnd.nextInt(4)]);
+      } else {
+        b.write(hex[_rnd.nextInt(16)]);
+      }
+      if (i == 7 || i == 11 || i == 15 || i == 19) b.write('-');
+    }
+    return b.toString();
+  }
+
+  /// Web `safeName` — güvensiz karakterleri `_` yap (`[^a-zA-Z0-9._-]`).
+  String _safeName(String fileName) =>
+      fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+
+  /// public: `{platformCode}/assets/{category}/{unique}-{safeName}`
+  String buildPublicPath({
+    required String fileName,
+    required StorageCategory category,
+    required String platformCode,
+  }) {
+    return '$platformCode/assets/${category.value}/${_generateUnique()}-${_safeName(fileName)}';
+  }
+
+  /// protected: `{platformCode}/{tenant}/protected/{category}/{unique}-{safeName}`
+  /// (entity scoping ile:
+  /// `{platformCode}/{tenant}/protected/{entityType}/{entityId}/{category}/…`)
+  ///
+  /// CANLI `profiles.avatar_url` örneklerinden doğrulanan kanonik şema tenant
+  /// segmentini İÇERİR (tenant-less biçim yalnız eski PTB satırlarında). tenant
+  /// fallback `_unknown`. Okuma `getAvatarUrl`/`isStoragePath` ile uyumlu
+  /// (regex'teki opsiyonel `(?:[^/]+/)?` = tenant segmenti).
+  String buildProtectedPath({
+    required String fileName,
+    required StorageCategory category,
+    required String platformCode,
+    String? tenantId,
+    String? entityType,
+    String? entityId,
+  }) {
+    final tenant = (tenantId != null && tenantId.isNotEmpty)
+        ? tenantId
+        : '_unknown';
+    final unique = _generateUnique();
+    final safe = _safeName(fileName);
+    if (entityType != null &&
+        entityType.isNotEmpty &&
+        entityId != null &&
+        entityId.isNotEmpty) {
+      return '$platformCode/$tenant/protected/$entityType/$entityId/${category.value}/$unique-$safe';
+    }
+    return '$platformCode/$tenant/protected/${category.value}/$unique-$safe';
+  }
+
+  /// private: `{platformCode}/{tenant}/{org}/{category}/{unique}-{safeName}`
+  /// (tenant fallback `_unknown`, org fallback `_tenant` — web ile birebir)
+  String buildPrivatePath({
+    required String fileName,
+    required StorageCategory category,
+    required String platformCode,
+    String? tenantId,
+    String? organizationId,
+  }) {
+    final tenant = (tenantId != null && tenantId.isNotEmpty)
+        ? tenantId
+        : '_unknown';
+    final org = (organizationId != null && organizationId.isNotEmpty)
+        ? organizationId
+        : '_tenant';
+    return '$platformCode/$tenant/$org/${category.value}/${_generateUnique()}-${_safeName(fileName)}';
+  }
+
+  /// Erişim düzeyine göre yol kur (bağlam çözülmüş olmalı).
+  String _pathFor({
+    required StorageAccessLevel access,
+    required StorageCategory category,
+    required String fileName,
+    required _StorageContext ctx,
+    String? tenantId,
+    String? organizationId,
+    String? entityType,
+    String? entityId,
+  }) {
+    switch (access) {
+      case StorageAccessLevel.public:
+        return buildPublicPath(
+          fileName: fileName,
+          category: category,
+          platformCode: ctx.platformCode,
+        );
+      case StorageAccessLevel.protected:
+        return buildProtectedPath(
+          fileName: fileName,
+          category: category,
+          platformCode: ctx.platformCode,
+          tenantId: tenantId ?? ctx.tenantId,
+          entityType: entityType,
+          entityId: entityId,
+        );
+      case StorageAccessLevel.private:
+        return buildPrivatePath(
+          fileName: fileName,
+          category: category,
+          platformCode: ctx.platformCode,
+          tenantId: tenantId ?? ctx.tenantId,
+          organizationId: organizationId ?? ctx.organizationId,
+        );
+    }
+  }
+
+  /// Yüklenen yol için okuma URL'i (public → publicUrl; aksi → signedUrl).
+  Future<UploadResult> _resultFor({
+    required String bucket,
+    required String storedPath,
+    required StorageAccessLevel access,
+  }) async {
+    if (access == StorageAccessLevel.public) {
+      final url = _supabase.storage.from(bucket).getPublicUrl(storedPath);
+      return UploadResult.success(path: storedPath, publicUrl: url);
+    }
+    final signed = await getSignedUrl(bucket: bucket, path: storedPath);
+    return UploadResult.success(path: storedPath, signedUrl: signed);
+  }
+
+  /// `storage_objects` registry satırı ekle (web `StorageService.recordObject`
+  /// ile birebir). protected/private SELECT RLS bu tabloyu kontrol eder →
+  /// KAYIT ŞART; aksi halde `createSignedUrl` yükleyen için bile 403 döner.
+  ///
+  /// Başarısız olursa fırlatır (obje yüklendi ama okunamaz = orphan) — çağıran
+  /// upload metodu yakalayıp [UploadResult.failure] döndürür (web throw davranışı).
+  Future<void> _recordObject({
+    required String bucket,
+    required String storagePath,
+    required String fileName,
+    required int fileSize,
+    required String? mimeType,
+    required StorageCategory category,
+    required StorageAccessLevel access,
+    required String? tenantId,
+    required String? organizationId,
+    String? entityType,
+    String? entityId,
+    String? siteId,
+    String? providerId,
+    String? controllerId,
+  }) async {
+    final isPublic = access == StorageAccessLevel.public;
+    final row = <String, dynamic>{
+      'platform_id': _platformContext?.activePlatformId ?? _pmsPlatformId,
+      'tenant_id': tenantId,
+      'organization_id': organizationId,
+      'site_id': siteId,
+      'provider_id': providerId,
+      'controller_id': controllerId,
+      // RLS okumasının geçmesi için ŞART (so.uploaded_by = auth.uid()).
+      'uploaded_by': _supabase.auth.currentUser?.id,
+      'bucket': bucket,
+      'storage_path': storagePath,
+      'public_url':
+          isPublic ? _supabase.storage.from(bucket).getPublicUrl(storagePath) : null,
+      'file_name': fileName,
+      'file_size': fileSize,
+      'mime_type': mimeType,
+      'category': category.value,
+      'entity_type': entityType,
+      'entity_id': entityId,
+      'access_level': access.name, // 'public' | 'protected' | 'private'
+      'is_public': isPublic,
+    };
+
+    await _supabase.from(_registryTable).insert(row).select('id').single();
+    Logger.info('Storage object registered: $bucket/$storagePath');
+  }
 
   // ============================================
   // UPLOAD
   // ============================================
 
-  /// Dosya yükle (File)
+  /// Dosya yükle (File) — kategori + görünürlük ile 3-bucket modeline yönlendirir.
+  ///
+  /// Bucket ve yol, [access]/[category] + enjekte edilen bağlamdan türetilir;
+  /// çağıran ham bucket/path geçmez (web `StorageService.upload*` ile aynı model).
   Future<UploadResult> uploadFile({
-    required String bucket,
-    required String path,
     required File file,
+    required StorageCategory category,
+    StorageAccessLevel access = StorageAccessLevel.private,
+    String? fileName,
     String? contentType,
-    bool upsert = true,
-    void Function(UploadProgress)? onProgress,
+    String? tenantId,
+    String? organizationId,
+    String? entityType,
+    String? entityId,
+    String? siteId,
+    String? providerId,
+    String? controllerId,
   }) async {
     try {
-      // Dosya boyutu kontrolü
       final fileSize = await file.length();
       if (fileSize > maxFileSizeMB * 1024 * 1024) {
         return UploadResult.failure(
@@ -333,29 +677,51 @@ class FileStorageService {
         );
       }
 
-      // Uzantıdan MIME type al
-      final extension = path.split('.').last;
-      final fileType = FileType.fromExtension(extension);
-      final mimeType = contentType ?? fileType.getMimeType(extension);
+      final name = fileName ?? file.path.split('/').last;
+      final extension = name.split('.').last;
+      final mimeType =
+          contentType ?? FileType.fromExtension(extension).getMimeType(extension);
 
-      // Yükle
-      final response = await _supabase.storage.from(bucket).upload(
+      final ctx = await _resolveContext();
+      final effTenant = tenantId ?? ctx.tenantId;
+      final effOrg = organizationId ?? ctx.organizationId;
+      final bucket = StorageBuckets.forAccess(access);
+      final path = _pathFor(
+        access: access,
+        category: category,
+        fileName: name,
+        ctx: ctx,
+        tenantId: effTenant,
+        organizationId: effOrg,
+        entityType: entityType,
+        entityId: entityId,
+      );
+
+      // TODO(storage-quota): web upload öncesi tenant depolama kotasını RPC ile
+      // REZERVE eder (+ hata halinde serbest bırakır). Mobil yüklemeler şu an bu
+      // rezervasyonu ATLIYOR → tenant storage-budget gate'i bypass ediliyor.
+      await _supabase.storage.from(bucket).upload(
             path,
             file,
-            fileOptions: FileOptions(
-              contentType: mimeType,
-              upsert: upsert,
-            ),
+            fileOptions: FileOptions(contentType: mimeType, upsert: true),
           );
-
-      // Public URL al
-      final publicUrl = _supabase.storage.from(bucket).getPublicUrl(path);
-
       Logger.info('File uploaded: $bucket/$path');
 
-      return UploadResult.success(
-        path: response,
-        publicUrl: publicUrl,
+      return _registerOrCleanup(
+        bucket: bucket,
+        path: path,
+        fileName: name,
+        fileSize: fileSize,
+        mimeType: mimeType,
+        category: category,
+        access: access,
+        tenantId: effTenant,
+        organizationId: effOrg,
+        entityType: entityType,
+        entityId: entityId,
+        siteId: siteId,
+        providerId: providerId,
+        controllerId: controllerId,
       );
     } catch (e) {
       Logger.error('Failed to upload file: $e');
@@ -363,45 +729,116 @@ class FileStorageService {
     }
   }
 
-  /// Dosya yükle (Bytes)
-  Future<UploadResult> uploadBytes({
+  /// Yüklenen objeyi registry'e kaydet; başarısız olursa orphan objeyi
+  /// best-effort sil ve [UploadResult.failure] döndür (obje okunamaz olurdu).
+  Future<UploadResult> _registerOrCleanup({
     required String bucket,
     required String path,
-    required Uint8List bytes,
-    String? contentType,
-    bool upsert = true,
+    required String fileName,
+    required int fileSize,
+    required String? mimeType,
+    required StorageCategory category,
+    required StorageAccessLevel access,
+    required String? tenantId,
+    required String? organizationId,
+    String? entityType,
+    String? entityId,
+    String? siteId,
+    String? providerId,
+    String? controllerId,
   }) async {
     try {
-      // Boyut kontrolü
+      await _recordObject(
+        bucket: bucket,
+        storagePath: path,
+        fileName: fileName,
+        fileSize: fileSize,
+        mimeType: mimeType,
+        category: category,
+        access: access,
+        tenantId: tenantId,
+        organizationId: organizationId,
+        entityType: entityType,
+        entityId: entityId,
+        siteId: siteId,
+        providerId: providerId,
+        controllerId: controllerId,
+      );
+    } catch (e) {
+      Logger.error('Storage registry insert failed → removing orphan object: $e');
+      try {
+        await _supabase.storage.from(bucket).remove([path]);
+      } catch (_) {}
+      return UploadResult.failure('Storage registry insert failed: $e');
+    }
+    return _resultFor(bucket: bucket, storedPath: path, access: access);
+  }
+
+  /// Dosya yükle (Bytes) — kategori + görünürlük ile 3-bucket modeline yönlendirir.
+  Future<UploadResult> uploadBytes({
+    required Uint8List bytes,
+    required String fileName,
+    required StorageCategory category,
+    StorageAccessLevel access = StorageAccessLevel.private,
+    String? contentType,
+    String? tenantId,
+    String? organizationId,
+    String? entityType,
+    String? entityId,
+    String? siteId,
+    String? providerId,
+    String? controllerId,
+  }) async {
+    try {
       if (bytes.length > maxFileSizeMB * 1024 * 1024) {
         return UploadResult.failure(
           'Dosya boyutu ${maxFileSizeMB}MB\'dan büyük olamaz',
         );
       }
 
-      // Uzantıdan MIME type al
-      final extension = path.split('.').last;
-      final fileType = FileType.fromExtension(extension);
-      final mimeType = contentType ?? fileType.getMimeType(extension);
+      final extension = fileName.split('.').last;
+      final mimeType =
+          contentType ?? FileType.fromExtension(extension).getMimeType(extension);
 
-      // Yükle
-      final response = await _supabase.storage.from(bucket).uploadBinary(
+      final ctx = await _resolveContext();
+      final effTenant = tenantId ?? ctx.tenantId;
+      final effOrg = organizationId ?? ctx.organizationId;
+      final bucket = StorageBuckets.forAccess(access);
+      final path = _pathFor(
+        access: access,
+        category: category,
+        fileName: fileName,
+        ctx: ctx,
+        tenantId: effTenant,
+        organizationId: effOrg,
+        entityType: entityType,
+        entityId: entityId,
+      );
+
+      // TODO(storage-quota): mobil yüklemeler tenant storage-budget rezervasyonunu
+      // (web upload-öncesi RPC) ATLIYOR — bkz. uploadFile.
+      await _supabase.storage.from(bucket).uploadBinary(
             path,
             bytes,
-            fileOptions: FileOptions(
-              contentType: mimeType,
-              upsert: upsert,
-            ),
+            fileOptions: FileOptions(contentType: mimeType, upsert: true),
           );
-
-      // Public URL al
-      final publicUrl = _supabase.storage.from(bucket).getPublicUrl(path);
-
       Logger.info('File uploaded (bytes): $bucket/$path');
 
-      return UploadResult.success(
-        path: response,
-        publicUrl: publicUrl,
+      return _registerOrCleanup(
+        bucket: bucket,
+        path: path,
+        fileName: fileName,
+        fileSize: bytes.length,
+        mimeType: mimeType,
+        category: category,
+        access: access,
+        tenantId: effTenant,
+        organizationId: effOrg,
+        entityType: entityType,
+        entityId: entityId,
+        siteId: siteId,
+        providerId: providerId,
+        controllerId: controllerId,
       );
     } catch (e) {
       Logger.error('Failed to upload bytes: $e');
@@ -409,34 +846,45 @@ class FileStorageService {
     }
   }
 
-  /// Avatar yükle
+  /// Avatar yükle → PROTECTED bucket, kategori `avatar`, entity-scoped:
+  /// `{platformCode}/{tenant}/protected/profile/{userId}/avatar/{unique}-{file}`.
+  ///
+  /// CANLI `profiles.avatar_url` örneklerinden doğrulanan kanonik web şeması ile
+  /// birebir (entity_type=`profile`, entity_id=`userId`) → foto web↔mobil
+  /// karşılıklı okunabilir. Dönen [UploadResult.path]'i `profiles.avatar_url`
+  /// olarak sakla; okumak için [getAvatarUrl] kullan.
   Future<UploadResult> uploadAvatar({
     required String userId,
     required File file,
   }) async {
-    final extension = file.path.split('.').last;
-    final path = '$userId/avatar.$extension';
-
     return uploadFile(
-      bucket: StorageBuckets.avatars,
-      path: path,
       file: file,
-      upsert: true,
+      category: StorageCategory.avatar,
+      access: StorageAccessLevel.protected,
+      entityType: 'profile',
+      entityId: userId,
     );
   }
 
-  /// Organizasyon dosyası yükle
+  /// Organizasyon dosyası yükle → PRIVATE bucket, kategori `document`
+  /// (`{platformCode}/{tenant}/{organizationId}/document/{unique}-{file}`).
+  ///
+  /// [organizationId] açıkça geçilir ve private yol hiyerarşisinin org
+  /// segmentini geçersiz kılar (çözülen bağlam yerine).
   Future<UploadResult> uploadOrganizationFile({
     required String organizationId,
     required String fileName,
     required File file,
   }) async {
-    final path = '$organizationId/$fileName';
-
+    // TODO(storage): web'de org-belgeleri için ayrı bir kategori yok →
+    // en yakın eşleşme `document`. Bir resim yükleniyorsa çağıran
+    // `uploadFile(category: StorageCategory.image, ...)` tercih edebilir.
     return uploadFile(
-      bucket: StorageBuckets.organizations,
-      path: path,
       file: file,
+      category: StorageCategory.document,
+      access: StorageAccessLevel.private,
+      fileName: fileName,
+      organizationId: organizationId,
     );
   }
 
@@ -490,6 +938,41 @@ class FileStorageService {
     required String path,
   }) {
     return _supabase.storage.from(bucket).getPublicUrl(path);
+  }
+
+  /// Web `profiles.avatar_url` değeri PLATFORM-PROTECTED bir storage path'idir
+  /// (`<PLATFORM>/<tenant>/protected/avatars/…`). `getPublicUrl` 403 döner →
+  /// `platform-protected` bucket'ından signed-URL üretilir. Web
+  /// `ProfileService.getAvatarUrl` + `StorageService.getProtectedUrl` ile birebir
+  /// aynı davranış (platformlar arası foto tutarlılığı için ŞART).
+  ///
+  /// [raw] `profiles.avatar_url` değeri. null/boş → null; tam http(s) URL ya da
+  /// storage-path olmayan bir değer → aynen döner.
+  Future<String?> getAvatarUrl(
+    String? raw, {
+    Duration expiry = signedUrlExpiry,
+  }) async {
+    if (raw == null || raw.isEmpty) return null;
+    // Storage path değilse (tam URL ya da düz değer) olduğu gibi döndür — web
+    // isStoragePath ile aynı: PLATFORM/(<tenant>/)?(protected|assets|private)/…
+    if (!_isStoragePath(raw)) return raw;
+    return getSignedUrl(
+      bucket: StorageBuckets.platformProtected,
+      path: raw,
+      expiry: expiry,
+    );
+  }
+
+  /// Web `StorageService.isStoragePath` ile birebir: değer platform-protected
+  /// bir storage path'i mi? (http(s) URL değil + `PLATFORM/(<tenant>/)?scheme/`)
+  static final RegExp _storagePathRe =
+      RegExp(r'^[A-Z]{2,10}\/(?:[^/]+\/)?(?:protected|assets|private)\/');
+  bool _isStoragePath(String value) {
+    if (value.isEmpty) return false;
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return false;
+    }
+    return _storagePathRe.hasMatch(value);
   }
 
   /// Signed URL al (geçici erişim)

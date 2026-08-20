@@ -13,6 +13,10 @@ export 'src/core/theme/app_shadows.dart';
 export 'src/core/theme/app_theme.dart';
 export 'src/core/theme/theme_service.dart';
 
+// Core - Branding (DB-driven per-platform branding)
+export 'src/core/branding/branding_config.dart';
+export 'src/core/branding/branding_service.dart';
+
 // Core - Utils
 export 'src/core/utils/validators.dart';
 export 'src/core/utils/formatters.dart';
@@ -96,6 +100,7 @@ export 'src/core/search/search_service.dart';
 // Core - Localization
 export 'src/core/localization/localization_service.dart';
 export 'src/core/localization/app_localizations.dart';
+export 'src/core/localization/language_service.dart';
 
 // Core - Push Notifications
 export 'src/core/push/push_notification_service.dart';
@@ -165,6 +170,35 @@ export 'src/core/team/team_service.dart';
 export 'src/core/map/map_models.dart';
 export 'src/core/map/map_service.dart';
 
+// Core - Menu (M1 — Windows-OS DB menu)
+export 'src/core/menu/menu_item.dart';
+export 'src/core/menu/mobile_menu_service.dart';
+export 'src/core/menu/bootstrap_icon_map.dart';
+
+// Core - Platform (M1 — platform switch)
+export 'src/core/platform/platform_catalog.dart';
+export 'src/core/platform/platform_context.dart';
+
+// Core - Entity Engine (low-code builder data layer)
+export 'src/core/entity/models/entity_type_config.dart';
+export 'src/core/entity/models/generic_entity.dart';
+export 'src/core/entity/entity_config_service.dart';
+export 'src/core/entity/entity_data_service.dart';
+
+// Core - Dynamic Form Engine (low-code builder data layer)
+export 'src/core/form/models/form_field.dart';
+export 'src/core/form/models/form_template.dart';
+export 'src/core/form/form_template_service.dart';
+export 'src/core/form/lookup_service.dart';
+
+// Core - HR (ESS): leave / payroll / attendance (PDKS) / onboarding
+export 'src/core/hr/hr_ess_service.dart';
+export 'src/core/hr/models/leave_balance.dart';
+export 'src/core/hr/models/leave_request_row.dart';
+export 'src/core/hr/models/payslip.dart';
+export 'src/core/hr/models/pdks_day.dart';
+export 'src/core/hr/models/onboarding_task.dart';
+
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
 export 'src/core/di/core_initializer.dart';
@@ -193,6 +227,30 @@ export 'src/presentation/widgets/lists/reset_alarm_list.dart';
 export 'src/presentation/widgets/navigation/app_scaffold.dart';
 export 'src/presentation/widgets/navigation/app_tab_bar.dart';
 export 'src/presentation/widgets/navigation/app_bottom_sheet.dart';
+
+// Presentation - Dynamic form + entity engine (Faz-1)
+// Yalnız container widget'ı public API'ye çıkar; field-registry/context iç kalır
+// (böylece iç dosyaların relative sibling import'ları redundant olmaz).
+export 'src/presentation/dynamic_form/dynamic_form_widget.dart';
+
+// Presentation - Shell (platform-nötr ekranlar + resolver) — Faz-0
+// App-shell'ler (example_pms, example_phr…) bu ekranları paylaşır; domain
+// ekranlarını `ScreenResolver.addResolver(...)` ile kaydeder.
+export 'src/presentation/shell/screen_resolver.dart';
+export 'src/presentation/shell/route_access.dart';
+export 'src/presentation/shell/main_shell_screen.dart';
+export 'src/presentation/shell/coming_soon_screen.dart';
+export 'src/presentation/shell/portal_landing_screen.dart';
+export 'src/presentation/shell/auth/login_screen.dart';
+export 'src/presentation/shell/auth/accept_invite_screen.dart';
+export 'src/presentation/shell/auth/request_access_screen.dart';
+export 'src/presentation/shell/tenant/tenant_selector_screen.dart';
+export 'src/presentation/shell/organization/organization_selector_screen.dart';
+export 'src/presentation/shell/settings/settings_screen.dart';
+export 'src/presentation/shell/language_picker.dart';
+export 'src/presentation/shell/entities/entity_list_screen.dart';
+export 'src/presentation/shell/entities/entity_detail_screen.dart';
+export 'src/presentation/shell/entities/entity_form_screen.dart';
 
 // Presentation - Widgets - Feedback
 export 'src/presentation/widgets/feedback/app_loading_indicator.dart';

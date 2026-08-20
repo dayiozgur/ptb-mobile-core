@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/map/map_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -163,7 +165,7 @@ class MapLayerSelector extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Harita Katmanı',
+                  sl<LocalizationService>().translate('map.layer'),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
@@ -172,7 +174,7 @@ class MapLayerSelector extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _LayerOption(
-                  title: 'Açık',
+                  title: sl<LocalizationService>().translate('map.layer_light'),
                   icon: Icons.wb_sunny_outlined,
                   isSelected: selected == MapTileProvider.light,
                   onTap: () {
@@ -181,7 +183,7 @@ class MapLayerSelector extends StatelessWidget {
                   },
                 ),
                 _LayerOption(
-                  title: 'Koyu',
+                  title: sl<LocalizationService>().translate('map.layer_dark'),
                   icon: Icons.dark_mode_outlined,
                   isSelected: selected == MapTileProvider.dark,
                   onTap: () {
@@ -190,7 +192,7 @@ class MapLayerSelector extends StatelessWidget {
                   },
                 ),
                 _LayerOption(
-                  title: 'Uydu',
+                  title: sl<LocalizationService>().translate('map.layer_satellite'),
                   icon: Icons.satellite_alt_outlined,
                   isSelected: selected == MapTileProvider.satellite,
                   onTap: () {
@@ -241,7 +243,7 @@ class _LayerOption extends StatelessWidget {
         ),
       ),
       trailing: isSelected
-          ? const Icon(Icons.check_rounded, color: AppColors.primary)
+          ? Icon(Icons.check_rounded, color: AppColors.primary)
           : null,
       onTap: onTap,
       shape: RoundedRectangleBorder(

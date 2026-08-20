@@ -1,48 +1,79 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
-import '../tenant/tenant_model.dart';
 import '../utils/logger.dart';
 import 'permission_model.dart';
 
+/// Coarse rol seti — modern RBAC.
+///
+/// Roller `rbac_user_roles` JOIN `rbac_roles` üzerinde yaşar ve coarse-role
+/// RPC'leri ile yüzeye çıkar (`fn_my_coarse_role` / `fn_coarse_role_of`).
+/// İstemci `rbac_*` tablolarını DOĞRUDAN sorgulamaz.
+///
+/// Eşleme (DB tarafı): super_admin/admin → ROLE_ADMIN, manager → ROLE_MANAGER,
+/// (staff/technician/dispatcher/inspector/reporter/...) → ROLE_USER,
+/// customer → ROLE_CUSTOMER.
+class CoarseRoles {
+  static const String admin = 'ROLE_ADMIN';
+  static const String manager = 'ROLE_MANAGER';
+  static const String user = 'ROLE_USER';
+  static const String customer = 'ROLE_CUSTOMER';
+
+  static const List<String> all = [admin, manager, user, customer];
+
+  static const Map<String, int> _levels = {
+    admin: 80,
+    manager: 60,
+    user: 40,
+    customer: 20,
+  };
+
+  /// Rol hiyerarşi seviyesi (yüksek = daha yetkili).
+  static int levelOf(String? role) => _levels[role] ?? 0;
+
+  static bool isValid(String? role) => role != null && _levels.containsKey(role);
+
+  /// Coarse rolü [Role] modeline dönüştür (UI/etiket için).
+  static Role toRole(String code) {
+    const names = {
+      admin: 'Yönetici',
+      manager: 'Müdür',
+      user: 'Kullanıcı',
+      customer: 'Müşteri',
+    };
+    return Role(
+      id: 'coarse-$code',
+      code: code,
+      name: names[code] ?? code,
+      level: levelOf(code),
+      isSystem: true,
+    );
+  }
+
+  static List<Role> get roles => all.map(toRole).toList();
+}
+
 /// İzin Servisi
 ///
-/// Kullanıcı izin ve rol yönetimini sağlar.
-/// Yetki kontrolü ve rol atamaları için kullanılır.
+/// Modern RBAC'e hizalanmıştır. Rol çözümü coarse-role RPC'lerinden gelir;
+/// ölü `tenant_users.role` / `roles` / `role_permissions` yolları KALDIRILDI.
 ///
-/// Örnek kullanım:
+/// Fine-grained izinler (platform_menu_items.permission) M1'de gelecek; şu an
+/// izin kontrolleri coarse rol hiyerarşisine (admin > manager > user > customer)
+/// göre yapılır.
+///
+/// Örnek:
 /// ```dart
-/// final permissionService = PermissionService(
-///   supabase: Supabase.instance.client,
-///   cacheManager: CacheManager(),
-/// );
-///
-/// // İzin kontrolü
-/// final canEdit = await permissionService.hasPermission(
-///   userId: 'user-id',
-///   tenantId: 'tenant-id',
-///   permission: 'sites.update',
-/// );
-///
-/// // Rol ataması
-/// await permissionService.assignRole(
-///   userId: 'user-id',
-///   tenantId: 'tenant-id',
-///   roleCode: 'manager',
-/// );
+/// final role = await permissionService.getCoarseRole();      // self
+/// final isAdmin = await permissionService.isCurrentUserAdmin();
 /// ```
 class PermissionService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
 
-  // Cache keys
-  static const String _userPermissionsCacheKey = 'user_permissions';
-  static const String _rolesCacheKey = 'tenant_roles';
-
-  // Table names
-  static const String _tenantUsersTable = 'tenant_users';
-  static const String _rolesTable = 'roles';
-  static const String _rolePermissionsTable = 'role_permissions';
+  // Cache
+  static const String _coarseRoleCacheKey = 'coarse_role';
+  static const Duration _cacheTtl = Duration(minutes: 15);
 
   PermissionService({
     required SupabaseClient supabase,
@@ -51,535 +82,220 @@ class PermissionService {
         _cacheManager = cacheManager;
 
   // ============================================
-  // PERMISSION CHECKS
+  // COARSE ROLE RESOLUTION (RBAC)
   // ============================================
 
-  /// Kullanıcının belirli bir izne sahip olup olmadığını kontrol et
-  Future<bool> hasPermission({
-    required String userId,
-    required String tenantId,
-    required String permission,
+  /// Coarse rolü çöz.
+  ///
+  /// [profileId] null ya da mevcut kullanıcı ise `fn_my_coarse_role`,
+  /// aksi halde `fn_coarse_role_of(p_profile)` çağrılır.
+  /// Dönüş: ROLE_ADMIN | ROLE_MANAGER | ROLE_USER | ROLE_CUSTOMER | null.
+  Future<String?> getCoarseRole({
+    String? profileId,
+    bool forceRefresh = false,
   }) async {
-    try {
-      // Kullanıcının rolünü al
-      final userRole = await getUserRole(userId, tenantId);
-      if (userRole == null) return false;
+    final currentUserId = _supabase.auth.currentUser?.id;
+    final targetId = profileId ?? currentUserId;
+    if (targetId == null) return null;
 
-      // Sistem rolü mü kontrol et
-      final systemRole = SystemRoles.getByCode(userRole);
-      if (systemRole != null) {
-        return systemRole.hasPermission(permission);
-      }
+    final isSelf = targetId == currentUserId;
+    final cacheKey = '${_coarseRoleCacheKey}_$targetId';
 
-      // Özel rol için izinleri al
-      final permissions = await _getUserPermissions(userId, tenantId);
-      return permissions.contains(permission) || permissions.contains('*');
-    } catch (e) {
-      Logger.error('Failed to check permission', e);
-      return false;
-    }
-  }
-
-  /// Kullanıcının birden fazla izinden birine sahip olup olmadığını kontrol et
-  Future<bool> hasAnyPermission({
-    required String userId,
-    required String tenantId,
-    required List<String> permissions,
-  }) async {
-    for (final permission in permissions) {
-      if (await hasPermission(
-        userId: userId,
-        tenantId: tenantId,
-        permission: permission,
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /// Kullanıcının tüm izinlere sahip olup olmadığını kontrol et
-  Future<bool> hasAllPermissions({
-    required String userId,
-    required String tenantId,
-    required List<String> permissions,
-  }) async {
-    for (final permission in permissions) {
-      if (!await hasPermission(
-        userId: userId,
-        tenantId: tenantId,
-        permission: permission,
-      )) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /// Kullanıcının yönetici olup olmadığını kontrol et
-  Future<bool> isAdmin(String userId, String tenantId) async {
-    final role = await getUserRole(userId, tenantId);
-    if (role == null) return false;
-
-    final systemRole = SystemRoles.getByCode(role);
-    if (systemRole != null) {
-      return systemRole.level >= SystemRoles.admin.level;
-    }
-
-    // Özel rol için level kontrolü
-    final customRole = await getRole(role, tenantId);
-    return customRole != null && customRole.level >= 80;
-  }
-
-  /// Kullanıcının sahip olup olmadığını kontrol et
-  Future<bool> isOwner(String userId, String tenantId) async {
-    final role = await getUserRole(userId, tenantId);
-    return role == SystemRoles.ownerCode;
-  }
-
-  /// Kullanıcının başka bir kullanıcıyı yönetip yönetemeyeceğini kontrol et
-  Future<bool> canManageUser({
-    required String managerId,
-    required String targetUserId,
-    required String tenantId,
-  }) async {
-    // Kendini yönetemez (bazı işlemler için)
-    if (managerId == targetUserId) return false;
-
-    final managerRole = await getUserRole(managerId, tenantId);
-    final targetRole = await getUserRole(targetUserId, tenantId);
-
-    if (managerRole == null || targetRole == null) return false;
-
-    final managerLevel = _getRoleLevel(managerRole);
-    final targetLevel = _getRoleLevel(targetRole);
-
-    // Daha yüksek seviyeli kullanıcıları yönetemez
-    return managerLevel > targetLevel;
-  }
-
-  // ============================================
-  // ROLE MANAGEMENT
-  // ============================================
-
-  /// Kullanıcının rolünü getir
-  Future<String?> getUserRole(String userId, String tenantId) async {
-    try {
-      // Cache'den dene
-      final cacheKey = '${_userPermissionsCacheKey}_${userId}_$tenantId';
+    if (!forceRefresh) {
       final cached = await _cacheManager.get(cacheKey);
       if (cached != null && cached is Map && cached['role'] != null) {
         return cached['role'] as String;
       }
+    }
 
-      // Supabase'den getir
-      final response = await _supabase
-          .from(_tenantUsersTable)
-          .select('role')
-          .eq('user_id', userId)
-          .eq('tenant_id', tenantId)
-          .eq('status', 'active')
-          .maybeSingle();
+    try {
+      final dynamic response = isSelf
+          ? await _supabase.rpc('fn_my_coarse_role')
+          : await _supabase
+              .rpc('fn_coarse_role_of', params: {'p_profile': targetId});
 
-      if (response == null) return null;
+      final role = response is String ? response : response?.toString();
+      if (role == null || role.isEmpty) return null;
 
-      final role = response['role'] as String?;
-
-      // Cache'e kaydet
-      await _cacheManager.set(
-        cacheKey,
-        {'role': role},
-        ttl: const Duration(minutes: 15),
-      );
-
+      await _cacheManager.set(cacheKey, {'role': role}, ttl: _cacheTtl);
       return role;
     } catch (e) {
-      Logger.error('Failed to get user role', e);
+      Logger.error('Failed to resolve coarse role', e);
       return null;
     }
   }
 
-  /// Kullanıcıya rol ata
+  /// Mevcut kullanıcının coarse rolünü çöz.
+  Future<String?> getCurrentUserRole({bool forceRefresh = false}) =>
+      getCoarseRole(forceRefresh: forceRefresh);
+
+  /// Rol önbelleğini temizle (rol değişimi / re-login sonrası).
+  Future<void> invalidateRoleCache([String? profileId]) async {
+    final id = profileId ?? _supabase.auth.currentUser?.id;
+    if (id != null) {
+      await _cacheManager.delete('${_coarseRoleCacheKey}_$id');
+    }
+  }
+
+  // ============================================
+  // ROLE CHECKS
+  // ============================================
+
+  /// Mevcut kullanıcı yönetici mi? (server-truth `fn_is_admin`)
+  Future<bool> isCurrentUserAdmin() async {
+    try {
+      final dynamic res = await _supabase.rpc('fn_is_admin');
+      if (res is bool) return res;
+    } catch (e) {
+      Logger.warning('fn_is_admin failed, falling back to coarse role: $e');
+    }
+    final role = await getCoarseRole();
+    return role == CoarseRoles.admin;
+  }
+
+  /// Belirli kullanıcı yönetici mi? (coarse rol ROLE_ADMIN)
+  ///
+  /// [tenantId] geriye-uyumluluk için korunuyor; RBAC profil-kapsamlıdır.
+  Future<bool> isAdmin(String userId, [String? tenantId]) async {
+    final role = await getCoarseRole(profileId: userId);
+    return role == CoarseRoles.admin;
+  }
+
+  /// Mevcut kullanıcı belirtilen organizasyonun üyesi mi? (`fn_user_in_org`)
+  Future<bool> isInOrganization(String organizationId) async {
+    try {
+      final dynamic res = await _supabase
+          .rpc('fn_user_in_org', params: {'p_org_id': organizationId});
+      return res is bool ? res : false;
+    } catch (e) {
+      Logger.error('Failed fn_user_in_org', e);
+      return false;
+    }
+  }
+
+  /// Kullanıcının başka bir kullanıcıyı yönetip yönetemeyeceğini kontrol et.
+  ///
+  /// Coarse rol hiyerarşisine göre: yönetici hedeften daha yüksek seviyede
+  /// olmalı.
+  Future<bool> canManageUser({
+    required String managerId,
+    required String targetUserId,
+    String? tenantId,
+  }) async {
+    if (managerId == targetUserId) return false;
+
+    final managerRole = await getCoarseRole(profileId: managerId);
+    final targetRole = await getCoarseRole(profileId: targetUserId);
+    if (managerRole == null || targetRole == null) return false;
+
+    return CoarseRoles.levelOf(managerRole) > CoarseRoles.levelOf(targetRole);
+  }
+
+  // ============================================
+  // PERMISSION CHECKS (coarse-role gated)
+  // ============================================
+
+  // TODO(M1): fine-grained perms via platform_menu_items (roles[]/permission).
+  // Şimdilik izin kodları coarse rol hiyerarşisine indirgeniyor.
+
+  /// Mevcut kullanıcı verilen izne sahip mi? (coarse rol tabanlı)
+  Future<bool> hasPermission({
+    String? userId,
+    String? tenantId,
+    required String permission,
+  }) async {
+    final role = await getCoarseRole(profileId: userId);
+    if (role == null) return false;
+    return CoarseRoles.levelOf(role) >= _requiredLevel(permission);
+  }
+
+  /// İzinlerden herhangi birine sahip mi?
+  Future<bool> hasAnyPermission({
+    String? userId,
+    String? tenantId,
+    required List<String> permissions,
+  }) async {
+    final role = await getCoarseRole(profileId: userId);
+    if (role == null) return false;
+    final level = CoarseRoles.levelOf(role);
+    return permissions.any((p) => level >= _requiredLevel(p));
+  }
+
+  /// İzinlerin tümüne sahip mi?
+  Future<bool> hasAllPermissions({
+    String? userId,
+    String? tenantId,
+    required List<String> permissions,
+  }) async {
+    final role = await getCoarseRole(profileId: userId);
+    if (role == null) return false;
+    final level = CoarseRoles.levelOf(role);
+    return permissions.every((p) => level >= _requiredLevel(p));
+  }
+
+  /// Bir izin kodu için gereken minimum coarse seviye.
+  ///
+  /// TODO(M1): platform_menu_items.roles / permission ile değiştir.
+  int _requiredLevel(String permission) {
+    final parts = permission.split('.');
+    final category = parts.isNotEmpty ? parts[0] : '';
+    final action = parts.length > 1 ? parts[1] : 'view';
+
+    // Yalnızca yöneticiye açık alanlar
+    if (category == 'billing' || category == 'integrations') {
+      return CoarseRoles.levelOf(CoarseRoles.admin);
+    }
+    if (category == 'users' || category == 'settings') {
+      return action == 'view'
+          ? CoarseRoles.levelOf(CoarseRoles.manager)
+          : CoarseRoles.levelOf(CoarseRoles.admin);
+    }
+
+    switch (action) {
+      case 'view':
+      case 'list':
+      case 'export':
+        return CoarseRoles.levelOf(CoarseRoles.user);
+      case 'create':
+      case 'update':
+      case 'delete':
+      case 'manage':
+      case 'import':
+      default:
+        return CoarseRoles.levelOf(CoarseRoles.manager);
+    }
+  }
+
+  // ============================================
+  // ROLE CATALOG (coarse — no DB)
+  // ============================================
+
+  /// Coarse rolü [Role] modeline çöz (etiket/UI için). DB sorgusu yok.
+  Role? getRole(String roleCode) {
+    if (!CoarseRoles.isValid(roleCode)) return null;
+    return CoarseRoles.toRole(roleCode);
+  }
+
+  /// Kullanılabilir coarse roller. DB sorgusu yok.
+  List<Role> getAvailableRoles() => CoarseRoles.roles;
+
+  // ============================================
+  // DEPRECATED WRITE OPS
+  // ============================================
+  // Rol atama/oluşturma/güncelleme/silme artık server-side (rbac_user_roles /
+  // rbac_roles + admin EF/RPC) ile yönetiliyor. Ölü `roles`/`role_permissions`/
+  // `tenant_users.role` yazımları KALDIRILDI (400/no-op üretiyorlardı).
+  // TODO(M1): gerekirse admin EF üzerinden rol atama akışı.
+
+  @Deprecated('RBAC roller server-side yönetiliyor; client rol atamaz.')
   Future<bool> assignRole({
     required String userId,
-    required String tenantId,
+    String? tenantId,
     required String roleCode,
     String? assignedBy,
   }) async {
-    try {
-      // Owner rolü sadece mevcut owner tarafından atanabilir
-      if (roleCode == SystemRoles.ownerCode) {
-        if (assignedBy == null) return false;
-        final isAssignerOwner = await isOwner(assignedBy, tenantId);
-        if (!isAssignerOwner) {
-          Logger.warning('Only owner can assign owner role');
-          return false;
-        }
-      }
-
-      await _supabase
-          .from(_tenantUsersTable)
-          .update({
-            'role': roleCode,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('user_id', userId)
-          .eq('tenant_id', tenantId);
-
-      // Cache'i temizle
-      await _cacheManager.delete('${_userPermissionsCacheKey}_${userId}_$tenantId');
-
-      Logger.info('Role assigned: $roleCode to user: $userId');
-      return true;
-    } catch (e) {
-      Logger.error('Failed to assign role', e);
-      return false;
-    }
-  }
-
-  /// Rol detayını getir
-  Future<Role?> getRole(String roleCode, String? tenantId) async {
-    // Önce sistem rollerini kontrol et
-    final systemRole = SystemRoles.getByCode(roleCode);
-    if (systemRole != null) return systemRole;
-
-    if (tenantId == null) return null;
-
-    try {
-      // Özel rol için veritabanından getir
-      final response = await _supabase
-          .from(_rolesTable)
-          .select('*, permissions:$_rolePermissionsTable(permission_code)')
-          .eq('code', roleCode)
-          .eq('tenant_id', tenantId)
-          .eq('active', true)
-          .maybeSingle();
-
-      if (response == null) return null;
-
-      final permissionsList = (response['permissions'] as List<dynamic>?)
-              ?.map((p) => (p as Map)['permission_code'] as String)
-              .toList() ??
-          [];
-
-      return Role(
-        id: response['id'] as String,
-        code: response['code'] as String,
-        name: response['name'] as String,
-        description: response['description'] as String?,
-        level: response['level'] as int? ?? 0,
-        isSystem: response['is_system'] as bool? ?? false,
-        permissions: permissionsList,
-        active: response['active'] as bool? ?? true,
-        createdAt: response['created_at'] != null
-            ? DateTime.tryParse(response['created_at'] as String)
-            : null,
-        updatedAt: response['updated_at'] != null
-            ? DateTime.tryParse(response['updated_at'] as String)
-            : null,
-      );
-    } catch (e) {
-      Logger.error('Failed to get role', e);
-      return null;
-    }
-  }
-
-  /// Tenant'ın tüm rollerini getir
-  Future<List<Role>> getTenantRoles(String tenantId) async {
-    try {
-      // Cache'den dene
-      final cached = await _cacheManager.getList<Role>(
-        key: '${_rolesCacheKey}_$tenantId',
-        fromJson: Role.fromJson,
-      );
-      if (cached != null && cached.isNotEmpty) return cached;
-
-      // Sistem rollerini ekle
-      final roles = List<Role>.from(SystemRoles.all);
-
-      // Özel rolleri getir
-      final response = await _supabase
-          .from(_rolesTable)
-          .select('*, permissions:$_rolePermissionsTable(permission_code)')
-          .eq('tenant_id', tenantId)
-          .eq('active', true)
-          .order('level', ascending: false);
-
-      for (final item in response) {
-        final permissionsList = (item['permissions'] as List<dynamic>?)
-                ?.map((p) => (p as Map)['permission_code'] as String)
-                .toList() ??
-            [];
-
-        roles.add(Role(
-          id: item['id'] as String,
-          code: item['code'] as String,
-          name: item['name'] as String,
-          description: item['description'] as String?,
-          level: item['level'] as int? ?? 0,
-          isSystem: false,
-          permissions: permissionsList,
-          active: true,
-        ));
-      }
-
-      // Cache'e kaydet
-      await _cacheManager.setList(
-        key: '${_rolesCacheKey}_$tenantId',
-        value: roles,
-        toJson: (r) => r.toJson(),
-        ttl: const Duration(hours: 1),
-      );
-
-      return roles;
-    } catch (e) {
-      Logger.error('Failed to get tenant roles', e);
-      return SystemRoles.all; // En azından sistem rollerini döndür
-    }
-  }
-
-  /// Özel rol oluştur
-  Future<Role?> createRole({
-    required String tenantId,
-    required String code,
-    required String name,
-    String? description,
-    int level = 50,
-    List<String> permissions = const [],
-    String? createdBy,
-  }) async {
-    try {
-      // Kod benzersiz mi kontrol et
-      final existing = await getRole(code, tenantId);
-      if (existing != null) {
-        throw PermissionException('Bu rol kodu zaten kullanılıyor');
-      }
-
-      final roleData = {
-        'tenant_id': tenantId,
-        'code': code,
-        'name': name,
-        'description': description,
-        'level': level,
-        'is_system': false,
-        'active': true,
-        'created_by': createdBy,
-        'created_at': DateTime.now().toIso8601String(),
-      };
-
-      final response = await _supabase
-          .from(_rolesTable)
-          .insert(roleData)
-          .select()
-          .single();
-
-      final roleId = response['id'] as String;
-
-      // İzinleri ekle
-      if (permissions.isNotEmpty) {
-        final permissionInserts = permissions
-            .map((p) => {
-                  'role_id': roleId,
-                  'permission_code': p,
-                  'tenant_id': tenantId,
-                })
-            .toList();
-
-        await _supabase.from(_rolePermissionsTable).insert(permissionInserts);
-      }
-
-      // Cache'i temizle
-      await _cacheManager.delete('${_rolesCacheKey}_$tenantId');
-
-      Logger.info('Role created: $code');
-
-      return Role(
-        id: roleId,
-        code: code,
-        name: name,
-        description: description,
-        level: level,
-        isSystem: false,
-        permissions: permissions,
-        active: true,
-        createdAt: DateTime.now(),
-      );
-    } on PermissionException {
-      rethrow;
-    } catch (e) {
-      Logger.error('Failed to create role', e);
-      return null;
-    }
-  }
-
-  /// Rol güncelle
-  Future<Role?> updateRole({
-    required String roleId,
-    required String tenantId,
-    String? name,
-    String? description,
-    int? level,
-    List<String>? permissions,
-    String? updatedBy,
-  }) async {
-    try {
-      // Sistem rolü güncellenemez
-      final existingRole = await _getRoleById(roleId);
-      if (existingRole != null && existingRole.isSystem) {
-        throw PermissionException('Sistem rolleri güncellenemez');
-      }
-
-      final updateData = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-
-      if (name != null) updateData['name'] = name;
-      if (description != null) updateData['description'] = description;
-      if (level != null) updateData['level'] = level;
-      if (updatedBy != null) updateData['updated_by'] = updatedBy;
-
-      await _supabase
-          .from(_rolesTable)
-          .update(updateData)
-          .eq('id', roleId)
-          .eq('tenant_id', tenantId);
-
-      // İzinleri güncelle
-      if (permissions != null) {
-        // Eski izinleri sil
-        await _supabase
-            .from(_rolePermissionsTable)
-            .delete()
-            .eq('role_id', roleId);
-
-        // Yeni izinleri ekle
-        if (permissions.isNotEmpty) {
-          final permissionInserts = permissions
-              .map((p) => {
-                    'role_id': roleId,
-                    'permission_code': p,
-                    'tenant_id': tenantId,
-                  })
-              .toList();
-
-          await _supabase.from(_rolePermissionsTable).insert(permissionInserts);
-        }
-      }
-
-      // Cache'i temizle
-      await _cacheManager.delete('${_rolesCacheKey}_$tenantId');
-
-      Logger.info('Role updated: $roleId');
-      return await getRole(existingRole?.code ?? '', tenantId);
-    } on PermissionException {
-      rethrow;
-    } catch (e) {
-      Logger.error('Failed to update role', e);
-      return null;
-    }
-  }
-
-  /// Rol sil
-  Future<bool> deleteRole(String roleId, String tenantId) async {
-    try {
-      // Sistem rolü silinemez
-      final existingRole = await _getRoleById(roleId);
-      if (existingRole != null && existingRole.isSystem) {
-        throw PermissionException('Sistem rolleri silinemez');
-      }
-
-      // Bu role atanmış kullanıcı var mı kontrol et
-      final usersWithRole = await _supabase
-          .from(_tenantUsersTable)
-          .select('id')
-          .eq('tenant_id', tenantId)
-          .eq('role', existingRole?.code ?? '')
-          .limit(1);
-
-      if (usersWithRole.isNotEmpty) {
-        throw PermissionException(
-          'Bu role atanmış kullanıcılar var. Önce kullanıcıların rollerini değiştirin.',
-        );
-      }
-
-      // İzinleri sil
-      await _supabase
-          .from(_rolePermissionsTable)
-          .delete()
-          .eq('role_id', roleId);
-
-      // Rolü sil
-      await _supabase
-          .from(_rolesTable)
-          .delete()
-          .eq('id', roleId)
-          .eq('tenant_id', tenantId);
-
-      // Cache'i temizle
-      await _cacheManager.delete('${_rolesCacheKey}_$tenantId');
-
-      Logger.info('Role deleted: $roleId');
-      return true;
-    } on PermissionException {
-      rethrow;
-    } catch (e) {
-      Logger.error('Failed to delete role', e);
-      return false;
-    }
-  }
-
-  // ============================================
-  // HELPER METHODS
-  // ============================================
-
-  /// Kullanıcının tüm izinlerini getir
-  Future<List<String>> _getUserPermissions(String userId, String tenantId) async {
-    try {
-      final role = await getUserRole(userId, tenantId);
-      if (role == null) return [];
-
-      // Sistem rolü
-      final systemRole = SystemRoles.getByCode(role);
-      if (systemRole != null) return systemRole.permissions;
-
-      // Özel rol
-      final customRole = await getRole(role, tenantId);
-      return customRole?.permissions ?? [];
-    } catch (e) {
-      Logger.error('Failed to get user permissions', e);
-      return [];
-    }
-  }
-
-  /// Rol seviyesini getir
-  int _getRoleLevel(String roleCode) {
-    final systemRole = SystemRoles.getByCode(roleCode);
-    if (systemRole != null) return systemRole.level;
-
-    // TenantRole enum'undan kontrol et
-    final tenantRole = TenantRole.values.cast<TenantRole?>().firstWhere(
-          (r) => r?.value == roleCode,
-          orElse: () => null,
-        );
-    if (tenantRole != null) return tenantRole.level;
-
-    return 0;
-  }
-
-  /// ID ile rol getir
-  Future<Role?> _getRoleById(String roleId) async {
-    try {
-      final response = await _supabase
-          .from(_rolesTable)
-          .select()
-          .eq('id', roleId)
-          .maybeSingle();
-
-      if (response == null) return null;
-      return Role.fromJson(response);
-    } catch (e) {
-      return null;
-    }
+    Logger.warning('assignRole no-op: RBAC server-side (rbac_user_roles).');
+    return false;
   }
 }
 

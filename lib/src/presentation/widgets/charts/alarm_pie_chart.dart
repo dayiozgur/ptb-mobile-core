@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/alarm/alarm_stats_model.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -53,7 +55,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
         height: widget.size,
         child: Center(
           child: Text(
-            'Alarm kaydı yok',
+            sl<LocalizationService>().translate('alarm.no_records'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary(brightness),
@@ -338,7 +340,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
       if (dist.acknowledgedCount > 0) {
         items.add(_LegendItem(
           color: AppColors.info,
-          label: 'Onaylı',
+          label: sl<LocalizationService>().translate('alarm.acknowledged_label'),
           value: dist.acknowledgedCount,
           brightness: brightness,
         ));

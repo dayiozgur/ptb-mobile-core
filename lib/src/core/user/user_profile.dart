@@ -1,232 +1,147 @@
-/// Kullanıcı profil durumu
-enum UserProfileStatus {
-  /// Aktif
-  active,
-
-  /// Pasif
-  inactive,
-
-  /// Askıda
-  suspended,
-
-  /// Silinmiş
-  deleted,
-
-  /// Doğrulama bekliyor
-  pendingVerification;
-
-  /// String'den UserProfileStatus'a dönüştür
-  static UserProfileStatus fromString(String? value) {
-    return UserProfileStatus.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => UserProfileStatus.active,
-    );
-  }
-}
-
-/// Kullanıcı cinsiyet
-enum UserGender {
-  /// Erkek
-  male('male', 'Erkek'),
-
-  /// Kadın
-  female('female', 'Kadın'),
-
-  /// Belirtilmemiş
-  notSpecified('not_specified', 'Belirtilmemiş');
-
-  final String value;
-  final String label;
-  const UserGender(this.value, this.label);
-
-  static UserGender fromString(String? value) {
-    return UserGender.values.firstWhere(
-      (e) => e.value == value || e.name == value,
-      orElse: () => UserGender.notSpecified,
-    );
-  }
-}
-
 /// Kullanıcı Profili modeli
 ///
-/// Supabase auth.users tablosunu genişleten profil bilgileri.
-/// profiles tablosunda tutulur.
+/// `profiles` tablosunun CANLI şemasına hizalanmıştır (2026-08).
+/// NOT: Web backend sertleştirildikten sonra bir dizi kolon DROP edildi /
+/// yeniden adlandırıldı. Bu model yalnızca GERÇEK kolonları map/write eder;
+/// aksi halde Supabase 400 döner (sessiz drift).
+///
+/// Coarse-role / tenant_name / organization_id alanları `fn_my_profile_bundle`
+/// RPC'sinden gelir (tek round-trip cold-start). Düz `profiles` select'inde
+/// bu üç alan null olur.
 class UserProfile {
-  /// Kullanıcı ID (auth.users.id)
+  /// Kullanıcı ID (auth.users.id == profiles.id)
   final String id;
 
-  /// Email adresi
+  /// Email adresi (profiles.email — null olabilir)
   final String email;
 
-  /// Email doğrulanmış mı?
-  final bool emailVerified;
+  /// Kullanıcı adı (profiles.username)
+  final String? username;
 
-  /// Görüntülenecek ad
-  final String? displayName;
+  /// Tam ad (profiles.full_name)
+  final String? fullName;
 
-  /// Ad
+  /// Ad (profiles.first_name)
   final String? firstName;
 
-  /// Soyad
+  /// Soyad (profiles.last_name)
   final String? lastName;
 
-  /// Avatar URL
+  /// Avatar URL (profiles.avatar_url) — ham storage path olabilir; görüntülemek
+  /// için signed URL üret (bkz. FileStorageService.getAvatarUrl).
   final String? avatarUrl;
 
-  /// Telefon numarası
+  /// Telefon numarası (profiles.phone)
   final String? phone;
 
-  /// Telefon doğrulanmış mı?
-  final bool phoneVerified;
-
-  /// Doğum tarihi
-  final DateTime? birthDate;
-
-  /// Cinsiyet
-  final UserGender gender;
-
-  /// Biyografi
+  /// Biyografi (profiles.bio)
   final String? bio;
 
-  /// Lokasyon/Şehir
-  final String? location;
+  /// İki faktörlü kimlik doğrulama açık mı? (profiles.two_factor_enabled)
+  final bool twoFactorEnabled;
 
-  /// Website
-  final String? website;
+  /// Aktif mi? (profiles.active) — pasif kullanıcıları gate'lemek için.
+  final bool active;
 
-  /// Profil durumu
-  final UserProfileStatus status;
+  /// Tenant ID (profiles.tenant_id)
+  final String? tenantId;
 
-  /// Askıya alınma tarihi
-  final DateTime? suspendedAt;
-
-  /// Askıya alınma nedeni
-  final String? suspendedReason;
-
-  // ============================================
-  // TERCIHLER
-  // ============================================
-
-  /// Tercih edilen dil
+  /// Tercih edilen dil (profiles.preferred_language)
   final String preferredLanguage;
 
-  /// Tercih edilen tema
-  final String preferredTheme;
+  /// Profil tipi (profiles.type)
+  final String? type;
 
-  /// Tercih edilen timezone
-  final String? preferredTimezone;
+  /// Varsayılan site ID (profiles.site_id)
+  final String? siteId;
 
-  /// Bildirim tercihleri
-  final NotificationPreferences notificationPreferences;
+  /// İsim etiketi (profiles.name)
+  final String? name;
 
-  // ============================================
-  // METADATA
-  // ============================================
+  /// Açıklama (profiles.description)
+  final String? description;
 
-  /// Son giriş tarihi
-  final DateTime? lastLoginAt;
+  /// Varsayılan profil mi? (profiles.is_default)
+  final bool isDefault;
 
-  /// Son giriş IP'si
-  final String? lastLoginIp;
+  /// Son giriş tarihi (profiles.last_login)
+  final DateTime? lastLogin;
 
-  /// Giriş sayısı
-  final int loginCount;
+  /// Oluşturulma tarihi (profiles.created_at)
+  final DateTime? createdAt;
 
-  /// Profil tamamlanma yüzdesi
-  final int profileCompleteness;
-
-  // ============================================
-  // ZAMAN DAMGALARI
-  // ============================================
-
-  /// Oluşturulma tarihi
-  final DateTime createdAt;
-
-  /// Güncellenme tarihi
+  /// Güncellenme tarihi (profiles.updated_at)
   final DateTime? updatedAt;
 
-  /// Silinme tarihi (soft delete)
-  final DateTime? deletedAt;
-
   // ============================================
-  // ORGANİZASYON İLİŞKİLERİ
+  // BUNDLE EKSTRALARI (fn_my_profile_bundle)
   // ============================================
 
-  /// Varsayılan organizasyon ID
+  /// Coarse rol: ROLE_ADMIN | ROLE_MANAGER | ROLE_USER | ROLE_CUSTOMER
+  final String? coarseRole;
+
+  /// Tenant adı (bundle: tenant_name)
+  final String? tenantName;
+
+  /// Organizasyon ID (bundle: organization_id — staffs'tan; ≠1 staff satırı → null)
   final String? organizationId;
-
-  /// Varsayılan site ID
-  final String? defaultSiteId;
 
   const UserProfile({
     required this.id,
-    required this.email,
-    this.emailVerified = false,
-    this.displayName,
+    this.email = '',
+    this.username,
+    this.fullName,
     this.firstName,
     this.lastName,
     this.avatarUrl,
     this.phone,
-    this.phoneVerified = false,
-    this.birthDate,
-    this.gender = UserGender.notSpecified,
     this.bio,
-    this.location,
-    this.website,
-    this.status = UserProfileStatus.active,
-    this.suspendedAt,
-    this.suspendedReason,
+    this.twoFactorEnabled = false,
+    this.active = true,
+    this.tenantId,
     this.preferredLanguage = 'tr',
-    this.preferredTheme = 'system',
-    this.preferredTimezone,
-    this.notificationPreferences = const NotificationPreferences(),
-    this.lastLoginAt,
-    this.lastLoginIp,
-    this.loginCount = 0,
-    this.profileCompleteness = 0,
-    required this.createdAt,
+    this.type,
+    this.siteId,
+    this.name,
+    this.description,
+    this.isDefault = false,
+    this.lastLogin,
+    this.createdAt,
     this.updatedAt,
-    this.deletedAt,
+    this.coarseRole,
+    this.tenantName,
     this.organizationId,
-    this.defaultSiteId,
   });
 
   // ============================================
   // COMPUTED PROPERTIES
   // ============================================
 
-  /// Tam ad
-  String get fullName {
-    if (firstName != null && lastName != null) {
-      return '$firstName $lastName';
-    }
-    return displayName ?? firstName ?? lastName ?? email.split('@').first;
+  /// Görüntülenecek ad (non-null) — full_name > ad soyad > username > email öneki
+  String get displayName {
+    final fn = fullName?.trim();
+    if (fn != null && fn.isNotEmpty) return fn;
+    final combined = '${firstName ?? ''} ${lastName ?? ''}'.trim();
+    if (combined.isNotEmpty) return combined;
+    if (name != null && name!.trim().isNotEmpty) return name!.trim();
+    if (username != null && username!.trim().isNotEmpty) return username!.trim();
+    if (email.isNotEmpty) return email.split('@').first;
+    return id;
   }
 
   /// Kısa ad (baş harfler)
   String get initials {
-    final name = fullName;
-    final parts = name.split(' ');
+    final label = displayName;
+    final parts = label.split(' ').where((p) => p.isNotEmpty).toList();
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
-    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    if (label.isEmpty) return '?';
+    return label.substring(0, label.length >= 2 ? 2 : 1).toUpperCase();
   }
 
-  /// Aktif mi?
-  bool get isActive => status == UserProfileStatus.active;
-
-  /// Askıda mı?
-  bool get isSuspended => status == UserProfileStatus.suspended;
-
-  /// Silinmiş mi?
-  bool get isDeleted => status == UserProfileStatus.deleted;
-
-  /// Doğrulama bekliyor mu?
-  bool get isPendingVerification => status == UserProfileStatus.pendingVerification;
-
-  /// Profil tamamlandı mı? (%80 üzeri)
-  bool get isProfileComplete => profileCompleteness >= 80;
+  /// Aktif mi? (profiles.active)
+  bool get isActive => active;
 
   /// Avatar var mı?
   bool get hasAvatar => avatarUrl != null && avatarUrl!.isNotEmpty;
@@ -234,130 +149,116 @@ class UserProfile {
   /// Telefon var mı?
   bool get hasPhone => phone != null && phone!.isNotEmpty;
 
-  /// Yaş (birthDate varsa)
-  int? get age {
-    if (birthDate == null) return null;
-    final now = DateTime.now();
-    int age = now.year - birthDate!.year;
-    if (now.month < birthDate!.month ||
-        (now.month == birthDate!.month && now.day < birthDate!.day)) {
-      age--;
-    }
-    return age;
-  }
-
   /// Organizasyon atanmış mı?
-  bool get hasOrganization => organizationId != null && organizationId!.isNotEmpty;
+  bool get hasOrganization =>
+      organizationId != null && organizationId!.isNotEmpty;
 
   /// Varsayılan site atanmış mı?
-  bool get hasDefaultSite => defaultSiteId != null && defaultSiteId!.isNotEmpty;
+  bool get hasDefaultSite => siteId != null && siteId!.isNotEmpty;
+
+  // ============================================
+  // COARSE ROLE HELPERS
+  // ============================================
+
+  /// Yönetici mi? (super_admin/admin → ROLE_ADMIN)
+  bool get isAdmin => coarseRole == 'ROLE_ADMIN';
+
+  /// Müdür mü? (manager → ROLE_MANAGER)
+  bool get isManager => coarseRole == 'ROLE_MANAGER';
+
+  /// Standart kullanıcı mı? (staff/technician/... → ROLE_USER)
+  bool get isUser => coarseRole == 'ROLE_USER';
+
+  /// Müşteri mi? (customer → ROLE_CUSTOMER, yalnız /portal/*)
+  bool get isCustomer => coarseRole == 'ROLE_CUSTOMER';
 
   // ============================================
   // JSON SERIALIZATION
   // ============================================
 
+  /// Düz `profiles` satırından (veya bundle'dan) parse et.
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic v) =>
+        v == null ? null : DateTime.tryParse(v.toString());
+
     return UserProfile(
       id: json['id'] as String,
-      email: json['email'] as String,
-      emailVerified: json['email_verified'] as bool? ?? false,
-      displayName: json['display_name'] as String?,
+      email: (json['email'] as String?) ?? '',
+      username: json['username'] as String?,
+      fullName: json['full_name'] as String?,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       phone: json['phone'] as String?,
-      phoneVerified: json['phone_verified'] as bool? ?? false,
-      birthDate: json['birth_date'] != null
-          ? DateTime.tryParse(json['birth_date'] as String)
-          : null,
-      gender: UserGender.fromString(json['gender'] as String?),
       bio: json['bio'] as String?,
-      location: json['location'] as String?,
-      website: json['website'] as String?,
-      status: UserProfileStatus.fromString(json['status'] as String?),
-      suspendedAt: json['suspended_at'] != null
-          ? DateTime.tryParse(json['suspended_at'] as String)
-          : null,
-      suspendedReason: json['suspended_reason'] as String?,
+      twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
+      active: json['active'] as bool? ?? true,
+      tenantId: json['tenant_id'] as String?,
       preferredLanguage: json['preferred_language'] as String? ?? 'tr',
-      preferredTheme: json['preferred_theme'] as String? ?? 'system',
-      preferredTimezone: json['preferred_timezone'] as String?,
-      notificationPreferences: json['notification_preferences'] != null
-          ? NotificationPreferences.fromJson(
-              json['notification_preferences'] as Map<String, dynamic>)
-          : const NotificationPreferences(),
-      lastLoginAt: json['last_login_at'] != null
-          ? DateTime.tryParse(json['last_login_at'] as String)
-          : null,
-      lastLoginIp: json['last_login_ip'] as String?,
-      loginCount: json['login_count'] as int? ?? 0,
-      profileCompleteness: json['profile_completeness'] as int? ?? 0,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'] as String)
-          : null,
-      deletedAt: json['deleted_at'] != null
-          ? DateTime.tryParse(json['deleted_at'] as String)
-          : null,
+      type: json['type'] as String?,
+      siteId: json['site_id'] as String?,
+      name: json['name'] as String?,
+      description: json['description'] as String?,
+      isDefault: json['is_default'] as bool? ?? false,
+      lastLogin: parseDate(json['last_login']),
+      createdAt: parseDate(json['created_at']),
+      updatedAt: parseDate(json['updated_at']),
+      // Bundle ekstraları (düz select'te null)
+      coarseRole: json['coarse_role'] as String?,
+      tenantName: json['tenant_name'] as String?,
       organizationId: json['organization_id'] as String?,
-      defaultSiteId: json['default_site_id'] as String?,
     );
   }
+
+  /// `fn_my_profile_bundle` çıktısından parse et.
+  ///
+  /// Bundle = `to_jsonb(profiles.*)` + `tenant_name` + `organization_id`
+  /// + `coarse_role`. Tek round-trip cold-start kaynağı.
+  factory UserProfile.fromBundle(Map<String, dynamic> bundle) =>
+      UserProfile.fromJson(bundle);
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'email': email,
-      'email_verified': emailVerified,
-      'display_name': displayName,
+      'username': username,
+      'full_name': fullName,
       'first_name': firstName,
       'last_name': lastName,
       'avatar_url': avatarUrl,
       'phone': phone,
-      'phone_verified': phoneVerified,
-      'birth_date': birthDate?.toIso8601String(),
-      'gender': gender.value,
       'bio': bio,
-      'location': location,
-      'website': website,
-      'status': status.name,
-      'suspended_at': suspendedAt?.toIso8601String(),
-      'suspended_reason': suspendedReason,
+      'two_factor_enabled': twoFactorEnabled,
+      'active': active,
+      'tenant_id': tenantId,
       'preferred_language': preferredLanguage,
-      'preferred_theme': preferredTheme,
-      'preferred_timezone': preferredTimezone,
-      'notification_preferences': notificationPreferences.toJson(),
-      'last_login_at': lastLoginAt?.toIso8601String(),
-      'last_login_ip': lastLoginIp,
-      'login_count': loginCount,
-      'profile_completeness': profileCompleteness,
-      'created_at': createdAt.toIso8601String(),
+      'type': type,
+      'site_id': siteId,
+      'name': name,
+      'description': description,
+      'is_default': isDefault,
+      'last_login': lastLogin?.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'deleted_at': deletedAt?.toIso8601String(),
+      'coarse_role': coarseRole,
+      'tenant_name': tenantName,
       'organization_id': organizationId,
-      'default_site_id': defaultSiteId,
     };
   }
 
-  /// Güncelleme için JSON (sadece değiştirilebilir alanlar)
+  /// Güncelleme için JSON — YALNIZCA gerçek, yazılabilir kolonlar.
+  ///
+  /// coarse_role/tenant_name/organization_id türetilmiştir (yazılamaz);
+  /// active/tenant_id/type gibi alanlar backend/RLS tarafından yönetilir.
   Map<String, dynamic> toUpdateJson() {
     return {
-      'display_name': displayName,
+      'full_name': fullName,
       'first_name': firstName,
       'last_name': lastName,
       'avatar_url': avatarUrl,
       'phone': phone,
-      'birth_date': birthDate?.toIso8601String(),
-      'gender': gender.value,
       'bio': bio,
-      'location': location,
-      'website': website,
       'preferred_language': preferredLanguage,
-      'preferred_theme': preferredTheme,
-      'preferred_timezone': preferredTimezone,
-      'notification_preferences': notificationPreferences.toJson(),
       'updated_at': DateTime.now().toIso8601String(),
     };
   }
@@ -369,71 +270,59 @@ class UserProfile {
   UserProfile copyWith({
     String? id,
     String? email,
-    bool? emailVerified,
-    String? displayName,
+    String? username,
+    String? fullName,
     String? firstName,
     String? lastName,
     String? avatarUrl,
     String? phone,
-    bool? phoneVerified,
-    DateTime? birthDate,
-    UserGender? gender,
     String? bio,
-    String? location,
-    String? website,
-    UserProfileStatus? status,
-    DateTime? suspendedAt,
-    String? suspendedReason,
+    bool? twoFactorEnabled,
+    bool? active,
+    String? tenantId,
     String? preferredLanguage,
-    String? preferredTheme,
-    String? preferredTimezone,
-    NotificationPreferences? notificationPreferences,
-    DateTime? lastLoginAt,
-    String? lastLoginIp,
-    int? loginCount,
-    int? profileCompleteness,
+    String? type,
+    String? siteId,
+    String? name,
+    String? description,
+    bool? isDefault,
+    DateTime? lastLogin,
     DateTime? createdAt,
     DateTime? updatedAt,
-    DateTime? deletedAt,
+    String? coarseRole,
+    String? tenantName,
     String? organizationId,
-    String? defaultSiteId,
   }) {
     return UserProfile(
       id: id ?? this.id,
       email: email ?? this.email,
-      emailVerified: emailVerified ?? this.emailVerified,
-      displayName: displayName ?? this.displayName,
+      username: username ?? this.username,
+      fullName: fullName ?? this.fullName,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       phone: phone ?? this.phone,
-      phoneVerified: phoneVerified ?? this.phoneVerified,
-      birthDate: birthDate ?? this.birthDate,
-      gender: gender ?? this.gender,
       bio: bio ?? this.bio,
-      location: location ?? this.location,
-      website: website ?? this.website,
-      status: status ?? this.status,
-      suspendedAt: suspendedAt ?? this.suspendedAt,
-      suspendedReason: suspendedReason ?? this.suspendedReason,
+      twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
+      active: active ?? this.active,
+      tenantId: tenantId ?? this.tenantId,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
-      preferredTheme: preferredTheme ?? this.preferredTheme,
-      preferredTimezone: preferredTimezone ?? this.preferredTimezone,
-      notificationPreferences: notificationPreferences ?? this.notificationPreferences,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-      lastLoginIp: lastLoginIp ?? this.lastLoginIp,
-      loginCount: loginCount ?? this.loginCount,
-      profileCompleteness: profileCompleteness ?? this.profileCompleteness,
+      type: type ?? this.type,
+      siteId: siteId ?? this.siteId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      isDefault: isDefault ?? this.isDefault,
+      lastLogin: lastLogin ?? this.lastLogin,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt,
+      coarseRole: coarseRole ?? this.coarseRole,
+      tenantName: tenantName ?? this.tenantName,
       organizationId: organizationId ?? this.organizationId,
-      defaultSiteId: defaultSiteId ?? this.defaultSiteId,
     );
   }
 
   @override
-  String toString() => 'UserProfile($id, $fullName, $email)';
+  String toString() => 'UserProfile($id, $displayName, $email)';
 
   @override
   bool operator ==(Object other) =>
@@ -443,7 +332,10 @@ class UserProfile {
   int get hashCode => id.hashCode;
 }
 
-/// Bildirim tercihleri
+/// Bildirim tercihleri (uygulama-yerel; `profiles` tablosunda persist EDİLMEZ).
+///
+/// NOT: eski `notification_preferences` kolonu DROP edildi. Bu sınıf yalnızca
+/// uygulama içi tercih taşımak için tutuluyor; DB'ye yazılmaz.
 class NotificationPreferences {
   /// Email bildirimleri
   final bool emailNotifications;
@@ -491,7 +383,8 @@ class NotificationPreferences {
       smsNotifications: json['sms_notifications'] as bool? ?? false,
       activityNotifications: json['activity_notifications'] as bool? ?? true,
       updateNotifications: json['update_notifications'] as bool? ?? true,
-      promotionalNotifications: json['promotional_notifications'] as bool? ?? false,
+      promotionalNotifications:
+          json['promotional_notifications'] as bool? ?? false,
       quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
       quietHoursStart: json['quiet_hours_start'] as String?,
       quietHoursEnd: json['quiet_hours_end'] as String?,
@@ -527,38 +420,14 @@ class NotificationPreferences {
       emailNotifications: emailNotifications ?? this.emailNotifications,
       pushNotifications: pushNotifications ?? this.pushNotifications,
       smsNotifications: smsNotifications ?? this.smsNotifications,
-      activityNotifications: activityNotifications ?? this.activityNotifications,
+      activityNotifications:
+          activityNotifications ?? this.activityNotifications,
       updateNotifications: updateNotifications ?? this.updateNotifications,
-      promotionalNotifications: promotionalNotifications ?? this.promotionalNotifications,
+      promotionalNotifications:
+          promotionalNotifications ?? this.promotionalNotifications,
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
     );
   }
-}
-
-/// Profil tamamlanma yüzdesini hesapla
-int calculateProfileCompleteness(UserProfile profile) {
-  int score = 0;
-  const int maxScore = 100;
-
-  // Zorunlu alanlar (50 puan)
-  if (profile.email.isNotEmpty) score += 10;
-  if (profile.emailVerified) score += 10;
-  if (profile.displayName != null) score += 10;
-  if (profile.firstName != null) score += 10;
-  if (profile.lastName != null) score += 10;
-
-  // İsteğe bağlı alanlar (50 puan)
-  if (profile.hasAvatar) score += 10;
-  if (profile.hasPhone) score += 5;
-  if (profile.phoneVerified) score += 5;
-  if (profile.birthDate != null) score += 5;
-  if (profile.gender != UserGender.notSpecified) score += 5;
-  if (profile.bio != null && profile.bio!.isNotEmpty) score += 5;
-  if (profile.location != null && profile.location!.isNotEmpty) score += 5;
-  if (profile.preferredTimezone != null) score += 5;
-  if (profile.website != null && profile.website!.isNotEmpty) score += 5;
-
-  return (score / maxScore * 100).round().clamp(0, 100);
 }

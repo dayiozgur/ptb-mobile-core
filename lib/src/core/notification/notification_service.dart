@@ -412,8 +412,11 @@ class NotificationService {
   // ============================================
 
   /// Realtime bildirim dinlemeyi başlat
-  void startListening(String profileId) {
-    _realtimeChannel?.unsubscribe();
+  Future<void> startListening(String profileId) async {
+    // Önceki kanalı tam olarak kapat (unsubscribe + removeChannel).
+    // Sadece unsubscribe() çağırmak kanal referansını client içinde bırakır
+    // (realtime_service.dart:326-327 ile aynı doğru teardown deseni).
+    await _teardownChannel();
 
     _realtimeChannel = _supabase
         .channel('notifications_$profileId')
@@ -437,10 +440,24 @@ class NotificationService {
   }
 
   /// Realtime dinlemeyi durdur
-  void stopListening() {
-    _realtimeChannel?.unsubscribe();
-    _realtimeChannel = null;
+  Future<void> stopListening() async {
+    await _teardownChannel();
     Logger.debug('Stopped listening for notifications');
+  }
+
+  /// Realtime kanalını tam olarak kapat: unsubscribe + removeChannel.
+  /// removeChannel olmadan sadece unsubscribe çağırmak kanalı client'ın
+  /// dahili listesinde bırakır ve sızıntıya yol açar.
+  Future<void> _teardownChannel() async {
+    final channel = _realtimeChannel;
+    if (channel == null) return;
+    _realtimeChannel = null;
+    try {
+      await channel.unsubscribe();
+      await _supabase.removeChannel(channel);
+    } catch (e) {
+      Logger.warning('Failed to tear down notification channel: $e');
+    }
   }
 
   void _handleNewNotification(Map<String, dynamic> data) {
@@ -490,7 +507,7 @@ class NotificationService {
 
   /// Servisi kapat
   void dispose() {
-    stopListening();
+    unawaited(stopListening());
     _notificationsController.close();
     _unreadCountController.close();
     _newNotificationController.close();

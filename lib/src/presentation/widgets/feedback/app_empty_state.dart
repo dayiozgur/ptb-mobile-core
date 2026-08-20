@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -194,13 +196,14 @@ class AppNoSearchResultsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppEmptyState(
       icon: Icons.search_off,
-      title: 'Sonuç Bulunamadı',
+      title: loc.translate('empty.no_results_title'),
       message: query != null
-          ? '"$query" için sonuç bulunamadı'
-          : 'Aramanızla eşleşen sonuç bulunamadı',
-      actionLabel: onClear != null ? 'Aramayı Temizle' : null,
+          ? loc.translate('empty.no_results_query', params: {'query': query!})
+          : loc.translate('empty.no_search_match'),
+      actionLabel: onClear != null ? loc.translate('empty.clear_search') : null,
       onAction: onClear,
     );
   }
@@ -221,11 +224,14 @@ class AppNoItemsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppEmptyState(
       icon: Icons.folder_open_outlined,
-      title: 'Henüz $itemName Yok',
-      message: 'İlk $itemName oluşturmak için başlayın',
-      actionLabel: actionLabel ?? '$itemName Oluştur',
+      title: loc.translate('empty.no_items_named', params: {'item': itemName}),
+      message:
+          loc.translate('empty.create_first_named', params: {'item': itemName}),
+      actionLabel: actionLabel ??
+          loc.translate('empty.create_named', params: {'item': itemName}),
       onAction: onAction,
     );
   }
@@ -242,11 +248,12 @@ class AppNoFavoritesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppEmptyState(
       icon: Icons.favorite_border,
-      title: 'Favori Yok',
-      message: 'Favorileriniz burada görünecek',
-      actionLabel: onExplore != null ? 'Keşfet' : null,
+      title: loc.translate('empty.no_favorites'),
+      message: loc.translate('empty.favorites_hint'),
+      actionLabel: onExplore != null ? loc.translate('common.explore') : null,
       onAction: onExplore,
     );
   }
@@ -258,10 +265,11 @@ class AppNoNotificationsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppEmptyState(
+    final loc = sl<LocalizationService>();
+    return AppEmptyState(
       icon: Icons.notifications_none,
-      title: 'Bildirim Yok',
-      message: 'Bildirimleriniz burada görünecek',
+      title: loc.translate('empty.no_notifications'),
+      message: loc.translate('empty.notifications_hint'),
     );
   }
 }

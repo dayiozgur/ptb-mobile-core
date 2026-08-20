@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
@@ -176,7 +178,8 @@ class MapContainer extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  emptyMessage ?? 'Konum verisi bulunamadı',
+                  emptyMessage ??
+                      sl<LocalizationService>().translate('map.no_location_data'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,

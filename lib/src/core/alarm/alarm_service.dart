@@ -106,6 +106,143 @@ class AlarmService {
   String? get currentSiteId => _currentSiteId;
 
   // ============================================
+  // SERVER-SIDE KPI / AGGREGATION HELPERS
+  // ============================================
+
+  static int _asInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  /// Zaman aralığı yardımcıları (RPC p_from/p_to için ISO string)
+  String _rangeFrom(int days) =>
+      DateTime.now().subtract(Duration(days: days)).toIso8601String();
+  String _rangeTo() => DateTime.now().toIso8601String();
+
+  /// RPC agregasyon yolunu kullanmak güvenli mi?
+  ///
+  /// Sunucu RPC'leri tenant (+opsiyonel organization) kapsamlıdır; site/
+  /// controller/provider daraltması YAPAMAZ. Bu daraltmalar aktifken RPC
+  /// yanlış (tenant-geneli) sonuç verir → bu durumda client-side yola düşülür.
+  bool _canUseTenantRpc({
+    String? controllerId,
+    String? siteId,
+    String? providerId,
+  }) {
+    return _currentTenantId != null &&
+        controllerId == null &&
+        siteId == null &&
+        providerId == null &&
+        _currentSiteId == null;
+  }
+
+  /// Server-side KPI özeti (fn_pms_kpi_summary)
+  ///
+  /// Tüm sayımlar/MTTR sunucuda hesaplanır. İmza sürüklenmesinde RPC hata
+  /// fırlatır (sessiz 0 yerine). tenant_id yoksa boş özet döner.
+  Future<AlarmKpiSummary> getKpiSummary({
+    int days = IoTConfig.defaultAlarmTimelineDays,
+  }) async {
+    if (_currentTenantId == null) return AlarmKpiSummary.empty;
+
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final response = await _supabase.rpc('fn_pms_kpi_summary', params: {
+      'p_tenant_id': _currentTenantId,
+      'p_from': _rangeFrom(effectiveDays),
+      'p_to': _rangeTo(),
+    });
+
+    final rows = response as List;
+    if (rows.isEmpty) return AlarmKpiSummary.empty;
+    return AlarmKpiSummary.fromRow(
+        Map<String, dynamic>.from(rows.first as Map));
+  }
+
+  /// Server-side controller uptime / kullanılabilirlik (fn_pms_controller_uptime)
+  ///
+  /// Tenant kapsamlı; agregasyon sunucuda yapılır. İmza sürüklenmesinde RPC
+  /// hata fırlatır (sessiz boş yerine). tenant_id yoksa boş liste döner.
+  Future<List<ControllerUptime>> getControllerUptime({
+    int days = IoTConfig.defaultAlarmTimelineDays,
+  }) async {
+    if (_currentTenantId == null) return const [];
+
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final response =
+        await _supabase.rpc('fn_pms_controller_uptime', params: {
+      'p_tenant_id': _currentTenantId,
+      'p_from': _rangeFrom(effectiveDays),
+      'p_to': _rangeTo(),
+    });
+
+    return (response as List)
+        .map((e) =>
+            ControllerUptime.fromRow(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// Server-side provider sağlık skorları (fn_pms_provider_health)
+  ///
+  /// Tenant kapsamlı; agregasyon sunucuda yapılır. İmza sürüklenmesinde RPC
+  /// hata fırlatır (sessiz boş yerine). tenant_id yoksa boş liste döner.
+  Future<List<ProviderHealth>> getProviderHealth({
+    int days = IoTConfig.defaultAlarmTimelineDays,
+  }) async {
+    if (_currentTenantId == null) return const [];
+
+    final effectiveDays = IoTConfig.clampDaysRange(days);
+    final response = await _supabase.rpc('fn_pms_provider_health', params: {
+      'p_tenant_id': _currentTenantId,
+      'p_from': _rangeFrom(effectiveDays),
+      'p_to': _rangeTo(),
+    });
+
+    return (response as List)
+        .map((e) =>
+            ProviderHealth.fromRow(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  // ============================================
+  // ALARM ACTIONS (server RPC - RLS/yetki sunucuda)
+  // ============================================
+
+  /// Alarmı onayla (acknowledge) - fn_pms_alarm_acknowledge
+  ///
+  /// Yetki/tenant kontrolü sunucuda yapılır. Ağ/imza hatası fırlatır;
+  /// iş kuralı reddi (already_acknowledged_or_closed vb.) `false` döner.
+  Future<bool> acknowledgeAlarm(String alarmId) async {
+    final result = await _supabase
+        .rpc('fn_pms_alarm_acknowledge', params: {'p_alarm_id': alarmId});
+    return _actionSucceeded(result);
+  }
+
+  /// Alarmı resetle (kapat) - fn_pms_alarm_reset
+  Future<bool> resetAlarm(String alarmId) async {
+    final result = await _supabase
+        .rpc('fn_pms_alarm_reset', params: {'p_alarm_id': alarmId});
+    return _actionSucceeded(result);
+  }
+
+  /// Alarmı inhibit et / kaldır - fn_pms_alarm_inhibit
+  Future<bool> inhibitAlarm(String alarmId, {bool inhibit = true}) async {
+    final result = await _supabase.rpc('fn_pms_alarm_inhibit',
+        params: {'p_alarm_id': alarmId, 'p_inhibit': inhibit});
+    return _actionSucceeded(result);
+  }
+
+  bool _actionSucceeded(dynamic rpcResult) {
+    if (rpcResult is Map) {
+      return rpcResult['success'] == true;
+    }
+    // fn_alarm_acknowledge gibi boolean dönen varyantlar için
+    if (rpcResult is bool) return rpcResult;
+    return false;
+  }
+
+  // ============================================
   // ACTIVE ALARMS
   // ============================================
 
@@ -165,8 +302,11 @@ class AlarmService {
       _alarmsController.add(alarms);
       return alarms;
     } catch (e, stackTrace) {
+      // Bir monitoring uygulamasında başarısız yükleme "alarm yok" gibi
+      // gösterilmemeli — sessiz boş-liste yerine hatayı yukarı ilet; tüm
+      // çağıranlar try/catch ile hata-durumu/graceful-degrade uyguluyor.
       Logger.error('Failed to get active alarms', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -217,8 +357,10 @@ class AlarmService {
 
       return alarms;
     } catch (e, stackTrace) {
+      // Hatayı gizleme — çağıran (provider/site landing) kendi try/catch'iyle
+      // graceful-degrade uyguluyor; false-empty monitoring için yanıltıcı.
       Logger.error('Failed to get alarms by controllers', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -358,9 +500,11 @@ class AlarmService {
 
       final response = await query;
       return (response as List).length;
-    } catch (e) {
-      Logger.warning('Failed to get reset alarm count for site: $e');
-      return 0;
+    } catch (e, stackTrace) {
+      // Drift-loud: sessizce 0 döndürme. Gerçek hata (imza/RLS/ağ) yüzeye
+      // çıksın; çağıran (site listesi/harita) kendi try/catch'inde ele alır.
+      Logger.error('Failed to get reset alarm count for site', e, stackTrace);
+      rethrow;
     }
   }
 
@@ -383,9 +527,11 @@ class AlarmService {
 
       final response = await query;
       return (response as List).length;
-    } catch (e) {
-      Logger.warning('Failed to get reset alarm count for provider: $e');
-      return 0;
+    } catch (e, stackTrace) {
+      // Drift-loud: sessizce 0 döndürme. Gerçek hata yüzeye çıksın.
+      Logger.error(
+          'Failed to get reset alarm count for provider', e, stackTrace);
+      rethrow;
     }
   }
 
@@ -516,6 +662,55 @@ class AlarmService {
       }
     }
 
+    // Server-side yol: daraltma yoksa fn_pms_alarm_trend günlük gruplamayı
+    // sunucuda yapar (client-side satır gruplaması yerine).
+    if (_canUseTenantRpc(
+        controllerId: controllerId, siteId: siteId, providerId: providerId)) {
+      final response = await _supabase.rpc('fn_pms_alarm_trend', params: {
+        'p_tenant_id': _currentTenantId,
+        'p_bucket': 'day',
+        'p_from': _rangeFrom(effectiveDays),
+        'p_to': _rangeTo(),
+      });
+
+      // period (YYYY-MM-DD) -> cnt
+      final totalByDate = <String, int>{};
+      for (final r in (response as List)) {
+        final m = Map<String, dynamic>.from(r as Map);
+        final period = m['period'] as String?;
+        if (period != null) totalByDate[period] = _asInt(m['cnt']);
+      }
+
+      // Boş günleri de dahil et (mevcut davranışla aynı)
+      final entries = <AlarmTimelineEntry>[];
+      final now = DateTime.now();
+      for (var i = effectiveDays - 1; i >= 0; i--) {
+        final day =
+            DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+        final dateKey =
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+        entries.add(AlarmTimelineEntry(
+          date: day,
+          totalCount: totalByDate[dateKey] ?? 0,
+          countByPriority: const {},
+        ));
+      }
+
+      await _cacheManager.set(
+        cacheKey,
+        entries
+            .map((e) => {
+                  'date': e.date.toIso8601String(),
+                  'totalCount': e.totalCount,
+                  'countByPriority': e.countByPriority,
+                })
+            .toList(),
+        ttl: const Duration(minutes: 5),
+      );
+
+      return entries;
+    }
+
     try {
       final since = DateTime.now()
           .subtract(Duration(days: effectiveDays))
@@ -596,8 +791,9 @@ class AlarmService {
 
       return entries;
     } catch (e, stackTrace) {
+      // Drift-loud: sessiz boş liste yerine hata yüzeye çıksın.
       Logger.error('Failed to get alarm timeline', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -639,6 +835,68 @@ class AlarmService {
               ?.map((k, v) => MapEntry(k, v as int)) ?? {},
         );
       }
+    }
+
+    // Server-side agregasyon yolu: site/controller daraltması yoksa ve tenant
+    // biliniyorsa fn_pms_kpi_summary + fn_pms_alarm_priority_breakdown kullan.
+    if (_canUseTenantRpc(controllerId: controllerId, siteId: siteId)) {
+      final since = _rangeFrom(effectiveDays);
+      final until = _rangeTo();
+
+      final kpiResp = await _supabase.rpc('fn_pms_kpi_summary', params: {
+        'p_tenant_id': _currentTenantId,
+        'p_from': since,
+        'p_to': until,
+      });
+      final kpiRows = kpiResp as List;
+      final kpi = kpiRows.isNotEmpty
+          ? AlarmKpiSummary.fromRow(Map<String, dynamic>.from(kpiRows.first as Map))
+          : AlarmKpiSummary.empty;
+
+      // Reset alarm priority dağılımı (alarm_histories)
+      final prioResp =
+          await _supabase.rpc('fn_pms_alarm_priority_breakdown', params: {
+        'p_tenant_id': _currentTenantId,
+        'p_from': since,
+        'p_to': until,
+        'p_organization_id': _currentOrganizationId,
+      });
+      final resetByPriority = <String, int>{};
+      for (final r in (prioResp as List)) {
+        final m = Map<String, dynamic>.from(r as Map);
+        final pid = m['priority_id'] as String?;
+        if (pid != null) resetByPriority[pid] = _asInt(m['cnt']);
+      }
+
+      // Onaylı aktif alarm sayısı (küçük, filtreli sorgu - RPC'de yok)
+      final ackResp = await _supabase
+          .from('alarms')
+          .select('id')
+          .not('local_acknowledge_time', 'is', null)
+          .or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+      final acknowledgedCount = (ackResp as List).length;
+
+      final distribution = AlarmDistribution(
+        activeCount: kpi.activeAlarms,
+        resetCount: kpi.resolvedAlarms,
+        acknowledgedCount: acknowledgedCount,
+        activeByPriority: const {},
+        resetByPriority: resetByPriority,
+      );
+
+      await _cacheManager.set(
+        cacheKey,
+        {
+          'activeCount': distribution.activeCount,
+          'resetCount': distribution.resetCount,
+          'acknowledgedCount': distribution.acknowledgedCount,
+          'activeByPriority': distribution.activeByPriority,
+          'resetByPriority': distribution.resetByPriority,
+        },
+        ttl: const Duration(minutes: 5),
+      );
+
+      return distribution;
     }
 
     try {
@@ -764,12 +1022,9 @@ class AlarmService {
 
       return distribution;
     } catch (e, stackTrace) {
+      // Drift-loud: sessiz sıfır dashboard yerine hata yüzeye çıksın.
       Logger.error('Failed to get alarm distribution', e, stackTrace);
-      return const AlarmDistribution(
-        activeCount: 0,
-        resetCount: 0,
-        acknowledgedCount: 0,
-      );
+      rethrow;
     }
   }
 
@@ -798,6 +1053,41 @@ class AlarmService {
       if (cached != null) {
         return _parseMttrStatsFromCache(cached);
       }
+    }
+
+    // Server-side yol: daraltma yoksa fn_pms_kpi_summary genel MTTR'ı sunucuda
+    // hesaplar (avg_resolution_hours). Priority-bazlı/haftalık trend tüketilmiyor.
+    if (_canUseTenantRpc(
+        controllerId: controllerId, siteId: siteId, providerId: providerId)) {
+      final response = await _supabase.rpc('fn_pms_kpi_summary', params: {
+        'p_tenant_id': _currentTenantId,
+        'p_from': _rangeFrom(effectiveDays),
+        'p_to': _rangeTo(),
+      });
+      final rows = response as List;
+      final kpi = rows.isNotEmpty
+          ? AlarmKpiSummary.fromRow(Map<String, dynamic>.from(rows.first as Map))
+          : AlarmKpiSummary.empty;
+
+      final overallMttr = Duration(
+          milliseconds: (kpi.avgResolutionHours * 3600 * 1000).round());
+      final stats = AlarmMttrStats(
+        overallMttr: overallMttr,
+        totalAlarmCount: kpi.resolvedAlarms,
+      );
+
+      await _cacheManager.set(
+        cacheKey,
+        {
+          'overallMttrMs': overallMttr.inMilliseconds,
+          'totalAlarmCount': kpi.resolvedAlarms,
+          'mttrByPriority': const <String, int>{},
+          'trend': const <dynamic>[],
+        },
+        ttl: const Duration(minutes: 5),
+      );
+
+      return stats;
     }
 
     try {
@@ -908,8 +1198,9 @@ class AlarmService {
 
       return stats;
     } catch (e, stackTrace) {
+      // Drift-loud: sessiz sıfır yerine hata yüzeye çıksın.
       Logger.error('Failed to get MTTR stats', e, stackTrace);
-      return const AlarmMttrStats(overallMttr: Duration.zero);
+      rethrow;
     }
   }
 
@@ -1089,29 +1380,41 @@ class AlarmService {
     }
 
     try {
-      final since = DateTime.now()
-          .subtract(Duration(days: effectiveDays))
-          .toIso8601String();
-
-      // Reset alarm sayıları (alarm_histories)
-      var resetQuery = _supabase
-          .from('alarm_histories')
-          .select('site_id')
-          .gte('start_time', since);
-
-      if (_currentTenantId != null) {
-        resetQuery =
-            resetQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
-      }
-
-      final resetResponse = await resetQuery;
-      final resetRows = resetResponse as List;
+      final since = _rangeFrom(effectiveDays);
 
       final resetBySite = <String, int>{};
-      for (final row in resetRows) {
-        final siteId = (row as Map<String, dynamic>)['site_id'] as String?;
-        if (siteId != null) {
-          resetBySite[siteId] = (resetBySite[siteId] ?? 0) + 1;
+      final rpcSiteNames = <String, String>{};
+
+      if (_currentTenantId != null) {
+        // Server-side: site bazlı reset alarm sayıları sunucuda gruplanır
+        // (fn_pms_alarm_site_controller). Client-side "tüm satırları çek + say"
+        // yerine indexli agregasyon.
+        final scResp =
+            await _supabase.rpc('fn_pms_alarm_site_controller', params: {
+          'p_tenant_id': _currentTenantId,
+          'p_from': since,
+          'p_to': _rangeTo(),
+          'p_organization_id': _currentOrganizationId,
+        });
+        for (final r in (scResp as List)) {
+          final m = Map<String, dynamic>.from(r as Map);
+          final sid = m['site_id'] as String?;
+          if (sid == null) continue;
+          resetBySite[sid] = (resetBySite[sid] ?? 0) + _asInt(m['cnt']);
+          final sname = m['site_name'] as String?;
+          if (sname != null) rpcSiteNames[sid] = sname;
+        }
+      } else {
+        // tenant yok: client-side fallback (RPC tenant zorunlu)
+        final resetResponse = await _supabase
+            .from('alarm_histories')
+            .select('site_id')
+            .gte('start_time', since);
+        for (final row in (resetResponse as List)) {
+          final siteId = (row as Map<String, dynamic>)['site_id'] as String?;
+          if (siteId != null) {
+            resetBySite[siteId] = (resetBySite[siteId] ?? 0) + 1;
+          }
         }
       }
 
@@ -1139,7 +1442,7 @@ class AlarmService {
       final results = allSiteIds.map((siteId) {
         return SiteAlarmCount(
           siteId: siteId,
-          siteName: siteNames[siteId] ?? siteId,
+          siteName: siteNames[siteId] ?? rpcSiteNames[siteId] ?? siteId,
           resetCount: resetBySite[siteId] ?? 0,
           activeCount: activeBySite[siteId] ?? 0,
         );
@@ -1164,8 +1467,9 @@ class AlarmService {
 
       return topN;
     } catch (e, stackTrace) {
+      // Drift-loud: sessiz boş liste yerine hata yüzeye çıksın.
       Logger.error('Failed to get alarm counts by site', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -1261,12 +1565,10 @@ class AlarmService {
 
       return data;
     } catch (e, stackTrace) {
+      // Sıfır-dolu matris "sakin/sağlıklı hafta" gibi görünür — yükleme
+      // hatasını böyle maskeleme; çağıran ekranlar hata-durumu gösteriyor.
       Logger.error('Failed to get alarm heatmap', e, stackTrace);
-      return AlarmHeatmapData(
-        matrix: List.generate(7, (_) => List.filled(24, 0)),
-        maxCount: 0,
-        weekStart: weekStartNormalized,
-      );
+      rethrow;
     }
   }
 

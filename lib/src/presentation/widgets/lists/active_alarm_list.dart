@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/alarm/alarm_model.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -288,16 +290,29 @@ class _ActiveAlarmTile extends StatelessWidget {
 /// Aktif alarm detay bottom sheet
 ///
 /// Aktif alarm'ın zaman çizelgesi ve detaylarını gösterir.
-class ActiveAlarmDetailSheet extends StatelessWidget {
+/// Aktif alarm için operatör aksiyonları (acknowledge / reset / inhibit)
+enum _AlarmActionKind { acknowledge, reset, inhibit }
+
+class ActiveAlarmDetailSheet extends StatefulWidget {
   final Alarm alarm;
   final Priority? priority;
-  final VoidCallback? onAcknowledge;
+
+  /// Alarmı onayla (non-destructive). null ise buton gösterilmez.
+  final Future<void> Function()? onAcknowledge;
+
+  /// Alarmı sıfırla/kapat (destructive). null ise buton gösterilmez.
+  final Future<void> Function()? onReset;
+
+  /// Inhibit / un-inhibit toggle. null ise buton gösterilmez.
+  final Future<void> Function()? onInhibitToggle;
 
   const ActiveAlarmDetailSheet({
     super.key,
     required this.alarm,
     this.priority,
     this.onAcknowledge,
+    this.onReset,
+    this.onInhibitToggle,
   });
 
   /// Bottom sheet'i göster
@@ -305,7 +320,9 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
     BuildContext context, {
     required Alarm alarm,
     Priority? priority,
-    VoidCallback? onAcknowledge,
+    Future<void> Function()? onAcknowledge,
+    Future<void> Function()? onReset,
+    Future<void> Function()? onInhibitToggle,
   }) {
     showModalBottomSheet(
       context: context,
@@ -319,7 +336,127 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
         alarm: alarm,
         priority: priority,
         onAcknowledge: onAcknowledge,
+        onReset: onReset,
+        onInhibitToggle: onInhibitToggle,
       ),
+    );
+  }
+
+  @override
+  State<ActiveAlarmDetailSheet> createState() => _ActiveAlarmDetailSheetState();
+}
+
+class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
+  /// Şu an çalışan aksiyon (null = boşta). Bir aksiyon çalışırken tüm
+  /// butonlar devre dışı, çalışan buton spinner gösterir.
+  _AlarmActionKind? _inFlight;
+
+  Alarm get _alarm => widget.alarm;
+
+  bool get _showAcknowledge =>
+      widget.onAcknowledge != null && !_alarm.isAcknowledged;
+  bool get _showReset => widget.onReset != null && _alarm.isActive;
+  bool get _showInhibit => widget.onInhibitToggle != null;
+  bool get _hasAnyAction => _showAcknowledge || _showReset || _showInhibit;
+
+  Future<void> _run(_AlarmActionKind kind, Future<void> Function()? cb) async {
+    if (cb == null || _inFlight != null) return;
+    setState(() => _inFlight = kind);
+    try {
+      await cb();
+    } finally {
+      // Sheet aksiyon içinde kapanabilir (ekran pop eder) → mounted guard.
+      if (mounted) setState(() => _inFlight = null);
+    }
+  }
+
+  Widget _spinner(Color color) => SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2, color: color),
+      );
+
+  Widget _buildActions(LocalizationService loc) {
+    final busy = _inFlight != null;
+    final inhibited = _alarm.inhibited == true;
+
+    return Column(
+      children: [
+        // Reset (primary/destructive)
+        if (_showReset) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: busy
+                  ? null
+                  : () => _run(_AlarmActionKind.reset, widget.onReset),
+              icon: _inFlight == _AlarmActionKind.reset
+                  ? _spinner(Colors.white)
+                  : const Icon(Icons.stop_circle_outlined),
+              label: Text(loc.translate('alarm.reset_action')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        // Acknowledge
+        if (_showAcknowledge) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: busy
+                  ? null
+                  : () =>
+                      _run(_AlarmActionKind.acknowledge, widget.onAcknowledge),
+              icon: _inFlight == _AlarmActionKind.acknowledge
+                  ? _spinner(Colors.white)
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(loc.translate('alarm.acknowledge')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        // Inhibit / Un-inhibit toggle
+        if (_showInhibit)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: busy
+                  ? null
+                  : () =>
+                      _run(_AlarmActionKind.inhibit, widget.onInhibitToggle),
+              icon: _inFlight == _AlarmActionKind.inhibit
+                  ? _spinner(AppColors.primary)
+                  : Icon(inhibited
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined),
+              label: Text(
+                loc.translate(inhibited ? 'alarm.uninhibit' : 'alarm.inhibit'),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -327,8 +464,10 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
+    final loc = sl<LocalizationService>();
+    final alarm = widget.alarm;
 
-    final priorityColor = priority?.displayColor ?? AppColors.error;
+    final priorityColor = widget.priority?.displayColor ?? AppColors.error;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
@@ -379,7 +518,7 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
-                        'AKTİF ALARM',
+                        sl<LocalizationService>().translate('alarm.active_badge'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -429,20 +568,20 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
                 Row(
                   children: [
                     _StatusBadge(
-                      label: 'Aktif',
+                      label: loc.translate('alarm.active_status'),
                       color: AppColors.error,
                     ),
                     if (alarm.isAcknowledged) ...[
                       const SizedBox(width: AppSpacing.sm),
                       _StatusBadge(
-                        label: 'Onaylandı',
+                        label: loc.translate('alarm.acknowledged'),
                         color: AppColors.info,
                       ),
                     ],
-                    if (priority != null) ...[
+                    if (widget.priority != null) ...[
                       const SizedBox(width: AppSpacing.sm),
                       _StatusBadge(
-                        label: priority!.label,
+                        label: widget.priority!.label,
                         color: priorityColor,
                       ),
                     ],
@@ -464,7 +603,7 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
 
                 // Zaman çizelgesi
                 Text(
-                  'Zaman Çizelgesi',
+                  loc.translate('alarm.timeline'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -476,7 +615,7 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
                 _TimelineRow(
                   icon: Icons.play_arrow,
                   color: AppColors.error,
-                  label: 'Başlangıç',
+                  label: loc.translate('common.start'),
                   value: alarm.startTime != null
                       ? dateFormat.format(alarm.startTime!)
                       : '-',
@@ -486,7 +625,7 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
                   _TimelineRow(
                     icon: Icons.directions_run,
                     color: AppColors.warning,
-                    label: 'Varış',
+                    label: loc.translate('alarm.arrival'),
                     value: dateFormat.format(alarm.arrivalStartTime!),
                     brightness: brightness,
                   ),
@@ -519,28 +658,10 @@ class ActiveAlarmDetailSheet extends StatelessWidget {
                   isLast: true,
                 ),
 
-                // Onay butonu
-                if (onAcknowledge != null && !alarm.isAcknowledged) ...[
+                // Operatör aksiyonları (reset / acknowledge / inhibit)
+                if (_hasAnyAction) ...[
                   const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onAcknowledge,
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Alarmı Onayla'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.sm,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
+                  _buildActions(loc),
                 ],
 
                 const SizedBox(height: AppSpacing.md),

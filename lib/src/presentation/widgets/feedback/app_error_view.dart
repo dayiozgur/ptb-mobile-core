@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -202,10 +204,11 @@ class AppNetworkErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppErrorView(
       icon: Icons.wifi_off,
-      title: 'Bağlantı Hatası',
-      message: 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.',
+      title: loc.translate('error.connection_title'),
+      message: loc.translate('error.connection_message'),
       onRetry: onRetry,
       compact: compact,
     );
@@ -225,10 +228,11 @@ class AppServerErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppErrorView(
       icon: Icons.cloud_off,
-      title: 'Sunucu Hatası',
-      message: 'Bir sorun oluştu. Lütfen daha sonra tekrar deneyin.',
+      title: loc.translate('error.server_title'),
+      message: loc.translate('error.server_message'),
       onRetry: onRetry,
       compact: compact,
     );
@@ -250,10 +254,11 @@ class AppGenericErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = sl<LocalizationService>();
     return AppErrorView(
       icon: Icons.error_outline,
-      title: 'Bir Hata Oluştu',
-      message: message ?? 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+      title: loc.translate('error.generic_title'),
+      message: message ?? loc.translate('error.generic_message'),
       onRetry: onRetry,
       compact: compact,
     );

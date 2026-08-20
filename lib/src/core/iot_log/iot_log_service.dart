@@ -144,6 +144,9 @@ class IoTLogService {
           ? '*, variable:variables(id, name, description, unit)'
           : '*';
 
+      // TODO(perf): 1.97M satırlık `logs` fact tablosunu doğrudan tarar.
+      // Bu yol ham log satırlarına ihtiyaç duyuyor (variable listesi değil);
+      // özet/agregasyon gerektiğinde fn_pms_telemetry_summary tercih edilmeli.
       var query = _supabase.from('logs').select(selectClause);
 
       // Active filtresi - bazı sistemlerde active null olabilir
@@ -232,6 +235,8 @@ class IoTLogService {
   /// Multi-tenant izolasyon: tenant_id, organization_id, site_id ile filtrelenir.
   Future<int> getLogCountByProvider(String providerId, {int? lastHours}) async {
     try {
+      // TODO(perf): 1.97M satırlık `logs` fact tablosunu tarar (provider bazlı
+      // ham satır sayımı). Server-side sayım için özel bir RPC yok.
       var query = _supabase
           .from('logs')
           .select('id')
@@ -272,6 +277,8 @@ class IoTLogService {
   Future<int> getLogCountByController(String controllerId,
       {int? lastHours}) async {
     try {
+      // TODO(perf): 1.97M satırlık `logs` fact tablosunu tarar (controller bazlı
+      // ham satır sayımı). Server-side sayım için özel bir RPC yok.
       var query = _supabase
           .from('logs')
           .select('id')
@@ -353,72 +360,37 @@ class IoTLogService {
     }
 
     try {
-      final since = DateTime.now()
-          .subtract(Duration(days: effectiveDays))
-          .toIso8601String();
+      final now = DateTime.now();
+      final since =
+          now.subtract(Duration(days: effectiveDays)).toIso8601String();
 
-      // Tüm kolonları çek - hem date_time hem datetime (legacy) destekle
-      // DB'de created_at NULL - date_time üzerinden filtrele
-      var query = _supabase
-          .from('logs')
-          .select()
-          .gte('date_time', since);
+      // Öncelik: bugüne kadar olan son [effectiveDays] günlük pencere.
+      // Prod verisinde bu yol her zaman güncel veriyi döner.
+      var entries = await _queryLogTimeSeries(
+        controllerId: controllerId,
+        variableId: variableId,
+        since: since,
+      );
 
-      // Birincil filtre: controllerId veya variableId
-      if (variableId != null) {
-        // Variable bazlı sorgulama - logs.variable_id üzerinden
-        query = query.eq('variable_id', variableId);
-      }
-      if (controllerId != null) {
-        // Controller bazlı sorgulama
-        query = query.eq('controller_id', controllerId);
-      }
-
-      // Multi-Tenant İzolasyon Filtreleri
-      if (_currentTenantId != null) {
-        query = query.eq('tenant_id', _currentTenantId!);
-      }
-
-      if (_currentOrganizationId != null) {
-        query = query.eq('organization_id', _currentOrganizationId!);
-      }
-
-      if (_currentSiteId != null) {
-        query = query.eq('site_id', _currentSiteId!);
-      }
-
-      final response =
-          await query.order('date_time', ascending: true);
-
-      final entries = <LogTimeSeriesEntry>[];
-      for (final e in (response as List)) {
-        final row = e as Map<String, dynamic>;
-
-        // Dual column: date_time (current) / datetime (legacy)
-        final dt = DbFieldHelpers.parseLogDateTime(row);
-        if (dt == null) continue;
-
-        final rawValue = row['value'] as String?;
-        final numericValue =
-            rawValue != null ? double.tryParse(rawValue) : null;
-
-        // Dual column: on_off (current) / onoff (legacy)
-        var onOff = DbFieldHelpers.parseLogOnOff(row);
-
-        // DB'de on_off/onoff NULL olabilir - digital variable'lar
-        // value alanında "0.0"/"1.0" tutar, bu durumda value'dan türet
-        if (onOff == null && numericValue != null) {
-          if (numericValue == 0.0 || numericValue == 1.0) {
-            onOff = numericValue.toInt();
-          }
+      // Fallback: güncel pencerede veri yoksa (geçmiş/boşluklu/demo verisi),
+      // filtrelenen küme için EN SON mevcut date_time'ı bul ve pencereyi
+      // ORADAN geriye [effectiveDays] gün al. Böylece grafik "bugün"e sabit
+      // pencere yerine mevcut EN SON veriyi gösterir (boş grafik yerine).
+      if (entries.isEmpty) {
+        final latest = await _latestLogDateTime(
+          controllerId: controllerId,
+          variableId: variableId,
+        );
+        if (latest != null) {
+          final fallbackSince = latest
+              .subtract(Duration(days: effectiveDays))
+              .toIso8601String();
+          entries = await _queryLogTimeSeries(
+            controllerId: controllerId,
+            variableId: variableId,
+            since: fallbackSince,
+          );
         }
-
-        entries.add(LogTimeSeriesEntry(
-          dateTime: dt,
-          value: numericValue,
-          onOff: onOff,
-          rawValue: rawValue,
-        ));
       }
 
       await _cacheManager.set(
@@ -439,6 +411,109 @@ class IoTLogService {
       Logger.error('Failed to get log time series', e, stackTrace);
       return [];
     }
+  }
+
+  /// [getLogTimeSeries] için ham sorgu + parse yardımcısı.
+  ///
+  /// Verilen [since] (ISO string, `date_time >=`) alt sınırından itibaren tüm
+  /// tenant/organization/site/controller/variable filtrelerini uygular ve
+  /// satırları [LogTimeSeriesEntry]'e çevirir. Sıralama: date_time ASC.
+  Future<List<LogTimeSeriesEntry>> _queryLogTimeSeries({
+    String? controllerId,
+    String? variableId,
+    required String since,
+  }) async {
+    // Tüm kolonları çek - hem date_time hem datetime (legacy) destekle.
+    var query = _supabase.from('logs').select().gte('date_time', since);
+
+    // Birincil filtre: controllerId veya variableId
+    if (variableId != null) {
+      query = query.eq('variable_id', variableId);
+    }
+    if (controllerId != null) {
+      query = query.eq('controller_id', controllerId);
+    }
+
+    // Multi-Tenant İzolasyon Filtreleri
+    if (_currentTenantId != null) {
+      query = query.eq('tenant_id', _currentTenantId!);
+    }
+    if (_currentOrganizationId != null) {
+      query = query.eq('organization_id', _currentOrganizationId!);
+    }
+    if (_currentSiteId != null) {
+      query = query.eq('site_id', _currentSiteId!);
+    }
+
+    final response = await query.order('date_time', ascending: true);
+
+    final entries = <LogTimeSeriesEntry>[];
+    for (final e in (response as List)) {
+      final row = e as Map<String, dynamic>;
+
+      // Dual column: date_time (current) / datetime (legacy)
+      final dt = DbFieldHelpers.parseLogDateTime(row);
+      if (dt == null) continue;
+
+      final rawValue = row['value'] as String?;
+      final numericValue = rawValue != null ? double.tryParse(rawValue) : null;
+
+      // Dual column: on_off (current) / onoff (legacy)
+      var onOff = DbFieldHelpers.parseLogOnOff(row);
+
+      // DB'de on_off/onoff NULL olabilir - digital variable'lar
+      // value alanında "0.0"/"1.0" tutar, bu durumda value'dan türet
+      if (onOff == null && numericValue != null) {
+        if (numericValue == 0.0 || numericValue == 1.0) {
+          onOff = numericValue.toInt();
+        }
+      }
+
+      entries.add(LogTimeSeriesEntry(
+        dateTime: dt,
+        value: numericValue,
+        onOff: onOff,
+        rawValue: rawValue,
+      ));
+    }
+    return entries;
+  }
+
+  /// Filtrelenen küme için EN SON `date_time` değerini döndürür (yoksa null).
+  ///
+  /// Ucuz sorgu: yalnız date_time kolonu, date_time DESC, limit 1. Güncel
+  /// pencere boş dönünce "son mevcut veri" penceresini konumlandırmak için
+  /// kullanılır. NULL date_time satırları hariç tutulur (nullsFirst=false).
+  Future<DateTime?> _latestLogDateTime({
+    String? controllerId,
+    String? variableId,
+  }) async {
+    var query = _supabase.from('logs').select('date_time');
+
+    if (variableId != null) {
+      query = query.eq('variable_id', variableId);
+    }
+    if (controllerId != null) {
+      query = query.eq('controller_id', controllerId);
+    }
+    if (_currentTenantId != null) {
+      query = query.eq('tenant_id', _currentTenantId!);
+    }
+    if (_currentOrganizationId != null) {
+      query = query.eq('organization_id', _currentOrganizationId!);
+    }
+    if (_currentSiteId != null) {
+      query = query.eq('site_id', _currentSiteId!);
+    }
+
+    final response = await query
+        .order('date_time', ascending: false, nullsFirst: false)
+        .limit(1);
+
+    final list = response as List;
+    if (list.isEmpty) return null;
+    return DbFieldHelpers.parseLogDateTime(
+        Map<String, dynamic>.from(list.first as Map));
   }
 
   /// Tarih aralığına göre log kayıtları
@@ -463,6 +538,8 @@ class IoTLogService {
 
     try {
       // DB'de created_at NULL - date_time üzerinden filtrele
+      // TODO(perf): 1.97M satırlık `logs` fact tablosunu tarar (tarih aralığında
+      // ham log satırları gerekiyor). Ham satır ihtiyacı olduğundan bırakıldı.
       var query = _supabase
           .from('logs')
           .select()
@@ -568,8 +645,15 @@ class IoTLogService {
 
   /// Controller'a ait loglanmış variable listesini getirir
   ///
-  /// logs tablosundan DISTINCT variable_id'leri çeker ve
-  /// variables tablosu ile JOIN yaparak variable bilgilerini döner.
+  /// Server RPC `fn_controller_logged_variables(p_controller_id)` üzerinden
+  /// çalışır: RPC, `logs` fact tablosunda GERÇEKTEN loglanmış (distinct
+  /// variable_id) variable'ları sunucu tarafında indexli olarak çözer;
+  /// client'ta 1.97M satırlık logs taraması YAPILMAZ.
+  ///
+  /// RPC şu kolonları döner: id, name, code, description, measure_unit,
+  /// data_type. Tüketiciler `variable_type` (ANALOG/INTEGER/DIGITAL) ile
+  /// filtreliyor ve `unit`/`minimum`/`maximum` okuyabildiği için, dönen küçük
+  /// id kümesi `variables` boyut tablosundan (PK'ye IN sorgusu) zenginleştirilir.
   /// variable_type (ANALOG, DIGITAL, INTEGER, ALARM) ile filtreleme desteklenir.
   Future<List<Map<String, dynamic>>> getLoggedVariables({
     required String controllerId,
@@ -585,45 +669,71 @@ class IoTLogService {
       }
     }
 
-    try {
-      // Realtimes junction üzerinden controller'ın variable'larını çek
-      // variable bilgisi ile birlikte
-      var query = _supabase
-          .from('realtimes')
-          .select('variable_id, variable:variables(id, name, description, variable_type, measure_unit, unit, minimum, maximum)')
-          .eq('controller_id', controllerId);
+    // Server-side: controller için loglanmış distinct variable'lar.
+    final rpcResponse = await _supabase.rpc(
+      'fn_controller_logged_variables',
+      params: {'p_controller_id': controllerId},
+    );
 
-      final response = await query;
-      final results = <Map<String, dynamic>>[];
-      final seenIds = <String>{};
+    final rpcRows = (rpcResponse as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
 
-      for (final row in (response as List)) {
-        final variable = row['variable'] as Map<String, dynamic>?;
-        if (variable == null) continue;
-
-        final varId = variable['id'] as String?;
-        if (varId == null || seenIds.contains(varId)) continue;
-
-        // variable_type filtresi
-        final vType = variable['variable_type'] as String?;
-        if (variableType != null && vType != variableType) continue;
-
-        seenIds.add(varId);
-        results.add(variable);
-      }
-
-      // İsme göre sırala
-      results.sort((a, b) =>
-          (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
-
-      await _cacheManager.set(cacheKey, results,
+    if (rpcRows.isEmpty) {
+      await _cacheManager.set(cacheKey, <Map<String, dynamic>>[],
           ttl: const Duration(minutes: 10));
-
-      return results;
-    } catch (e, stackTrace) {
-      Logger.error('Failed to get logged variables', e, stackTrace);
       return [];
     }
+
+    // RPC variable_type/unit/minimum/maximum döndürmüyor; tüketiciler bunlara
+    // ihtiyaç duyduğundan küçük id kümesini variables boyut tablosundan
+    // zenginleştir (logs fact tablosuna DOKUNMAZ).
+    final ids = rpcRows
+        .map((r) => r['id'] as String?)
+        .whereType<String>()
+        .toList();
+
+    final enrichById = <String, Map<String, dynamic>>{};
+    final enrichResponse = await _supabase
+        .from('variables')
+        .select('id, variable_type, unit, minimum, maximum')
+        .inFilter('id', ids);
+    for (final row in (enrichResponse as List)) {
+      final m = Map<String, dynamic>.from(row as Map);
+      final id = m['id'] as String?;
+      if (id != null) enrichById[id] = m;
+    }
+
+    final results = <Map<String, dynamic>>[];
+    for (final base in rpcRows) {
+      final id = base['id'] as String?;
+      if (id == null) continue;
+
+      final merged = Map<String, dynamic>.from(base);
+      final extra = enrichById[id];
+      if (extra != null) {
+        merged['variable_type'] = extra['variable_type'];
+        merged['unit'] = extra['unit'];
+        merged['minimum'] = extra['minimum'];
+        merged['maximum'] = extra['maximum'];
+      }
+
+      // variable_type filtresi (tüketiciler ANALOG/INTEGER/DIGITAL geçiyor)
+      if (variableType != null && merged['variable_type'] != variableType) {
+        continue;
+      }
+
+      results.add(merged);
+    }
+
+    // İsme göre sırala
+    results.sort((a, b) =>
+        (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
+
+    await _cacheManager.set(cacheKey, results,
+        ttl: const Duration(minutes: 10));
+
+    return results;
   }
 
   void dispose() {

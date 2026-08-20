@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/iot_log/iot_log_stats_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -30,7 +32,7 @@ class MultiLineChart extends StatefulWidget {
 class _MultiLineChartState extends State<MultiLineChart> {
   final Set<String> _hiddenSeries = {};
 
-  static const _lineColors = [
+  static final _lineColors = [
     AppColors.primary,
     AppColors.error,
     AppColors.success,
@@ -52,7 +54,7 @@ class _MultiLineChartState extends State<MultiLineChart> {
         height: widget.height,
         child: Center(
           child: Text(
-            'Veri bulunamadı',
+            sl<LocalizationService>().translate('empty.no_data'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary(brightness),
@@ -80,7 +82,7 @@ class _MultiLineChartState extends State<MultiLineChart> {
         height: widget.height,
         child: Center(
           child: Text(
-            'Gösterilecek veri yok',
+            sl<LocalizationService>().translate('chart.no_data_to_show'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary(brightness),

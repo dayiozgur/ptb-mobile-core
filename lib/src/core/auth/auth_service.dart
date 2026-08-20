@@ -197,52 +197,36 @@ class AuthService {
   // EMAIL/PASSWORD AUTH
   // ============================================
 
-  /// Email ile kayıt ol
+  /// Email ile kayıt ol — **DEVRE DIŞI (invite-only)**.
+  ///
+  /// Platform artık davet-yalnız (invite-only). Web arka ucuyla tutarlı olmak
+  /// için client-side açık kayıt (`auth.signUp`) tamamen kaldırıldı. Yeni
+  /// erişim iki yoldan biriyle olur:
+  /// 1. Admin daveti → e-posta linki → accept-invite (verifyOtp + şifre).
+  /// 2. Erişim talebi (waitlist) → `access_requests` tablosu.
+  ///
+  /// Bu yöntem geriye dönük uyumluluk için korunur ancak **hesap oluşturmaz**;
+  /// her zaman bir hata sonucu döndürür.
+  @Deprecated(
+    'Açık kayıt kapatıldı (invite-only). Davet akışı veya access_requests '
+    '(waitlist) kullanın.',
+  )
   Future<AuthResult> signUpWithEmail({
     required String email,
     required String password,
     Map<String, dynamic>? metadata,
     String? redirectTo,
   }) async {
-    try {
-      _updateState(_currentState.loading());
-
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: metadata,
-        emailRedirectTo: redirectTo,
-      );
-
-      if (response.user == null) {
-        return AuthResult.failure(AuthError(
-          type: AuthErrorType.unknown,
-          message: 'Kayıt başarısız',
-        ));
-      }
-
-      // Email doğrulaması gerekiyor mu?
-      if (response.session == null) {
-        _updateState(const AuthState(
-          status: AuthStatus.emailVerificationPending,
-        ));
-        return AuthResult.emailVerificationPending();
-      }
-
-      Logger.info('User signed up: ${response.user!.email}');
-      return AuthResult.success(
-        user: response.user!,
-        session: response.session!,
-      );
-    } on AuthException catch (e) {
-      Logger.error('Sign up failed', e);
-      _updateState(const AuthState(status: AuthStatus.unauthenticated));
-      return AuthResult.failure(AuthError.fromSupabase(e));
-    } catch (e) {
-      Logger.error('Sign up error', e);
-      _updateState(const AuthState(status: AuthStatus.unauthenticated));
-      return AuthResult.failure(AuthError.fromException(e));
-    }
+    Logger.warning(
+      'signUpWithEmail called but open sign-up is disabled (invite-only). '
+      'No account created.',
+    );
+    _updateState(const AuthState(status: AuthStatus.unauthenticated));
+    return AuthResult.failure(AuthError(
+      type: AuthErrorType.unknown,
+      message: 'Kayıt davet ile yapılır. Lütfen erişim talebinde bulunun '
+          'veya davet e-postanızdaki bağlantıyı kullanın.',
+    ));
   }
 
   /// Email ile giriş yap
@@ -404,29 +388,44 @@ class AuthService {
     }
   }
 
-  /// OTP doğrula
+  /// OTP doğrula.
+  ///
+  /// İki mod:
+  /// - **E-posta + kod** (magic link OTP): `email` + `token` verilir.
+  /// - **Token-hash** (davet / e-posta linki, web PREFERRED akışı): `tokenHash`
+  ///   verilir; `email`/`token` gerekmez. Davet linkleri
+  ///   `?token_hash=…&type=invite` taşır → `type: OtpType.invite` ile çağırın.
+  ///
+  /// Prefetch-safe: link tek-kullanımlık olduğundan çağrı yalnızca bir kez
+  /// yapılmalıdır (accept-invite ekranı tek sefer tetikler).
   Future<AuthResult> verifyOtp({
-    required String email,
-    required String token,
+    String? email,
+    String? token,
+    String? tokenHash,
     OtpType type = OtpType.magiclink,
   }) async {
+    assert(
+      tokenHash != null || (email != null && token != null),
+      'verifyOtp: `tokenHash` ya da (`email` + `token`) verilmelidir.',
+    );
     try {
       _updateState(_currentState.loading());
 
       final response = await _supabase.auth.verifyOTP(
         email: email,
         token: token,
+        tokenHash: tokenHash,
         type: type,
       );
 
       if (response.user == null || response.session == null) {
         return AuthResult.failure(AuthError(
           type: AuthErrorType.invalidToken,
-          message: 'Geçersiz doğrulama kodu',
+          message: 'Geçersiz veya süresi dolmuş doğrulama bağlantısı',
         ));
       }
 
-      Logger.info('OTP verified: $email');
+      Logger.info('OTP verified (type: ${type.name})');
       return AuthResult.success(
         user: response.user!,
         session: response.session!,
@@ -437,6 +436,48 @@ class AuthService {
       return AuthResult.failure(AuthError.fromSupabase(e));
     } catch (e) {
       Logger.error('OTP verification error', e);
+      _updateState(const AuthState(status: AuthStatus.unauthenticated));
+      return AuthResult.failure(AuthError.fromException(e));
+    }
+  }
+
+  /// Davet linkini doğrula (web PREFERRED akışının kısayolu).
+  ///
+  /// `?token_hash=…&type=invite` taşıyan davet bağlantısı için tek-kullanımlık
+  /// oturum kurar. Ardından çağıran taraf [updatePassword] ile şifre
+  /// belirletmelidir.
+  Future<AuthResult> verifyInviteToken(String tokenHash) {
+    return verifyOtp(tokenHash: tokenHash, type: OtpType.invite);
+  }
+
+  /// Hash-flow fallback (eski davet linkleri):
+  /// `#access_token=…&refresh_token=…&type=invite`.
+  ///
+  /// Refresh token ile oturum kurar. Yeni linkler token-hash taşıdığından bu
+  /// yalnızca geriye dönük bir yedektir.
+  Future<AuthResult> setSessionFromRefreshToken(String refreshToken) async {
+    try {
+      _updateState(_currentState.loading());
+
+      final response = await _supabase.auth.setSession(refreshToken);
+      if (response.user == null || response.session == null) {
+        return AuthResult.failure(AuthError(
+          type: AuthErrorType.invalidToken,
+          message: 'Oturum kurulamadı — geçersiz bağlantı',
+        ));
+      }
+
+      Logger.info('Session established from invite hash tokens');
+      return AuthResult.success(
+        user: response.user!,
+        session: response.session!,
+      );
+    } on AuthException catch (e) {
+      Logger.error('setSession from refresh token failed', e);
+      _updateState(const AuthState(status: AuthStatus.unauthenticated));
+      return AuthResult.failure(AuthError.fromSupabase(e));
+    } catch (e) {
+      Logger.error('setSession from refresh token error', e);
       _updateState(const AuthState(status: AuthStatus.unauthenticated));
       return AuthResult.failure(AuthError.fromException(e));
     }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/alarm/alarm_history_model.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -61,7 +63,8 @@ class ResetAlarmList extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                emptyMessage ?? 'Resetlenmiş alarm kaydı yok',
+                emptyMessage ??
+                    sl<LocalizationService>().translate('alarm.no_reset'),
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary(brightness),
@@ -290,6 +293,7 @@ class AlarmDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
+    final loc = sl<LocalizationService>();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
@@ -384,7 +388,7 @@ class AlarmDetailSheet extends StatelessWidget {
 
                 // Zaman çizelgesi
                 Text(
-                  'Zaman Çizelgesi',
+                  loc.translate('alarm.timeline'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -396,7 +400,7 @@ class AlarmDetailSheet extends StatelessWidget {
                 _TimelineRow(
                   icon: Icons.play_arrow,
                   color: AppColors.error,
-                  label: 'Başlangıç',
+                  label: loc.translate('common.start'),
                   value: alarm.startTime != null
                       ? dateFormat.format(alarm.startTime!)
                       : '-',
@@ -406,7 +410,7 @@ class AlarmDetailSheet extends StatelessWidget {
                   _TimelineRow(
                     icon: Icons.directions_run,
                     color: AppColors.warning,
-                    label: 'Varış',
+                    label: loc.translate('alarm.arrival'),
                     value: dateFormat.format(alarm.arrivalStartTime!),
                     brightness: brightness,
                   ),
@@ -444,7 +448,7 @@ class AlarmDetailSheet extends StatelessWidget {
                   _TimelineRow(
                     icon: Icons.stop,
                     color: AppColors.systemGray,
-                    label: 'Bitiş',
+                    label: loc.translate('common.end'),
                     value: dateFormat.format(alarm.endTime!),
                     brightness: brightness,
                     isLast: true,

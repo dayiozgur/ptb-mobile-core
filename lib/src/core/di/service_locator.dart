@@ -13,6 +13,8 @@ import '../realtime/realtime_service.dart';
 import '../reporting/reporting_service.dart';
 import '../search/search_service.dart';
 import '../theme/theme_service.dart';
+import '../branding/branding_service.dart';
+import '../localization/language_service.dart';
 import '../localization/localization_service.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logger_interceptor.dart';
@@ -22,6 +24,7 @@ import '../auth/biometric_auth.dart';
 import '../organization/organization_service.dart';
 import '../site/site_service.dart';
 import '../storage/cache_manager.dart';
+import '../storage/file_storage_service.dart';
 import '../storage/secure_storage.dart';
 import '../tenant/tenant_service.dart';
 import '../unit/unit_service.dart';
@@ -41,6 +44,14 @@ import '../user/profile_service.dart';
 import '../todo/todo_service.dart';
 import '../staff/staff_service.dart';
 import '../team/team_service.dart';
+import '../menu/mobile_menu_service.dart';
+import '../platform/platform_catalog.dart';
+import '../platform/platform_context.dart';
+import '../entity/entity_config_service.dart';
+import '../entity/entity_data_service.dart';
+import '../form/form_template_service.dart';
+import '../form/lookup_service.dart';
+import '../hr/hr_ess_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -257,12 +268,35 @@ Future<void> setupServiceLocator({
   );
 
   // ============================================
+  // BRANDING SERVICE (DB-driven per-platform branding)
+  // ============================================
+
+  sl.registerLazySingleton<BrandingService>(
+    () => BrandingService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+
+  // ============================================
   // LOCALIZATION SERVICE
   // ============================================
 
   sl.registerLazySingleton<LocalizationService>(
     () => LocalizationService(
       storage: sl<SecureStorage>(),
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // LANGUAGE SERVICE (DB-driven picker: languages ∩ platform supported)
+  // ============================================
+
+  sl.registerLazySingleton<LanguageService>(
+    () => LanguageService(
+      supabase: sl<SupabaseClient>(),
+      platformContext: sl<PlatformContext>(),
     ),
   );
 
@@ -443,6 +477,87 @@ Future<void> setupServiceLocator({
     ),
   );
 
+  // ============================================
+  // MENU SERVICE (M1 — Windows-OS DB menu)
+  // ============================================
+
+  sl.registerLazySingleton<MobileMenuService>(
+    () => MobileMenuService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  // ============================================
+  // PLATFORM CATALOG + CONTEXT (M1 — platform switch)
+  // ============================================
+
+  sl.registerLazySingleton<PlatformCatalogService>(
+    () => PlatformCatalogService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<PlatformContext>(
+    () => PlatformContext(),
+  );
+
+  // ============================================
+  // FILE STORAGE SERVICE (storage-reconciliation — 3-bucket web kontratı)
+  // ============================================
+
+  sl.registerLazySingleton<FileStorageService>(
+    () => FileStorageService(
+      supabase: sl<SupabaseClient>(),
+      platformContext: sl<PlatformContext>(),
+      tenantService: sl<TenantService>(),
+      profileService: sl<ProfileService>(),
+    ),
+  );
+
+  // ============================================
+  // DYNAMIC FORM + ENTITY ENGINE
+  // (low-code builder artefaktlarını tüketen data layer)
+  // ============================================
+
+  sl.registerLazySingleton<EntityConfigService>(
+    () => EntityConfigService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<EntityDataService>(
+    () => EntityDataService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<FormTemplateService>(
+    () => FormTemplateService(
+      supabase: sl<SupabaseClient>(),
+      cacheManager: sl<CacheManager>(),
+    ),
+  );
+
+  sl.registerLazySingleton<LookupService>(
+    () => LookupService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+
+  // ============================================
+  // HR EMPLOYEE-SELF-SERVICE (ESS)
+  // ============================================
+
+  sl.registerLazySingleton<HrEssService>(
+    () => HrEssService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+
   Logger.debug('Service Locator setup complete');
 }
 
@@ -493,7 +608,9 @@ OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
 ReportingService get reportingService => sl<ReportingService>();
 SearchService get searchService => sl<SearchService>();
 ThemeService get themeService => sl<ThemeService>();
+BrandingService get brandingService => sl<BrandingService>();
 LocalizationService get localizationService => sl<LocalizationService>();
+LanguageService get languageService => sl<LanguageService>();
 PermissionService get permissionService => sl<PermissionService>();
 InvitationService get invitationService => sl<InvitationService>();
 PushNotificationService get pushNotificationService => sl<PushNotificationService>();
@@ -525,3 +642,20 @@ ProfileService get profileService => sl<ProfileService>();
 TodoService get todoService => sl<TodoService>();
 StaffService get staffService => sl<StaffService>();
 TeamService get teamService => sl<TeamService>();
+
+// Menu & Platform Services (M1 — Windows-OS model)
+MobileMenuService get mobileMenuService => sl<MobileMenuService>();
+PlatformCatalogService get platformCatalogService => sl<PlatformCatalogService>();
+PlatformContext get platformContext => sl<PlatformContext>();
+
+// Storage Service (storage-reconciliation — 3-bucket web kontratı)
+FileStorageService get fileStorageService => sl<FileStorageService>();
+
+// Dynamic Form + Entity Engine (low-code builder data layer)
+EntityConfigService get entityConfigService => sl<EntityConfigService>();
+EntityDataService get entityDataService => sl<EntityDataService>();
+FormTemplateService get formTemplateService => sl<FormTemplateService>();
+LookupService get lookupService => sl<LookupService>();
+
+// Core - HR (ESS): leave / payroll / attendance (PDKS) / onboarding data layer
+HrEssService get hrEssService => sl<HrEssService>();

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/search/search_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -320,7 +322,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
               child: Text(
-                'İptal',
+                sl<LocalizationService>().translate('common.cancel'),
                 style: AppTypography.body.copyWith(
                   color: AppColors.primary,
                 ),
@@ -344,9 +346,9 @@ class _AppSearchBarState extends State<AppSearchBar> {
       initialValue: widget.entityType,
       onSelected: widget.onEntityTypeChanged,
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: null,
-          child: Text('Tümü'),
+          child: Text(sl<LocalizationService>().translate('common.all')),
         ),
         ...SearchEntityType.values
             .where((e) => e != SearchEntityType.all)
@@ -422,7 +424,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Text(
-                  'Öneriler',
+                  sl<LocalizationService>().translate('search.suggestions'),
                   style: AppTypography.caption1.copyWith(
                     color: AppColors.textSecondary(brightness),
                     fontWeight: FontWeight.w600,
@@ -461,7 +463,8 @@ class _AppSearchBarState extends State<AppSearchBar> {
             ),
             if (recent.resultCount > 0)
               Text(
-                '${recent.resultCount} sonuç',
+                sl<LocalizationService>().translate('search.result_count',
+                    params: {'count': recent.resultCount}),
                 style: AppTypography.caption2.copyWith(
                   color: AppColors.textSecondary(brightness),
                 ),

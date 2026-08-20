@@ -243,7 +243,12 @@ class OrganizationService {
     _organizationController.add(null);
     try {
       await _secureStorage.write(key: _currentOrgKey, value: '');
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      // Sessizce yutma (drift-loud): secure-storage yazımı başarısızsa en
+      // azından görünür olsun. Signout teardown'ını kesmemek için rethrow
+      // yerine hata olarak loglanır.
+      Logger.error('Failed to clear persisted organization id', e, stackTrace);
+    }
     Logger.debug('Organization cleared');
   }
 

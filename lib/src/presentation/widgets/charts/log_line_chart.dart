@@ -2,13 +2,18 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/iot_log/iot_log_stats_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
 /// Log line chart konfigürasyonu
 class LogChartConfig {
-  final Color lineColor;
+  final Color? _lineColor;
+
+  /// Çizgi rengi — verilmezse DB-driven branding primary rengine düşer.
+  Color get lineColor => _lineColor ?? AppColors.primary;
   final Color? gradientColor;
   final bool showDots;
   final bool showArea;
@@ -20,7 +25,7 @@ class LogChartConfig {
   final bool startFromZero;
 
   const LogChartConfig({
-    this.lineColor = AppColors.primary,
+    Color? lineColor,
     this.gradientColor,
     this.showDots = false,
     this.showArea = true,
@@ -30,7 +35,7 @@ class LogChartConfig {
     this.valueUnit,
     this.showMinMaxIndicators = true,
     this.startFromZero = false,
-  });
+  }) : _lineColor = lineColor;
 }
 
 /// Log line chart widget
@@ -107,7 +112,7 @@ class _LogLineChartState extends State<LogLineChart> {
                 ),
               ),
               Text(
-                'En az 2 veri noktası gerekli',
+                sl<LocalizationService>().translate('chart.min_two_points'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary(brightness).withValues(alpha: 0.7),

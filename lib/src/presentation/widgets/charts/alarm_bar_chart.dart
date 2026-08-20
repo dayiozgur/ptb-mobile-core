@@ -42,7 +42,7 @@ class _AlarmBarChartState extends State<AlarmBarChart> {
     }
 
     // Fallback renkleri (priority tanımsız ise)
-    const fallbackColors = [
+    final fallbackColors = [
       AppColors.error,
       AppColors.warning,
       AppColors.info,

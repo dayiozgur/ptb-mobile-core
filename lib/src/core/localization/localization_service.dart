@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../storage/cache_manager.dart';
 import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
 import 'app_localizations.dart';
@@ -16,7 +18,10 @@ enum AppLocale {
   english('en', 'English', 'US'),
 
   /// Almanca
-  german('de', 'Deutsch', 'DE');
+  german('de', 'Deutsch', 'DE'),
+
+  /// İtalyanca
+  italian('it', 'Italiano', 'IT');
 
   final String languageCode;
   final String displayName;
@@ -26,6 +31,22 @@ enum AppLocale {
 
   /// Flutter Locale'e dönüştür
   Locale toLocale() => Locale(languageCode, countryCode);
+
+  /// Web `keywords` tablosundaki `language_id` (canlı DB — tek doğruluk kaynağı).
+  ///
+  /// Bu UUID'ler web portalıyla aynı DB'yi paylaşır; değiştirmeyin.
+  String get languageId {
+    switch (this) {
+      case AppLocale.turkish:
+        return 'fc6e12d2-73b1-4c19-a465-ffdd1a785715';
+      case AppLocale.english:
+        return '198b2bf7-c859-4cc5-8a26-a1367cdd28ef';
+      case AppLocale.german:
+        return '44929d49-5cf2-4ba9-b325-2166d250dabc';
+      case AppLocale.italian:
+        return '009377a3-faee-4c5e-ba26-ff1e6953c506';
+    }
+  }
 
   /// Dil kodundan bul
   static AppLocale fromLanguageCode(String? code) {
@@ -61,10 +82,26 @@ enum AppLocale {
 class LocalizationService {
   final SecureStorage _storage;
 
+  /// DB `keywords` tablosuna erişim (opsiyonel — null ise sadece statik map).
+  final SupabaseClient? _supabase;
+
+  /// DB çevirilerini 1 saat TTL ile önbelleğe alır (web IDB 1h aynası).
+  final CacheManager? _cacheManager;
+
   // State
   AppLocale _currentLocale = AppLocale.turkish;
+
+  /// Statik fallback map (offline / DB yoksa). `app_localizations.dart`.
   Map<String, String> _translations = {};
+
+  /// Canlı DB `keywords` map'i (cache'den veya ağdan). Statiğe ÜSTÜN gelir,
+  /// böylece mobil bir daha sessizce drift edemez.
+  Map<String, String> _dbTranslations = {};
+
   bool _isInitialized = false;
+
+  /// Aynı locale için eşzamanlı ağ yenilemesini engeller.
+  Future<void>? _refreshInFlight;
 
   // Stream controllers
   final _localeController = StreamController<AppLocale>.broadcast();
@@ -72,9 +109,25 @@ class LocalizationService {
   // Storage keys
   static const String _localeKey = 'app_locale';
 
+  /// DB keyword cache önekı (locale koduna göre): `keywords_i18n_tr` vb.
+  static const String _dbCachePrefix = 'keywords_i18n_';
+
+  /// DB keyword cache TTL — web'in IDB 1 saatlik cache'ini yansıtır.
+  static const Duration _dbCacheTtl = Duration(hours: 1);
+
+  /// Supabase varsayılan satır limiti 1000; sayfa başına çekilen satır.
+  static const int _pageSize = 1000;
+
+  /// Sonsuz döngü koruması (tr-TR ~19.5k satır → ~20 sayfa).
+  static const int _maxRows = 40000;
+
   LocalizationService({
     required SecureStorage storage,
-  }) : _storage = storage;
+    SupabaseClient? supabase,
+    CacheManager? cacheManager,
+  })  : _storage = storage,
+        _supabase = supabase,
+        _cacheManager = cacheManager;
 
   // ============================================
   // GETTERS
@@ -113,9 +166,11 @@ class LocalizationService {
       if (savedLocale != null) {
         _currentLocale = AppLocale.fromLanguageCode(savedLocale);
       } else {
-        // Sistem dilini kontrol et
-        final systemLocale = PlatformDispatcher.instance.locale;
-        _currentLocale = AppLocale.fromLocale(systemLocale);
+        // Türk pazarı — web (LOCALE_ID=tr-TR pinli) ile tutarlı: kayıtlı bir dil
+        // tercihi yoksa uygulama VARSAYILAN OLARAK TÜRKÇE açılır (dil seçici
+        // gelene kadar). Cihazın sistem dili İngilizce olsa bile Türkçe başlar;
+        // kullanıcı ayarlardan değiştirebilir (setLocale tercihi kaydeder).
+        _currentLocale = AppLocale.turkish;
       }
 
       // Çevirileri yükle
@@ -155,19 +210,148 @@ class LocalizationService {
     await setLocale(appLocale);
   }
 
-  /// Çevirileri yükle
+  /// Çevirileri yükle.
+  ///
+  /// Sıra (soğuk-başlangıçta ağ beklemez):
+  /// 1. Statik map ile anında boya (fallback).
+  /// 2. Cache'deki DB kopyasını (varsa) yükle → hemen kullanılır.
+  /// 3. Arka planda DB'den yenile, gelince swap-in + UI'ı yeniden çiz.
   Future<void> _loadTranslations(AppLocale locale) async {
+    // 1) Statik fallback — her zaman mevcut, asla null.
     _translations = AppLocalizations.getTranslations(locale);
-    Logger.debug('Loaded ${_translations.length} translations for ${locale.languageCode}');
+    Logger.debug(
+        'Loaded ${_translations.length} static translations for ${locale.languageCode}');
+
+    // 2) Cache'deki DB kopyası (yerel Hive — hızlı, ağ yok).
+    _dbTranslations = await _loadDbFromCache(locale);
+    if (_dbTranslations.isNotEmpty) {
+      Logger.debug(
+          'Loaded ${_dbTranslations.length} cached DB keywords for ${locale.languageCode}');
+    }
+
+    // 3) Arka planda DB yenilemesi (fire-and-forget; başlatmayı bloklamaz).
+    unawaited(_refreshFromDb(locale));
+  }
+
+  /// Cache'deki DB keyword kopyasını oku (TTL dolmuşsa boş döner).
+  Future<Map<String, String>> _loadDbFromCache(AppLocale locale) async {
+    final cache = _cacheManager;
+    if (cache == null) return {};
+    try {
+      final raw =
+          await cache.get<Map<String, dynamic>>('$_dbCachePrefix${locale.languageCode}');
+      if (raw == null) return {};
+      return raw.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+    } catch (e) {
+      Logger.warning('DB keyword cache read failed for ${locale.languageCode}', e);
+      return {};
+    }
+  }
+
+  /// DB `keywords` tablosundan güncel çevirileri çek, swap-in yap ve cache'le.
+  ///
+  /// Ağ hatasında sessizce cache/statik ile devam eder (asla çökmez).
+  Future<void> _refreshFromDb(AppLocale locale) async {
+    final supabase = _supabase;
+    if (supabase == null) return;
+
+    // Aynı anda tek yenileme.
+    if (_refreshInFlight != null) return;
+
+    final completer = Completer<void>();
+    _refreshInFlight = completer.future;
+    try {
+      final fetched = await _fetchKeywordsFromDb(supabase, locale);
+      if (fetched.isEmpty) {
+        Logger.debug('DB keyword fetch returned no rows for ${locale.languageCode}');
+        return;
+      }
+
+      // Locale bu arada değişmiş olabilir — yalnızca hâlâ geçerliyse uygula.
+      if (locale == _currentLocale) {
+        _dbTranslations = fetched;
+        // Değişikliği dinleyicilere bildir → LocalizationBuilder yeniden çizer.
+        if (!_localeController.isClosed) {
+          _localeController.add(_currentLocale);
+        }
+      }
+
+      // Bir sonraki soğuk-başlangıç için cache'le.
+      await _cacheManager?.set(
+        '$_dbCachePrefix${locale.languageCode}',
+        fetched,
+        ttl: _dbCacheTtl,
+      );
+      Logger.info(
+          'Refreshed ${fetched.length} DB keywords for ${locale.languageCode}');
+    } catch (e) {
+      // Sessizce statik/cache fallback ile devam.
+      Logger.warning('DB keyword refresh failed for ${locale.languageCode}', e);
+    } finally {
+      _refreshInFlight = null;
+      completer.complete();
+    }
+  }
+
+  /// `keywords` tablosundan sayfalı olarak tüm satırları çek.
+  ///
+  /// Okuma önceliği (web ile aynı): `defaultvalue || shortvalue || longvalue`.
+  Future<Map<String, String>> _fetchKeywordsFromDb(
+    SupabaseClient supabase,
+    AppLocale locale,
+  ) async {
+    final result = <String, String>{};
+    var offset = 0;
+
+    while (offset < _maxRows) {
+      final rows = await supabase
+          .from('keywords')
+          .select('key, defaultvalue, shortvalue, longvalue')
+          .eq('language_id', locale.languageId)
+          .eq('active', true)
+          // STABİL sıralama ŞART: `.order` olmadan `.range` sayfalaması satır
+          // atlar/tekrarlar (PostgREST sıra garantisi yok) → rastgele key'ler ham
+          // görünür. `id` benzersiz+stabil; tüm aktif key'ler güvenilir çekilir.
+          .order('id', ascending: true)
+          .range(offset, offset + _pageSize - 1);
+
+      final list = rows as List<dynamic>;
+      for (final row in list) {
+        final map = row as Map<String, dynamic>;
+        final key = map['key'] as String?;
+        if (key == null || key.isEmpty) continue;
+        final value = _pickValue(map);
+        if (value == null) continue;
+        result[key] = value;
+      }
+
+      if (list.length < _pageSize) break; // son sayfa
+      offset += _pageSize;
+    }
+
+    return result;
+  }
+
+  /// Web okuma önceliği: `defaultvalue || shortvalue || longvalue` (boş atlanır).
+  String? _pickValue(Map<String, dynamic> row) {
+    for (final col in const ['defaultvalue', 'shortvalue', 'longvalue']) {
+      final v = row[col];
+      if (v is String && v.isNotEmpty) return v;
+    }
+    return null;
   }
 
   // ============================================
   // TRANSLATIONS
   // ============================================
 
-  /// Çeviri al
+  /// Çeviri al.
+  ///
+  /// Çözüm sırası: DB keyword (cache/ağ) → statik fallback → anahtarın kendisi.
+  /// DB varsa kazanır (mobil bir daha sessizce drift etmez). Asla null döndürmez;
+  /// yükleme bitmeden çağrılırsa cache/statik/anahtar ile güvenli çalışır.
   String translate(String key, {Map<String, dynamic>? params}) {
-    var text = _translations[key] ?? key;
+    var text = _dbTranslations[key] ?? _translations[key] ?? key;
 
     // Parametreleri değiştir
     if (params != null) {
@@ -190,8 +374,10 @@ class LocalizationService {
       ...?params,
       'count': count,
     };
+    final hasPlural = _dbTranslations.containsKey(pluralKey) ||
+        _translations.containsKey(pluralKey);
     return translate(
-      _translations.containsKey(pluralKey) ? pluralKey : key,
+      hasPlural ? pluralKey : key,
       params: finalParams,
     );
   }
@@ -214,6 +400,8 @@ class LocalizationService {
         return '$month/$day/$year';
       case AppLocale.german:
         return '$day.$month.$year';
+      case AppLocale.italian:
+        return '$day/$month/$year';
     }
   }
 
@@ -267,6 +455,8 @@ class LocalizationService {
         return '$currencySymbol$formatted';
       case AppLocale.german:
         return '$formatted $currencySymbol';
+      case AppLocale.italian:
+        return '$formatted $currencySymbol';
     }
   }
 
@@ -277,6 +467,8 @@ class LocalizationService {
       case AppLocale.english:
         return '\$';
       case AppLocale.german:
+        return '€';
+      case AppLocale.italian:
         return '€';
     }
   }

@@ -3,11 +3,26 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../buttons/app_button.dart';
+
+/// Guarded translation helper for the error boundary.
+///
+/// The boundary may be rendering *because* DI failed, so resolving
+/// [LocalizationService] can throw. Never let that happen here — fall back to
+/// the hardcoded literal so the last-resort error UI always renders.
+String _boundaryTr(String key, String fallback) {
+  try {
+    return sl<LocalizationService>().translate(key);
+  } catch (_) {
+    return fallback;
+  }
+}
 
 /// Hata bilgisi
 class ErrorDetails {
@@ -202,7 +217,7 @@ class _DefaultErrorView extends StatelessWidget {
 
                 // Başlık
                 Text(
-                  'Bir Hata Oluştu',
+                  _boundaryTr('error.generic_title', 'Bir Hata Oluştu'),
                   style: AppTypography.title2,
                   textAlign: TextAlign.center,
                 ),
@@ -211,7 +226,8 @@ class _DefaultErrorView extends StatelessWidget {
 
                 // Mesaj
                 Text(
-                  'Üzgünüz, beklenmeyen bir hata oluştu.',
+                  _boundaryTr('error.boundary_message',
+                      'Üzgünüz, beklenmeyen bir hata oluştu.'),
                   style: AppTypography.body.copyWith(
                     color: AppColors.secondaryLabel(context),
                   ),
@@ -231,7 +247,7 @@ class _DefaultErrorView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Hata Detayı:',
+                          _boundaryTr('error.detail_label', 'Hata Detayı:'),
                           style: AppTypography.caption1.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -246,7 +262,7 @@ class _DefaultErrorView extends StatelessWidget {
                         if (error.context != null) ...[
                           const SizedBox(height: AppSpacing.sm),
                           Text(
-                            'Konum: ${error.context}',
+                            '${_boundaryTr('error.location_label', 'Konum')}: ${error.context}',
                             style: AppTypography.caption2.copyWith(
                               color: AppColors.secondaryLabel(context),
                             ),
@@ -261,7 +277,7 @@ class _DefaultErrorView extends StatelessWidget {
 
                 // Yeniden dene butonu
                 AppButton(
-                  label: 'Tekrar Dene',
+                  label: _boundaryTr('common.retry', 'Tekrar Dene'),
                   onPressed: onRetry,
                   icon: Icons.refresh,
                 ),
@@ -347,7 +363,7 @@ class TryCatch extends StatelessWidget {
       return onError?.call(e) ??
           Center(
             child: Text(
-              'Hata: $e',
+              '${_boundaryTr('common.error', 'Hata')}: $e',
               style: TextStyle(color: AppColors.error),
             ),
           );
@@ -390,7 +406,7 @@ class SafeFutureBuilder<T> extends StatelessWidget {
                     Icon(Icons.error_outline, color: AppColors.error, size: 48),
                     const SizedBox(height: 16),
                     Text(
-                      'Bir hata oluştu',
+                      _boundaryTr('error.occurred', 'Bir hata oluştu'),
                       style: TextStyle(color: AppColors.error),
                     ),
                   ],
@@ -446,7 +462,7 @@ class SafeStreamBuilder<T> extends StatelessWidget {
                     Icon(Icons.error_outline, color: AppColors.error, size: 48),
                     const SizedBox(height: 16),
                     Text(
-                      'Bir hata oluştu',
+                      _boundaryTr('error.occurred', 'Bir hata oluştu'),
                       style: TextStyle(color: AppColors.error),
                     ),
                   ],

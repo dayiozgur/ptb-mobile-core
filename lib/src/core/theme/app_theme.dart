@@ -22,7 +22,7 @@ class AppTheme {
         brightness: Brightness.light,
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.backgroundLight,
-        colorScheme: const ColorScheme.light(
+        colorScheme: ColorScheme.light(
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.surfaceLight,
@@ -84,7 +84,7 @@ class AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -142,7 +142,7 @@ class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
-            side: const BorderSide(color: AppColors.primary),
+            side: BorderSide(color: AppColors.primary),
             textStyle: AppTypography.buttonMedium,
           ),
         ),
@@ -154,7 +154,7 @@ class AppTheme {
         ),
 
         // Bottom Navigation Bar Theme
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: AppColors.surfaceLight,
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.systemGray,
@@ -165,7 +165,7 @@ class AppTheme {
         ),
 
         // Tab Bar Theme
-        tabBarTheme: const TabBarThemeData(
+        tabBarTheme: TabBarThemeData(
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.systemGray,
           indicatorColor: AppColors.primary,
@@ -234,7 +234,7 @@ class AppTheme {
         ),
 
         // Progress Indicator Theme
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
+        progressIndicatorTheme: ProgressIndicatorThemeData(
           color: AppColors.primary,
           linearTrackColor: AppColors.systemGray5,
           circularTrackColor: AppColors.systemGray5,
@@ -313,7 +313,7 @@ class AppTheme {
         brightness: Brightness.dark,
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.backgroundDark,
-        colorScheme: const ColorScheme.dark(
+        colorScheme: ColorScheme.dark(
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.surfaceDark,
@@ -375,7 +375,7 @@ class AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -433,7 +433,7 @@ class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
-            side: const BorderSide(color: AppColors.primary),
+            side: BorderSide(color: AppColors.primary),
             textStyle: AppTypography.buttonMedium,
           ),
         ),
@@ -445,7 +445,7 @@ class AppTheme {
         ),
 
         // Bottom Navigation Bar Theme
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: AppColors.surfaceDark,
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.systemGray,
@@ -456,7 +456,7 @@ class AppTheme {
         ),
 
         // Tab Bar Theme
-        tabBarTheme: const TabBarThemeData(
+        tabBarTheme: TabBarThemeData(
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.systemGray,
           indicatorColor: AppColors.primary,
@@ -527,7 +527,7 @@ class AppTheme {
         ),
 
         // Progress Indicator Theme
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
+        progressIndicatorTheme: ProgressIndicatorThemeData(
           color: AppColors.primary,
           linearTrackColor: AppColors.surfaceElevatedDark,
           circularTrackColor: AppColors.surfaceElevatedDark,
