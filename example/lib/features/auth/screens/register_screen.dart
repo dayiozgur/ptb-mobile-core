@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Erişim Talebi (Waitlist) ekranı.
+///
+/// M3 (invite-only): açık kayıt kaldırıldı. Bu ekran artık hesap OLUŞTURMAZ;
+/// yalnızca `access_requests` tablosuna bir erişim talebi yazar (status
+/// varsayılan 'pending'). Talep, yönetici tarafından incelenir ve onaylanırsa
+/// kullanıcıya davet gönderilir.
+///
+/// NOT: Sınıf adı geriye dönük yönlendirme uyumu için `RegisterScreen` olarak
+/// korunmuştur (`/register` rotası artık "erişim talebi" ekranını gösterir).
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -13,74 +23,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _messageController = TextEditingController();
   bool _isLoading = false;
-  bool _acceptedTerms = false;
+
+  String _t(String key) => localizationService.translate(key);
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _companyController.dispose();
+    _phoneController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
+  Future<void> _handleRequestAccess() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (!_acceptedTerms) {
-      AppSnackbar.showWarning(
-        context,
-        message: 'Kullanım koşullarını kabul etmelisiniz',
-      );
-      return;
-    }
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      AppSnackbar.showError(
-        context,
-        message: 'Şifreler eşleşmiyor',
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
     try {
-      final result = await authService.signUpWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        metadata: {
-          'full_name': _nameController.text.trim(),
-        },
-      );
+      await Supabase.instance.client.from('access_requests').insert({
+        'email': _emailController.text.trim().toLowerCase(),
+        'full_name': _nameController.text.trim(),
+        if (_companyController.text.trim().isNotEmpty)
+          'company': _companyController.text.trim(),
+        if (_phoneController.text.trim().isNotEmpty)
+          'phone': _phoneController.text.trim(),
+        if (_messageController.text.trim().isNotEmpty)
+          'message': _messageController.text.trim(),
+        'source': 'mobile',
+      });
 
       if (!mounted) return;
-
-      result.when(
-        success: (user, session) {
-          Logger.info('Registration successful: ${user.email}');
-          AppSnackbar.showSuccess(
-            context,
-            message: 'Kayıt başarılı! Hoş geldiniz.',
-          );
-          context.go('/tenant-select');
-        },
-        failure: (error) {
-          AppSnackbar.showError(
-            context,
-            message: error?.message ?? 'Kayıt başarısız',
-          );
-        },
-      );
-
-      // Email verification pending durumunu kontrol et
-      if (result.status == AuthStatus.emailVerificationPending) {
-        if (mounted) {
-          _showEmailVerificationDialog();
-        }
+      _showConfirmation();
+    } catch (e) {
+      Logger.error('Access request failed', e);
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          message: _t('auth.request_access.error'),
+        );
       }
     } finally {
       if (mounted) {
@@ -89,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _showEmailVerificationDialog() {
+  void _showConfirmation() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -98,36 +84,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Icon(Icons.mark_email_read, color: AppColors.primary),
             const SizedBox(width: AppSpacing.sm),
-            const Text('Email Doğrulama'),
+            Expanded(child: Text(_t('auth.request_access.received_title'))),
           ],
         ),
-        content: const Text(
-          'Kayıt işleminizi tamamlamak için email adresinize gönderilen '
-          'doğrulama linkine tıklayın.\n\n'
-          'Email gelmedi mi? Spam klasörünüzü kontrol edin.',
-        ),
+        content: Text(_t('auth.request_access.received_message')),
         actions: [
-          TextButton(
-            onPressed: () async {
-              await authService.resendEmailVerification(
-                email: _emailController.text.trim(),
-              );
-              if (context.mounted) {
-                Navigator.pop(context);
-                AppSnackbar.showSuccess(
-                  context,
-                  message: 'Doğrulama emaili tekrar gönderildi',
-                );
-              }
-            },
-            child: const Text('Tekrar Gönder'),
-          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               context.go('/login');
             },
-            child: const Text('Tamam'),
+            child: Text(_t('common.ok')),
           ),
         ],
       ),
@@ -137,7 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Kayıt Ol',
+      title: _t('auth.request_access.title'),
       showBackButton: true,
       onBack: () => context.go('/login'),
       child: SingleChildScrollView(
@@ -148,139 +115,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacing.lg),
-
-              // Title
               Text(
-                'Hesap Oluştur',
+                _t('auth.request_access.heading'),
                 style: AppTypography.largeTitle,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Bilgilerinizi girerek başlayın',
+                _t('auth.request_access.subheading'),
                 style: AppTypography.subheadline.copyWith(
                   color: AppColors.secondaryLabel(context),
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: AppSpacing.xl),
 
-              // Name field
+              // Full name
               AppTextField(
                 controller: _nameController,
-                label: 'Ad Soyad',
-                placeholder: 'Adınızı girin',
+                label: _t('auth.request_access.full_name'),
                 prefixIcon: Icons.person_outline,
                 enabled: !_isLoading,
-                validator: Validators.required('Ad soyad zorunludur'),
+                validator: Validators.required(_t('auth.request_access.full_name_required')),
                 textCapitalization: TextCapitalization.words,
               ),
-
               const SizedBox(height: AppSpacing.md),
 
-              // Email field
+              // Email
               AppEmailField(
                 controller: _emailController,
                 enabled: !_isLoading,
               ),
-
               const SizedBox(height: AppSpacing.md),
 
-              // Password field
-              AppPasswordField(
-                controller: _passwordController,
-                label: 'Şifre',
+              // Company (optional)
+              AppTextField(
+                controller: _companyController,
+                label: _t('auth.request_access.company'),
+                prefixIcon: Icons.business_outlined,
                 enabled: !_isLoading,
-                validator: Validators.combine([
-                  Validators.required('Şifre zorunludur'),
-                  Validators.password(),
-                ]),
               ),
-
               const SizedBox(height: AppSpacing.md),
 
-              // Confirm password field
-              AppPasswordField(
-                controller: _confirmPasswordController,
-                label: 'Şifre Tekrar',
+              // Phone (optional)
+              AppTextField(
+                controller: _phoneController,
+                label: _t('auth.request_access.phone'),
+                prefixIcon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
                 enabled: !_isLoading,
-                validator: (value) {
-                  if (value != _passwordController.text) {
-                    return 'Şifreler eşleşmiyor';
-                  }
-                  return null;
-                },
               ),
+              const SizedBox(height: AppSpacing.md),
 
+              // Message (optional)
+              AppTextField(
+                controller: _messageController,
+                label: _t('auth.request_access.message'),
+                prefixIcon: Icons.message_outlined,
+                maxLines: 3,
+                enabled: !_isLoading,
+              ),
               const SizedBox(height: AppSpacing.lg),
 
-              // Terms checkbox
-              Row(
-                children: [
-                  Checkbox(
-                    value: _acceptedTerms,
-                    onChanged: _isLoading
-                        ? null
-                        : (value) => setState(() => _acceptedTerms = value ?? false),
-                    activeColor: AppColors.primary,
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _isLoading
-                          ? null
-                          : () => setState(() => _acceptedTerms = !_acceptedTerms),
-                      child: Text.rich(
-                        TextSpan(
-                          text: 'Okudum ve kabul ediyorum: ',
-                          style: AppTypography.footnote,
-                          children: [
-                            TextSpan(
-                              text: 'Kullanım Koşulları',
-                              style: AppTypography.footnote.copyWith(
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const TextSpan(text: ' ve '),
-                            TextSpan(
-                              text: 'Gizlilik Politikası',
-                              style: AppTypography.footnote.copyWith(
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Register button
               AppButton(
-                label: 'Kayıt Ol',
-                onPressed: _isLoading ? null : _handleRegister,
+                label: _t('auth.request_access.submit'),
+                onPressed: _isLoading ? null : _handleRequestAccess,
                 isLoading: _isLoading,
               ),
-
               const SizedBox(height: AppSpacing.xl),
 
-              // Login link
+              // Back to login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Zaten hesabınız var mı? ',
+                    _t('auth.request_access.have_account'),
                     style: AppTypography.footnote.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
                   ),
                   TextButton(
-                    onPressed: _isLoading ? null : () => context.pop(),
+                    onPressed: _isLoading ? null : () => context.go('/login'),
                     child: Text(
-                      'Giriş Yap',
+                      _t('auth.login'),
                       style: AppTypography.footnote.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -289,7 +206,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: AppSpacing.lg),
             ],
           ),

@@ -13,6 +13,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Calendar and events module
 - Inventory management module
 
+## [1.3.0] - 2026-08-20
+
+### Changed - Backend modernization (align to hardened web backend)
+Bringing the mobile core to the current web maturity — the platform-as-OS
+model, modern RBAC/access, and one-round-trip Supabase connections. See
+`docs/MOBILE_MODERNIZATION_ROADMAP.md`.
+
+- **M0 — RBAC + cold-start + profile model:**
+  - `UserProfile` realigned to the live `profiles` schema (`full_name`, `active`,
+    `last_login`, `site_id`, `tenant_id`); stopped mapping/writing ~19 dropped
+    columns (display_name, status, gender, organization_id, …).
+  - One-round-trip cold-start via `fn_my_profile_bundle()`
+    (`ProfileService.getProfileBundle`), with timeout + retry + fallback.
+  - Coarse-role RBAC via `fn_my_coarse_role`/`fn_coarse_role_of`
+    (ROLE_ADMIN/MANAGER/USER/CUSTOMER); removed dead `roles`/`role_permissions`/
+    `tenant_users.role` lookups.
+  - Avatar signed-URL aligned to web (`platform-protected` bucket + `isStoragePath`).
+- **M2 — Backend RPC adoption (perf + drift-loud):**
+  - `AlarmService` now uses `fn_pms_kpi_summary`/`_alarm_trend`/
+    `_alarm_priority_breakdown`/`_alarm_site_controller` + ack/reset/inhibit RPCs
+    instead of client-side aggregation (tenant-scope-guarded).
+  - `IotLogService` uses `fn_controller_logged_variables` instead of scanning the
+    1.97M-row `logs` fact table for variable enumeration.
+  - Fixed the `NotificationService` realtime channel leak (removeChannel).
+  - Silent error-swallows surfaced (drift becomes loud, not a blank dashboard).
+- **M1 — DB-driven menu + platform switch + coarse-role route guard:**
+  `MobileMenuService` loads `platform_menu_items` (role-filtered, nested tree) →
+  dynamic bottom-nav + drawer; `fn_my_platform_catalog` platform switcher;
+  `bi-*`→Material icon map; web-path→mobile-screen resolver (unbuilt→ComingSoon);
+  go_router coarse-role guard (CUSTOMER→portal).
+- **M3 — invite-only + onboarding:** killed open self-service signup (→
+  `access_requests` waitlist); `InvitationService` now uses `tenant_users` +
+  the `invite-user` Edge Function (removed the nonexistent `tenant_invitations`);
+  accept-invite deep-link via `verifyOtp(OtpType.invite)` → strong-password set.
+- **M4 — i18n from DB keywords:** `LocalizationService` DB-backed from `keywords`
+  (paginated, 1h cache), resolution DB→static→key (no silent drift, no crash);
+  49 shared-widget literals + 38 M1/M3 keys routed through `translate()`.
+
+Integration-verified: `dart analyze` reports 0 errors / 0 warnings in both
+`lib/` and `example_pms/lib/`. Owner follow-ups: native deep-link registration,
+DB-seeding the new i18n keys, on-device smoke.
+
 ## [1.2.0] - 2026-01-26
 
 ### Added - Phase 2 Features

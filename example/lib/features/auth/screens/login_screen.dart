@@ -288,12 +288,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Register link
+              // Request access (waitlist) link — invite-only
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Hesabınız yok mu? ',
+                    localizationService.translate('auth.request_access.no_account'),
                     style: AppTypography.footnote.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
@@ -301,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: _isLoading ? null : () => context.push('/register'),
                     child: Text(
-                      'Kayıt Ol',
+                      localizationService.translate('auth.request_access.cta'),
                       style: AppTypography.footnote.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,

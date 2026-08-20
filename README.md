@@ -2,7 +2,7 @@
 
 > Enterprise-grade Flutter SaaS foundation library for Protoolbag ecosystem
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/ozgurprotoolbag/protoolbag-mobile-core)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/ozgurprotoolbag/protoolbag-mobile-core)
 [![Flutter](https://img.shields.io/badge/Flutter-3.19+-02569B.svg?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
