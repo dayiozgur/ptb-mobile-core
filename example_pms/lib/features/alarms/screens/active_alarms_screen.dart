@@ -63,7 +63,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
       Logger.error('Failed to load active alarms', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Aktif alarmlar yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('alarm.load_error');
           _isLoading = false;
         });
       }
@@ -114,7 +114,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
     final brightness = Theme.of(context).brightness;
 
     return AppScaffold(
-      title: 'Aktif Alarmlar',
+      title: sl<LocalizationService>().translate('alarm.active_title'),
       onBack: () => context.go('/alarms'),
       actions: [
         AppIconButton(
@@ -132,7 +132,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: AppSearchBar(
-              placeholder: 'Alarm ara...',
+              placeholder: sl<LocalizationService>().translate('alarm.search_placeholder'),
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
@@ -160,7 +160,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                         Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          '${_filteredAlarms.length} aktif alarm',
+                          sl<LocalizationService>().translate('alarm.active_count', params: {'count': _filteredAlarms.length}),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -173,7 +173,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                   const Spacer(),
                   if (_searchQuery.isNotEmpty || _selectedPriorityId != null)
                     Text(
-                      'Toplam: ${_allAlarms.length}',
+                      sl<LocalizationService>().translate('common.total_count', params: {'count': _allAlarms.length}),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(brightness),
@@ -215,10 +215,12 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
       return Center(
         child: AppEmptyState(
           icon: Icons.check_circle_outline,
-          title: _allAlarms.isEmpty ? 'Aktif Alarm Yok' : 'Sonuc Bulunamadi',
+          title: _allAlarms.isEmpty
+              ? sl<LocalizationService>().translate('alarm.empty_active_title')
+              : sl<LocalizationService>().translate('common.no_results_found'),
           message: _allAlarms.isEmpty
-              ? 'Su anda aktif alarm bulunmuyor.'
-              : 'Arama kriterlerinize uygun alarm bulunamadi.',
+              ? sl<LocalizationService>().translate('alarm.empty_active_message')
+              : sl<LocalizationService>().translate('alarm.no_search_match'),
         ),
       );
     }
@@ -239,37 +241,124 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
           alarm: alarm,
           priority: priority,
           priorityColor: priorityColor,
-          onTap: () {
-            ActiveAlarmDetailSheet.show(
-              context,
-              alarm: alarm,
-              priority: priority,
-            );
-          },
+          onTap: () => _openAlarmDetail(alarm, priority),
         );
       },
     );
+  }
+
+  // ==========================================================================
+  // Alarm operatör aksiyonları (acknowledge / reset / inhibit)
+  // ==========================================================================
+
+  void _openAlarmDetail(Alarm alarm, Priority? priority) {
+    final loc = sl<LocalizationService>();
+    ActiveAlarmDetailSheet.show(
+      context,
+      alarm: alarm,
+      priority: priority,
+      onAcknowledge: () => _handleAction(
+        action: () => alarmService.acknowledgeAlarm(alarm.id),
+        successKey: 'alarm.ack_success',
+      ),
+      onReset: () async {
+        final confirmed = await _confirm(
+          title: loc.translate('alarm.confirm_reset_title'),
+          message: loc.translate('alarm.confirm_reset_message'),
+        );
+        if (!confirmed) return;
+        await _handleAction(
+          action: () => alarmService.resetAlarm(alarm.id),
+          successKey: 'alarm.reset_success',
+        );
+      },
+      onInhibitToggle: () async {
+        final inhibited = alarm.inhibited == true;
+        final confirmed = await _confirm(
+          title: loc.translate(inhibited
+              ? 'alarm.confirm_uninhibit_title'
+              : 'alarm.confirm_inhibit_title'),
+          message: loc.translate(inhibited
+              ? 'alarm.confirm_uninhibit_message'
+              : 'alarm.confirm_inhibit_message'),
+        );
+        if (!confirmed) return;
+        await _handleAction(
+          action: () => alarmService.inhibitAlarm(alarm.id, inhibit: !inhibited),
+          successKey:
+              inhibited ? 'alarm.uninhibit_success' : 'alarm.inhibit_success',
+        );
+      },
+    );
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+  }) async {
+    final loc = sl<LocalizationService>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(loc.translate('common.cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(loc.translate('common.confirm')),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  /// Aksiyonu çalıştır: başarı/iş-reddi/hata → SnackBar + sheet kapat + refresh.
+  Future<void> _handleAction({
+    required Future<bool> Function() action,
+    required String successKey,
+  }) async {
+    final loc = sl<LocalizationService>();
+    String message;
+    try {
+      final ok = await action();
+      message = loc.translate(ok ? successKey : 'alarm.action_failed');
+    } catch (e) {
+      Logger.error('Alarm action failed', e);
+      message = loc.translate('alarm.action_error');
+    }
+
+    if (!mounted) return;
+    // Sheet'i kapat (en üstteki route = detay sheet).
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+    await _loadData();
   }
 
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
       builder: (context) => AppBottomSheet(
-        title: 'Filtreler',
+        title: sl<LocalizationService>().translate('common.filters'),
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Oncelik Seviyesi', style: AppTypography.subheadline),
+              Text(sl<LocalizationService>().translate('alarm.priority_level'), style: AppTypography.subheadline),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
                   FilterChip(
-                    label: const Text('Tumu'),
+                    label: Text(sl<LocalizationService>().translate('common.all_ascii')),
                     selected: _selectedPriorityId == null,
                     onSelected: (_) {
                       setState(() {
@@ -297,7 +386,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: AppButton(
-                    label: 'Filtreleri Sifirla',
+                    label: sl<LocalizationService>().translate('common.reset_filters'),
                     variant: AppButtonVariant.secondary,
                     onPressed: () {
                       setState(() {
@@ -386,7 +475,7 @@ class _AlarmCard extends StatelessWidget {
                       ],
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? 'Alarm',
+                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -474,9 +563,9 @@ class _AlarmCard extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inDays == 0) {
-      return 'Bugun ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${sl<LocalizationService>().translate('common.today')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
-      return 'Dun ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${sl<LocalizationService>().translate('common.yesterday')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } else {
       return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }

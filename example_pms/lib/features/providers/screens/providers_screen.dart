@@ -40,7 +40,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     } catch (e) {
       Logger.error('Failed to load providers', e);
       if (mounted) {
-        setState(() => _errorMessage = 'Veri saglayicilar yuklenemedi');
+        setState(() => _errorMessage = sl<LocalizationService>().translate('provider.load_failed'));
       }
     }
 
@@ -62,7 +62,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Veri Saglayicilar',
+      title: sl<LocalizationService>().translate('provider.list_title'),
       onBack: () => context.go('/main'),
       actions: [
         AppIconButton(
@@ -76,7 +76,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: AppSearchField(
-              placeholder: 'Provider ara...',
+              placeholder: sl<LocalizationService>().translate('provider.search_placeholder'),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -94,9 +94,9 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
 
     if (_errorMessage != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _errorMessage!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadProviders,
       );
     }
@@ -107,8 +107,8 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
       if (_providers.isEmpty) {
         return AppEmptyState(
           icon: Icons.storage,
-          title: 'Veri Saglayici Bulunamadi',
-          message: 'Henuz tanimlanmis veri saglayici yok.',
+          title: sl<LocalizationService>().translate('provider.not_found'),
+          message: sl<LocalizationService>().translate('provider.empty_message'),
         );
       }
       return Center(
@@ -117,7 +117,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
           children: [
             Icon(Icons.search_off, size: 48, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.sm),
-            Text('Sonuc Bulunamadi', style: AppTypography.headline),
+            Text(sl<LocalizationService>().translate('common.no_results_ascii'), style: AppTypography.headline),
           ],
         ),
       );
@@ -245,17 +245,18 @@ class _ProviderCard extends StatelessWidget {
   }
 
   String _getStatusLabel() {
+    final loc = sl<LocalizationService>();
     switch (provider.status) {
       case DataProviderStatus.active:
-        return 'Aktif';
+        return loc.translate('common.active');
       case DataProviderStatus.inactive:
-        return 'Pasif';
+        return loc.translate('common.inactive');
       case DataProviderStatus.connecting:
-        return 'Baglaniyor';
+        return loc.translate('common.connecting');
       case DataProviderStatus.error:
-        return 'Hata';
+        return loc.translate('common.error');
       case DataProviderStatus.disabled:
-        return 'Devre Disi';
+        return loc.translate('common.disabled_ascii');
     }
   }
 
@@ -326,7 +327,7 @@ class _ProviderDetailSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Durum',
+                            sl<LocalizationService>().translate('common.status'),
                             style: AppTypography.caption1.copyWith(
                               color: AppColors.secondaryLabel(context),
                             ),
@@ -344,7 +345,7 @@ class _ProviderDetailSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Tip',
+                            sl<LocalizationService>().translate('field.tip'),
                             style: AppTypography.caption1.copyWith(
                               color: AppColors.secondaryLabel(context),
                             ),
@@ -362,18 +363,18 @@ class _ProviderDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Connection Info
-            AppSectionHeader(title: 'Baglanti Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.connection_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'IP Adresi', value: provider.ip ?? '-'),
-                    _InfoRow(label: 'Hostname', value: provider.hostname ?? '-'),
-                    _InfoRow(label: 'MAC', value: provider.mac ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('provider.ip_address'), value: provider.ip ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.hostname'), value: provider.hostname ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.mac'), value: provider.mac ?? '-'),
                     if (provider.code != null)
-                      _InfoRow(label: 'Kod', value: provider.code!),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.code'), value: provider.code!),
                   ],
                 ),
               ),
@@ -381,7 +382,7 @@ class _ProviderDetailSheet extends StatelessWidget {
 
             if (provider.description != null && provider.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Aciklama'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -394,16 +395,16 @@ class _ProviderDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Record Info
-            AppSectionHeader(title: 'Kayit Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.record_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Olusturulma', value: _formatDate(provider.createdAt)),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.created'), value: _formatDate(provider.createdAt)),
                     if (provider.updatedAt != null)
-                      _InfoRow(label: 'Guncelleme', value: _formatDate(provider.updatedAt!)),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.updated'), value: _formatDate(provider.updatedAt!)),
                   ],
                 ),
               ),
@@ -412,14 +413,14 @@ class _ProviderDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             AppButton(
-              label: 'Baglanti Test Et',
+              label: sl<LocalizationService>().translate('provider.test_connection'),
               variant: AppButtonVariant.secondary,
               icon: Icons.wifi_find,
               onPressed: () {
                 Navigator.pop(context);
                 AppSnackbar.showInfo(
                   context,
-                  message: 'Baglanti testi baslatiliyor...',
+                  message: sl<LocalizationService>().translate('provider.test_connection_starting'),
                 );
               },
             ),
@@ -432,12 +433,13 @@ class _ProviderDetailSheet extends StatelessWidget {
   }
 
   String _statusLabel(DataProviderStatus status) {
+    final loc = sl<LocalizationService>();
     switch (status) {
-      case DataProviderStatus.active: return 'Aktif';
-      case DataProviderStatus.inactive: return 'Pasif';
-      case DataProviderStatus.connecting: return 'Baglaniyor';
-      case DataProviderStatus.error: return 'Hata';
-      case DataProviderStatus.disabled: return 'Devre Disi';
+      case DataProviderStatus.active: return loc.translate('common.active');
+      case DataProviderStatus.inactive: return loc.translate('common.inactive');
+      case DataProviderStatus.connecting: return loc.translate('common.connecting');
+      case DataProviderStatus.error: return loc.translate('common.error');
+      case DataProviderStatus.disabled: return loc.translate('common.disabled_ascii');
     }
   }
 

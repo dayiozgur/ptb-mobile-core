@@ -5,6 +5,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 
 import 'app.dart';
 import 'config/environment.dart';
+import 'config/pms_screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,18 @@ void main() async {
   Logger.info('PMS initialized in ${result.duration.inMilliseconds}ms');
   Logger.info('Session restored: ${result.sessionRestored}');
   Logger.info('Tenant restored: ${result.tenantRestored}');
+
+  // Domain ekranlarını çekirdek ScreenResolver'a kaydet (ilk shell'den ÖNCE).
+  registerPmsScreens();
+
+  // DB-driven markalama: PMS platform tabanını yükle ve temaya uygula.
+  // (Tenant override login sonrası tenant bilindiğinde yeniden yüklenebilir:
+  //  sl<BrandingService>().load(pmsPlatformId, tenantId: <tenant>).)
+  await sl<BrandingService>().load(MobileMenuService.pmsPlatformId);
+  final branding = sl<BrandingService>().current;
+  if (branding != null) {
+    sl<ThemeService>().applyBranding(branding);
+  }
 
   runApp(const ProviderScope(child: PMSApp()));
 }

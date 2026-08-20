@@ -60,7 +60,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Controller listesi yuklenemedi';
+          _errorMessage = sl<LocalizationService>()
+              .translate('logs.controllers_load_failed');
           _isLoading = false;
         });
       }
@@ -93,7 +94,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       Logger.error('Failed to load logs', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Log verileri yuklenemedi';
+          _errorMessage =
+              sl<LocalizationService>().translate('logs.load_failed');
           _isLoading = false;
         });
       }
@@ -114,7 +116,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Log Goruntule',
+      title: sl<LocalizationService>().translate('logs.title'),
       onBack: () => context.go('/dashboard'),
       actions: [
         AppIconButton(
@@ -134,7 +136,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Controller', style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+                Text(sl<LocalizationService>().translate('logs.controller'), style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
                 const SizedBox(height: AppSpacing.xs),
                 Container(
                   width: double.infinity,
@@ -146,7 +148,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedControllerId,
-                      hint: Text('Controller secin', style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
+                      hint: Text(sl<LocalizationService>().translate('logs.select_controller_hint'), style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
                       isExpanded: true,
                       items: _controllers.map((c) => DropdownMenuItem(
                         value: c.id,
@@ -180,7 +182,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: AppSearchField(
-              placeholder: 'Variable adi veya deger ara...',
+              placeholder:
+                  sl<LocalizationService>().translate('logs.search_placeholder'),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -193,7 +196,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
               child: Row(
                 children: [
                   AppChip(
-                    label: '${_filteredLogs.length} kayit',
+                    label: sl<LocalizationService>().translate('logs.record_count',
+                        params: {'count': '${_filteredLogs.length}'}),
                     variant: AppChipVariant.tonal,
                     color: AppColors.primary,
                     small: true,
@@ -233,8 +237,10 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     if (_selectedControllerId == null) {
       return AppEmptyState(
         icon: Icons.developer_board,
-        title: 'Controller Secin',
-        message: 'Loglari goruntulemek icin bir controller secin.',
+        title:
+            sl<LocalizationService>().translate('logs.select_controller_title'),
+        message: sl<LocalizationService>()
+            .translate('logs.select_controller_message'),
       );
     }
 
@@ -243,10 +249,10 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     if (filtered.isEmpty) {
       return AppEmptyState(
         icon: Icons.list_alt,
-        title: 'Log Kaydi Yok',
+        title: sl<LocalizationService>().translate('logs.no_logs_title'),
         message: _logList.isEmpty
-            ? 'Bu controller icin log kaydi bulunamadi.'
-            : 'Arama kriterlerinize uygun log bulunamadi.',
+            ? sl<LocalizationService>().translate('logs.no_logs_message')
+            : sl<LocalizationService>().translate('logs.no_search_results'),
       );
     }
 

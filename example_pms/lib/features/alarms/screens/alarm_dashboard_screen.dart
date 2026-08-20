@@ -115,7 +115,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
       Logger.error('Failed to load alarm dashboard', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Veriler yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('common.data_load_error');
           _isLoading = false;
         });
       }
@@ -130,7 +130,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Alarm Yonetimi',
+      title: sl<LocalizationService>().translate('alarm.management_title'),
       onBack: () => context.go('/dashboard'),
       actions: [
         AppIconButton(
@@ -165,7 +165,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             children: [
                               Expanded(
                                 child: MetricCard(
-                                  title: 'Aktif',
+                                  title: sl<LocalizationService>().translate('common.active'),
                                   value: '${_distribution.activeCount}',
                                   icon: Icons.warning_amber_rounded,
                                   color: AppColors.error,
@@ -175,7 +175,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: MetricCard(
-                                  title: 'Reset',
+                                  title: sl<LocalizationService>().translate('alarm.reset_label'),
                                   value: '${_distribution.resetCount}',
                                   icon: Icons.restart_alt,
                                   color: AppColors.success,
@@ -185,7 +185,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: MetricCard(
-                                  title: 'Toplam',
+                                  title: sl<LocalizationService>().translate('common.total'),
                                   value: '${_distribution.totalCount}',
                                   icon: Icons.notifications_outlined,
                                   color: AppColors.primary,
@@ -199,10 +199,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Distribution Pie Chart
                         ChartContainer(
-                          title: 'Alarm Dagilimi',
-                          subtitle: 'Aktif vs Reset',
+                          title: sl<LocalizationService>().translate('alarm.distribution_title'),
+                          subtitle: sl<LocalizationService>().translate('alarm.distribution_subtitle'),
                           isEmpty: _distribution.totalCount == 0,
-                          emptyMessage: 'Alarm kaydi bulunamadi',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_found'),
                           child: AlarmPieChart(
                             distribution: _distribution,
                             priorities: _priorityMap,
@@ -216,14 +216,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Trend Bar Chart
                         ChartContainer(
-                          title: 'Alarm Trendi',
-                          subtitle: 'Son $_selectedDays gun',
+                          title: sl<LocalizationService>().translate('alarm.trend_title'),
+                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
                           trailing: ChartPeriodSelector(
                             selectedDays: _selectedDays,
                             onChanged: _onPeriodChanged,
                           ),
                           isEmpty: _timeline.every((e) => e.totalCount == 0),
-                          emptyMessage: 'Bu donemde alarm kaydi yok',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_period'),
                           child: AlarmBarChart(
                             entries: _timeline,
                             priorities: _priorityMap,
@@ -235,10 +235,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Priority Trend (Stacked Area)
                         ChartContainer(
-                          title: 'Priority Trendi',
-                          subtitle: 'Son $_selectedDays gun',
+                          title: sl<LocalizationService>().translate('alarm.priority_trend_title'),
+                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
                           isEmpty: _timeline.every((e) => e.totalCount == 0),
-                          emptyMessage: 'Bu donemde alarm kaydi yok',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_period'),
                           child: AlarmPriorityTrendChart(
                             entries: _timeline,
                             priorities: _priorityMap,
@@ -250,10 +250,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // MTTR Card
                         ChartContainer(
-                          title: 'Ortalama Cozum Suresi (MTTR)',
-                          subtitle: 'Son $_selectedDays gun',
+                          title: sl<LocalizationService>().translate('alarm.mttr_title'),
+                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
                           isEmpty: _mttrStats.totalAlarmCount == 0,
-                          emptyMessage: 'Cozulmus alarm bulunamadi',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_resolved'),
                           child: AlarmMttrCard(
                             stats: _mttrStats,
                             priorities: _priorityMap,
@@ -264,10 +264,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Top Offenders
                         ChartContainer(
-                          title: 'En Sik Tekrarlayan Alarmlar',
-                          subtitle: 'Son $_selectedDays gun - Top 10',
+                          title: sl<LocalizationService>().translate('alarm.top_offenders_title'),
+                          subtitle: sl<LocalizationService>().translate('alarm.last_days_top10', params: {'days': _selectedDays}),
                           isEmpty: _topAlarms.isEmpty,
-                          emptyMessage: 'Alarm verisi bulunamadi',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_alarm_data'),
                           child: AlarmTopOffendersCard(
                             alarms: _topAlarms,
                             priorities: _priorityMap,
@@ -278,10 +278,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Heatmap
                         ChartContainer(
-                          title: 'Alarm Yogunluk Haritasi',
-                          subtitle: 'Haftalik gun x saat dagilimi',
+                          title: sl<LocalizationService>().translate('alarm.heatmap_title'),
+                          subtitle: sl<LocalizationService>().translate('alarm.heatmap_subtitle'),
                           isEmpty: _heatmapData.totalCount == 0,
-                          emptyMessage: 'Bu haftada alarm kaydi yok',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_week'),
                           child: AlarmHeatmapChart(
                             data: _heatmapData,
                             height: 200,
@@ -292,10 +292,10 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Site Alarm Ranking
                         ChartContainer(
-                          title: 'Site Alarm Siralamasi',
-                          subtitle: 'Son $_selectedDays gun - Top 10',
+                          title: sl<LocalizationService>().translate('alarm.site_ranking_title'),
+                          subtitle: sl<LocalizationService>().translate('alarm.last_days_top10', params: {'days': _selectedDays}),
                           isEmpty: _siteAlarmCounts.isEmpty,
-                          emptyMessage: 'Site alarm verisi bulunamadi',
+                          emptyMessage: sl<LocalizationService>().translate('alarm.no_site_data'),
                           child: AlarmSiteRankingChart(
                             sites: _siteAlarmCounts,
                             height: 300,
@@ -312,7 +312,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           child: Row(
                             children: [
                               Text(
-                                'Aktif Alarmlar',
+                                sl<LocalizationService>().translate('alarm.active_title'),
                                 style: AppTypography.title3,
                               ),
                               const Spacer(),
@@ -320,7 +320,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                                 TextButton(
                                   onPressed: () => context.push('/alarms/active'),
                                   child: Text(
-                                    'Tumunu Gor',
+                                    sl<LocalizationService>().translate('common.see_all'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -340,7 +340,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             child: ActiveAlarmList(
                               alarms: _activeAlarms.take(5).toList(),
                               priorities: _priorityMap,
-                              emptyMessage: 'Aktif alarm bulunmuyor',
+                              emptyMessage: sl<LocalizationService>().translate('alarm.no_active'),
                               onAlarmTap: (alarm) {
                                 ActiveAlarmDetailSheet.show(
                                   context,
@@ -364,7 +364,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           child: Row(
                             children: [
                               Text(
-                                'Son Resetlenen Alarmlar',
+                                sl<LocalizationService>().translate('alarm.recent_reset_title'),
                                 style: AppTypography.title3,
                               ),
                               const Spacer(),
@@ -372,7 +372,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                                 TextButton(
                                   onPressed: () => context.push('/alarms/history'),
                                   child: Text(
-                                    'Tumunu Gor',
+                                    sl<LocalizationService>().translate('common.see_all'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -392,7 +392,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             child: ResetAlarmList(
                               alarms: _resetAlarms.take(5).toList(),
                               priorities: _priorityMap,
-                              emptyMessage: 'Resetlenmis alarm bulunmuyor',
+                              emptyMessage: sl<LocalizationService>().translate('alarm.no_reset_alarms'),
                               onAlarmTap: (alarm) {
                                 AlarmDetailSheet.show(
                                   context,

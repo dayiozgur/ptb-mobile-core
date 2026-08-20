@@ -139,7 +139,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       Logger.error('Failed to load provider data', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Veriler yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('provider.load_error');
           _isLoading = false;
         });
       }
@@ -342,7 +342,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: _provider?.name ?? 'Provider',
+      title: _provider?.name ?? sl<LocalizationService>().translate('provider.title'),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _loadData),
       ],
@@ -360,12 +360,12 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                       indicatorColor: AppColors.primary,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        const Tab(text: 'Dashboard'),
+                        Tab(text: sl<LocalizationService>().translate('provider.tab_dashboard')),
                         Tab(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Controllers'),
+                              Text(sl<LocalizationService>().translate('provider.tab_controllers')),
                               if (_controllers.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(count: _controllers.length),
@@ -377,7 +377,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Alarmlar'),
+                              Text(sl<LocalizationService>().translate('provider.tab_alarms')),
                               if (_activeAlarms.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(count: _activeAlarms.length, color: AppColors.error),
@@ -389,7 +389,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Loglar'),
+                              Text(sl<LocalizationService>().translate('provider.tab_logs')),
                               if (_logs.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(count: _logs.length),
@@ -397,7 +397,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                             ],
                           ),
                         ),
-                        const Tab(text: 'Detaylar'),
+                        Tab(text: sl<LocalizationService>().translate('provider.tab_details')),
                       ],
                     ),
                     Expanded(
@@ -434,17 +434,17 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             _buildQuickStats(),
             const SizedBox(height: AppSpacing.md),
 
-            AppSectionHeader(title: 'Baglanti Durumu'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.connection_status')),
             const SizedBox(height: AppSpacing.sm),
             _buildConnectionCard(),
 
             if (_activeAlarms.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               AppSectionHeader(
-                title: 'Aktif Alarmlar',
+                title: sl<LocalizationService>().translate('provider.active_alarms'),
                 action: TextButton(
                   onPressed: () => _tabController.animateTo(2),
-                  child: const Text('Tumu'),
+                  child: Text(sl<LocalizationService>().translate('common.all_short')),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -461,10 +461,10 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             if (_controllers.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               AppSectionHeader(
-                title: 'Controllers',
+                title: sl<LocalizationService>().translate('provider.tab_controllers'),
                 action: TextButton(
                   onPressed: () => _tabController.animateTo(1),
-                  child: const Text('Tumu'),
+                  child: Text(sl<LocalizationService>().translate('common.all_short')),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -484,7 +484,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                       title: controller.name,
                       subtitle: controller.type.label,
                       trailing: AppBadge(
-                        label: controller.status == ControllerStatus.online ? 'Online' : 'Offline',
+                        label: controller.status == ControllerStatus.online
+                            ? sl<LocalizationService>().translate('common.online')
+                            : sl<LocalizationService>().translate('common.offline'),
                         variant: controller.status == ControllerStatus.online
                             ? AppBadgeVariant.success
                             : AppBadgeVariant.error,
@@ -557,7 +559,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.warning_amber_rounded,
-            label: 'Alarm',
+            label: sl<LocalizationService>().translate('common.alarm'),
             value: _activeAlarms.length.toString(),
             color: _activeAlarms.isNotEmpty ? AppColors.error : AppColors.success,
             onTap: () => _tabController.animateTo(2),
@@ -567,7 +569,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.developer_board,
-            label: 'Controller',
+            label: sl<LocalizationService>().translate('common.controller'),
             value: _controllers.length.toString(),
             color: AppColors.info,
             onTap: () => _tabController.animateTo(1),
@@ -577,7 +579,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.article_outlined,
-            label: 'Log',
+            label: sl<LocalizationService>().translate('common.log'),
             value: _logs.length.toString(),
             color: AppColors.warning,
             onTap: () => _tabController.animateTo(3),
@@ -611,9 +613,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            if (_provider!.ip != null) _InfoRow(label: 'IP Adresi', value: _provider!.ip!),
-            if (_provider!.hostname != null) _InfoRow(label: 'Hostname', value: _provider!.hostname!),
-            if (_provider!.mac != null) _InfoRow(label: 'MAC', value: _provider!.mac!),
+            if (_provider!.ip != null) _InfoRow(label: sl<LocalizationService>().translate('provider.ip_address'), value: _provider!.ip!),
+            if (_provider!.hostname != null) _InfoRow(label: sl<LocalizationService>().translate('common.hostname'), value: _provider!.hostname!),
+            if (_provider!.mac != null) _InfoRow(label: sl<LocalizationService>().translate('common.mac'), value: _provider!.mac!),
           ],
         ),
       ),
@@ -626,8 +628,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.developer_board,
-          title: 'Controller Bulunamadi',
-          message: 'Bu provider\'a bagli controller yok',
+          title: sl<LocalizationService>().translate('controller.not_found'),
+          message: sl<LocalizationService>().translate('provider.no_controllers'),
         ),
       );
     }
@@ -673,7 +675,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Aktif'),
+                      Text(sl<LocalizationService>().translate('common.active')),
                       if (_activeAlarms.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         _CountBadge(count: _activeAlarms.length, color: AppColors.error),
@@ -685,7 +687,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Gecmis'),
+                      Text(sl<LocalizationService>().translate('common.history')),
                       if (_alarmHistory.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         _CountBadge(count: _alarmHistory.length),
@@ -712,7 +714,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   Widget _buildActiveAlarmsContent() {
     if (_activeAlarms.isEmpty) {
       return Center(
-        child: AppEmptyState(icon: Icons.check_circle_outline, title: 'Aktif Alarm Yok', message: 'Bu provider\'da aktif alarm bulunmuyor'),
+        child: AppEmptyState(icon: Icons.check_circle_outline, title: sl<LocalizationService>().translate('alarm.none_active'), message: sl<LocalizationService>().translate('provider.no_active_alarms')),
       );
     }
 
@@ -735,7 +737,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   Widget _buildAlarmHistoryContent() {
     if (_alarmHistory.isEmpty) {
       return Center(
-        child: AppEmptyState(icon: Icons.history, title: 'Alarm Gecmisi Bos', message: 'Bu provider\'da gecmis alarm yok'),
+        child: AppEmptyState(icon: Icons.history, title: sl<LocalizationService>().translate('alarm.history_empty'), message: sl<LocalizationService>().translate('provider.no_alarm_history')),
       );
     }
 
@@ -781,9 +783,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
               indicatorPadding: const EdgeInsets.all(4),
-              tabs: const [
-                Tab(text: 'Liste'),
-                Tab(text: 'Analiz'),
+              tabs: [
+                Tab(text: sl<LocalizationService>().translate('common.list')),
+                Tab(text: sl<LocalizationService>().translate('common.analysis')),
               ],
             ),
           ),
@@ -813,7 +815,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                 scrollDirection: Axis.horizontal,
                 children: [
                   _FilterChip(
-                    label: 'Tumu',
+                    label: sl<LocalizationService>().translate('common.all_short'),
                     isSelected: _selectedLogControllerId == null,
                     onTap: () => setState(() => _selectedLogControllerId = null),
                   ),
@@ -835,7 +837,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: AppSearchField(
-            placeholder: 'Variable adi veya deger ara...',
+            placeholder: sl<LocalizationService>().translate('provider.log_search_placeholder'),
             onChanged: (value) => setState(() => _logSearchQuery = value),
           ),
         ),
@@ -847,7 +849,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           child: Row(
             children: [
               AppChip(
-                label: '${_filteredLogs.length} kayit',
+                label: sl<LocalizationService>().translate('common.count_records', params: {'count': _filteredLogs.length}),
                 variant: AppChipVariant.tonal,
                 color: AppColors.primary,
                 small: true,
@@ -863,10 +865,10 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
               ? Center(
                   child: AppEmptyState(
                     icon: Icons.article_outlined,
-                    title: 'Log Bulunamadi',
+                    title: sl<LocalizationService>().translate('log.not_found'),
                     message: _logs.isEmpty
-                        ? 'Bu provider icin log kaydi yok'
-                        : 'Arama kriterlerinize uygun log bulunamadi',
+                        ? sl<LocalizationService>().translate('provider.no_logs')
+                        : sl<LocalizationService>().translate('log.no_search_match'),
                   ),
                 )
               : RefreshIndicator(
@@ -894,7 +896,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         children: [
           // Controller selector for analytics
           if (_controllers.isNotEmpty) ...[
-            Text('Controller', style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+            Text(sl<LocalizationService>().translate('common.controller'), style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
             const SizedBox(height: AppSpacing.xs),
             Container(
               width: double.infinity,
@@ -906,7 +908,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedLogControllerId ?? (_controllers.isNotEmpty ? _controllers.first.id : null),
-                  hint: Text('Controller secin', style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
+                  hint: Text(sl<LocalizationService>().translate('controller.select'), style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
                   isExpanded: true,
                   items: _controllers.map((c) => DropdownMenuItem(
                     value: c.id,
@@ -939,7 +941,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Son $_selectedDays gun',
+                sl<LocalizationService>().translate('common.last_n_days', params: {'days': _selectedDays}),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary(brightness)),
               ),
               ChartPeriodSelector(
@@ -955,7 +957,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           const SizedBox(height: AppSpacing.md),
 
           // Analog / Integer section
-          _buildAnalyticsSectionHeader(brightness, Icons.show_chart, 'Analog / Integer', _analogVars.length, _selectedAnalogIds.length, _maxAnalogSelection),
+          _buildAnalyticsSectionHeader(brightness, Icons.show_chart, sl<LocalizationService>().translate('provider.analog_integer'), _analogVars.length, _selectedAnalogIds.length, _maxAnalogSelection),
           const SizedBox(height: AppSpacing.sm),
           _buildAnalyticsVariableChips(brightness, _analogVars, _selectedAnalogIds, _toggleAnalogVariable),
           const SizedBox(height: AppSpacing.sm),
@@ -964,7 +966,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           const SizedBox(height: AppSpacing.lg),
 
           // Digital section
-          _buildAnalyticsSectionHeader(brightness, Icons.toggle_on, 'Digital', _digitalVars.length, _selectedDigitalIds.length, _maxDigitalSelection),
+          _buildAnalyticsSectionHeader(brightness, Icons.toggle_on, sl<LocalizationService>().translate('common.digital'), _digitalVars.length, _selectedDigitalIds.length, _maxDigitalSelection),
           const SizedBox(height: AppSpacing.sm),
           _buildAnalyticsVariableChips(brightness, _digitalVars, _selectedDigitalIds, _toggleDigitalVariable),
           const SizedBox(height: AppSpacing.sm),
@@ -985,7 +987,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         const SizedBox(width: AppSpacing.sm),
         AppChip(label: '$count', variant: AppChipVariant.tonal, color: AppColors.primary, small: true),
         const Spacer(),
-        if (count > 0) Text('$selectedCount/$maxCount secili', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(brightness))),
+        if (count > 0) Text(sl<LocalizationService>().translate('common.n_selected', params: {'selected': selectedCount, 'max': maxCount}), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(brightness))),
       ],
     );
   }
@@ -1000,7 +1002,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Text(
-          _selectedLogControllerId == null ? 'Once controller secin' : 'Bu tip icin variable bulunamadi',
+          _selectedLogControllerId == null ? sl<LocalizationService>().translate('controller.select_first') : sl<LocalizationService>().translate('variable.none_for_type'),
           style: TextStyle(fontSize: 13, color: AppColors.tertiaryLabel(context)),
           textAlign: TextAlign.center,
         ),
@@ -1055,7 +1057,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       return const Padding(padding: EdgeInsets.all(40), child: Center(child: AppLoadingIndicator()));
     }
     if (_selectedAnalogIds.isEmpty) {
-      return _buildEmptyChart(brightness, 'Grafik icin analog/integer variable secin');
+      return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.chart_select_analog'));
     }
 
     final seriesList = <VariableTimeSeries>[];
@@ -1070,11 +1072,11 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       seriesList.add(VariableTimeSeries(variableId: varId, variableName: name, unit: unit, color: _getSeriesColor(i), entries: entries));
     }
 
-    if (seriesList.isEmpty) return _buildEmptyChart(brightness, 'Secili variable icin veri bulunamadi');
+    if (seriesList.isEmpty) return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.no_data_for_selected'));
 
     return ChartContainer(
-      title: 'Deger Grafigi',
-      subtitle: '${seriesList.length} variable - Son $_selectedDays gun',
+      title: sl<LocalizationService>().translate('provider.value_chart'),
+      subtitle: sl<LocalizationService>().translate('provider.chart_subtitle', params: {'count': seriesList.length, 'days': _selectedDays}),
       isEmpty: false,
       child: MultiLogLineChart(seriesList: seriesList, height: 260, showLegend: seriesList.length > 1),
     );
@@ -1085,7 +1087,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       return const Padding(padding: EdgeInsets.all(40), child: Center(child: AppLoadingIndicator()));
     }
     if (_selectedDigitalIds.isEmpty) {
-      return _buildEmptyChart(brightness, 'On/Off grafigi icin digital variable secin');
+      return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.chart_select_digital'));
     }
 
     final seriesList = <VariableTimeSeries>[];
@@ -1099,11 +1101,11 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       seriesList.add(VariableTimeSeries(variableId: varId, variableName: name, color: _getSeriesColor(i), entries: entries));
     }
 
-    if (seriesList.isEmpty) return _buildEmptyChart(brightness, 'Secili variable icin veri bulunamadi');
+    if (seriesList.isEmpty) return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.no_data_for_selected'));
 
     return ChartContainer(
-      title: 'On/Off Durumu',
-      subtitle: '${seriesList.length} digital variable - Son $_selectedDays gun',
+      title: sl<LocalizationService>().translate('provider.onoff_status'),
+      subtitle: sl<LocalizationService>().translate('provider.onoff_subtitle', params: {'count': seriesList.length, 'days': _selectedDays}),
       isEmpty: false,
       child: MultiLogOnOffChart(seriesList: seriesList, rowHeight: 32),
     );
@@ -1140,47 +1142,47 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppSectionHeader(title: 'Durum & Tip'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.status_and_type')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Durum', value: _getStatusText()),
-                    _InfoRow(label: 'Tip', value: _provider!.type.label),
-                    if (_provider!.code != null) _InfoRow(label: 'Kod', value: _provider!.code!),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.status'), value: _getStatusText()),
+                    _InfoRow(label: sl<LocalizationService>().translate('field.tip'), value: _provider!.type.label),
+                    if (_provider!.code != null) _InfoRow(label: sl<LocalizationService>().translate('common.code'), value: _provider!.code!),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            AppSectionHeader(title: 'Baglanti Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.connection_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'IP Adresi', value: _provider!.ip ?? '-'),
-                    _InfoRow(label: 'Hostname', value: _provider!.hostname ?? '-'),
-                    _InfoRow(label: 'MAC', value: _provider!.mac ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('provider.ip_address'), value: _provider!.ip ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.hostname'), value: _provider!.hostname ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.mac'), value: _provider!.mac ?? '-'),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            AppSectionHeader(title: 'Iliskiler'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.relations')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Site', value: _site?.name ?? '-'),
-                    _InfoRow(label: 'Controller', value: _controllers.isNotEmpty ? _controllers.map((c) => c.name).join(', ') : '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.site'), value: _site?.name ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.controller'), value: _controllers.isNotEmpty ? _controllers.map((c) => c.name).join(', ') : '-'),
                   ],
                 ),
               ),
@@ -1188,7 +1190,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
             if (_provider!.description != null && _provider!.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Aciklama'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -1199,17 +1201,17 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             ],
 
             const SizedBox(height: AppSpacing.md),
-            AppSectionHeader(title: 'Kayit Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.record_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'ID', value: _provider!.id),
-                    _InfoRow(label: 'Olusturulma', value: _formatDate(_provider!.createdAt)),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.id'), value: _provider!.id),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.created'), value: _formatDate(_provider!.createdAt)),
                     if (_provider!.updatedAt != null)
-                      _InfoRow(label: 'Guncelleme', value: _formatDate(_provider!.updatedAt!)),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.updated'), value: _formatDate(_provider!.updatedAt!)),
                   ],
                 ),
               ),
@@ -1233,13 +1235,14 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   }
 
   String _getStatusText() {
+    final loc = sl<LocalizationService>();
     switch (_provider?.status) {
-      case DataProviderStatus.active: return 'Aktif - Bagli';
-      case DataProviderStatus.inactive: return 'Pasif';
-      case DataProviderStatus.connecting: return 'Baglaniyor...';
-      case DataProviderStatus.error: return 'Hata';
-      case DataProviderStatus.disabled: return 'Devre Disi';
-      default: return 'Bilinmiyor';
+      case DataProviderStatus.active: return loc.translate('provider.status_active_connected');
+      case DataProviderStatus.inactive: return loc.translate('common.inactive');
+      case DataProviderStatus.connecting: return loc.translate('provider.status_connecting');
+      case DataProviderStatus.error: return loc.translate('common.error');
+      case DataProviderStatus.disabled: return loc.translate('common.disabled_ascii');
+      default: return loc.translate('common.unknown');
     }
   }
 
@@ -1333,12 +1336,13 @@ class _StatusBadge extends StatelessWidget {
   }
 
   String _getLabel() {
+    final loc = sl<LocalizationService>();
     switch (status) {
-      case DataProviderStatus.active: return 'Aktif';
-      case DataProviderStatus.inactive: return 'Pasif';
-      case DataProviderStatus.connecting: return 'Baglaniyor';
-      case DataProviderStatus.error: return 'Hata';
-      case DataProviderStatus.disabled: return 'Devre Disi';
+      case DataProviderStatus.active: return loc.translate('common.active');
+      case DataProviderStatus.inactive: return loc.translate('common.inactive');
+      case DataProviderStatus.connecting: return loc.translate('common.connecting');
+      case DataProviderStatus.error: return loc.translate('common.error');
+      case DataProviderStatus.disabled: return loc.translate('common.disabled_ascii');
     }
   }
 
@@ -1419,14 +1423,15 @@ class _ControllerCard extends StatelessWidget {
   }
 
   String _getStatusLabel() {
+    final loc = sl<LocalizationService>();
     switch (controller.status) {
-      case ControllerStatus.online: return 'Online';
-      case ControllerStatus.offline: return 'Offline';
-      case ControllerStatus.connecting: return 'Baglaniyor';
-      case ControllerStatus.error: return 'Hata';
-      case ControllerStatus.maintenance: return 'Bakimda';
-      case ControllerStatus.disabled: return 'Devre Disi';
-      case ControllerStatus.unknown: return 'Bilinmiyor';
+      case ControllerStatus.online: return loc.translate('common.online');
+      case ControllerStatus.offline: return loc.translate('common.offline');
+      case ControllerStatus.connecting: return loc.translate('common.connecting');
+      case ControllerStatus.error: return loc.translate('common.error');
+      case ControllerStatus.maintenance: return loc.translate('controller.status_maintenance');
+      case ControllerStatus.disabled: return loc.translate('common.disabled_ascii');
+      case ControllerStatus.unknown: return loc.translate('common.unknown');
     }
   }
 
@@ -1463,7 +1468,7 @@ class _AlarmRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
+                Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
                 Text(alarm.durationFormatted, style: AppTypography.caption2.copyWith(color: AppColors.secondaryLabel(context))),
               ],
             ),
@@ -1502,7 +1507,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                     children: [
                       Container(width: 8, height: 8, decoration: BoxDecoration(color: priorityColor, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
-                      Expanded(child: Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
                       if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
                     ],
                   ),
@@ -1556,7 +1561,7 @@ class _ResetAlarmCard extends StatelessWidget {
                     children: [
                       Icon(Icons.check_circle, size: 14, color: AppColors.success),
                       const SizedBox(width: 6),
-                      Expanded(child: Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
                       if (priority != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

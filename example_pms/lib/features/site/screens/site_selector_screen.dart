@@ -31,7 +31,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
       final organizationId = organizationService.currentOrganizationId;
       if (organizationId == null) {
         setState(() {
-          _error = 'Organizasyon secilmemis';
+          _error = sl<LocalizationService>().translate('org.not_selected');
           _isLoading = false;
         });
         return;
@@ -48,7 +48,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     } catch (e) {
       Logger.error('Failed to load sites', e);
       setState(() {
-        _error = 'Siteler yuklenemedi';
+        _error = sl<LocalizationService>().translate('site.load_failed');
         _isLoading = false;
       });
     }
@@ -74,7 +74,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     } else if (mounted) {
       AppSnackbar.showError(
         context,
-        message: 'Site secilemedi',
+        message: sl<LocalizationService>().translate('site.select_failed'),
       );
     }
   }
@@ -82,7 +82,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Site Sec',
+      title: sl<LocalizationService>().translate('site.select_title'),
       showBackButton: true,
       onBack: () => context.go('/organizations'),
       child: _buildContent(),
@@ -96,18 +96,18 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
 
     if (_error != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _error!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadSites,
       );
     }
 
     if (_sites.isEmpty) {
-      return const AppEmptyState(
+      return AppEmptyState(
         icon: Icons.location_city_outlined,
-        title: 'Site Bulunamadi',
-        message: 'Bu organizasyonda henuz site yok.',
+        title: sl<LocalizationService>().translate('site.not_found_title'),
+        message: sl<LocalizationService>().translate('site.none_in_org'),
       );
     }
 
@@ -119,7 +119,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
           _buildOrganizationInfo(),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'Devam etmek icin bir site secin',
+            sl<LocalizationService>().translate('site.select_prompt'),
             style: AppTypography.subheadline.copyWith(
               color: AppColors.secondaryLabel(context),
             ),
@@ -178,7 +178,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
             ),
             TextButton(
               onPressed: () => context.go('/organizations'),
-              child: const Text('Degistir'),
+              child: Text(sl<LocalizationService>().translate('common.change')),
             ),
           ],
         ),
@@ -243,7 +243,10 @@ class _SiteCard extends StatelessWidget {
                       if (site.floorCount != null) ...[
                         _InfoChip(
                           icon: Icons.layers,
-                          label: '${site.floorCount} Kat',
+                          label: sl<LocalizationService>().translate(
+                            'site.floor_suffix',
+                            params: {'count': site.floorCount},
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.xs),
                       ],

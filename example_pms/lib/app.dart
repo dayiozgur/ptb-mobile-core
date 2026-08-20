@@ -14,20 +14,27 @@ class PMSApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeService = sl<ThemeService>();
 
-    return ThemeBuilder(
-      themeService: themeService,
-      builder: (context, settings) {
-        return MaterialApp.router(
-          title: Environment.appName,
-          debugShowCheckedModeBanner: false,
+    // LocalizationBuilder: dil değişince (setLocale → localeStream) tüm ağaç
+    // yeniden çizilir → translate() yeni locale'i canlı yansıtır.
+    return LocalizationBuilder(
+      localizationService: sl<LocalizationService>(),
+      builder: (context, locale) {
+        return ThemeBuilder(
+          themeService: themeService,
+          builder: (context, settings) {
+            return MaterialApp.router(
+              title: Environment.appName,
+              debugShowCheckedModeBanner: false,
 
-          // Theme from ThemeService (dynamic)
-          theme: themeService.lightTheme,
-          darkTheme: themeService.darkTheme,
-          themeMode: themeService.flutterThemeMode,
+              // Theme from ThemeService (dynamic)
+              theme: themeService.lightTheme,
+              darkTheme: themeService.darkTheme,
+              themeMode: themeService.flutterThemeMode,
 
-          // Router configuration
-          routerConfig: router,
+              // Router configuration
+              routerConfig: router,
+            );
+          },
         );
       },
     );

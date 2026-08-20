@@ -41,7 +41,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
     } catch (e) {
       Logger.error('Failed to load variables', e);
       if (mounted) {
-        setState(() => _errorMessage = 'Degiskenler yuklenemedi');
+        setState(() => _errorMessage = sl<LocalizationService>().translate('variable.load_failed'));
       }
     }
 
@@ -69,7 +69,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Degiskenler',
+      title: sl<LocalizationService>().translate('variable.list_title'),
       onBack: () => context.go('/dashboard'),
       actions: [
         AppIconButton(
@@ -87,7 +87,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: AppSearchField(
-              placeholder: 'Degisken ara...',
+              placeholder: sl<LocalizationService>().translate('variable.search_placeholder'),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -106,9 +106,9 @@ class _VariablesScreenState extends State<VariablesScreen> {
 
     if (_errorMessage != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _errorMessage!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadVariables,
       );
     }
@@ -119,8 +119,8 @@ class _VariablesScreenState extends State<VariablesScreen> {
       if (_variables.isEmpty) {
         return AppEmptyState(
           icon: Icons.data_object,
-          title: 'Degisken Bulunamadi',
-          message: 'Henuz tanimlanmis degisken yok.',
+          title: sl<LocalizationService>().translate('variable.not_found'),
+          message: sl<LocalizationService>().translate('variable.empty_message'),
         );
       }
       return Center(
@@ -129,7 +129,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
           children: [
             Icon(Icons.search_off, size: 64, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.md),
-            Text('Sonuc Bulunamadi', style: AppTypography.headline),
+            Text(sl<LocalizationService>().translate('common.no_results_ascii'), style: AppTypography.headline),
           ],
         ),
       );
@@ -158,21 +158,21 @@ class _VariablesScreenState extends State<VariablesScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) => AppBottomSheet(
-        title: 'Filtrele',
+        title: sl<LocalizationService>().translate('common.filter'),
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Veri Tipi', style: AppTypography.subheadline),
+              Text(sl<LocalizationService>().translate('variable.data_type'), style: AppTypography.subheadline),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
                   FilterChip(
-                    label: const Text('Tumu'),
+                    label: Text(sl<LocalizationService>().translate('common.all_short')),
                     selected: _filterType == null,
                     onSelected: (_) {
                       setState(() => _filterType = null);
@@ -327,7 +327,7 @@ class _ValueDisplay extends StatelessWidget {
 
     if (value == null || value.isEmpty) {
       return Text(
-        'Deger yok',
+        sl<LocalizationService>().translate('variable.no_value'),
         style: AppTypography.caption2.copyWith(
           color: AppColors.tertiaryLabel(context),
           fontStyle: FontStyle.italic,

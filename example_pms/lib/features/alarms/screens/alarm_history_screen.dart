@@ -68,7 +68,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
       Logger.error('Failed to load reset alarms', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Alarm gecmisi yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('alarm.history_load_error');
           _isLoading = false;
         });
       }
@@ -124,7 +124,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     final brightness = Theme.of(context).brightness;
 
     return AppScaffold(
-      title: 'Alarm Gecmisi',
+      title: sl<LocalizationService>().translate('alarm.history_title'),
       onBack: () => context.go('/alarms'),
       actions: [
         AppIconButton(
@@ -145,7 +145,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
               children: [
                 Expanded(
                   child: AppSearchBar(
-                    placeholder: 'Alarm ara...',
+                    placeholder: sl<LocalizationService>().translate('alarm.search_placeholder'),
                     onChanged: (value) {
                       setState(() {
                         _searchQuery = value;
@@ -182,7 +182,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
                         Icon(Icons.restart_alt, size: 16, color: AppColors.success),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          '${_filteredAlarms.length} reset alarm',
+                          sl<LocalizationService>().translate('alarm.reset_count', params: {'count': _filteredAlarms.length}),
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success),
                         ),
                       ],
@@ -190,7 +190,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    'Son $_selectedDays gun',
+                    sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary(brightness)),
                   ),
                 ],
@@ -229,10 +229,12 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
       return Center(
         child: AppEmptyState(
           icon: Icons.history,
-          title: _allAlarms.isEmpty ? 'Alarm Gecmisi Yok' : 'Sonuc Bulunamadi',
+          title: _allAlarms.isEmpty
+              ? sl<LocalizationService>().translate('alarm.empty_history_title')
+              : sl<LocalizationService>().translate('common.no_results_found'),
           message: _allAlarms.isEmpty
-              ? 'Bu donemde resetlenmis alarm bulunmuyor.'
-              : 'Arama kriterlerinize uygun alarm bulunamadi.',
+              ? sl<LocalizationService>().translate('alarm.empty_history_message')
+              : sl<LocalizationService>().translate('alarm.no_search_match'),
         ),
       );
     }
@@ -269,21 +271,21 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) => AppBottomSheet(
-        title: 'Filtreler',
+        title: sl<LocalizationService>().translate('common.filters'),
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Oncelik Seviyesi', style: AppTypography.subheadline),
+              Text(sl<LocalizationService>().translate('alarm.priority_level'), style: AppTypography.subheadline),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
                   FilterChip(
-                    label: const Text('Tumu'),
+                    label: Text(sl<LocalizationService>().translate('common.all_ascii')),
                     selected: _selectedPriorityId == null,
                     onSelected: (_) {
                       setState(() {
@@ -356,7 +358,7 @@ class _ResetAlarmCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? 'Alarm',
+                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary(brightness)),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -433,11 +435,11 @@ class _ResetAlarmCard extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inDays == 0) {
-      return 'Bugun ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${sl<LocalizationService>().translate('common.today')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
-      return 'Dun ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${sl<LocalizationService>().translate('common.yesterday')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays < 7) {
-      return '${diff.inDays} gun once';
+      return sl<LocalizationService>().translate('common.days_ago', params: {'days': diff.inDays});
     } else {
       return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }

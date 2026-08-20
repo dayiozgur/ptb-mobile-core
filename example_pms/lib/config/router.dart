@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../features/auth/screens/login_screen.dart';
-import '../features/tenant/screens/tenant_selector_screen.dart';
-import '../features/shell/screens/main_shell_screen.dart';
+// Nötr shell ekranları (login/tenant/main-shell/settings/org/portal/entity) +
+// RouteAccess çekirdek barrel'dan gelir (Faz-0). PMS-domain ekranları local:
 import '../features/controllers/screens/controllers_screen.dart';
 import '../features/controllers/screens/controller_detail_screen.dart';
 import '../features/variables/screens/variables_screen.dart';
@@ -15,12 +14,11 @@ import '../features/alarms/screens/active_alarms_screen.dart';
 import '../features/alarms/screens/alarm_history_screen.dart';
 import '../features/logs/screens/log_viewer_screen.dart';
 import '../features/logs/screens/log_analytics_screen.dart';
+import '../features/kpi/screens/kpi_screen.dart';
 import '../features/providers/screens/providers_screen.dart';
 import '../features/providers/screens/provider_landing_screen.dart';
-import '../features/organization/screens/organization_selector_screen.dart';
 import '../features/site/screens/site_selector_screen.dart';
 import '../features/site/screens/site_landing_screen.dart';
-import '../features/settings/screens/settings_screen.dart';
 import '../features/map/screens/site_map_screen.dart';
 
 /// Router provider
@@ -29,39 +27,68 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     debugLogDiagnostics: true,
 
-    // Redirect logic based on auth state
+    // Coarse-role çözülünce (shell menüyü yükledikten sonra) redirect'i
+    // yeniden çalıştır → rol-bazlı gating uygulanır.
+    refreshListenable: sessionCoarseRole,
+
+    // Redirect: auth → tenant/org kurulum → coarse-role erişim guard'ı.
     redirect: (context, state) {
       final isAuthenticated = authService.isAuthenticated;
-      final hasTenant = tenantService.hasTenant;
-      final hasOrganization = organizationService.currentOrganizationId != null;
-
       final loc = state.matchedLocation;
-      final isAuthRoute = loc == '/login';
+
+      // 0) Accept-invite deep-link: kimlik durumundan bağımsız DAİMA erişilebilir.
+      // Ekran kendi akışını yönetir (verifyOtp/OtpType.invite → güçlü şifre →
+      // /main). Guard'ın allowlist'inde — /login'e zorlanmamalı.
+      if (loc.startsWith('/auth/accept-invite')) {
+        return null;
+      }
+
+      // Kimlik doğrulama gerektirmeyen (unauth) rotalar.
+      final isAuthRoute = loc == '/login' || loc == '/request-access';
+
+      // 1) Kimlik doğrulama
+      if (!isAuthenticated) {
+        return isAuthRoute ? null : '/login';
+      }
+
+      final role = sessionCoarseRole.value;
+
+      // 2) CUSTOMER → yalnız portal (operatör ekranları görünmez)
+      if (role == CoarseRoles.customer) {
+        return loc.startsWith(RouteAccess.portalPath)
+            ? null
+            : RouteAccess.portalPath;
+      }
+
+      // Müşteri-dışı roller portal'a girmesin
+      if (loc.startsWith(RouteAccess.portalPath)) {
+        return '/main';
+      }
+
+      // 3) Tenant / organization kurulumu
+      final hasTenant = tenantService.hasTenant;
+      final hasOrganization =
+          organizationService.currentOrganizationId != null;
       final isTenantRoute = loc == '/tenant-select';
       final isOrgRoute = loc == '/organizations';
       final isSetupRoute = isAuthRoute || isTenantRoute || isOrgRoute;
 
-      // Not authenticated -> go to login
-      if (!isAuthenticated && !isAuthRoute) {
-        return '/login';
-      }
-
-      // Authenticated but no tenant selected -> go to tenant select
-      if (isAuthenticated && !hasTenant && !isTenantRoute && !isAuthRoute) {
+      if (!hasTenant && !isTenantRoute && !isAuthRoute) {
         return '/tenant-select';
       }
-
-      // Tenant selected but no organization -> go to organizations
-      if (isAuthenticated && hasTenant && !hasOrganization && !isSetupRoute) {
+      if (hasTenant && !hasOrganization && !isSetupRoute) {
         return '/organizations';
       }
-
-      // Everything set, redirect away from auth route
-      if (isAuthenticated && hasTenant && hasOrganization && isAuthRoute) {
+      if (hasTenant && hasOrganization && isAuthRoute) {
         return '/main';
       }
 
-      // No redirect needed
+      // 4) Coarse-role erişim guard'ı (admin-only menü yolları).
+      // Menü rol filtresiyle aynı vokabüler — SoT: platform_menu_items.roles.
+      if (!RouteAccess.canAccess(role, loc)) {
+        return RouteAccess.deniedRedirect(role);
+      }
+
       return null;
     },
 
@@ -73,6 +100,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+
+      // Erişim talebi (waitlist) — açık kayıt yerine invite-only kapı.
+      GoRoute(
+        path: '/request-access',
+        name: 'request-access',
+        builder: (context, state) => const RequestAccessScreen(),
+      ),
+
+      // Davet kabul (deep-link hedefi).
+      //
+      // Davet e-postasındaki bağlantı `<APP_BASE>/auth/accept-invite` biçimindedir
+      // ve `?token_hash=…&type=invite` sorgu parametreleri taşır (eski linkler
+      // `#access_token=…&refresh_token=…` hash-flow'u taşır). go_router yerleşik
+      // deep-link desteği URL'yi buraya yönlendirir.
+      //
+      // TODO(deeplink-native): İşletim sisteminin universal/app-link'i bu
+      // uygulamaya teslim etmesi için native kayıt GEREKİR ve bu bir owner/native
+      // build adımıdır (bu görevde native dosyalara dokunulmaz):
+      //   - iOS:     ios/Runner/Info.plist + Associated Domains
+      //              (applinks:app.pms.protoolbag.com) + apple-app-site-association
+      //   - Android: android/app/src/main/AndroidManifest.xml intent-filter
+      //              (android:autoVerify + <data> host app.pms.protoolbag.com) +
+      //              assetlinks.json
+      // Kayıt yapılana kadar rota yalnızca uygulama-içi navigasyonla erişilebilir.
+      GoRoute(
+        path: '/auth/accept-invite',
+        name: 'accept-invite',
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          // Hash-flow fallback: bazı istemciler token'ları fragment (#) olarak
+          // taşır; go_router bunları query'e taşımadığından fragment'ı da okuruz.
+          final frag = Uri.splitQueryString(state.uri.fragment);
+          return AcceptInviteScreen(
+            tokenHash: q['token_hash'] ?? frag['token_hash'],
+            type: q['type'] ?? frag['type'],
+            accessToken: q['access_token'] ?? frag['access_token'],
+            refreshToken: q['refresh_token'] ?? frag['refresh_token'],
+          );
+        },
       ),
 
       // ==================
@@ -100,6 +167,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/main',
         name: 'main',
         builder: (context, state) => const MainShellScreen(),
+      ),
+
+      // ==================
+      // Portal (CUSTOMER kısıtlı açılış)
+      // ==================
+      GoRoute(
+        path: '/portal',
+        name: 'portal',
+        builder: (context, state) => const PortalLandingScreen(),
       ),
 
       // ==================
@@ -204,6 +280,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
+      // KPI
+      // ==================
+      GoRoute(
+        path: '/kpi',
+        name: 'kpi',
+        builder: (context, state) => const KpiScreen(),
+      ),
+
+      // ==================
       // Providers
       // ==================
       GoRoute(
@@ -230,6 +315,35 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ==================
+      // Entities (low-code builder entity engine)
+      // ==================
+      // Statik `create` rotası, `:id` tarafından yakalanmaması için ondan
+      // ÖNCE tanımlanır.
+      GoRoute(
+        path: '/entities/:type/create',
+        name: 'entity-create',
+        builder: (context, state) => EntityFormScreen(
+          typeCode: state.pathParameters['type']!,
+        ),
+      ),
+      GoRoute(
+        path: '/entities/:type/:id/edit',
+        name: 'entity-edit',
+        builder: (context, state) => EntityFormScreen(
+          typeCode: state.pathParameters['type']!,
+          id: state.pathParameters['id'],
+        ),
+      ),
+      GoRoute(
+        path: '/entities/:type/:id',
+        name: 'entity-detail',
+        builder: (context, state) => EntityDetailScreen(
+          typeCode: state.pathParameters['type']!,
+          id: state.pathParameters['id']!,
+        ),
+      ),
+
+      // ==================
       // Settings
       // ==================
       GoRoute(
@@ -242,8 +356,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Error page
     errorBuilder: (context, state) => Scaffold(
       body: AppErrorView(
-        title: 'Sayfa Bulunamadi',
-        message: 'Aradiginiz sayfa mevcut degil: ${state.matchedLocation}',
+        title: 'Sayfa Bulunamadı',
+        message: 'Aradığınız sayfa mevcut değil: ${state.matchedLocation}',
         actionLabel: 'Dashboard\'a Git',
         onAction: () => context.go('/main'),
       ),

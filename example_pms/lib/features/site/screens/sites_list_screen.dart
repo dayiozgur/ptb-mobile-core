@@ -32,7 +32,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
       final organizationId = organizationService.currentOrganizationId;
       if (organizationId == null) {
         setState(() {
-          _error = 'Organizasyon secilmemis';
+          _error = sl<LocalizationService>().translate('org.not_selected');
           _isLoading = false;
         });
         return;
@@ -49,7 +49,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
     } catch (e) {
       Logger.error('Failed to load sites', e);
       setState(() {
-        _error = 'Siteler yuklenemedi';
+        _error = sl<LocalizationService>().translate('site.load_failed');
         _isLoading = false;
       });
     }
@@ -84,7 +84,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Siteler',
+      title: sl<LocalizationService>().translate('site.list_title'),
       showBackButton: false,
       actions: [
         AppIconButton(
@@ -103,18 +103,18 @@ class _SitesListScreenState extends State<SitesListScreen> {
 
     if (_error != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _error!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadSites,
       );
     }
 
     if (_sites.isEmpty) {
-      return const AppEmptyState(
+      return AppEmptyState(
         icon: Icons.location_city_outlined,
-        title: 'Site Bulunamadi',
-        message: 'Bu organizasyonda henuz site yok.',
+        title: sl<LocalizationService>().translate('site.not_found_title'),
+        message: sl<LocalizationService>().translate('site.none_in_org'),
       );
     }
 
@@ -128,7 +128,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: AppSearchField(
-              placeholder: 'Site ara...',
+              placeholder: sl<LocalizationService>().translate('site.search_placeholder'),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
               },
@@ -141,8 +141,11 @@ class _SitesListScreenState extends State<SitesListScreen> {
                 ? Center(
                     child: AppEmptyState(
                       icon: Icons.search_off,
-                      title: 'Sonuc Bulunamadi',
-                      message: '"$_searchQuery" ile eslesen site yok',
+                      title: sl<LocalizationService>().translate('common.no_results'),
+                      message: sl<LocalizationService>().translate(
+                        'site.no_match',
+                        params: {'query': _searchQuery},
+                      ),
                     ),
                   )
                 : ListView.separated(
@@ -224,7 +227,10 @@ class _SiteCard extends StatelessWidget {
                       if (site.floorCount != null) ...[
                         _InfoChip(
                           icon: Icons.layers,
-                          label: '${site.floorCount} Kat',
+                          label: sl<LocalizationService>().translate(
+                            'site.floor_suffix',
+                            params: {'count': site.floorCount},
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.xs),
                       ],

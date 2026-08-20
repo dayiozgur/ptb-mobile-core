@@ -86,7 +86,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Controller listesi yuklenemedi';
+          _errorMessage = sl<LocalizationService>()
+              .translate('logs.controllers_load_failed');
           _isLoading = false;
         });
       }
@@ -191,7 +192,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       Logger.error('Failed to load chart data', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Grafik verileri yuklenemedi';
+          _errorMessage =
+              sl<LocalizationService>().translate('logs.chart_load_failed');
           _isLoadingChart = false;
         });
       }
@@ -299,7 +301,9 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     final varCount = _selectedAnalogIds.length + _selectedDigitalIds.length;
-    final subtitle = 'Son $_selectedDays gun - $varCount variable';
+    final subtitle = sl<LocalizationService>().translate(
+        'logs.chart_subtitle_landscape',
+        params: {'days': '$_selectedDays', 'count': '$varCount'});
 
     return FullScreenChartView(
       analogSeries: _buildAnalogSeriesList(),
@@ -315,7 +319,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     final brightness = Theme.of(context).brightness;
 
     return AppScaffold(
-      title: 'Log Analiz',
+      title: sl<LocalizationService>().translate('logs.analytics_title'),
       onBack: () => context.go('/logs'),
       actions: [
         AppIconButton(
@@ -341,7 +345,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Son $_selectedDays gun',
+                            sl<LocalizationService>().translate('logs.last_n_days',
+                                params: {'days': '$_selectedDays'}),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -364,7 +369,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                       _buildSectionHeader(
                         brightness,
                         icon: Icons.show_chart,
-                        title: 'Analog / Integer',
+                        title:
+                            sl<LocalizationService>().translate('logs.analog_integer'),
                         count: _analogVars.length,
                         selectedCount: _selectedAnalogIds.length,
                         maxCount: _maxAnalogSelection,
@@ -389,7 +395,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                       _buildSectionHeader(
                         brightness,
                         icon: Icons.toggle_on,
-                        title: 'Digital',
+                        title: sl<LocalizationService>().translate('logs.digital'),
                         count: _digitalVars.length,
                         selectedCount: _selectedDigitalIds.length,
                         maxCount: _maxDigitalSelection,
@@ -419,7 +425,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Controller', style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+        Text(sl<LocalizationService>().translate('logs.controller'), style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
         const SizedBox(height: AppSpacing.xs),
         Container(
           width: double.infinity,
@@ -431,7 +437,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedControllerId,
-              hint: Text('Controller secin', style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
+              hint: Text(sl<LocalizationService>().translate('logs.select_controller_hint'), style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
               isExpanded: true,
               items: _controllers.map((c) => DropdownMenuItem(
                 value: c.id,
@@ -491,7 +497,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
         const Spacer(),
         if (count > 0)
           Text(
-            '$selectedCount/$maxCount secili',
+            sl<LocalizationService>().translate('logs.selected_count',
+                params: {'selected': '$selectedCount', 'max': '$maxCount'}),
             style: TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary(brightness),
@@ -516,7 +523,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Text(
-          'Bu tip icin variable bulunamadi',
+          sl<LocalizationService>().translate('logs.no_variables'),
           style: TextStyle(fontSize: 13, color: AppColors.tertiaryLabel(context)),
           textAlign: TextAlign.center,
         ),
@@ -591,18 +598,21 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     }
 
     if (_selectedAnalogIds.isEmpty) {
-      return _buildEmptyChartMessage(brightness, 'Grafik icin analog/integer variable secin');
+      return _buildEmptyChartMessage(brightness,
+          sl<LocalizationService>().translate('logs.select_analog_hint'));
     }
 
     final seriesList = _buildAnalogSeriesList();
 
     if (seriesList.isEmpty) {
-      return _buildEmptyChartMessage(brightness, 'Secili variable\'lar icin veri bulunamadi');
+      return _buildEmptyChartMessage(brightness,
+          sl<LocalizationService>().translate('logs.no_data_for_selection'));
     }
 
     return ChartContainer(
-      title: 'Deger Grafigi',
-      subtitle: '${seriesList.length} variable - Son $_selectedDays gun',
+      title: sl<LocalizationService>().translate('logs.value_chart'),
+      subtitle: sl<LocalizationService>().translate('logs.value_chart_subtitle',
+          params: {'count': '${seriesList.length}', 'days': '$_selectedDays'}),
       isEmpty: false,
       child: MultiLogLineChart(
         seriesList: seriesList,
@@ -621,18 +631,21 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     }
 
     if (_selectedDigitalIds.isEmpty) {
-      return _buildEmptyChartMessage(brightness, 'On/Off grafigi icin digital variable secin');
+      return _buildEmptyChartMessage(brightness,
+          sl<LocalizationService>().translate('logs.select_digital_hint'));
     }
 
     final seriesList = _buildDigitalSeriesList();
 
     if (seriesList.isEmpty) {
-      return _buildEmptyChartMessage(brightness, 'Secili variable\'lar icin veri bulunamadi');
+      return _buildEmptyChartMessage(brightness,
+          sl<LocalizationService>().translate('logs.no_data_for_selection'));
     }
 
     return ChartContainer(
-      title: 'On/Off Durumu',
-      subtitle: '${seriesList.length} digital variable - Son $_selectedDays gun',
+      title: sl<LocalizationService>().translate('logs.onoff_status'),
+      subtitle: sl<LocalizationService>().translate('logs.onoff_chart_subtitle',
+          params: {'count': '${seriesList.length}', 'days': '$_selectedDays'}),
       isEmpty: false,
       child: MultiLogOnOffChart(
         seriesList: seriesList,

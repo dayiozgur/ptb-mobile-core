@@ -82,7 +82,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
       Logger.error('Failed to load variable detail', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Degisken detaylari yuklenemedi';
+          _errorMessage = sl<LocalizationService>().translate('variable.load_failed_detail');
           _isLoading = false;
         });
       }
@@ -97,7 +97,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: widget.variableName ?? 'Degisken Detay',
+      title: widget.variableName ?? sl<LocalizationService>().translate('variable.detail_title'),
       onBack: () => context.go('/variables'),
       actions: [
         AppIconButton(
@@ -116,9 +116,9 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
 
     if (_errorMessage != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _errorMessage!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadData,
       );
     }
@@ -126,9 +126,9 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
     final variable = _variable;
     if (variable == null) {
       return AppErrorView(
-        title: 'Bulunamadi',
-        message: 'Degisken bulunamadi.',
-        actionLabel: 'Geri Don',
+        title: sl<LocalizationService>().translate('common.not_found_title'),
+        message: sl<LocalizationService>().translate('variable.not_found_message'),
+        actionLabel: sl<LocalizationService>().translate('common.go_back'),
         onAction: () => context.go('/variables'),
       );
     }
@@ -151,7 +151,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Mevcut Deger',
+                      sl<LocalizationService>().translate('variable.current_value'),
                       style: AppTypography.caption1.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -161,7 +161,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                     if (variable.lastUpdate != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Son guncelleme: ${dateFormat.format(variable.lastUpdate!)}',
+                        sl<LocalizationService>().translate('variable.last_update', params: {'date': dateFormat.format(variable.lastUpdate!)}),
                         style: AppTypography.caption2.copyWith(
                           color: AppColors.tertiaryLabel(context),
                         ),
@@ -175,17 +175,17 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Variable Info
-            AppSectionHeader(title: 'Degisken Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('variable.info_title')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Veri Tipi', value: variable.dataType.label),
-                    _InfoRow(label: 'Adres', value: variable.address ?? '-'),
-                    _InfoRow(label: 'Birim', value: variable.unit ?? '-'),
-                    _InfoRow(label: 'Erisim', value: variable.accessMode.label),
+                    _InfoRow(label: sl<LocalizationService>().translate('variable.data_type'), value: variable.dataType.label),
+                    _InfoRow(label: sl<LocalizationService>().translate('variable.address'), value: variable.address ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('variable.unit'), value: variable.unit ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('variable.access'), value: variable.accessMode.label),
                   ],
                 ),
               ),
@@ -195,7 +195,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             if (variable.minimum != null || variable.maximum != null ||
                 variable.minValue != null || variable.maxValue != null) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Deger Araligi'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('variable.value_range')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -203,13 +203,13 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                   child: Column(
                     children: [
                       if (variable.minimum != null)
-                        _InfoRow(label: 'Minimum', value: variable.minimum!),
+                        _InfoRow(label: sl<LocalizationService>().translate('common.minimum'), value: variable.minimum!),
                       if (variable.maximum != null)
-                        _InfoRow(label: 'Maximum', value: variable.maximum!),
+                        _InfoRow(label: sl<LocalizationService>().translate('common.maximum'), value: variable.maximum!),
                       if (variable.minValue != null)
-                        _InfoRow(label: 'Min Deger', value: variable.minValue.toString()),
+                        _InfoRow(label: sl<LocalizationService>().translate('variable.min_value'), value: variable.minValue.toString()),
                       if (variable.maxValue != null)
-                        _InfoRow(label: 'Max Deger', value: variable.maxValue.toString()),
+                        _InfoRow(label: sl<LocalizationService>().translate('variable.max_value'), value: variable.maxValue.toString()),
                     ],
                   ),
                 ),
@@ -219,13 +219,13 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             // Statistics
             if (_stats.hasData) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Istatistikler (Son $_selectedDays gun)'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('variable.stats_title', params: {'days': _selectedDays})),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
                     child: MetricCard(
-                      title: 'Min',
+                      title: sl<LocalizationService>().translate('common.min'),
                       value: _stats.minValue?.toStringAsFixed(1) ?? '-',
                       icon: Icons.arrow_downward,
                       color: AppColors.info,
@@ -234,7 +234,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Max',
+                      title: sl<LocalizationService>().translate('common.max'),
                       value: _stats.maxValue?.toStringAsFixed(1) ?? '-',
                       icon: Icons.arrow_upward,
                       color: AppColors.error,
@@ -243,7 +243,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Ort',
+                      title: sl<LocalizationService>().translate('common.avg'),
                       value: _stats.avgValue?.toStringAsFixed(1) ?? '-',
                       icon: Icons.trending_flat,
                       color: AppColors.warning,
@@ -257,18 +257,18 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             if (_timeSeries.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               ChartContainer(
-                title: 'Deger Grafigi',
-                subtitle: 'Son $_selectedDays gun',
+                title: sl<LocalizationService>().translate('provider.value_chart'),
+                subtitle: sl<LocalizationService>().translate('common.last_n_days', params: {'days': _selectedDays}),
                 trailing: ChartPeriodSelector(
                   selectedDays: _selectedDays,
                   onChanged: _onPeriodChanged,
                   options: const [1, 7, 30],
                 ),
                 isEmpty: _timeSeries.where((e) => e.hasNumericValue).length < 2,
-                emptyMessage: 'Yeterli veri yok',
+                emptyMessage: sl<LocalizationService>().translate('chart.insufficient_data'),
                 child: LogLineChart(
                   entries: _timeSeries,
-                  config: const LogChartConfig(
+                  config: LogChartConfig(
                     lineColor: AppColors.primary,
                     showArea: true,
                     enableTouch: true,
@@ -281,7 +281,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
               if (_timeSeries.any((e) => e.hasOnOff)) ...[
                 const SizedBox(height: AppSpacing.sm),
                 ChartContainer(
-                  title: 'On/Off Durumu',
+                  title: sl<LocalizationService>().translate('provider.onoff_status'),
                   isEmpty: false,
                   child: LogOnOffChart(
                     entries: _timeSeries,
@@ -293,7 +293,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
 
             if (variable.description != null && variable.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Aciklama'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -308,12 +308,12 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             // Write value action
             if (variable.isWritable)
               AppButton(
-                label: 'Deger Yaz',
+                label: sl<LocalizationService>().translate('variable.write_value'),
                 icon: Icons.edit,
                 onPressed: () {
                   AppSnackbar.showInfo(
                     context,
-                    message: 'Deger yazma ozelligi yakinda eklenecek',
+                    message: sl<LocalizationService>().translate('variable.write_coming_soon'),
                   );
                 },
               ),

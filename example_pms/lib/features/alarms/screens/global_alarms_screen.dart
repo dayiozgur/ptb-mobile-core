@@ -119,7 +119,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       Logger.error('Failed to load global alarms', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Veriler yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('common.data_load_error');
           _isLoading = false;
         });
       }
@@ -173,10 +173,103 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
     _loadData();
   }
 
+  // ==========================================================================
+  // Alarm operatör aksiyonları (acknowledge / reset / inhibit)
+  // ==========================================================================
+
+  void _openActiveAlarmDetail(Alarm alarm, Priority? priority) {
+    final loc = sl<LocalizationService>();
+    ActiveAlarmDetailSheet.show(
+      context,
+      alarm: alarm,
+      priority: priority,
+      onAcknowledge: () => _handleAction(
+        action: () => alarmService.acknowledgeAlarm(alarm.id),
+        successKey: 'alarm.ack_success',
+      ),
+      onReset: () async {
+        final confirmed = await _confirm(
+          title: loc.translate('alarm.confirm_reset_title'),
+          message: loc.translate('alarm.confirm_reset_message'),
+        );
+        if (!confirmed) return;
+        await _handleAction(
+          action: () => alarmService.resetAlarm(alarm.id),
+          successKey: 'alarm.reset_success',
+        );
+      },
+      onInhibitToggle: () async {
+        final inhibited = alarm.inhibited == true;
+        final confirmed = await _confirm(
+          title: loc.translate(inhibited
+              ? 'alarm.confirm_uninhibit_title'
+              : 'alarm.confirm_inhibit_title'),
+          message: loc.translate(inhibited
+              ? 'alarm.confirm_uninhibit_message'
+              : 'alarm.confirm_inhibit_message'),
+        );
+        if (!confirmed) return;
+        await _handleAction(
+          action: () => alarmService.inhibitAlarm(alarm.id, inhibit: !inhibited),
+          successKey:
+              inhibited ? 'alarm.uninhibit_success' : 'alarm.inhibit_success',
+        );
+      },
+    );
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+  }) async {
+    final loc = sl<LocalizationService>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(loc.translate('common.cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(loc.translate('common.confirm')),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  /// Aksiyonu çalıştır: başarı/iş-reddi/hata → SnackBar + sheet kapat + refresh.
+  Future<void> _handleAction({
+    required Future<bool> Function() action,
+    required String successKey,
+  }) async {
+    final loc = sl<LocalizationService>();
+    String message;
+    try {
+      final ok = await action();
+      message = loc.translate(ok ? successKey : 'alarm.action_failed');
+    } catch (e) {
+      Logger.error('Alarm action failed', e);
+      message = loc.translate('alarm.action_error');
+    }
+
+    if (!mounted) return;
+    // Sheet'i kapat (en üstteki route = detay sheet).
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+    await _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Alarmlar',
+      title: sl<LocalizationService>().translate('alarm.plural_title'),
       showBackButton: false,
       actions: [
         AppIconButton(
@@ -218,7 +311,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
                             return Padding(
                               padding: const EdgeInsets.only(right: AppSpacing.xs),
                               child: ChoiceChip(
-                                label: Text('$days gun'),
+                                label: Text(sl<LocalizationService>().translate('common.days_label', params: {'days': days})),
                                 selected: isSelected,
                                 onSelected: (selected) {
                                   if (selected) _onPeriodChanged(days);
@@ -238,7 +331,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
                         horizontal: AppSpacing.screenHorizontal,
                       ),
                       child: AppSearchField(
-                        placeholder: 'Alarm ara...',
+                        placeholder: sl<LocalizationService>().translate('alarm.search_placeholder'),
                         onChanged: (value) {
                           setState(() => _searchQuery = value);
                         },
@@ -258,12 +351,12 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
                       unselectedLabelColor: AppColors.secondaryLabel(context),
                       indicatorColor: AppColors.primary,
                       tabs: [
-                        const Tab(text: 'Dashboard'),
+                        Tab(text: sl<LocalizationService>().translate('common.dashboard')),
                         Tab(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Aktif'),
+                              Text(sl<LocalizationService>().translate('common.active')),
                               if (_filteredActiveAlarms.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(
@@ -278,7 +371,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Gecmis'),
+                              Text(sl<LocalizationService>().translate('alarm.history_tab')),
                               if (_filteredResetAlarms.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(
@@ -313,7 +406,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       children: [
         Expanded(
           child: _SummaryCard(
-            label: 'Aktif',
+            label: sl<LocalizationService>().translate('common.active'),
             value: _distribution.activeCount,
             color: AppColors.error,
             icon: Icons.warning_amber_rounded,
@@ -323,7 +416,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
-            label: 'Reset',
+            label: sl<LocalizationService>().translate('alarm.reset_label'),
             value: _distribution.resetCount,
             color: AppColors.success,
             icon: Icons.check_circle_outline,
@@ -333,7 +426,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
-            label: 'Toplam',
+            label: sl<LocalizationService>().translate('common.total'),
             value: _distribution.totalCount,
             color: AppColors.primary,
             icon: Icons.notifications_outlined,
@@ -356,7 +449,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
           children: [
             if (_selectedSiteId != null)
               _FilterChip(
-                label: _siteMap[_selectedSiteId]?.name ?? 'Site',
+                label: _siteMap[_selectedSiteId]?.name ?? sl<LocalizationService>().translate('site.label'),
                 icon: Icons.location_city,
                 onRemove: () {
                   setState(() => _selectedSiteId = null);
@@ -365,7 +458,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
             if (_selectedPriorityId != null) ...[
               const SizedBox(width: AppSpacing.xs),
               _FilterChip(
-                label: _priorityMap[_selectedPriorityId]?.name ?? 'Priority',
+                label: _priorityMap[_selectedPriorityId]?.name ?? sl<LocalizationService>().translate('alarm.priority_label'),
                 icon: Icons.flag,
                 onRemove: () {
                   setState(() => _selectedPriorityId = null);
@@ -389,10 +482,10 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
           children: [
             // Distribution Chart
             ChartContainer(
-              title: 'Alarm Dagilimi',
-              subtitle: 'Aktif vs Reset',
+              title: sl<LocalizationService>().translate('alarm.distribution_title'),
+              subtitle: sl<LocalizationService>().translate('alarm.distribution_subtitle'),
               isEmpty: _distribution.totalCount == 0,
-              emptyMessage: 'Alarm kaydi bulunamadi',
+              emptyMessage: sl<LocalizationService>().translate('alarm.no_records_found'),
               child: AlarmPieChart(
                 distribution: _distribution,
                 size: 180,
@@ -403,14 +496,14 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
 
             // Timeline Chart
             ChartContainer(
-              title: 'Alarm Trendi',
-              subtitle: 'Son $_selectedDays gun',
+              title: sl<LocalizationService>().translate('alarm.trend_title'),
+              subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
               trailing: ChartPeriodSelector(
                 selectedDays: _selectedDays,
                 onChanged: _onPeriodChanged,
               ),
               isEmpty: _timeline.every((e) => e.totalCount == 0),
-              emptyMessage: 'Bu donemde alarm kaydi yok',
+              emptyMessage: sl<LocalizationService>().translate('alarm.no_records_period'),
               child: AlarmBarChart(
                 entries: _timeline,
                 priorities: _priorityMap,
@@ -422,7 +515,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
 
             // Alarms by Site
             if (_sites.isNotEmpty) ...[
-              AppSectionHeader(title: 'Site Bazli Alarm Gecmisi'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('alarm.by_site_title')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -453,10 +546,10 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.check_circle_outline,
-          title: 'Aktif Alarm Yok',
+          title: sl<LocalizationService>().translate('alarm.empty_active_title'),
           message: _searchQuery.isNotEmpty || _selectedPriorityId != null
-              ? 'Filtrelere uygun alarm bulunamadi'
-              : 'Su anda aktif alarm bulunmuyor',
+              ? sl<LocalizationService>().translate('alarm.no_filter_match')
+              : sl<LocalizationService>().translate('alarm.no_active_now'),
         ),
       );
     }
@@ -476,13 +569,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
           return _ActiveAlarmCard(
             alarm: alarm,
             priority: priority,
-            onTap: () {
-              ActiveAlarmDetailSheet.show(
-                context,
-                alarm: alarm,
-                priority: priority,
-              );
-            },
+            onTap: () => _openActiveAlarmDetail(alarm, priority),
           );
         },
       ),
@@ -496,10 +583,10 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.history,
-          title: 'Alarm Gecmisi Bos',
+          title: sl<LocalizationService>().translate('alarm.empty_history_box_title'),
           message: _searchQuery.isNotEmpty || _selectedSiteId != null
-              ? 'Filtrelere uygun alarm bulunamadi'
-              : 'Belirtilen donemde resetlenmis alarm yok',
+              ? sl<LocalizationService>().translate('alarm.no_filter_match')
+              : sl<LocalizationService>().translate('alarm.no_reset_period'),
         ),
       );
     }
@@ -714,7 +801,7 @@ class _SiteAlarmRow extends StatelessWidget {
         ),
       ),
       title: siteName,
-      subtitle: 'Gecmis: $resetCount',
+      subtitle: sl<LocalizationService>().translate('alarm.history_count', params: {'count': resetCount}),
       trailing: _CountBadge(count: resetCount, color: AppColors.success),
     );
   }
@@ -765,7 +852,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? 'Alarm',
+                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
                           style: AppTypography.headline,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -877,7 +964,7 @@ class _ResetAlarmCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? 'Alarm',
+                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
                           style: AppTypography.headline,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -994,7 +1081,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     return AppBottomSheet(
-      title: 'Filtrele',
+      title: sl<LocalizationService>().translate('common.filter'),
       child: Padding(
         padding: AppSpacing.screenPadding,
         child: Column(
@@ -1002,14 +1089,14 @@ class _FilterSheetState extends State<_FilterSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Period selector
-            Text('Donem', style: AppTypography.subheadline),
+            Text(sl<LocalizationService>().translate('common.period'), style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,
               children: [7, 14, 30, 60, 90, 180].map((days) {
                 final isSelected = _selectedDays == days;
                 return ChoiceChip(
-                  label: Text('$days gun'),
+                  label: Text(sl<LocalizationService>().translate('common.days_label', params: {'days': days})),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() => _selectedDays = days);
@@ -1021,23 +1108,23 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: AppSpacing.md),
 
             // Site filter
-            Text('Site', style: AppTypography.subheadline),
+            Text(sl<LocalizationService>().translate('site.label'), style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: DropdownButton<String?>(
                 value: _selectedSiteId,
                 isExpanded: true,
-                hint: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('Tum siteler'),
+                hint: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(sl<LocalizationService>().translate('site.all_sites')),
                 ),
                 underline: const SizedBox(),
                 items: [
-                  const DropdownMenuItem<String?>(
+                  DropdownMenuItem<String?>(
                     value: null,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('Tum siteler'),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(sl<LocalizationService>().translate('site.all_sites')),
                     ),
                   ),
                   ...widget.sites.map((site) {
@@ -1059,14 +1146,14 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: AppSpacing.md),
 
             // Priority filter
-            Text('Oncelik', style: AppTypography.subheadline),
+            Text(sl<LocalizationService>().translate('alarm.priority'), style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,
               runSpacing: AppSpacing.xs,
               children: [
                 ChoiceChip(
-                  label: const Text('Tumu'),
+                  label: Text(sl<LocalizationService>().translate('common.all_ascii')),
                   selected: _selectedPriorityId == null,
                   onSelected: (selected) {
                     if (selected) {
@@ -1096,7 +1183,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 Expanded(
                   child: AppButton(
-                    label: 'Temizle',
+                    label: sl<LocalizationService>().translate('common.clear'),
                     variant: AppButtonVariant.secondary,
                     onPressed: () {
                       setState(() {
@@ -1110,7 +1197,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: AppButton(
-                    label: 'Uygula',
+                    label: sl<LocalizationService>().translate('common.apply'),
                     onPressed: () {
                       widget.onApply(
                         _selectedSiteId,

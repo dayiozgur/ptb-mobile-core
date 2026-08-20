@@ -83,7 +83,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       final site = await siteService.getSite(widget.siteId);
       if (site == null) {
         setState(() {
-          _errorMessage = 'Site bulunamadi';
+          _errorMessage = sl<LocalizationService>().translate('site.not_found');
           _isLoading = false;
         });
         return;
@@ -140,7 +140,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       Logger.error('Failed to load site data', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Veriler yuklenirken hata olustu';
+          _errorMessage = sl<LocalizationService>().translate('common.load_error');
           _isLoading = false;
         });
       }
@@ -197,7 +197,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: _site?.name ?? 'Site',
+      title: _site?.name ?? sl<LocalizationService>().translate('site.title_fallback'),
       actions: [
         AppIconButton(
           icon: Icons.refresh,
@@ -223,12 +223,12 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                       indicatorColor: AppColors.primary,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        const Tab(text: 'Dashboard'),
+                        Tab(text: sl<LocalizationService>().translate('common.dashboard')),
                         Tab(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Providers'),
+                              Text(sl<LocalizationService>().translate('provider.plural')),
                               if (_providers.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(count: _providers.length),
@@ -240,7 +240,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Alarmlar'),
+                              Text(sl<LocalizationService>().translate('alarm.plural')),
                               if (_activeAlarms.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(
@@ -255,7 +255,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Controllers'),
+                              Text(sl<LocalizationService>().translate('controller.plural')),
                               if (_controllers.isNotEmpty) ...[
                                 const SizedBox(width: 4),
                                 _CountBadge(count: _controllers.length),
@@ -263,7 +263,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                             ],
                           ),
                         ),
-                        const Tab(text: 'Detaylar'),
+                        Tab(text: sl<LocalizationService>().translate('common.details')),
                       ],
                     ),
                     Expanded(
@@ -300,10 +300,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
             if (_activeAlarms.isNotEmpty) ...[
               AppSectionHeader(
-                title: 'Aktif Alarmlar',
+                title: sl<LocalizationService>().translate('alarm.active_plural'),
                 action: TextButton(
                   onPressed: () => _tabController.animateTo(2),
-                  child: const Text('Tumu'),
+                  child: Text(sl<LocalizationService>().translate('common.all_ascii')),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -320,13 +320,13 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
               const SizedBox(height: AppSpacing.md),
             ],
 
-            AppSectionHeader(title: 'IoT Ozeti'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('site.iot_summary')),
             const SizedBox(height: AppSpacing.sm),
             _buildIotSummary(),
 
             if (_resetAlarms.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Son Alarm Gecmisi'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('site.recent_alarm_history')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -344,10 +344,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             ChartContainer(
-              title: 'Priority Trendi',
-              subtitle: 'Son 30 gun',
+              title: sl<LocalizationService>().translate('site.priority_trend'),
+              subtitle: sl<LocalizationService>().translate('site.last_30_days'),
               isEmpty: _timeline.every((e) => e.totalCount == 0),
-              emptyMessage: 'Bu donemde alarm kaydi yok',
+              emptyMessage: sl<LocalizationService>().translate('site.no_alarm_this_period'),
               child: AlarmPriorityTrendChart(
                 entries: _timeline,
                 priorities: _priorityMap,
@@ -358,10 +358,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.sm),
 
             ChartContainer(
-              title: 'Ortalama Cozum Suresi (MTTR)',
-              subtitle: 'Son 30 gun',
+              title: sl<LocalizationService>().translate('site.avg_resolution_mttr'),
+              subtitle: sl<LocalizationService>().translate('site.last_30_days'),
               isEmpty: _mttrStats.totalAlarmCount == 0,
-              emptyMessage: 'Cozulmus alarm bulunamadi',
+              emptyMessage: sl<LocalizationService>().translate('site.no_resolved_alarm'),
               child: AlarmMttrCard(
                 stats: _mttrStats,
                 priorities: _priorityMap,
@@ -371,10 +371,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.sm),
 
             ChartContainer(
-              title: 'En Sik Tekrarlayan Alarmlar',
-              subtitle: 'Son 30 gun - Top 10',
+              title: sl<LocalizationService>().translate('site.top_recurring_alarms'),
+              subtitle: sl<LocalizationService>().translate('site.last_30_days_top10'),
               isEmpty: _topAlarms.isEmpty,
-              emptyMessage: 'Alarm verisi bulunamadi',
+              emptyMessage: sl<LocalizationService>().translate('site.no_alarm_data'),
               child: AlarmTopOffendersCard(
                 alarms: _topAlarms,
                 priorities: _priorityMap,
@@ -384,10 +384,10 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.sm),
 
             ChartContainer(
-              title: 'Alarm Yogunluk Haritasi',
-              subtitle: 'Haftalik gun x saat dagilimi',
+              title: sl<LocalizationService>().translate('site.alarm_heatmap'),
+              subtitle: sl<LocalizationService>().translate('site.weekly_day_hour_dist'),
               isEmpty: _heatmapData.totalCount == 0,
-              emptyMessage: 'Bu haftada alarm kaydi yok',
+              emptyMessage: sl<LocalizationService>().translate('site.no_alarm_this_week'),
               child: AlarmHeatmapChart(
                 data: _heatmapData,
                 height: 200,
@@ -489,7 +489,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.warning_amber_rounded,
-            label: 'Aktif Alarm',
+            label: sl<LocalizationService>().translate('alarm.active_singular'),
             value: _activeAlarms.length.toString(),
             color: _activeAlarms.isNotEmpty ? AppColors.error : AppColors.success,
             onTap: () => _tabController.animateTo(2),
@@ -499,7 +499,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.storage,
-            label: 'Provider',
+            label: sl<LocalizationService>().translate('provider.singular'),
             value: '$_activeProviderCount/${_providers.length}',
             color: AppColors.success,
             onTap: () => _tabController.animateTo(1),
@@ -509,7 +509,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         Expanded(
           child: _StatCard(
             icon: Icons.developer_board,
-            label: 'Controller',
+            label: sl<LocalizationService>().translate('controller.singular'),
             value: '$_activeControllerCount/${_controllers.length}',
             color: AppColors.info,
             onTap: () => _tabController.animateTo(3),
@@ -525,24 +525,33 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         children: [
           AppListTile(
             leading: _IconBox(icon: Icons.storage, color: Colors.green),
-            title: 'Veri Saglayicilar',
-            subtitle: '$_activeProviderCount aktif / ${_providers.length} toplam',
+            title: sl<LocalizationService>().translate('provider.data_providers'),
+            subtitle: sl<LocalizationService>().translate(
+              'common.active_total_summary',
+              params: {'active': _activeProviderCount, 'total': _providers.length},
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _tabController.animateTo(1),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           AppListTile(
             leading: _IconBox(icon: Icons.developer_board, color: Colors.blue),
-            title: 'Controllers',
-            subtitle: '$_activeControllerCount aktif / ${_controllers.length} toplam',
+            title: sl<LocalizationService>().translate('controller.plural'),
+            subtitle: sl<LocalizationService>().translate(
+              'common.active_total_summary',
+              params: {'active': _activeControllerCount, 'total': _controllers.length},
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _tabController.animateTo(3),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           AppListTile(
             leading: _IconBox(icon: Icons.history, color: Colors.purple),
-            title: 'Alarm Gecmisi',
-            subtitle: '${_resetAlarms.length} kayit',
+            title: sl<LocalizationService>().translate('alarm.history'),
+            subtitle: sl<LocalizationService>().translate(
+              'common.record_count',
+              params: {'count': _resetAlarms.length},
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               // Show alarm history
@@ -559,8 +568,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.storage,
-          title: 'Provider Bulunamadi',
-          message: 'Bu siteye bagli veri saglayici yok',
+          title: sl<LocalizationService>().translate('provider.not_found_site'),
+          message: sl<LocalizationService>().translate('provider.none_for_site'),
         ),
       );
     }
@@ -609,7 +618,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Aktif'),
+                      Text(sl<LocalizationService>().translate('common.active')),
                       if (_activeAlarms.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         _CountBadge(count: _activeAlarms.length, color: AppColors.error),
@@ -621,7 +630,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Gecmis'),
+                      Text(sl<LocalizationService>().translate('common.past')),
                       if (_resetAlarms.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         _CountBadge(count: _resetAlarms.length),
@@ -650,8 +659,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.check_circle_outline,
-          title: 'Aktif Alarm Yok',
-          message: 'Bu sitede aktif alarm bulunmuyor',
+          title: sl<LocalizationService>().translate('alarm.none_active'),
+          message: sl<LocalizationService>().translate('alarm.no_active_for_site'),
         ),
       );
     }
@@ -679,8 +688,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.history,
-          title: 'Alarm Gecmisi Bos',
-          message: 'Resetlenmis alarm yok',
+          title: sl<LocalizationService>().translate('alarm.history_empty'),
+          message: sl<LocalizationService>().translate('alarm.no_reset_ascii'),
         ),
       );
     }
@@ -709,8 +718,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       return Center(
         child: AppEmptyState(
           icon: Icons.developer_board,
-          title: 'Controller Bulunamadi',
-          message: 'Bu siteye bagli controller yok',
+          title: sl<LocalizationService>().translate('controller.not_found'),
+          message: sl<LocalizationService>().translate('controller.none_for_site'),
         ),
       );
     }
@@ -748,20 +757,20 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppSectionHeader(title: 'Temel Bilgiler'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('site.basic_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Site Adi', value: _site!.name),
-                    _InfoRow(label: 'Kod', value: _site!.code ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.name_label'), value: _site!.name),
+                    _InfoRow(label: sl<LocalizationService>().translate('common.code'), value: _site!.code ?? '-'),
                     if (_organization != null)
-                      _InfoRow(label: 'Organizasyon', value: _organization!.name),
-                    _InfoRow(label: 'Kat Sayisi', value: _site!.floorCount?.toString() ?? '-'),
+                      _InfoRow(label: sl<LocalizationService>().translate('org.singular'), value: _organization!.name),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.floor_count'), value: _site!.floorCount?.toString() ?? '-'),
                     _InfoRow(
-                      label: 'Alan',
+                      label: sl<LocalizationService>().translate('site.area'),
                       value: _site!.grossAreaSqm != null ? '${_site!.grossAreaSqm!.toInt()} m2' : '-',
                     ),
                   ],
@@ -770,35 +779,35 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             ),
             const SizedBox(height: AppSpacing.md),
 
-            AppSectionHeader(title: 'Adres Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('site.address_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Adres', value: _site!.address ?? '-'),
-                    _InfoRow(label: 'Sehir', value: _site!.city ?? '-'),
-                    _InfoRow(label: 'Ilce', value: _site!.town ?? '-'),
-                    _InfoRow(label: 'Ulke', value: _site!.country ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.address'), value: _site!.address ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.city_label'), value: _site!.city ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.town'), value: _site!.town ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.country_label'), value: _site!.country ?? '-'),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            AppSectionHeader(title: 'Teknik Bilgiler'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('site.technical_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'Site ID', value: _site!.id),
+                    _InfoRow(label: sl<LocalizationService>().translate('site.id_label'), value: _site!.id),
                     if (_site!.createdAt != null)
-                      _InfoRow(label: 'Olusturulma', value: _formatDate(_site!.createdAt!)),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.created'), value: _formatDate(_site!.createdAt!)),
                     if (_site!.updatedAt != null)
-                      _InfoRow(label: 'Guncelleme', value: _formatDate(_site!.updatedAt!)),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.updated'), value: _formatDate(_site!.updatedAt!)),
                   ],
                 ),
               ),
@@ -932,7 +941,7 @@ class _AlarmRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
+                Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.singular'), style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
                 Text(alarm.durationFormatted, style: AppTypography.caption2.copyWith(color: AppColors.secondaryLabel(context))),
               ],
             ),
@@ -964,7 +973,7 @@ class _ResetAlarmRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
+                Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.singular'), style: AppTypography.subheadline, overflow: TextOverflow.ellipsis),
                 Text(alarm.durationFormatted, style: AppTypography.caption2.copyWith(color: AppColors.secondaryLabel(context))),
               ],
             ),
@@ -1081,11 +1090,11 @@ class _StatusBadge extends StatelessWidget {
 
   String _getLabel() {
     switch (status) {
-      case DataProviderStatus.active: return 'Aktif';
-      case DataProviderStatus.inactive: return 'Pasif';
-      case DataProviderStatus.connecting: return 'Baglaniyor';
-      case DataProviderStatus.error: return 'Hata';
-      case DataProviderStatus.disabled: return 'Devre Disi';
+      case DataProviderStatus.active: return sl<LocalizationService>().translate('common.active');
+      case DataProviderStatus.inactive: return sl<LocalizationService>().translate('common.inactive');
+      case DataProviderStatus.connecting: return sl<LocalizationService>().translate('status.connecting');
+      case DataProviderStatus.error: return sl<LocalizationService>().translate('common.error');
+      case DataProviderStatus.disabled: return sl<LocalizationService>().translate('common.disabled_ascii');
     }
   }
 
@@ -1170,13 +1179,13 @@ class _ControllerCard extends StatelessWidget {
 
   String _getStatusLabel() {
     switch (controller.status) {
-      case ControllerStatus.online: return 'Online';
-      case ControllerStatus.offline: return 'Offline';
-      case ControllerStatus.connecting: return 'Baglaniyor';
-      case ControllerStatus.error: return 'Hata';
-      case ControllerStatus.maintenance: return 'Bakimda';
-      case ControllerStatus.disabled: return 'Devre Disi';
-      case ControllerStatus.unknown: return 'Bilinmiyor';
+      case ControllerStatus.online: return sl<LocalizationService>().translate('status.online');
+      case ControllerStatus.offline: return sl<LocalizationService>().translate('status.offline');
+      case ControllerStatus.connecting: return sl<LocalizationService>().translate('status.connecting');
+      case ControllerStatus.error: return sl<LocalizationService>().translate('common.error');
+      case ControllerStatus.maintenance: return sl<LocalizationService>().translate('status.maintenance');
+      case ControllerStatus.disabled: return sl<LocalizationService>().translate('common.disabled_ascii');
+      case ControllerStatus.unknown: return sl<LocalizationService>().translate('status.unknown');
     }
   }
 
@@ -1220,7 +1229,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                     children: [
                       Container(width: 8, height: 8, decoration: BoxDecoration(color: priorityColor, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
-                      Expanded(child: Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.singular'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
                       if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
                     ],
                   ),
@@ -1274,7 +1283,7 @@ class _ResetAlarmCard extends StatelessWidget {
                     children: [
                       Icon(Icons.check_circle, size: 14, color: AppColors.success),
                       const SizedBox(width: 6),
-                      Expanded(child: Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.singular'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
                       if (priority != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

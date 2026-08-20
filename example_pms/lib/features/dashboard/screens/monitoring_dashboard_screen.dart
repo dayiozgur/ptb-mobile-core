@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../shell/screens/main_shell_screen.dart';
-
 class MonitoringDashboardScreen extends StatefulWidget {
   const MonitoringDashboardScreen({super.key});
 
@@ -134,7 +132,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'PMS Dashboard',
+      title: sl<LocalizationService>().translate('dashboard.title'),
       showBackButton: false,
       actions: [
         AppIconButton(
@@ -155,13 +153,15 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Genel Bakis: Siteler, Controllerlar, Providerlar
-              AppSectionHeader(title: 'Genel Bakis'),
+              AppSectionHeader(
+                  title:
+                      sl<LocalizationService>().translate('dashboard.overview')),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
                     child: MetricCard(
-                      title: 'Siteler',
+                      title: sl<LocalizationService>().translate('dashboard.sites'),
                       value: _isLoading ? '-' : '$_siteCount',
                       icon: Icons.location_city,
                       color: AppColors.primary,
@@ -174,7 +174,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Controllerlar',
+                      title:
+                          sl<LocalizationService>().translate('dashboard.controllers'),
                       value: _isLoading ? '-' : '$_totalControllers',
                       icon: Icons.developer_board,
                       color: Colors.blue,
@@ -184,7 +185,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Providerlar',
+                      title:
+                          sl<LocalizationService>().translate('dashboard.providers'),
                       value: _isLoading ? '-' : '$_totalProviders',
                       icon: Icons.storage,
                       color: Colors.green,
@@ -198,7 +200,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Provider Durumu
               AppSectionHeader(
-                title: 'Provider Durumu',
+                title:
+                    sl<LocalizationService>().translate('dashboard.provider_status'),
                 action: _isLoading
                     ? const SizedBox(
                         width: 20,
@@ -212,7 +215,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                 children: [
                   Expanded(
                     child: MetricCard(
-                      title: 'Aktif',
+                      title: sl<LocalizationService>().translate('common.active'),
                       value: _isLoading ? '-' : '$_activeProviders',
                       icon: Icons.check_circle,
                       color: AppColors.success,
@@ -222,7 +225,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Pasif',
+                      title: sl<LocalizationService>().translate('common.inactive'),
                       value: _isLoading ? '-' : '$_inactiveProviders',
                       icon: Icons.pause_circle,
                       color: AppColors.warning,
@@ -232,7 +235,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: 'Hata',
+                      title: sl<LocalizationService>().translate('common.error'),
                       value: _isLoading ? '-' : '$_errorProviders',
                       icon: Icons.error,
                       color: AppColors.error,
@@ -245,11 +248,14 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Alarm Durumu
-              AppSectionHeader(title: 'Alarm Durumu'),
+              AppSectionHeader(
+                  title:
+                      sl<LocalizationService>().translate('dashboard.alarm_status')),
               const SizedBox(height: AppSpacing.sm),
               // Aktif alarm kart
               MetricCard(
-                title: 'Aktif Alarm',
+                title:
+                    sl<LocalizationService>().translate('dashboard.active_alarm'),
                 value: _isLoading ? '-' : '$_activeAlarmCount',
                 icon: Icons.warning_amber_rounded,
                 color: AppColors.error,
@@ -263,11 +269,12 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Son Alarmlar
               AppSectionHeader(
-                title: 'Son Alarmlar',
+                title:
+                    sl<LocalizationService>().translate('dashboard.recent_alarms'),
                 action: TextButton(
                   onPressed: () => context.push('/alarms/active'),
                   child: Text(
-                    'Tumunu Gor',
+                    sl<LocalizationService>().translate('dashboard.view_all'),
                     style: AppTypography.footnote.copyWith(
                       color: AppColors.primary,
                     ),
@@ -280,7 +287,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Hizli Erisim
-              AppSectionHeader(title: 'Hizli Erisim'),
+              AppSectionHeader(
+                  title:
+                      sl<LocalizationService>().translate('dashboard.quick_access')),
               const SizedBox(height: AppSpacing.sm),
               _buildQuickNavigation(),
 
@@ -375,7 +384,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
             ),
             TextButton(
               onPressed: () => context.go('/organizations'),
-              child: const Text('Degistir'),
+              child: Text(sl<LocalizationService>().translate('dashboard.change')),
             ),
           ],
         ),
@@ -413,7 +422,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Aktif alarm bulunmuyor',
+                  sl<LocalizationService>()
+                      .translate('dashboard.no_active_alarms'),
                   style: AppTypography.subheadline.copyWith(
                     color: AppColors.secondaryLabel(context),
                   ),
@@ -447,7 +457,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                title: alarm.name ?? alarm.code ?? 'Alarm',
+                title: alarm.name ??
+                    alarm.code ??
+                    sl<LocalizationService>().translate('common.alarm'),
                 subtitle: priority?.label ?? alarm.durationFormatted,
                 trailing: Text(
                   alarm.durationFormatted,
@@ -478,40 +490,51 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
           _QuickNavItem(
             icon: Icons.developer_board,
             color: Colors.blue,
-            title: 'Controllers',
-            subtitle: _isLoading ? '...' : '$_totalControllers controller',
+            title: sl<LocalizationService>().translate('dashboard.nav_controllers'),
+            subtitle: _isLoading
+                ? '...'
+                : sl<LocalizationService>().translate(
+                    'dashboard.controller_count',
+                    params: {'count': '$_totalControllers'}),
             onTap: () => context.push('/controllers'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.data_object,
             color: Colors.orange,
-            title: 'Degiskenler',
-            subtitle: 'Tag ve veri noktalarini goruntule',
+            title: sl<LocalizationService>().translate('dashboard.variables'),
+            subtitle:
+                sl<LocalizationService>().translate('dashboard.variables_subtitle'),
             onTap: () => context.push('/variables'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.warning_amber_rounded,
             color: Colors.red,
-            title: 'Alarm Yonetimi',
-            subtitle: 'Alarm dashboard ve gecmisi',
+            title: sl<LocalizationService>().translate('dashboard.alarm_management'),
+            subtitle: sl<LocalizationService>()
+                .translate('dashboard.alarm_management_subtitle'),
             onTap: () => context.push('/alarms'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.article_outlined,
             color: Colors.teal,
-            title: 'Log Goruntule',
-            subtitle: 'IoT log verileri ve analiz',
+            title: sl<LocalizationService>().translate('dashboard.log_view'),
+            subtitle:
+                sl<LocalizationService>().translate('dashboard.log_view_subtitle'),
             onTap: () => context.push('/logs'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.storage,
             color: Colors.green,
-            title: 'Veri Saglayicilar',
-            subtitle: _isLoading ? '...' : '$_totalProviders provider',
+            title: sl<LocalizationService>().translate('dashboard.data_providers'),
+            subtitle: _isLoading
+                ? '...'
+                : sl<LocalizationService>().translate(
+                    'dashboard.provider_count',
+                    params: {'count': '$_totalProviders'}),
             onTap: () => context.push('/providers'),
           ),
         ],

@@ -93,7 +93,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
       Logger.error('Failed to load controller detail', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Controller detaylari yuklenemedi';
+          _errorMessage = sl<LocalizationService>().translate('controller.load_failed');
           _isLoading = false;
         });
       }
@@ -103,7 +103,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: widget.controllerName ?? 'Controller Detay',
+      title: widget.controllerName ?? sl<LocalizationService>().translate('controller.detail_title'),
       onBack: () => context.go('/controllers'),
       actions: [
         AppIconButton(
@@ -122,9 +122,9 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
     if (_errorMessage != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _errorMessage!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadData,
       );
     }
@@ -132,9 +132,9 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
     final controller = _controller;
     if (controller == null) {
       return AppErrorView(
-        title: 'Bulunamadi',
-        message: 'Controller bulunamadi.',
-        actionLabel: 'Geri Don',
+        title: sl<LocalizationService>().translate('common.not_found_title'),
+        message: sl<LocalizationService>().translate('controller.not_found_message'),
+        actionLabel: sl<LocalizationService>().translate('common.go_back'),
         onAction: () => context.go('/controllers'),
       );
     }
@@ -158,7 +158,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   children: [
                     Expanded(
                       child: _DetailItem(
-                        label: 'Durum',
+                        label: sl<LocalizationService>().translate('common.status'),
                         child: AppBadge(
                           label: controller.status.label,
                           variant: _getStatusVariant(controller.status),
@@ -167,14 +167,16 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                     ),
                     Expanded(
                       child: _DetailItem(
-                        label: 'Tip',
+                        label: sl<LocalizationService>().translate('field.tip'),
                         value: controller.type.label,
                       ),
                     ),
                     Expanded(
                       child: _DetailItem(
-                        label: 'Aktif',
-                        value: controller.active ? 'Evet' : 'Hayir',
+                        label: sl<LocalizationService>().translate('common.active'),
+                        value: controller.active
+                            ? sl<LocalizationService>().translate('common.yes')
+                            : sl<LocalizationService>().translate('common.no_ascii'),
                       ),
                     ),
                   ],
@@ -185,28 +187,28 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Connection Info
-            AppSectionHeader(title: 'Baglanti Bilgileri'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('provider.connection_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: 'IP Adresi', value: controller.ipAddress ?? '-'),
+                    _InfoRow(label: sl<LocalizationService>().translate('provider.ip_address'), value: controller.ipAddress ?? '-'),
                     if (controller.code != null)
-                      _InfoRow(label: 'Kod', value: controller.code!),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.code'), value: controller.code!),
                     if (controller.serialNumber != null)
-                      _InfoRow(label: 'Seri No', value: controller.serialNumber!),
+                      _InfoRow(label: sl<LocalizationService>().translate('controller.serial_no'), value: controller.serialNumber!),
                     if (controller.model != null)
-                      _InfoRow(label: 'Model', value: controller.model!),
+                      _InfoRow(label: sl<LocalizationService>().translate('common.model'), value: controller.model!),
                     if (controller.lastConnectedAt != null)
                       _InfoRow(
-                        label: 'Son Baglanti',
+                        label: sl<LocalizationService>().translate('controller.last_connection'),
                         value: dateFormat.format(controller.lastConnectedAt!),
                       ),
                     if (controller.lastDataAt != null)
                       _InfoRow(
-                        label: 'Son Iletisim',
+                        label: sl<LocalizationService>().translate('controller.last_communication'),
                         value: dateFormat.format(controller.lastDataAt!),
                       ),
                   ],
@@ -216,7 +218,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
             if (controller.description != null && controller.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Aciklama'),
+              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -230,11 +232,11 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
             // Related Variables
             AppSectionHeader(
-              title: 'Degiskenler (${_variables.length})',
+              title: sl<LocalizationService>().translate('variable.list_count', params: {'count': _variables.length}),
               action: _variables.isNotEmpty
                   ? TextButton(
                       onPressed: () => context.push('/variables'),
-                      child: Text('Tumunu Gor', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                      child: Text(sl<LocalizationService>().translate('common.see_all_full'), style: TextStyle(color: AppColors.primary, fontSize: 13)),
                     )
                   : null,
             ),
@@ -245,7 +247,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   padding: AppSpacing.cardInsets,
                   child: Center(
                     child: Text(
-                      'Bu controller icin degisken bulunamadi',
+                      sl<LocalizationService>().translate('controller.no_variables'),
                       style: AppTypography.subheadline.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -293,7 +295,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Active Alarms
-            AppSectionHeader(title: 'Aktif Alarmlar (${_alarms.length})'),
+            AppSectionHeader(title: sl<LocalizationService>().translate('controller.active_alarms_count', params: {'count': _alarms.length})),
             const SizedBox(height: AppSpacing.sm),
             if (_alarms.isEmpty)
               AppCard(
@@ -305,7 +307,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                       Icon(Icons.check_circle, color: AppColors.success, size: 20),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
-                        'Aktif alarm yok',
+                        sl<LocalizationService>().translate('alarm.none_active_inline'),
                         style: AppTypography.subheadline.copyWith(
                           color: AppColors.success,
                         ),
@@ -337,7 +339,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(alarm.name ?? alarm.code ?? 'Alarm', style: AppTypography.headline),
+                                Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline),
                                 Text(alarm.durationFormatted, style: AppTypography.caption2.copyWith(color: AppColors.error)),
                               ],
                             ),
@@ -353,10 +355,10 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
             // Recent Logs
             AppSectionHeader(
-              title: 'Son Loglar (${_recentLogs.length})',
+              title: sl<LocalizationService>().translate('log.recent_count', params: {'count': _recentLogs.length}),
               action: TextButton(
                 onPressed: () => context.push('/logs'),
-                child: Text('Tumunu Gor', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                child: Text(sl<LocalizationService>().translate('common.see_all_full'), style: TextStyle(color: AppColors.primary, fontSize: 13)),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -366,7 +368,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   padding: AppSpacing.cardInsets,
                   child: Center(
                     child: Text(
-                      'Log kaydı bulunamadi',
+                      sl<LocalizationService>().translate('log.no_records'),
                       style: AppTypography.subheadline.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),

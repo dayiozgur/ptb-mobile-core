@@ -41,7 +41,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
       final organizationId = organizationService.currentOrganizationId;
       if (organizationId == null) {
         setState(() {
-          _error = 'Organizasyon secilmemis';
+          _error = sl<LocalizationService>().translate('org.not_selected');
           _isLoading = false;
         });
         return;
@@ -96,7 +96,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
     } catch (e) {
       Logger.error('Failed to load map markers', e);
       setState(() {
-        _error = 'Harita verileri yuklenemedi';
+        _error = sl<LocalizationService>().translate('map.load_failed');
         _isLoading = false;
       });
     }
@@ -125,7 +125,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Konum izni alinamadi')),
+            SnackBar(content: Text(sl<LocalizationService>().translate('map.location_permission_denied'))),
           );
         }
       }
@@ -158,7 +158,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Site Haritasi',
+      title: sl<LocalizationService>().translate('map.title'),
       showBackButton: false,
       actions: [
         AppIconButton(
@@ -185,18 +185,18 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
 
     if (_error != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _error!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadMarkers,
       );
     }
 
     if (_markers.isEmpty) {
-      return const AppEmptyState(
+      return AppEmptyState(
         icon: Icons.map_outlined,
-        title: 'Site Bulunamadi',
-        message: 'Konumu olan site bulunmamaktadir.',
+        title: sl<LocalizationService>().translate('site.not_found_title'),
+        message: sl<LocalizationService>().translate('map.no_located_sites'),
       );
     }
 
@@ -233,10 +233,10 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
           left: 12,
           child: MapLegend(
             items: [
-              MapLegendItem(label: 'Normal', color: AppColors.success),
-              MapLegendItem(label: 'Uyari', color: AppColors.warning),
-              MapLegendItem(label: 'Kritik', color: AppColors.error),
-              MapLegendItem(label: 'Cevrimdisi', color: AppColors.systemGray),
+              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_normal'), color: AppColors.success),
+              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_warning'), color: AppColors.warning),
+              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_critical'), color: AppColors.error),
+              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_offline'), color: AppColors.systemGray),
             ],
           ),
         ),
@@ -295,14 +295,20 @@ class _MapStatsBar extends StatelessWidget {
         children: [
           _StatChip(
             icon: Icons.location_city,
-            label: '$siteCount site',
+            label: sl<LocalizationService>().translate(
+              'map.site_count',
+              params: {'count': siteCount},
+            ),
             color: AppColors.primary,
           ),
           const SizedBox(width: AppSpacing.md),
           if (alarmCount > 0) ...[
             _StatChip(
               icon: Icons.warning_amber,
-              label: '$alarmCount alarm',
+              label: sl<LocalizationService>().translate(
+                'map.alarm_count',
+                params: {'count': alarmCount},
+              ),
               color: AppColors.error,
             ),
             const SizedBox(width: AppSpacing.md),
@@ -445,7 +451,10 @@ class _MarkerDetailCard extends StatelessWidget {
                       Icon(Icons.warning_amber, size: 12, color: AppColors.error),
                       const SizedBox(width: 4),
                       Text(
-                        '${marker.alarmCount} aktif alarm',
+                        sl<LocalizationService>().translate(
+                          'map.active_alarm_count',
+                          params: {'count': marker.alarmCount},
+                        ),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -466,7 +475,7 @@ class _MarkerDetailCard extends StatelessWidget {
               color: AppColors.primary,
             ),
             onPressed: onNavigate,
-            tooltip: 'Site detayi',
+            tooltip: sl<LocalizationService>().translate('map.site_detail_tooltip'),
           ),
           IconButton(
             icon: Icon(

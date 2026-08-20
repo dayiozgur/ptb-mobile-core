@@ -41,7 +41,8 @@ class _ControllersScreenState extends State<ControllersScreen> {
     } catch (e) {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
-        setState(() => _errorMessage = 'Controllerlar yuklenemedi: $e');
+        setState(() => _errorMessage =
+            '${sl<LocalizationService>().translate('controller.list_load_failed')}: $e');
       }
     }
 
@@ -84,7 +85,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Controllers',
+      title: sl<LocalizationService>().translate('controller.plural'),
       onBack: () => context.go('/dashboard'),
       actions: [
         AppIconButton(
@@ -103,9 +104,9 @@ class _ControllersScreenState extends State<ControllersScreen> {
 
     if (_errorMessage != null) {
       return AppErrorView(
-        title: 'Hata',
+        title: sl<LocalizationService>().translate('common.error'),
         message: _errorMessage!,
-        actionLabel: 'Tekrar Dene',
+        actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadControllers,
       );
     }
@@ -113,8 +114,8 @@ class _ControllersScreenState extends State<ControllersScreen> {
     if (_controllers.isEmpty) {
       return AppEmptyState(
         icon: Icons.developer_board,
-        title: 'Controller Bulunamadi',
-        message: 'Henuz tanimlanmis controller yok.',
+        title: sl<LocalizationService>().translate('controller.not_found'),
+        message: sl<LocalizationService>().translate('controller.empty_message'),
       );
     }
 
@@ -133,7 +134,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
               AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
             ),
             child: AppSearchField(
-              placeholder: 'Controller ara...',
+              placeholder: sl<LocalizationService>().translate('controller.search_placeholder'),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -149,14 +150,14 @@ class _ControllersScreenState extends State<ControllersScreen> {
                 Row(
                   children: [
                     AppChip(
-                      label: '${_controllers.length} Toplam',
+                      label: '${_controllers.length} ${sl<LocalizationService>().translate('common.total')}',
                       variant: AppChipVariant.tonal,
                       color: AppColors.primary,
                       small: true,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     AppChip(
-                      label: '$onlineCount Online',
+                      label: '$onlineCount ${sl<LocalizationService>().translate('common.online')}',
                       variant: AppChipVariant.tonal,
                       color: AppColors.success,
                       icon: Icons.circle,
@@ -164,7 +165,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     AppChip(
-                      label: '$offlineCount Offline',
+                      label: '$offlineCount ${sl<LocalizationService>().translate('common.offline')}',
                       variant: AppChipVariant.tonal,
                       color: AppColors.error,
                       small: true,
@@ -172,7 +173,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
                     if (errorCount > 0) ...[
                       const SizedBox(width: AppSpacing.xs),
                       AppChip(
-                        label: '$errorCount Hata',
+                        label: '$errorCount ${sl<LocalizationService>().translate('common.error')}',
                         variant: AppChipVariant.tonal,
                         color: Colors.orange,
                         small: true,
@@ -186,11 +187,11 @@ class _ControllersScreenState extends State<ControllersScreen> {
                   selectedValue: _statusFilter,
                   onSelected: (val) => setState(() => _statusFilter = val),
                   scrollable: true,
-                  items: const [
-                    AppChoiceChipItem(value: 'all', label: 'Tumu'),
-                    AppChoiceChipItem(value: 'online', label: 'Online'),
-                    AppChoiceChipItem(value: 'offline', label: 'Offline'),
-                    AppChoiceChipItem(value: 'error', label: 'Hata'),
+                  items: [
+                    AppChoiceChipItem(value: 'all', label: sl<LocalizationService>().translate('common.all_ascii')),
+                    AppChoiceChipItem(value: 'online', label: sl<LocalizationService>().translate('common.online')),
+                    AppChoiceChipItem(value: 'offline', label: sl<LocalizationService>().translate('common.offline')),
+                    AppChoiceChipItem(value: 'error', label: sl<LocalizationService>().translate('common.error')),
                   ],
                 ),
               ],
@@ -207,7 +208,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
                       children: [
                         Icon(Icons.search_off, size: 48, color: AppColors.tertiaryLabel(context)),
                         const SizedBox(height: AppSpacing.sm),
-                        Text('Sonuc Bulunamadi', style: AppTypography.headline),
+                        Text(sl<LocalizationService>().translate('common.no_results'), style: AppTypography.headline),
                       ],
                     ),
                   )
