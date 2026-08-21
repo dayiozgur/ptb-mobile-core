@@ -285,6 +285,8 @@ export 'src/core/admin/admin_bug_report_service.dart';
 export 'src/presentation/shell/admin/roles_screen.dart';
 export 'src/presentation/shell/admin/bug_reports_screen.dart';
 export 'src/presentation/shell/admin/menu_builder_screen.dart';
+export 'src/core/dashboard/personal_dashboard_service.dart';
+export 'src/presentation/shell/dashboard/personal_dashboard_screen.dart';
 export 'src/presentation/shell/language_picker.dart';
 export 'src/presentation/shell/entities/entity_list_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_screen.dart';

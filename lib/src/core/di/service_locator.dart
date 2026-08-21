@@ -20,6 +20,7 @@ import '../admin/admin_user_service.dart';
 import '../admin/admin_staff_service.dart';
 import '../admin/admin_rbac_service.dart';
 import '../admin/admin_bug_report_service.dart';
+import '../dashboard/personal_dashboard_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
 import '../localization/language_service.dart';
@@ -300,6 +301,16 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<AdminBugReportService>(
     () => AdminBugReportService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<PersonalDashboardService>(
+    () => PersonalDashboardService(
+      supabase: sl<SupabaseClient>(),
+      pageService: sl<PageService>(),
+      reportQueryService: sl<ReportQueryService>(),
+      platformContext: sl<PlatformContext>(),
+      tenantService: sl<TenantService>(),
+      cacheManager: sl<CacheManager>(),
+    ),
   );
 
   // ============================================

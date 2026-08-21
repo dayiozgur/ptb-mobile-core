@@ -7,6 +7,7 @@ import 'admin/bug_reports_screen.dart';
 import 'admin/roles_screen.dart';
 import 'admin/menu_builder_screen.dart';
 import 'admin/staff_roster_screen.dart';
+import 'dashboard/personal_dashboard_screen.dart';
 import 'admin/user_management_screen.dart';
 import 'settings/security_screen.dart';
 import 'workflow/approvals_inbox_screen.dart';
@@ -67,6 +68,12 @@ class ScreenResolver {
     // Generic workflow onay-inbox (leave-özel /workflow/approvals'tan ayrı).
     if (p == '/workflow/inbox' || p == '/approvals') {
       return const ApprovalsInboxScreen();
+    }
+    // Kişisel pano (widget ekle/çıkar/sırala). /my-space bottom-nav tab'i ayrı.
+    if (p == '/dashboard/personal' ||
+        p == '/my-dashboard' ||
+        p == '/panom') {
+      return const PersonalDashboardScreen();
     }
     final t = _parseEntityType(path);
     if (t != null && t.isNotEmpty) return EntityListScreen(typeCode: t);
