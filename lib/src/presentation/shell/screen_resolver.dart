@@ -66,6 +66,18 @@ class ScreenResolver {
       final code = _lastSegment(path);
       if (code != null) return PageViewerScreen(pageCode: code);
     }
+    // Admin/yönetim yolları — mobilde henüz özel ekran yok, ama menüde
+    // GÖRÜNMELİ (aksi halde _pruneToScreens admin grubunu tümden gizliyordu →
+    // admin kullanıcı admin menülerini göremiyordu). ComingSoon'a çöz: menüde
+    // yer alır + dokununca "yakında" gösterir (domain resolver ileride gerçek
+    // ekran verirse onu kullanır — bu yalnız nötr fallback).
+    if (p.startsWith('/admin')) {
+      return ComingSoonScreen(
+        titleKey: 'nav.admin',
+        path: path,
+        icon: 'bi-gear',
+      );
+    }
     return null;
   }
 

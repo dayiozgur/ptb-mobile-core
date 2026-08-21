@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
-/// MainShellScreen tab index'ini alt widget'lardan degistirmek icin
+/// MainShellScreen sekme index'ini alt widget'lardan değiştirmek için.
 class MainShellScope extends InheritedWidget {
   final void Function(int tabIndex) switchTab;
 
@@ -22,11 +21,14 @@ class MainShellScope extends InheritedWidget {
   bool updateShouldNotify(MainShellScope oldWidget) => false;
 }
 
-/// DB-menü sürücülü ana kabuk (Windows-OS modeli).
+/// Global app-shell (WindowsOS mobil modeli).
 ///
-/// Bottom-nav ve drawer, `platform_menu_items`'tan (aktif platform + coarse
-/// rol filtresi) türetilir. Hardcoded 5 tab KALDIRILDI. Menü boş/başarısız
-/// olursa çekirdek ekranlara (fallback) düşer — uygulama çalışır kalır.
+/// **Global chrome shell'e ait** (her sekme aynı üst-bar + sidebar'ı paylaşır):
+/// - Üst-bar: hamburger (dinamik sidebar) · arama · AI · bildirim(rozet) · platform.
+/// - Sidebar (drawer): **web gibi dinamik** DB-menü ağacı (`platform_menu_items`).
+/// - Alt-nav: **Ana Sayfa · My Space · Profil · Ayarlar** (config-liste — ileride
+///   DB/kullanıcı-seçimiyle dinamikleştirilebilir).
+/// - Sekmeler `embedded:true` → kendi AppBar'ını çizmez (global chrome tek).
 class MainShellScreen extends StatefulWidget {
   const MainShellScreen({super.key});
 
@@ -34,118 +36,107 @@ class MainShellScreen extends StatefulWidget {
   State<MainShellScreen> createState() => _MainShellScreenState();
 }
 
+/// Alt-nav hedefi (config — dinamikleştirmeye hazır).
+class _NavDest {
+  final IconData icon;
+  final String label;
+  final Widget Function() build;
+  const _NavDest(this.icon, this.label, this.build);
+}
+
 class _MainShellScreenState extends State<MainShellScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  /// Rol-filtreli üst seviye menü ağacı (drawer için).
-  List<MenuItem> _tree = [];
-
-  /// Yol'u olan (navigasyon edilebilir) düz öğe listesi (nav index kaynağı).
-  List<MenuItem> _navItems = [];
-
   int _currentIndex = 0;
-  bool _initialTabDone = false;
-  final Set<int> _visited = {0};
-  bool _loading = true;
-  String? _coarseRole;
 
-  int _activeAlarmCount = 0;
+  int _unreadCount = 0;
+  StreamSubscription<int>? _unreadSub;
+
+  List<MenuItem> _tree = [];
   StreamSubscription<String>? _platformSub;
+
+  // Sidebar LinkedIn-tarzı profil kartı için kimlik.
+  UserProfile? _profile;
+  String? _avatarUrl;
+  StreamSubscription<UserProfile?>? _profileSub;
+
+  // Alt-nav hedefleri (sabit çekirdek; ileride DB/kullanıcı-seçimi ile dinamik).
+  late final List<_NavDest> _dests = [
+    _NavDest(Icons.home_outlined, 'Ana Sayfa',
+        () => const HomeScreen(embedded: true)),
+    _NavDest(Icons.workspaces_outline, 'My Space',
+        () => const MySpaceScreen(embedded: true)),
+    _NavDest(Icons.person_outline, 'Profil',
+        () => const ProfileHubScreen(embedded: true)),
+    _NavDest(Icons.settings_outlined, 'Ayarlar',
+        () => const SettingsScreen(embedded: true)),
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Aktif platform değişince menüyü yeniden kur (platform switch).
+    _loadRole();
+    _initUnread();
+    _loadMenu();
+    _loadProfile();
+    _profileSub = sl<ProfileService>().profileStream.listen((p) {
+      if (p != null) _applyProfile(p);
+    });
     _platformSub = sl<PlatformContext>().platformStream.listen((_) {
       _loadMenu(forceRefresh: true);
     });
-    _loadMenu();
   }
 
-  @override
-  void dispose() {
-    _platformSub?.cancel();
-    super.dispose();
+  Future<void> _loadProfile() async {
+    final p = await sl<ProfileService>().getProfileBundle();
+    if (p != null) await _applyProfile(p);
   }
 
+  Future<void> _applyProfile(UserProfile p) async {
+    final avatar = await sl<FileStorageService>().getAvatarUrl(p.avatarUrl);
+    if (!mounted) return;
+    setState(() {
+      _profile = p;
+      _avatarUrl = avatar;
+    });
+  }
+
+  Future<void> _loadRole() async {
+    try {
+      final role = await sl<PermissionService>().getCoarseRole();
+      sessionCoarseRole.value = role;
+    } catch (_) {}
+  }
+
+  Future<void> _initUnread() async {
+    final uid = authService.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final count = await sl<NotificationService>().getUnreadCount(uid);
+      if (mounted) setState(() => _unreadCount = count);
+      await sl<NotificationService>().startListening(uid);
+    } catch (_) {}
+    _unreadSub = sl<NotificationService>().unreadCountStream.listen((c) {
+      if (mounted) setState(() => _unreadCount = c);
+    });
+  }
+
+  /// Dinamik sidebar için DB-menü ağacı (ekranı olan öğelere budanmış).
   Future<void> _loadMenu({bool forceRefresh = false}) async {
-    if (mounted) setState(() => _loading = true);
     try {
       final role = await sl<PermissionService>().getCoarseRole();
       final platformId = sl<PlatformContext>().activePlatformId;
-
-      List<MenuItem> tree;
-      try {
-        tree = await sl<MobileMenuService>().loadMenu(
-          platformId: platformId,
-          coarseRole: role,
-          forceRefresh: forceRefresh,
-        );
-      } catch (_) {
-        tree = const [];
-      }
-
-      if (tree.isEmpty) tree = _fallbackMenu();
-
-      // Mobil = salt-okuma monitoring viewer: mobil ekranı olmayan web-admin
-      // öğelerini (configuration/management/mail-system/… → "Yakında") menüden
-      // çıkar. Budama her şeyi eleyecek olursa ham ağacı koru (güvenlik).
+      final tree = await sl<MobileMenuService>().loadMenu(
+        platformId: platformId,
+        coarseRole: role,
+        forceRefresh: forceRefresh,
+      );
       final pruned = _pruneToScreens(tree);
-      if (pruned.isNotEmpty) tree = pruned;
-
-      final nav = _flattenNavigable(tree);
-
-      // Router guard'ı için rolü yayınla (senkron okunur).
-      _coarseRole = role;
-      sessionCoarseRole.value = role;
-
-      if (!mounted) return;
-      setState(() {
-        _tree = tree;
-        _navItems = nav;
-        // Varsayılan sekme: ilk menü öğesi (çoğunlukla my-space ComingSoon)
-        // yerine Gösterge Paneli. Yalnız İLK yüklemede uygulanır; platform
-        // değişiminde kullanıcının seçtiği sekme korunur.
-        if (!_initialTabDone) {
-          final dashIdx = nav.indexWhere((m) => m.path == '/dashboard');
-          if (dashIdx >= 0) _currentIndex = dashIdx;
-          _initialTabDone = true;
-        }
-        _currentIndex = _currentIndex.clamp(0, (nav.length - 1).clamp(0, 999));
-        _visited.add(_currentIndex);
-        _loading = false;
-      });
-
-      _loadAlarmCount();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _tree = _fallbackMenu();
-        _navItems = _flattenNavigable(_tree);
-        _loading = false;
-      });
+      if (mounted) setState(() => _tree = pruned.isNotEmpty ? pruned : tree);
+    } catch (_) {
+      // Menü yüklenemezse sidebar boş kalır (shell çalışmaya devam eder).
     }
   }
 
-  /// Ağacı, mobil ekranı OLAN öğelerin düz (depth-first) listesine indir.
-  /// Kendi yolu ekrana çözülmeyen (yalnız çocukları için tutulan) grup
-  /// başlıkları nav'a eklenmez — aksi halde ComingSoon placeholder'ı olurdu.
-  List<MenuItem> _flattenNavigable(List<MenuItem> tree) {
-    final out = <MenuItem>[];
-    void walk(List<MenuItem> items) {
-      for (final it in items) {
-        if (it.hasPath && ScreenResolver.hasScreen(it.path)) out.add(it);
-        if (it.hasChildren) walk(it.children);
-      }
-    }
-
-    walk(tree);
-    return out;
-  }
-
-  /// Ağacı yalnızca mobil ekranı OLAN öğelere buda: ekranı olmayan yapraklar
-  /// ve (kendi ekranı da olmayan) boş gruplar çıkarılır. Böylece mobil menü
-  /// web-admin "Yakında" placeholder'larıyla dolmaz.
   List<MenuItem> _pruneToScreens(List<MenuItem> items) {
     final out = <MenuItem>[];
     for (final it in items) {
@@ -158,155 +149,94 @@ class _MainShellScreenState extends State<MainShellScreen> {
     return out;
   }
 
-  /// DB menüsü yoksa çekirdek PMS ekranları (uygulama çalışır kalsın).
-  List<MenuItem> _fallbackMenu() {
-    return const [
-      MenuItem(
-          itemKey: 'dashboard',
-          title: 'nav.dashboard',
-          icon: 'bi-speedometer',
-          path: '/dashboard'),
-      MenuItem(
-          itemKey: 'alarm',
-          title: 'nav.alarm',
-          icon: 'bi-bell',
-          path: '/alarm'),
-      MenuItem(
-          itemKey: 'sites',
-          title: 'nav.sites',
-          icon: 'bi-building',
-          path: '/sites'),
-      MenuItem(
-          itemKey: 'global-map',
-          title: 'nav.global_map',
-          icon: 'bi-geo-alt',
-          path: '/globalmap'),
-      MenuItem(
-          itemKey: 'settings',
-          title: 'nav.settings',
-          icon: 'bi-gear',
-          path: '/settings'),
-    ];
+  @override
+  void dispose() {
+    _unreadSub?.cancel();
+    _platformSub?.cancel();
+    _profileSub?.cancel();
+    super.dispose();
   }
 
-  Future<void> _loadAlarmCount() async {
-    try {
-      final orgId = organizationService.currentOrganizationId;
-      if (orgId != null) {
-        alarmService.setOrganization(orgId);
-      }
-      final alarms = await alarmService.getActiveAlarms();
-      if (mounted) {
-        setState(() => _activeAlarmCount = alarms.length);
-      }
-    } catch (_) {}
+  void _select(int index) {
+    setState(() => _currentIndex = index.clamp(0, _dests.length - 1));
   }
-
-  void _selectNav(int index) {
-    if (index < 0 || index >= _navItems.length) return;
-    setState(() {
-      _currentIndex = index;
-      _visited.add(index);
-    });
-    if (_navItems[index].path == '/alarm' ||
-        _navItems[index].path == '/dashboard') {
-      _loadAlarmCount();
-    }
-  }
-
-  void _switchTab(int index) => _selectNav(index);
 
   String _t(String key) => sl<LocalizationService>().translate(key);
 
-  // ============================================
-  // BUILD
-  // ============================================
+  void _push(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (_navItems.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: Text(_t('nav.dashboard'))),
-        body: Center(child: Text(_t('common.no_data'))),
-      );
-    }
-
-    final activeItem = _navItems[_currentIndex];
-
+    final brightness = Theme.of(context).brightness;
     return MainShellScope(
-      switchTab: _switchTab,
+      switchTab: _select,
       child: Scaffold(
         key: _scaffoldKey,
+        backgroundColor: AppColors.background(brightness),
         appBar: AppBar(
-          title: Text(_t(activeItem.title)),
+          backgroundColor: AppColors.surface(brightness),
+          elevation: 0,
+          scrolledUnderElevation: 0.5,
+          centerTitle: false,
+          title: Text(
+            _dests[_currentIndex].label,
+            style: AppTypography.headline
+                .copyWith(color: AppColors.textPrimary(brightness)),
+          ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.apps),
-              tooltip: _t('platform.switch'),
-              onPressed: _showPlatformSwitcher,
+              icon: const Icon(Icons.search),
+              tooltip: 'Ara',
+              onPressed: () => _push(const GlobalSearchScreen()),
             ),
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: 'AI Asistan',
+              onPressed: () => _push(const AiAssistantScreen()),
+            ),
+            IconButton(
+              icon: Badge.count(
+                count: _unreadCount,
+                isLabelVisible: _unreadCount > 0,
+                child: const Icon(Icons.notifications_outlined),
+              ),
+              tooltip: 'Bildirimler',
+              onPressed: () => _push(const NotificationsScreen()),
+            ),
+            IconButton(
+              icon: const Icon(Icons.apps),
+              tooltip: 'Platform Değiştir',
+              onPressed: () => showPlatformSwitcher(context),
+            ),
+            const SizedBox(width: 4),
           ],
         ),
-        drawer: _buildDrawer(),
+        drawer: _buildDrawer(brightness),
         body: IndexedStack(
           index: _currentIndex,
-          children: List.generate(_navItems.length, (i) {
-            if (!_visited.contains(i)) return const SizedBox.shrink();
-            return ScreenResolver.resolve(_navItems[i]);
-          }),
+          children: [for (final d in _dests) d.build()],
         ),
-        bottomNavigationBar: _buildBottomNav(),
+        bottomNavigationBar: AppBottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _select,
+          items: [
+            for (var i = 0; i < _dests.length; i++)
+              AppBottomNavItem(icon: _dests[i].icon, label: _dests[i].label),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBottomNav() {
-    final total = _navItems.length;
-    final hasMore = total > 5;
-    final bottomCount = hasMore ? 4 : total;
+  // ============================================
+  // DİNAMİK SIDEBAR (web-benzeri DB-menü ağacı)
+  // ============================================
 
-    final items = <AppBottomNavItem>[];
-    for (var i = 0; i < bottomCount; i++) {
-      final item = _navItems[i];
-      final isAlarm = item.path == '/alarm' || item.path == '/alarms';
-      items.add(AppBottomNavItem(
-        icon: BootstrapIconMap.resolve(item.icon),
-        label: _t(item.title),
-        badgeCount:
-            isAlarm && _activeAlarmCount > 0 ? _activeAlarmCount : null,
-        showBadge: isAlarm && _activeAlarmCount > 0,
-      ));
-    }
-    if (hasMore) {
-      items.add(AppBottomNavItem(
-        icon: Icons.more_horiz,
-        label: _t('common.more'),
-      ));
-    }
-
-    // "More" seçiliyken bottom bar'da geçerli index'i sınırla.
-    final navIndex = _currentIndex < bottomCount ? _currentIndex : 0;
-
-    return AppBottomNavigationBar(
-      currentIndex: navIndex,
-      onTap: (index) {
-        if (hasMore && index == bottomCount) {
-          _scaffoldKey.currentState?.openDrawer();
-          return;
-        }
-        _selectNav(index);
-      },
-      items: items,
-    );
-  }
-
-  Widget _buildDrawer() {
+  Widget _buildDrawer(Brightness brightness) {
     final tiles = <Widget>[
-      _buildDrawerHeader(),
+      _buildProfileHeader(brightness),
     ];
 
     for (final item in _tree) {
@@ -326,109 +256,117 @@ class _MainShellScreenState extends State<MainShellScreen> {
       } else if (item.hasPath && ScreenResolver.hasScreen(item.path)) {
         tiles.add(_drawerLeaf(item));
       }
-      // yol'u ve çocuğu olmayan (ör. bölüm başlığı) öğeler atlanır.
     }
 
     return Drawer(child: SafeArea(child: ListView(children: tiles)));
   }
 
   Widget _drawerLeaf(MenuItem item) {
-    final index = _navItems.indexWhere((n) => n.itemKey == item.itemKey);
-    final selected = index == _currentIndex;
     return ListTile(
       leading: Icon(BootstrapIconMap.resolve(item.icon)),
       title: Text(_t(item.title)),
-      selected: selected,
       enabled: !item.disabled,
       onTap: item.disabled
           ? null
           : () {
-              Navigator.of(context).pop();
-              if (index >= 0) _selectNav(index);
+              Navigator.of(context).pop(); // drawer'ı kapat
+              _push(ScreenResolver.resolve(item));
             },
     );
   }
 
-  Widget _buildDrawerHeader() {
-    final code = sl<PlatformContext>().activePlatformCode ?? 'PMS';
-    return DrawerHeader(
-      decoration: BoxDecoration(color: AppColors.primary),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Icon(Icons.grid_view, color: Colors.white, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            code,
-            style: AppTypography.title2.copyWith(color: Colors.white),
+  /// Sidebar başlığı = LinkedIn-tarzı profil kartı (avatar + ad + headline +
+  /// "Profili görüntüle"). Dokununca Profil sekmesine geçer.
+  Widget _buildProfileHeader(Brightness brightness) {
+    final name = _profile?.displayName ?? '';
+    return Material(
+      color: AppColors.primary,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pop();
+          _select(2); // Profil sekmesi
+        },
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 12, 16),
+            child: Row(
+              children: [
+                AppAvatar(
+                  imageUrl: _avatarUrl,
+                  name: name.isEmpty ? 'U' : name,
+                  size: AppAvatarSize.large,
+                  showBorder: true,
+                  borderColor: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name.isEmpty ? '...' : name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.headline.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _drawerHeadline(_profile),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.footnote
+                            .copyWith(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Profili görüntüle',
+                              style: AppTypography.caption1
+                                  .copyWith(color: Colors.white)),
+                          const Icon(Icons.chevron_right,
+                              size: 16, color: Colors.white),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          Text(
-            _coarseRole ?? '',
-            style: AppTypography.footnote.copyWith(color: Colors.white70),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // ============================================
-  // PLATFORM SWITCHER
-  // ============================================
+  String _drawerHeadline(UserProfile? p) {
+    if (p == null) return '';
+    final bio = (p.bio ?? '').trim();
+    if (bio.isNotEmpty) return bio;
+    final role = _roleLabelShort(p.coarseRole);
+    final tenant = (p.tenantName ?? '').trim();
+    if (role.isNotEmpty && tenant.isNotEmpty) return '$role · $tenant';
+    if (role.isNotEmpty) return role;
+    return p.email;
+  }
 
-  Future<void> _showPlatformSwitcher() async {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) {
-        return SafeArea(
-          child: FutureBuilder<List<PlatformCatalogEntry>>(
-            future: sl<PlatformCatalogService>().getOwnedPlatforms(),
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              final platforms = snap.data ?? const [];
-              if (platforms.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(_t('platform.none_owned')),
-                );
-              }
-              final activeId = sl<PlatformContext>().activePlatformId;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(_t('platform.switch'),
-                        style: AppTypography.headline),
-                  ),
-                  ...platforms.map((p) => ListTile(
-                        leading: const Icon(Icons.apps),
-                        title: Text(p.name),
-                        subtitle: p.code.isNotEmpty ? Text(p.code) : null,
-                        trailing: p.platformId == activeId
-                            ? const Icon(Icons.check_circle,
-                                color: Colors.green)
-                            : null,
-                        onTap: () {
-                          Navigator.of(ctx).pop();
-                          if (p.platformId != activeId) {
-                            sl<PlatformContext>()
-                                .setActivePlatform(p.platformId, code: p.code);
-                          }
-                        },
-                      )),
-                  const SizedBox(height: 8),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
+  String _roleLabelShort(String? r) {
+    switch (r) {
+      case 'ROLE_ADMIN':
+        return 'Yönetici';
+      case 'ROLE_MANAGER':
+        return 'Müdür';
+      case 'ROLE_CUSTOMER':
+        return 'Müşteri';
+      case 'ROLE_USER':
+        return 'Kullanıcı';
+      default:
+        return '';
+    }
   }
 }
