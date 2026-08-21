@@ -140,6 +140,10 @@ class GeofenceAttendanceService {
     }
     await loadGeofences();
     _map.clearGeofences();
+    // ÖNEMLİ: dinleyiciyi addGeofence'ten ÖNCE bağla — mevcut konum zaten
+    // set'liyse (önceki takip döngüsünden) addGeofence anında enter tetikler;
+    // dinleyici geç bağlanırsa bu ilk punch KAÇAR (re-toggle'da sessiz no-punch).
+    _sub = _map.geofenceEventStream.listen(_onEvent);
     for (final g in _geofences) {
       _map.addGeofence(GeofenceRegion(
         id: g.id,
@@ -150,7 +154,6 @@ class GeofenceAttendanceService {
         metadata: {'geofence_id': g.id, 'site_id': g.siteId},
       ));
     }
-    _sub = _map.geofenceEventStream.listen(_onEvent);
     await _map.startLocationTracking(distanceFilter: 15);
     _running = true;
     Logger.info('geofence-pdks: başladı (${_geofences.length} işyeri)');

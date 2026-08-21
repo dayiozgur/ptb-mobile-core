@@ -51,10 +51,20 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
   void _onPunch(GeoPunchResult r) {
     if (!mounted) return;
     setState(() {});
-    if (r.isNoop) return;
-    final msg = r.ok
-        ? (r.event.contains('in') ? 'Giriş yapıldı ✓' : 'Çıkış yapıldı ✓')
-        : _errMsg(r.error);
+    final String msg;
+    if (r.isNoop) {
+      // Sessiz geçme: kullanıcı neden punch olmadığını anlasın.
+      final reason = r.raw['reason']?.toString();
+      msg = reason == 'already_in'
+          ? 'Zaten açık bir girişiniz var (giriş atlandı).'
+          : reason == 'no_open_punch'
+              ? 'Açık giriş bulunamadı (çıkış atlandı).'
+              : 'Değişiklik yok.';
+    } else {
+      msg = r.ok
+          ? (r.event.contains('in') ? 'Giriş yapıldı ✓' : 'Çıkış yapıldı ✓')
+          : _errMsg(r.error);
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
