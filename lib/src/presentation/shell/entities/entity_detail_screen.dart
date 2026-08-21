@@ -183,6 +183,16 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         children: [
           _buildHeader(entity),
           const SizedBox(height: AppSpacing.md),
+          // FixFlow konum-tabanlı süre takibi — yalnız worklog-etkin tiplerde
+          // ve FixFlow geofence tanımlıysa görünür (aksi halde kendini gizler).
+          if (_config?.enableWorklogs == true) ...[
+            WorkGeoSessionCard(
+              workRequestId: widget.id,
+              siteId: entity.fieldValues['site_id']?.toString() ??
+                  entity.fieldValues['location_id']?.toString(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           DynamicFormWidget(
             template: template,
             initialValues: entity.fieldValues,

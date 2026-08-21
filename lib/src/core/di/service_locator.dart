@@ -66,6 +66,7 @@ import '../form/form_template_service.dart';
 import '../form/lookup_service.dart';
 import '../weather/weather_service.dart';
 import '../geofence/geofence_attendance_service.dart';
+import '../geofence/work_geo_session_service.dart';
 import '../account/account_service.dart';
 import '../hr/hr_ess_service.dart';
 import '../hr/hr_profile_service.dart';
@@ -640,6 +641,9 @@ Future<void> setupServiceLocator({
   sl.registerLazySingleton<WeatherService>(() => WeatherService());
   sl.registerLazySingleton<GeofenceAttendanceService>(
     () => GeofenceAttendanceService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<WorkGeoSessionService>(
+    () => WorkGeoSessionService(supabase: sl<SupabaseClient>()),
   );
   sl.registerLazySingleton<AccountService>(
     () => AccountService(supabase: sl<SupabaseClient>()),

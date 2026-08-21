@@ -292,7 +292,9 @@ export 'src/presentation/dyn_widgets/dashboard_widget_view.dart';
 export 'src/core/weather/weather_service.dart';
 // Geofence tabanlı otomatik PDKS
 export 'src/core/geofence/geofence_attendance_service.dart';
+export 'src/core/geofence/work_geo_session_service.dart';
 export 'src/presentation/shell/geofence/geofence_clock_card.dart';
+export 'src/presentation/shell/geofence/work_geo_session_card.dart';
 // Hesabım (Account) hub
 export 'src/core/account/account_service.dart';
 export 'src/core/account/models/credit_balance.dart';
