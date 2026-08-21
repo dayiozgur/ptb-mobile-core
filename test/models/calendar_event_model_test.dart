@@ -142,8 +142,12 @@ void main() {
       );
       expect(pastEvent.isPast, true);
 
+      // Override BOTH start and end with relative future dates. isPast compares
+      // `endTime ?? startTime`; copyWith keeps the fixture's original endTime
+      // when not overridden, so the end time must also be pushed to the future.
       final futureEvent = event.copyWith(
         startTime: DateTime.now().add(const Duration(days: 1)),
+        endTime: DateTime.now().add(const Duration(days: 1, hours: 2)),
       );
       expect(futureEvent.isPast, false);
     });
@@ -170,14 +174,32 @@ void main() {
     test('isOnlineMeeting returns correct value', () {
       expect(event.isOnlineMeeting, true);
 
-      final noUrlEvent = event.copyWith(meetingUrl: null);
+      // copyWith uses `meetingUrl ?? this.meetingUrl`, so it cannot clear the
+      // field. Build a fresh event that genuinely has no meetingUrl.
+      final noUrlEvent = CalendarEvent(
+        id: 'event-no-url',
+        title: 'No URL',
+        startTime: startTime,
+        tenantId: 'tenant-123',
+        createdById: 'user-123',
+        createdAt: DateTime.now(),
+      );
       expect(noUrlEvent.isOnlineMeeting, false);
     });
 
     test('hasLocation returns correct value', () {
       expect(event.hasLocation, true);
 
-      final noLocationEvent = event.copyWith(location: null);
+      // copyWith uses `location ?? this.location`, so it cannot clear the field.
+      // Build a fresh event that genuinely has no location.
+      final noLocationEvent = CalendarEvent(
+        id: 'event-no-loc',
+        title: 'No Location',
+        startTime: startTime,
+        tenantId: 'tenant-123',
+        createdById: 'user-123',
+        createdAt: DateTime.now(),
+      );
       expect(noLocationEvent.hasLocation, false);
     });
 

@@ -78,7 +78,17 @@ void main() {
     test('events returns unmodifiable list', () {
       final events = calendarService.events;
       expect(events, isA<List<CalendarEvent>>());
-      expect(() => (events as List).add(null), throwsUnsupportedError);
+      // Add a real CalendarEvent so the mutation reaches the unmodifiable guard
+      // (adding null would throw a TypeError first, masking the real assertion).
+      final dummy = CalendarEvent(
+        id: 'dummy-event',
+        title: 'Dummy',
+        startTime: DateTime.now(),
+        tenantId: 'tenant-123',
+        createdById: 'user-123',
+        createdAt: DateTime.now(),
+      );
+      expect(() => events.add(dummy), throwsUnsupportedError);
     });
   });
 

@@ -215,7 +215,16 @@ void main() {
       final shortRequest = request.copyWith(estimatedDuration: 45);
       expect(shortRequest.estimatedDurationFormatted, '45dk');
 
-      final noDurationRequest = request.copyWith(estimatedDuration: null);
+      // copyWith uses `estimatedDuration ?? this.estimatedDuration`, so it
+      // cannot clear the field. Build a fresh request with no estimatedDuration.
+      final noDurationRequest = WorkRequest(
+        id: 'request-no-dur',
+        title: 'No Duration',
+        requestedById: 'user-123',
+        requestedAt: requestedAt,
+        tenantId: 'tenant-123',
+        createdAt: requestedAt,
+      );
       expect(noDurationRequest.estimatedDurationFormatted, '-');
     });
 
