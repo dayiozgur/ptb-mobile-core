@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  /// Shell sekmesi olarak gömülüyse kendi AppBar'ını çizmez (global chrome).
+  final bool embedded;
+  const SettingsScreen({super.key, this.embedded = false});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -13,18 +15,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _notificationsEnabled = true;
   late AppThemeMode _themeMode;
+  UserProfile? _profile;
+  String? _avatarUrl;
 
   @override
   void initState() {
     super.initState();
     _themeMode = themeService.themeMode;
     _loadSettings();
+    _loadProfile();
   }
 
   Future<void> _loadSettings() async {
     final biometric = await authService.isBiometricLoginEnabled();
     setState(() {
       _biometricEnabled = biometric;
+    });
+  }
+
+  /// Profil kimliğini Profil Hub ile aynı kaynaktan yükler: bundle + signed
+  /// avatar URL (ham `avatar_url` public-URL'de 403 döner).
+  Future<void> _loadProfile() async {
+    final profile = await sl<ProfileService>().getProfileBundle();
+    final avatar =
+        await sl<FileStorageService>().getAvatarUrl(profile?.avatarUrl);
+    if (!mounted) return;
+    setState(() {
+      _profile = profile;
+      _avatarUrl = avatar;
     });
   }
 
@@ -71,8 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return AppScaffold(
       title: sl<LocalizationService>().translate('settings.title'),
-      showBackButton: true,
-      onBack: () => context.go('/main'),
+      showAppBar: !widget.embedded,
+      showBackButton: !widget.embedded,
+      onBack: widget.embedded ? null : () => context.go('/main'),
       child: SingleChildScrollView(
         padding: AppSpacing.screenPadding,
         child: Column(
@@ -83,36 +102,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: sl<LocalizationService>().translate('profile.title')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
-              child: Padding(
-                padding: AppSpacing.cardInsets,
-                child: Row(
-                  children: [
-                    AppAvatar(
-                      imageUrl: user?.userMetadata?['avatar_url'] as String?,
-                      name: user?.email ?? 'User',
-                      size: AppAvatarSize.large,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.userMetadata?['full_name'] as String? ??
-                                sl<LocalizationService>()
-                                    .translate('settings.user_fallback'),
-                            style: AppTypography.headline,
-                          ),
-                          Text(
-                            user?.email ?? '',
-                            style: AppTypography.subheadline.copyWith(
-                              color: AppColors.secondaryLabel(context),
-                            ),
-                          ),
-                        ],
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ProfileHubScreen(),
+                  ),
+                ),
+                child: Padding(
+                  padding: AppSpacing.cardInsets,
+                  child: Row(
+                    children: [
+                      AppAvatar(
+                        imageUrl: _avatarUrl,
+                        name: _profile?.displayName ?? user?.email ?? 'User',
+                        size: AppAvatarSize.large,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _profile?.displayName ??
+                                  user?.email ??
+                                  sl<LocalizationService>()
+                                      .translate('settings.user_fallback'),
+                              style: AppTypography.headline,
+                            ),
+                            Text(
+                              _profile?.email ?? user?.email ?? '',
+                              style: AppTypography.subheadline.copyWith(
+                                color: AppColors.secondaryLabel(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Icon(Icons.chevron_right,
+                          color: AppColors.secondaryLabel(context)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -136,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: tenant?.name ??
                         sl<LocalizationService>()
                             .translate('settings.organization'),
-                    subtitle: tenant?.plan.name.toUpperCase() ?? 'FREE',
+                    subtitle: tenant?.plan?.name.toUpperCase() ?? 'FREE',
                   ),
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
@@ -148,8 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Icon(Icons.swap_horiz, color: AppColors.primary),
                     ),
-                    title: sl<LocalizationService>()
-                        .translate('settings.switch_organization'),
+                    title: 'Organizasyon Değiştir',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _handleSwitchTenant,
                   ),
@@ -160,9 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Security section
-            AppSectionHeader(
-                title: sl<LocalizationService>()
-                    .translate('settings.security_section')),
+            const AppSectionHeader(title: 'Güvenlik'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -176,8 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Icon(Icons.lock_outline, color: AppColors.primary),
                     ),
-                    title: sl<LocalizationService>()
-                        .translate('settings.change_password'),
+                    title: 'Şifre Değiştir',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showChangePasswordDialog(),
                   ),
