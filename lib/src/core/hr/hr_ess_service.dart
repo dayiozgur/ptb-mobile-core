@@ -175,10 +175,9 @@ class HrEssService {
   /// Yöneticinin bekleyen izin onay kuyruğu — `fn_hr_pending_leave_approvals()`
   /// (jsonb döner).
   ///
-  /// NOT: Bu RPC yalnızca görüntüleme alanları döner (start_date, end_date,
-  /// day_count, staff, leave_type) — **karar için bir id İÇERMEZ**. Onay/ret
-  /// işlemi için ayrıca [decideLeave] kullanılır; approvalStepId başka bir
-  /// kaynaktan (form_approval_steps) sağlanmalıdır.
+  /// Dönen her satır artık `id` (=`leave_requests.id`) taşır; bu id [decideLeave]
+  /// için doğrudan karar anahtarıdır. Diğer alanlar salt-görüntüleme: start_date,
+  /// end_date, day_count, staff, leave_type.
   Future<List<Map<String, dynamic>>> pendingLeaveApprovals() async {
     try {
       final response = await _supabase
@@ -198,39 +197,39 @@ class HrEssService {
     }
   }
 
-  /// İzin/onay adımına karar ver — `approval-decision` Edge Function.
+  /// Bir izin talebine onay/ret kararı ver.
   ///
-  /// EF gövdesi canlı EF kaynağından doğrulandı:
-  ///   `{ approvalStepId, decision: 'approved' | 'rejected', note? }`
-  /// (reddederken `note` zorunludur; EF `ERR_VALIDATION` döner). Zarf:
-  /// başarı → `{ success: true, data }`, hata → non-2xx +
-  /// `{ error: { code, message } }`.
+  /// Web `LeaveService.decide` ile **birebir** aynı sözleşme: `leave_requests`
+  /// tablosuna doğrudan UPDATE (`status='approved'|'rejected'`, `updated_at`,
+  /// reddederken `decision_note`). Onay yetkisi (yalnızca atanmış onaylayan /
+  /// yöneticinin karar verebilmesi), `approver_staff_id` + `decided_at` dolumu ve
+  /// bakiye/çakışma kontrolleri DB tetikleyicilerince (`fn_leave_on_decision`,
+  /// `fn_leave_guard_update`) yetkeyle yürütülür; bu yüzden EF/RPC gerekmez —
+  /// web ile aynı yolu izleriz. (Not: `approval-decision` EF `form_approval_steps`
+  /// üzerinde çalışır ve izin taleplerinde böyle bir adım OLUŞMAZ; leave o kapıyı
+  /// kullanmaz.)
+  ///
+  /// [leaveRequestId] `leave_requests.id` — `pendingLeaveApprovals()` satırındaki
+  /// `id`. Reddederken [note] zorunludur (web: min 3 karakter). Hata durumunda
+  /// tetikleyicinin RAISE mesajı (yetki/bakiye) yukarı fırlatılır.
   Future<void> decideLeave({
-    required String approvalId,
+    required String leaveRequestId,
     required bool approve,
     String? note,
   }) async {
     try {
-      final response = await _supabase.functions.invoke(
-        'approval-decision',
-        body: {
-          'approvalStepId': approvalId,
-          'decision': approve ? 'approved' : 'rejected',
-          'note': note,
-        },
-      );
+      final patch = <String, dynamic>{
+        'status': approve ? 'approved' : 'rejected',
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      };
+      // Karar/ret notunu AYRI kolona yaz — talep sahibinin kendi notunu ASLA
+      // ezmez (web ile aynı davranış).
+      if (note != null) patch['decision_note'] = note;
 
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        if (data['success'] == false || data['error'] != null) {
-          final error = data['error'];
-          final message =
-              error is Map ? error['message'] : (error ?? 'unknown error');
-          throw Exception('approval-decision failed: $message');
-        }
-        return;
-      }
-      // Beklenmeyen ama non-throwing gövde — başarı say (2xx döndü).
+      await _supabase
+          .from('leave_requests')
+          .update(patch)
+          .eq('id', leaveRequestId);
     } catch (e) {
       Logger.error('Error deciding leave approval: $e');
       rethrow;

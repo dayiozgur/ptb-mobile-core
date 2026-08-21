@@ -6,10 +6,10 @@ import '../ess_common.dart';
 
 /// Yönetici için bekleyen izin onay kuyruğu (salt-görüntüleme öncelikli).
 ///
-/// `pendingLeaveApprovals()` yalnızca görüntüleme alanları döner. Bir kararı
-/// güvenilir biçimde işlemek için kullanılabilir bir adım-id gerekir; map'te
-/// böyle bir alan (`approval_step_id` / `step_id` / `id`) VARSA onay/ret
-/// düğmesi gösterilir, yoksa "Onay işlemi yakında" bilgisi verilir — çökmez.
+/// `pendingLeaveApprovals()` her satırda `id` (=`leave_requests.id`) döner; bu
+/// id ile onay/ret kararı doğrudan `HrEssService.decideLeave` üzerinden verilir
+/// (web `LeaveService.decide` ile aynı yol). Id bulunamazsa (beklenmedik) karar
+/// düğmeleri gizlenir ve "Onay işlemi yakında" bilgisi verilir — çökmez.
 class LeaveApprovalsScreen extends StatefulWidget {
   const LeaveApprovalsScreen({super.key});
 
@@ -53,18 +53,16 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
     }
   }
 
-  /// Map içinden kullanılabilir onay adım-id'sini çıkar (yoksa null).
-  String? _approvalId(Map<String, dynamic> row) {
-    for (final key in ['approval_step_id', 'step_id', 'approvalStepId', 'id']) {
-      final v = row[key];
-      if (v is String && v.isNotEmpty) return v;
-    }
+  /// Satırdaki karar anahtarı (`leave_requests.id`) — yoksa null.
+  String? _leaveRequestId(Map<String, dynamic> row) {
+    final v = row['id'];
+    if (v is String && v.isNotEmpty) return v;
     return null;
   }
 
   Future<void> _decide(int index, Map<String, dynamic> row, bool approve) async {
-    final approvalId = _approvalId(row);
-    if (approvalId == null) return;
+    final leaveRequestId = _leaveRequestId(row);
+    if (leaveRequestId == null) return;
 
     String? note;
     if (!approve) {
@@ -75,7 +73,7 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
     setState(() => _busy.add(index));
     try {
       await hrEssService.decideLeave(
-        approvalId: approvalId,
+        leaveRequestId: leaveRequestId,
         approve: approve,
         note: note,
       );
@@ -127,7 +125,7 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
           TextButton(
             onPressed: () {
               final t = controller.text.trim();
-              if (t.isEmpty) return;
+              if (t.length < 3) return; // web ile aynı: min 3 karakter
               Navigator.of(ctx).pop(t);
             },
             child: Text(essT('common.reject', 'Reddet')),
@@ -185,7 +183,7 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) => _ApprovalCard(
         row: _rows[i],
-        actionable: _approvalId(_rows[i]) != null,
+        actionable: _leaveRequestId(_rows[i]) != null,
         busy: _busy.contains(i),
         onApprove: () => _decide(i, _rows[i], true),
         onReject: () => _decide(i, _rows[i], false),
