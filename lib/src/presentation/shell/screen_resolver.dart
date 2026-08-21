@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/menu/menu_item.dart';
 import '../page_viewer/page_viewer_screen.dart';
 import '../report_viewer/report_viewer_screen.dart';
+import 'admin/staff_roster_screen.dart';
+import 'admin/user_management_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
 import 'organization/organization_selector_screen.dart';
@@ -71,6 +73,17 @@ class ScreenResolver {
     // admin kullanıcı admin menülerini göremiyordu). ComingSoon'a çöz: menüde
     // yer alır + dokununca "yakında" gösterir (domain resolver ileride gerçek
     // ekran verirse onu kullanır — bu yalnız nötr fallback).
+    // Gerçek admin ekranları (spesifik yollar generic /admin fallback'inden ÖNCE).
+    if (p.startsWith('/admin/user-management') ||
+        p.startsWith('/admin/users')) {
+      return const UserManagementScreen();
+    }
+    if (p.startsWith('/admin/staff-roster') ||
+        p.startsWith('/admin/org-chart') ||
+        p.startsWith('/admin/departments')) {
+      return const StaffRosterScreen();
+    }
+    // Diğer admin yolları — henüz özel ekran yok → ComingSoon (menüde görünür).
     if (p.startsWith('/admin')) {
       return ComingSoonScreen(
         titleKey: 'nav.admin',

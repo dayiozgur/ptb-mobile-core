@@ -8,10 +8,12 @@ import '../../../core/di/core_initializer.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/tenant/tenant_service.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/user/user_profile.dart';
 import '../../widgets/cards/app_card.dart';
 import '../../widgets/display/app_avatar.dart';
+import '../organization/organization_selector_screen.dart';
 import '../settings/settings_screen.dart';
 import 'profile_edit_screen.dart';
 
@@ -217,6 +219,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                       _buildAccountCard(brightness),
                       if ((_profile!.bio ?? '').trim().isNotEmpty)
                         _buildAboutCard(brightness),
+                      _buildWorkspaceCard(brightness),
                       _buildActionsCard(brightness),
                     ],
                   ),
@@ -422,6 +425,58 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
         child: Text(_profile!.bio!.trim(), style: AppTypography.body),
       ),
     ]);
+  }
+
+  /// Çalışma alanı: organizasyon + tenant/kiracı değiştirme (web'de topbar'da
+  /// olan workspace-switcher'ın mobil karşılığı).
+  Widget _buildWorkspaceCard(Brightness brightness) {
+    final p = _profile!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text('Çalışma Alanı',
+                style: AppTypography.footnote.copyWith(
+                  color: AppColors.secondaryLabel(context),
+                  fontWeight: FontWeight.w600,
+                )),
+          ),
+          AppCard(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.business_outlined),
+                  title: const Text('Organizasyon Değiştir'),
+                  subtitle: (p.tenantName ?? '').isNotEmpty
+                      ? Text(p.tenantName!,
+                          maxLines: 1, overflow: TextOverflow.ellipsis)
+                      : null,
+                  trailing: const Icon(Icons.swap_horiz, size: 20),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) => const OrganizationSelectorScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.apartment_outlined),
+                  title: const Text('Kiracı (Tenant) Değiştir'),
+                  trailing: const Icon(Icons.swap_horiz, size: 20),
+                  onTap: () async {
+                    await sl<TenantService>().clearTenant();
+                    if (mounted) context.go('/tenant-select');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildActionsCard(Brightness brightness) {

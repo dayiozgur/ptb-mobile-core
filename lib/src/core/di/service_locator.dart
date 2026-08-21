@@ -16,6 +16,8 @@ import '../reporting/page_service.dart';
 import '../reporting/report_service.dart';
 import '../search/search_service.dart';
 import '../ai/ai_assistant_service.dart';
+import '../admin/admin_user_service.dart';
+import '../admin/admin_staff_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
 import '../localization/language_service.dart';
@@ -282,6 +284,14 @@ Future<void> setupServiceLocator({
   // AI asistan (web `ai-assistant` EF — provider-agnostik, streaming yok)
   sl.registerLazySingleton<AiAssistantService>(
     () => AiAssistantService(supabase: sl<SupabaseClient>()),
+  );
+
+  // Admin (kullanıcı-yönetimi + personel/org roster)
+  sl.registerLazySingleton<AdminUserService>(
+    () => AdminUserService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminStaffService>(
+    () => AdminStaffService(supabase: sl<SupabaseClient>()),
   );
 
   // ============================================
