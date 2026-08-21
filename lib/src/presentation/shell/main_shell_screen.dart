@@ -54,11 +54,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
   List<MenuItem> _tree = [];
   StreamSubscription<String>? _platformSub;
 
-  // Sidebar LinkedIn-tarzı profil kartı için kimlik.
-  UserProfile? _profile;
-  String? _avatarUrl;
-  StreamSubscription<UserProfile?>? _profileSub;
-
   // Alt-nav hedefleri (sabit çekirdek; ileride DB/kullanıcı-seçimi ile dinamik).
   late final List<_NavDest> _dests = [
     _NavDest(Icons.home_outlined, 'Ana Sayfa',
@@ -77,26 +72,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _loadRole();
     _initUnread();
     _loadMenu();
-    _loadProfile();
-    _profileSub = sl<ProfileService>().profileStream.listen((p) {
-      if (p != null) _applyProfile(p);
-    });
     _platformSub = sl<PlatformContext>().platformStream.listen((_) {
       _loadMenu(forceRefresh: true);
-    });
-  }
-
-  Future<void> _loadProfile() async {
-    final p = await sl<ProfileService>().getProfileBundle();
-    if (p != null) await _applyProfile(p);
-  }
-
-  Future<void> _applyProfile(UserProfile p) async {
-    final avatar = await sl<FileStorageService>().getAvatarUrl(p.avatarUrl);
-    if (!mounted) return;
-    setState(() {
-      _profile = p;
-      _avatarUrl = avatar;
     });
   }
 
@@ -153,7 +130,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void dispose() {
     _unreadSub?.cancel();
     _platformSub?.cancel();
-    _profileSub?.cancel();
     super.dispose();
   }
 
@@ -235,11 +211,26 @@ class _MainShellScreenState extends State<MainShellScreen> {
   // ============================================
 
   Widget _buildDrawer(Brightness brightness) {
+    // Mobilde devre-dışı gruplar (ör. "Yönetim"/`admin` = konsol/builder işleri;
+    // web konsolunda yönetilir) sidebar'dan gizlenir.
+    final groups = _tree
+        .where((it) => !_kMobileDisabledGroupKeys.contains(it.itemKey))
+        .toList();
+
     final tiles = <Widget>[
-      _buildProfileHeader(brightness),
+      // Modüller — tüm modül ızgarasına hızlı erişim (profil kartı kaldırıldı).
+      ListTile(
+        leading: Icon(Icons.grid_view_rounded, color: AppColors.primary),
+        title: const Text('Modüller'),
+        onTap: () {
+          Navigator.of(context).pop();
+          _push(const ModulesScreen());
+        },
+      ),
+      const Divider(height: 1),
     ];
 
-    for (final item in _tree) {
+    for (final item in groups) {
       if (item.hasChildren) {
         tiles.add(ExpansionTile(
           leading: Icon(BootstrapIconMap.resolve(item.icon)),
@@ -258,7 +249,50 @@ class _MainShellScreenState extends State<MainShellScreen> {
       }
     }
 
-    return Drawer(child: SafeArea(child: ListView(children: tiles)));
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(padding: EdgeInsets.zero, children: tiles),
+            ),
+            const Divider(height: 1),
+            // Çalışma alanı — Tenant + Organizasyon değiştiriciler.
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.apartment_outlined),
+              title: const Text('Tenant değiştir'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () {
+                Navigator.of(context).pop();
+                _push(const TenantSelectorScreen());
+              },
+            ),
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.business_outlined),
+              title: const Text('Organizasyon değiştir'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () {
+                Navigator.of(context).pop();
+                _push(const OrganizationSelectorScreen());
+              },
+            ),
+            const Divider(height: 1),
+            // Protoolbag logosu (sidebar altı).
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Image.asset(
+                'assets/brand/ptb_logo.png',
+                package: 'protoolbag_core',
+                height: 26,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _drawerLeaf(MenuItem item) {
@@ -275,98 +309,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
     );
   }
 
-  /// Sidebar başlığı = LinkedIn-tarzı profil kartı (avatar + ad + headline +
-  /// "Profili görüntüle"). Dokununca Profil sekmesine geçer.
-  Widget _buildProfileHeader(Brightness brightness) {
-    final name = _profile?.displayName ?? '';
-    return Material(
-      color: AppColors.primary,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).pop();
-          _select(2); // Profil sekmesi
-        },
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 12, 16),
-            child: Row(
-              children: [
-                AppAvatar(
-                  imageUrl: _avatarUrl,
-                  name: name.isEmpty ? 'U' : name,
-                  size: AppAvatarSize.large,
-                  showBorder: true,
-                  borderColor: Colors.white,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        name.isEmpty ? '...' : name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.headline.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _drawerHeadline(_profile),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.footnote
-                            .copyWith(color: Colors.white70),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Profili görüntüle',
-                              style: AppTypography.caption1
-                                  .copyWith(color: Colors.white)),
-                          const Icon(Icons.chevron_right,
-                              size: 16, color: Colors.white),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _drawerHeadline(UserProfile? p) {
-    if (p == null) return '';
-    final bio = (p.bio ?? '').trim();
-    if (bio.isNotEmpty) return bio;
-    final role = _roleLabelShort(p.coarseRole);
-    final tenant = (p.tenantName ?? '').trim();
-    if (role.isNotEmpty && tenant.isNotEmpty) return '$role · $tenant';
-    if (role.isNotEmpty) return role;
-    return p.email;
-  }
-
-  String _roleLabelShort(String? r) {
-    switch (r) {
-      case 'ROLE_ADMIN':
-        return 'Yönetici';
-      case 'ROLE_MANAGER':
-        return 'Müdür';
-      case 'ROLE_CUSTOMER':
-        return 'Müşteri';
-      case 'ROLE_USER':
-        return 'Kullanıcı';
-      default:
-        return '';
-    }
-  }
 }
+
+/// Mobilde gizlenen üst-seviye menü grupları (item_key). `admin` = "Yönetim"
+/// (konsol/builder işleri: sayfa/rapor/iş-akışı tasarımcısı, roller, entegrasyon,
+/// audit…) → web konsolunda yönetilir, mobilde gösterilmez.
+const Set<String> _kMobileDisabledGroupKeys = {'admin'};
