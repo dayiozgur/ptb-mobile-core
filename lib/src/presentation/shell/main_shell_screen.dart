@@ -276,6 +276,15 @@ class _MainShellScreenState extends State<MainShellScreen> {
           _push(const ModulesScreen());
         },
       ),
+      // Profilim — tam profil hub (alt-nav'dan kaldırıldı; buradan erişilir).
+      ListTile(
+        leading: Icon(Icons.person_outline, color: AppColors.primary),
+        title: const Text('Profilim'),
+        onTap: () {
+          Navigator.of(context).pop();
+          _push(const ProfileHubScreen());
+        },
+      ),
       const Divider(height: 1),
     ];
 

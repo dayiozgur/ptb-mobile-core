@@ -11,6 +11,30 @@ import 'ai_models.dart';
 /// `functions.invoke` çağrısı JWT'yi otomatik ekler → tenant/RLS kapsamı web ile
 /// birebir aynıdır. Streaming YOK; düz JSON yanıt.
 ///
+/// Geçmiş AI konuşması (liste öğesi) — web `AiConversation` ile birebir.
+class AiConversation {
+  final String id;
+  final String? title;
+  final DateTime? updatedAt;
+  const AiConversation({required this.id, this.title, this.updatedAt});
+  factory AiConversation.fromJson(Map<String, dynamic> j) => AiConversation(
+        id: j['id']?.toString() ?? '',
+        title: j['title']?.toString(),
+        updatedAt: j['updated_at'] != null
+            ? DateTime.tryParse(j['updated_at'].toString())
+            : null,
+      );
+  String get displayTitle =>
+      (title != null && title!.trim().isNotEmpty) ? title!.trim() : 'Sohbet';
+}
+
+/// Geçmiş bir konuşmanın tek mesajı (rol + içerik).
+class AiHistoryMessage {
+  final String role; // 'user' | 'assistant'
+  final String content;
+  const AiHistoryMessage({required this.role, required this.content});
+}
+
 /// Ctor stili [notification_service.dart] ile aynıdır (named `supabase`).
 class AiAssistantService {
   final SupabaseClient _supabase;
@@ -21,6 +45,47 @@ class AiAssistantService {
   static const String _noLlmKeyCode = 'ERR_NO_LLM_KEY';
 
   AiAssistantService({required SupabaseClient supabase}) : _supabase = supabase;
+
+  /// Kullanıcının geçmiş AI konuşmaları (RLS tenant+user kapsamlı), en yeni önce.
+  /// Web `AiAssistantService.listConversations` ile birebir (`ai_conversations`).
+  Future<List<AiConversation>> listConversations({int limit = 30}) async {
+    try {
+      final res = await _supabase
+          .from('ai_conversations')
+          .select('id, title, updated_at')
+          .order('updated_at', ascending: false)
+          .limit(limit);
+      return (res as List)
+          .map((e) => AiConversation.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (e) {
+      Logger.warning('ai listConversations başarısız', e);
+      return [];
+    }
+  }
+
+  /// Bir konuşmanın mesajları (user/assistant), eskiden yeniye — devam ettirmek
+  /// için. Web `loadConversation` ile birebir (`ai_messages`).
+  Future<List<AiHistoryMessage>> loadConversation(String conversationId) async {
+    try {
+      final res = await _supabase
+          .from('ai_messages')
+          .select('role, content')
+          .eq('conversation_id', conversationId)
+          .inFilter('role', ['user', 'assistant'])
+          .order('created_at', ascending: true);
+      return (res as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        return AiHistoryMessage(
+          role: m['role']?.toString() ?? 'assistant',
+          content: m['content']?.toString() ?? '',
+        );
+      }).toList();
+    } catch (e) {
+      Logger.warning('ai loadConversation başarısız', e);
+      return [];
+    }
+  }
 
   /// AI asistanına bir mesaj gönderir ve yanıtı döndürür.
   ///

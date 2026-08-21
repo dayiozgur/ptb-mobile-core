@@ -114,6 +114,18 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'AI Asistan',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add_comment_outlined),
+          tooltip: 'Yeni sohbet',
+          onPressed: _sending ? null : _newChat,
+        ),
+        IconButton(
+          icon: const Icon(Icons.history),
+          tooltip: 'Sohbet geçmişi',
+          onPressed: _sending ? null : _openHistory,
+        ),
+      ],
       child: Column(
         children: [
           Expanded(child: _buildMessageList(context)),
@@ -121,6 +133,81 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         ],
       ),
     );
+  }
+
+  /// Yeni boş sohbet (geçmişi temizler, conversationId sıfırlar).
+  void _newChat() {
+    setState(() {
+      _messages.clear();
+      _conversationId = null;
+    });
+  }
+
+  /// Geçmiş konuşmaları listele (alt-sayfa) → seçilince yükle.
+  Future<void> _openHistory() async {
+    final convos = await sl<AiAssistantService>().listConversations();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Sohbet Geçmişi',
+                    style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+            ),
+            const Divider(height: 1),
+            if (convos.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Text('Henüz sohbet yok.'),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: convos.length,
+                  itemBuilder: (_, i) {
+                    final c = convos[i];
+                    return ListTile(
+                      leading: const Icon(Icons.chat_bubble_outline),
+                      title: Text(c.displayTitle,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _loadConversation(c.id);
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Seçilen konuşmanın mesajlarını yükle + devam ettirilebilir yap.
+  Future<void> _loadConversation(String id) async {
+    setState(() => _sending = true);
+    final msgs = await sl<AiAssistantService>().loadConversation(id);
+    if (!mounted) return;
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(msgs.map((m) => m.role == 'user'
+            ? _ChatMessage.user(m.content)
+            : _ChatMessage.assistantText(m.content)));
+      _conversationId = id;
+      _sending = false;
+    });
+    _scrollToBottom();
   }
 
   Widget _buildMessageList(BuildContext context) {
@@ -412,6 +499,9 @@ class _ChatMessage {
         isError: answer.isError,
         pendingActions: answer.pendingActions,
       );
+
+  factory _ChatMessage.assistantText(String text) =>
+      _ChatMessage._(role: _Role.assistant, text: text);
 
   factory _ChatMessage.system(String text) =>
       _ChatMessage._(role: _Role.system, text: text);
