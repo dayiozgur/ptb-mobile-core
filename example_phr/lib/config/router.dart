@@ -1,6 +1,14 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+
+/// Kök navigator anahtarı — go_router'ın kök Navigator'ına kararlı erişim.
+/// Push-bildirim deep-link'i (bkz. main.dart `onNotificationTap`) bu anahtar
+/// üzerinden `context.go(...)` / `push(...)` yapar; DI hazır olduğunda widget
+/// ağacına bağımlı kalmadan navigasyon sağlar.
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'phrRootNavigator');
 
 /// PHR router — YALNIZ paylaşılan shell rotaları (login/tenant/org/main/portal/
 /// settings/entity). Domain (ESS) ekranları henüz yok; PHR menü yolları
@@ -8,6 +16,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 /// çekirdek `protoolbag_core` barrel'ından gelir (Faz-0 shell çıkarımı).
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     debugLogDiagnostics: true,
     refreshListenable: sessionCoarseRole,

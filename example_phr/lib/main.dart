@@ -3,9 +3,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'package:go_router/go_router.dart';
+
 import 'app.dart';
 import 'config/environment.dart';
 import 'config/phr_screens.dart';
+import 'config/router.dart';
 
 /// PHR platform kimliği (canlı DB). Bu app DAİMA PHR platformunda açılır —
 /// menü + entity'ler bu platformdan yüklenir (WindowsOS: core + platform-app).
@@ -58,10 +61,60 @@ void main() async {
     sl<ThemeService>().applyBranding(branding);
   }
 
+  // Push-bildirim deep-link: bir bildirime dokunulduğunda payload'daki
+  // `route`/`screen` yoluna git. DI (sl) hazır olduğu için tap handler'ı
+  // burada, ilk render'dan önce kaydediyoruz (yalnız additive — mevcut
+  // rotalar/davranış değişmez). Navigasyon `rootNavigatorKey` üzerinden yapılır.
+  _wirePushDeepLinking();
+
   Logger.info('PHR initialized in ${result.duration.inMilliseconds}ms');
   Logger.info('Session restored: ${result.sessionRestored}');
 
   runApp(const ProviderScope(child: PHRApp()));
+}
+
+/// Bilinen shell (go_router) rotaları — bunlar router ile (`context.go`)
+/// açılır; diğer DB-menü yolları (`/hr/…`, `/admin/…`, `/entities/…`,
+/// `/report/…`) ScreenResolver ile çözülüp kök navigator'a push edilir.
+const Set<String> _kShellRoutes = {
+  '/login',
+  '/request-access',
+  '/tenant-select',
+  '/organizations',
+  '/main',
+  '/dashboard',
+  '/portal',
+  '/settings',
+};
+
+/// Push-bildirim tap → navigasyon köprüsünü kur (additive).
+void _wirePushDeepLinking() {
+  sl<PushNotificationService>().onNotificationTap = (n) {
+    if (!n.hasNavigationData) return;
+    final route = n.navigationRoute!;
+    if (route.isEmpty) return;
+
+    // Navigator henüz mount edilmemiş olabilir (cold-start yarışı) — guard.
+    final navState = rootNavigatorKey.currentState;
+    final navContext = rootNavigatorKey.currentContext;
+
+    // Bilinen shell rotası → go_router (redirect/auth guard'ları çalışır).
+    final base = route.split('?').first;
+    if (route.startsWith('/') && _kShellRoutes.contains(base)) {
+      if (navContext != null) navContext.go(route);
+      return;
+    }
+
+    // DB-menü yolu (/hr/…, /admin/…, /entities/…, /report/…) → çözülen
+    // ekranı kök navigator'a push et.
+    navState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => ScreenResolver.resolve(
+          MenuItem(itemKey: '', title: '', path: route),
+        ),
+      ),
+    );
+  };
 }
 
 /// Başlatma/yapılandırma hatasında gösterilen basit ekran.
