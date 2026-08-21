@@ -74,6 +74,8 @@ class LocalNotificationService {
       );
       const ios = DarwinNotificationDetails(
         presentAlert: true,
+        presentBanner: true, // iOS 14+ ÖN-PLAN banner (presentAlert tek başına yetmez)
+        presentList: true,   // iOS 14+ bildirim merkezinde listelenir
         presentBadge: true,
         presentSound: true,
       );
