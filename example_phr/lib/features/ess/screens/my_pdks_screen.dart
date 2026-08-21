@@ -63,48 +63,43 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _loadData),
       ],
-      child: Column(
-        children: [
-          // Geofence tabanlı otomatik PDKS giriş/çıkış kartı.
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-            child: GeofenceClockCard(),
-          ),
-          // Konum & kapsam haritası (GPS + geofence dairesi + mesafe).
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-            child: GeofenceMapCard(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              0,
+      // Kartlar (giriş/çıkış + harita) kayıtlarla TEK scroll'da — harita ortada
+      // pinlenip kayıt alanını daraltmasın; yukarı kaydırınca doğal akış.
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: GeofenceClockCard(),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_month,
-                    size: 16, color: AppColors.secondaryLabel(context)),
-                const SizedBox(width: 6),
-                Text(
-                  '${essDate(_from)} — ${essDate(_to)}',
-                  style: AppTypography.footnote
-                      .copyWith(color: AppColors.secondaryLabel(context)),
-                ),
-              ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: GeofenceMapCard(),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadData,
-              child: _buildContent(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_month,
+                      size: 16, color: AppColors.secondaryLabel(context)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${essDate(_from)} — ${essDate(_to)}',
+                    style: AppTypography.footnote
+                        .copyWith(color: AppColors.secondaryLabel(context)),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            ..._recordWidgets(),
+          ],
+        ),
       ),
     );
   }
@@ -123,40 +118,51 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
     );
   }
 
-  Widget _buildContent() {
+  /// Kayıtlar bölümü — ana ListView'a gömülür (kendi scroll'u YOK).
+  List<Widget> _recordWidgets() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const [
+        SizedBox(
+            height: 220, child: Center(child: AppLoadingIndicator())),
+      ];
     }
     if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
+      return [
+        SizedBox(
+          height: 220,
+          child: Center(
+            child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
+          ),
+        ),
+      ];
     }
     if (_days.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.punch_clock_outlined,
-                title: essT('hr.pdks.no_records', 'Puantaj kaydı yok'),
-              ),
+      return [
+        SizedBox(
+          height: 220,
+          child: Center(
+            child: AppEmptyState(
+              icon: Icons.punch_clock_outlined,
+              title: essT('hr.pdks.no_records', 'Puantaj kaydı yok'),
             ),
           ),
         ),
-      );
+      ];
     }
-    return ListView.separated(
-      padding: AppSpacing.screenPadding,
-      itemCount: _days.length,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _PdksCard(
-        day: _days[i],
-        onTap: () => _showDayPunches(_days[i]),
-      ),
-    );
+    final out = <Widget>[];
+    for (var i = 0; i < _days.length; i++) {
+      out.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: _PdksCard(
+          day: _days[i],
+          onTap: () => _showDayPunches(_days[i]),
+        ),
+      ));
+      if (i < _days.length - 1) {
+        out.add(const SizedBox(height: AppSpacing.sm));
+      }
+    }
+    return out;
   }
 }
 
