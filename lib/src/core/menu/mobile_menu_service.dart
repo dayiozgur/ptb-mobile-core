@@ -324,7 +324,147 @@ class MobileMenuService {
     await _cacheManager.delete(_entityCacheKey(platformId));
   }
 
+  // ── Admin: Menü Düzenleyici (reorder) ──────────────────────────────────────
+  //
+  // Web `menu-builder.component.ts` + `PtbMenuAdminService` reorder yolunun
+  // mobil karşılığı. Web reorder DOĞRUDAN `platform_menu_items` UPDATE'idir
+  // (RPC/EF YOK): her (id → sort_order) için `.update({sort_order}).eq('id')`.
+  // RLS `pmi_update` = `fn_is_admin()` (GLOBAL admin) hem qual hem with_check;
+  // admin olmayan çağrıda RLS 0 satır döndürür → NOT_FOUND_OR_FORBIDDEN.
+
+  /// Reorder editörü için DÜZ (ağaç kurulmamış, rol-filtresiz, cache-BYPASS)
+  /// admin menü satırları — DB uuid `id` dahil. `sort_order` artan sıralı.
+  ///
+  /// Web `PtbMenuAdminService.list()` okuma-yolunu aynalar (aktif+pasif tüm
+  /// satırlar; admin editör hepsini görür). Reorder ekranı üst-seviye öğeleri
+  /// [AdminMenuRow.isTopLevel] ile süzer.
+  Future<List<AdminMenuRow>> listMenuItemsForAdmin(String platformId) async {
+    try {
+      final response = await _supabase
+          .from(_table)
+          .select(
+            'id, item_key, parent_item_key, title, icon, path, '
+            'module, sort_order, active',
+          )
+          .eq('platform_id', platformId)
+          .order('sort_order', ascending: true);
+
+      return (response as List)
+          .map((e) => AdminMenuRow.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (e, st) {
+      Logger.error('listMenuItemsForAdmin($platformId) hata', e, st);
+      rethrow;
+    }
+  }
+
+  /// Tek bir satırın `sort_order`'ını güncelle — web ile AYNI yazma yolu:
+  /// doğrudan `platform_menu_items` UPDATE (`.eq('id')` + `.select('id')`).
+  /// RLS admin değilse 0 satır → `NOT_FOUND_OR_FORBIDDEN` fırlatır.
+  Future<void> updateMenuItemOrder({
+    required String id,
+    required int sortOrder,
+  }) async {
+    final data = await _supabase
+        .from(_table)
+        .update({'sort_order': sortOrder})
+        .eq('id', id)
+        .select('id');
+    if ((data as List).isEmpty) {
+      // RLS blokladı (admin değil) ya da satır yok — web'in guard'ıyla aynı.
+      throw Exception('NOT_FOUND_OR_FORBIDDEN');
+    }
+  }
+
+  /// Toplu yeniden sıralama — her (id, sortOrder) için ardışık UPDATE
+  /// (web `reorder()` döngüsüyle birebir). Herhangi biri başarısız olursa
+  /// (RLS/ağ) fırlatır; çağıran optimistik değişikliği geri alır.
+  Future<void> reorderMenuItems(List<AdminMenuOrderUpdate> updates) async {
+    try {
+      for (final u in updates) {
+        await updateMenuItemOrder(id: u.id, sortOrder: u.sortOrder);
+      }
+    } catch (e, st) {
+      Logger.error('reorderMenuItems hata', e, st);
+      rethrow;
+    }
+  }
+
   void dispose() {
     _menuController.close();
   }
+}
+
+/// Menü Düzenleyici (reorder) admin satırı — DB uuid `id` taşıyan hafif
+/// görüntü-modeli. [MenuItem]'dan farkı: `id` (satır kimliği) dahildir; ağaç
+/// kurulmaz. `parentItemKey` null/boş = üst seviye.
+class AdminMenuRow {
+  /// DB uuid (`id`) — reorder UPDATE hedefi (web ile aynı satır kimliği).
+  final String id;
+  final String itemKey;
+  final String? parentItemKey;
+
+  /// Başlık — i18n ANAHTARI (`title`); LocalizationService.translate() ile çözülür.
+  final String title;
+  final String? icon;
+  final String? path;
+  final String? module;
+  final int sortOrder;
+  final bool active;
+
+  const AdminMenuRow({
+    required this.id,
+    required this.itemKey,
+    this.parentItemKey,
+    required this.title,
+    this.icon,
+    this.path,
+    this.module,
+    this.sortOrder = 0,
+    this.active = true,
+  });
+
+  /// Üst seviye mi? (parentItemKey null/boş)
+  bool get isTopLevel => parentItemKey == null || parentItemKey!.isEmpty;
+
+  factory AdminMenuRow.fromJson(Map<String, dynamic> json) {
+    int asInt(dynamic v) {
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '') ?? 0;
+    }
+
+    final itemKey = json['item_key'] as String;
+    return AdminMenuRow(
+      id: json['id'] as String,
+      itemKey: itemKey,
+      parentItemKey: json['parent_item_key'] as String?,
+      title: (json['title'] as String?) ?? itemKey,
+      icon: json['icon'] as String?,
+      path: json['path'] as String?,
+      module: json['module'] as String?,
+      sortOrder: asInt(json['sort_order']),
+      active: json['active'] as bool? ?? true,
+    );
+  }
+
+  AdminMenuRow copyWith({int? sortOrder}) => AdminMenuRow(
+        id: id,
+        itemKey: itemKey,
+        parentItemKey: parentItemKey,
+        title: title,
+        icon: icon,
+        path: path,
+        module: module,
+        sortOrder: sortOrder ?? this.sortOrder,
+        active: active,
+      );
+}
+
+/// Tek bir (id → yeni sort_order) yeniden-sıralama talimatı.
+class AdminMenuOrderUpdate {
+  final String id;
+  final int sortOrder;
+
+  const AdminMenuOrderUpdate({required this.id, required this.sortOrder});
 }

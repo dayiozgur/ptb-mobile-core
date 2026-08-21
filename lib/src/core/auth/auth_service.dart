@@ -315,6 +315,89 @@ class AuthService {
     }
   }
 
+  /// Şifre değiştir (thin alias — [updatePassword] ile aynı davranış).
+  ///
+  /// Güvenlik ekranı bu adı kullanır; başarısızlıkta rethrow yerine
+  /// [AuthResult] döner (updatePassword ile tutarlı).
+  Future<AuthResult> changePassword(String newPassword) {
+    return updatePassword(newPassword);
+  }
+
+  // ============================================
+  // MFA / TOTP (İki adımlı doğrulama)
+  // ============================================
+  //
+  // Supabase-managed factor deposu üzerinden `supabase.auth.mfa.*` (GoTrueMFAApi)
+  // 5 primitifin ince sarmalayıcıları. Web `MfaService` ile bire bir aynı akış:
+  //   enroll → challenge → verify (kayıt), listFactors, unenroll.
+  // Parola birincil kalır; MFA opt-in ek katmandır. Hata durumunda Logger'a
+  // yazar ve ekranın gösterebilmesi için `rethrow` eder.
+
+  /// Yeni bir TOTP faktörü kaydını başlatır (`unverified`).
+  ///
+  /// Dönen [AuthMFAEnrollResponse]; `totp.qrCode` (SVG data-URI), `totp.secret`
+  /// ve `totp.uri` taşır. Kullanıcı authenticator app'e ekleyip 6-hane kodla
+  /// [verifyTotp] ile doğrulayana kadar faktör `unverified` kalır.
+  ///
+  /// NOT (gotrue 2.18): TOTP enroll'da `issuer` ZORUNLU — verilmezse istemci
+  /// `ArgumentError` fırlatır. Her çağrıda benzersiz `friendlyName` verilir
+  /// (Supabase yinelenen dostane-ad reddedebilir).
+  Future<AuthMFAEnrollResponse> enrollTotp() async {
+    try {
+      final response = await _supabase.auth.mfa.enroll(
+        factorType: FactorType.totp,
+        issuer: 'Protoolbag',
+        friendlyName: 'Authenticator ${DateTime.now().millisecondsSinceEpoch}',
+      );
+      Logger.info('MFA TOTP enroll started (factor: ${response.id})');
+      return response;
+    } catch (e) {
+      Logger.error('MFA enroll failed', e);
+      rethrow;
+    }
+  }
+
+  /// Bir TOTP faktörünü doğrular: önce challenge oluşturur, ardından kullanıcının
+  /// 6-haneli kodunu verify eder. Başarılıysa oturum `aal2`'ye yükselir.
+  Future<void> verifyTotp(String factorId, String code) async {
+    try {
+      final challenge = await _supabase.auth.mfa.challenge(factorId: factorId);
+      await _supabase.auth.mfa.verify(
+        factorId: factorId,
+        challengeId: challenge.id,
+        code: code,
+      );
+      Logger.info('MFA TOTP verified (factor: $factorId)');
+    } catch (e) {
+      Logger.error('MFA verify failed', e);
+      rethrow;
+    }
+  }
+
+  /// Bir MFA faktörünü kaldırır. `verified` bir faktörü kaldırmak `aal2`
+  /// oturum gerektirir.
+  Future<void> unenrollFactor(String factorId) async {
+    try {
+      await _supabase.auth.mfa.unenroll(factorId);
+      Logger.info('MFA factor unenrolled: $factorId');
+    } catch (e) {
+      Logger.error('MFA unenroll failed', e);
+      rethrow;
+    }
+  }
+
+  /// Mevcut kullanıcının tüm MFA faktörlerini döndürür (verified + unverified).
+  /// İçeride oturumu tazeler (gotrue `listFactors` davranışı).
+  Future<List<Factor>> listMfaFactors() async {
+    try {
+      final response = await _supabase.auth.mfa.listFactors();
+      return response.all;
+    } catch (e) {
+      Logger.error('MFA listFactors failed', e);
+      rethrow;
+    }
+  }
+
   // ============================================
   // OAUTH AUTH
   // ============================================

@@ -5,8 +5,10 @@ import '../page_viewer/page_viewer_screen.dart';
 import '../report_viewer/report_viewer_screen.dart';
 import 'admin/bug_reports_screen.dart';
 import 'admin/roles_screen.dart';
+import 'admin/menu_builder_screen.dart';
 import 'admin/staff_roster_screen.dart';
 import 'admin/user_management_screen.dart';
+import 'settings/security_screen.dart';
 import 'workflow/approvals_inbox_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
@@ -55,6 +57,9 @@ class ScreenResolver {
   static Widget? _neutral(String? path) {
     if (path == null || path.isEmpty) return null;
     final p = path.toLowerCase();
+    if (p.startsWith('/account/security') || p.startsWith('/security')) {
+      return const SecurityScreen();
+    }
     if (p.startsWith('/settings')) return const SettingsScreen();
     if (p.startsWith('/organizations') || p.startsWith('/organization')) {
       return const OrganizationSelectorScreen();
@@ -95,6 +100,9 @@ class ScreenResolver {
     }
     if (p.startsWith('/admin/bug-reports')) {
       return const BugReportsScreen();
+    }
+    if (p.startsWith('/admin/menu-builder')) {
+      return const MenuBuilderScreen();
     }
     // Diğer admin yolları — henüz özel ekran yok → ComingSoon (menüde görünür).
     if (p.startsWith('/admin')) {

@@ -14,6 +14,7 @@ import '../../../core/user/user_profile.dart';
 import '../../widgets/cards/app_card.dart';
 import '../../widgets/display/app_avatar.dart';
 import '../organization/organization_selector_screen.dart';
+import '../settings/security_screen.dart';
 import '../settings/settings_screen.dart';
 import 'profile_edit_screen.dart';
 
@@ -492,6 +493,16 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
               trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Güvenlik'),
+              subtitle: const Text('2FA · Şifre'),
+              trailing: const Icon(Icons.chevron_right, size: 20),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SecurityScreen()),
               ),
             ),
             const Divider(height: 1),
