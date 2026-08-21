@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
@@ -15,6 +17,10 @@ import 'models/performance_review.dart';
 // barrel bu dosyayı export ettiğinden re-export transitif olarak taşınır.
 export 'models/employee_goal.dart';
 export 'models/performance_review.dart';
+
+/// Offline kuyruğunda izin-talebi oluşturma işlemleri için op-tipi anahtarı
+/// (OfflineSyncService handler'ı bununla kayıtlanır ve tetiklenir).
+const String kLeaveRequestCreateOpType = 'leave_request_create';
 
 /// HR Employee-Self-Service (ESS) data layer.
 ///
@@ -34,6 +40,18 @@ class HrEssService {
   HrEssService({required SupabaseClient supabase}) : _supabase = supabase;
 
   TenantService get _tenant => sl<TenantService>();
+
+  // Offline-queue erişimi (kayıtlı/başlatılmış değilse null → doğrudan ağ path).
+  ConnectivityService? get _connectivityOrNull =>
+      sl.isRegistered<ConnectivityService>()
+          ? sl<ConnectivityService>()
+          : null;
+
+  OfflineSyncService? get _offlineSyncOrNull {
+    if (!sl.isRegistered<OfflineSyncService>()) return null;
+    final s = sl<OfflineSyncService>();
+    return s.isInitialized ? s : null;
+  }
 
   /// Cache'i temizle (ör. logout / tenant değişimi sonrası).
   void clearCache() {
@@ -140,6 +158,91 @@ class HrEssService {
       Logger.error('Error fetching leave requests: $e');
       rethrow;
     }
+  }
+
+  /// Yeni bir izin talebi oluştur (`leave_requests` INSERT).
+  ///
+  /// Web `LeaveService.insertRequest` ile **birebir** aynı sözleşme:
+  /// `tenant_id`, `staff_id`, `leave_type_id`, `start_date`, `end_date`,
+  /// `half_day_start`, `half_day_end`, `note`, `status='pending'`, `created_by`.
+  /// `day_count` DB tarafında hesaplanır (client yazmaz). Onay/yetki/bakiye
+  /// kontrolleri DB tetikleyicilerince yürütülür.
+  ///
+  /// OFFLINE fallback: bağlantı yoksa işlem kuyruğa alınır ve iyimser
+  /// (optimistic) olarak `{queued:true, offline:true}` dönülür; online olunca
+  /// OfflineSyncService bunu [replayCreateLeave] üzerinden yeniden oynatır.
+  /// Online path DEĞİŞMEDİ.
+  Future<Map<String, dynamic>> createLeaveRequest({
+    required String leaveTypeId,
+    required DateTime startDate,
+    required DateTime endDate,
+    bool halfDayStart = false,
+    bool halfDayEnd = false,
+    String? note,
+  }) async {
+    final staffId = await currentStaffId();
+    if (staffId == null) {
+      throw Exception('No staff row for current user; cannot create leave');
+    }
+    final tenantId = _tenant.currentTenantId;
+    final userId = _supabase.auth.currentUser?.id;
+
+    final payload = <String, dynamic>{
+      'tenant_id': tenantId,
+      'staff_id': staffId,
+      'leave_type_id': leaveTypeId,
+      'start_date': _fmtDate(startDate),
+      'end_date': _fmtDate(endDate),
+      'half_day_start': halfDayStart,
+      'half_day_end': halfDayEnd,
+      'note': note,
+      'status': 'pending',
+      'created_by': userId,
+    };
+
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final op = await sync.addOperation(
+        type: PendingOperationType.create,
+        entityType: kLeaveRequestCreateOpType,
+        data: payload,
+      );
+      Logger.info('Offline: leave request queued (${op.id})');
+      return {'queued': true, 'offline': true, 'opId': op.id};
+    }
+
+    return _insertLeaveRequest(payload);
+  }
+
+  /// Gerçek ağ yazımı (`leave_requests` INSERT). Online path burada; offline
+  /// kuyruk replay'i de doğrudan bunu çağırır.
+  Future<Map<String, dynamic>> _insertLeaveRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('leave_requests')
+          .insert(payload)
+          .select()
+          .single();
+      return response;
+    } catch (e) {
+      Logger.error('Error creating leave request: $e');
+      rethrow;
+    }
+  }
+
+  /// Offline kuyruk replay handler'ı: kaydedilmiş payload ile izin talebini
+  /// yeniden oynatır. Başarıda `true` döner; hata fırlatırsa retry/dead-letter
+  /// mantığı devreye girer.
+  ///
+  /// Idempotency notu: `leave_requests` için backend'de kalıcı bir dedupe
+  /// anahtarı YOK (şema değişikliği kapsam dışı); ağ yazımı başarılı olup
+  /// yanıt kaybolursa (kuyruktan silinmeden önce) gecikmiş bir replay KOPYA
+  /// talep yaratabilir. Birincil koruma kuyruğun başarı→sil davranışıdır.
+  Future<bool> replayCreateLeave(PendingOperation op) async {
+    await _insertLeaveRequest(Map<String, dynamic>.from(op.data));
+    return true;
   }
 
   /// Verilen satırlardaki `leave_type_id`'ler için görünen adları çöz.

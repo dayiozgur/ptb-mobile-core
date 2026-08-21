@@ -6,6 +6,8 @@ import '../auth/auth_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../controller/controller_service.dart';
+import '../entity/entity_data_service.dart';
+import '../hr/hr_ess_service.dart';
 import '../iot_log/iot_log_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
 import '../localization/localization_service.dart';
@@ -249,6 +251,11 @@ class CoreInitializer {
       final offlineSyncService = sl<OfflineSyncService>();
       await offlineSyncService.initialize();
 
+      // Step 8b: Offline write-queue replay handler'larını kaydet. Servisler
+      // offline'da yazımı kuyruğa alır; burada kayıtlı handler'lar online
+      // olunca kuyruğu boşaltıp yeniden oynatır (op-tipi anahtarıyla eşleşir).
+      _registerOfflineReplayHandlers(offlineSyncService);
+
       // Step 9: Push Notification Service başlat
       onProgress?.call('Push Notification Service');
       final pushNotificationService = sl<PushNotificationService>();
@@ -384,6 +391,28 @@ class CoreInitializer {
   }
 
   /// Tenant context'ini tüm IoT ve iş servislerine aktar
+  /// Offline write-queue replay handler'larını kaydet.
+  ///
+  /// Her handler bir op-tipi anahtarıyla eşleşir; OfflineSyncService online
+  /// olunca kuyruğu boşaltırken eşleşen handler'ı çağırır (başarı→sil,
+  /// hata→retry/dead-letter). Kayıt idempotent'tir (registerHandler map'e yazar).
+  static void _registerOfflineReplayHandlers(OfflineSyncService sync) {
+    try {
+      sync.registerHandler(
+        kEntitySubmitOpType,
+        (op) => sl<EntityDataService>().replaySubmit(op),
+      );
+      sync.registerHandler(
+        kLeaveRequestCreateOpType,
+        (op) => sl<HrEssService>().replayCreateLeave(op),
+      );
+      Logger.debug('Offline replay handlers registered '
+          '($kEntitySubmitOpType, $kLeaveRequestCreateOpType)');
+    } catch (e) {
+      Logger.warning('Failed to register offline replay handlers: $e');
+    }
+  }
+
   static void _propagateTenantToServices(String tenantId) {
     try {
       // IoT Services

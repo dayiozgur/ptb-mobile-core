@@ -318,6 +318,16 @@ class OfflineSyncService {
     return operations;
   }
 
+  /// Kalıcı başarısız (dead-letter) işlemleri getir.
+  ///
+  /// Retry sınırı ([_maxRetries]) aşıldıktan sonra bir işlem artık
+  /// senkronizasyon döngüsünde denenmez ancak incelenebilmesi için kuyrukta
+  /// tutulur. Bu getter o işlemleri döndürür.
+  Future<List<PendingOperation>> getDeadLetteredOperations() async {
+    final operations = await getPendingOperations();
+    return operations.where((op) => op.retryCount >= _maxRetries).toList();
+  }
+
   /// İşlem sil
   Future<void> removeOperation(String operationId) async {
     _ensureInitialized();
@@ -361,7 +371,12 @@ class OfflineSyncService {
     int failed = 0;
 
     try {
-      final operations = await getPendingOperations();
+      // Dead-letter: retry sınırını aşan işlemleri döngü dışında tut. Böylece
+      // kalıcı başarısız bir işlem her senkronizasyonda sonsuza dek yeniden
+      // denenmez; kuyrukta kalır (getDeadLetteredOperations ile incelenebilir).
+      final operations = (await getPendingOperations())
+          .where((op) => op.retryCount < _maxRetries)
+          .toList();
 
       if (operations.isEmpty) {
         return SyncResult(

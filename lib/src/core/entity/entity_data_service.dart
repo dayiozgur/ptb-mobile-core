@@ -1,9 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
+import '../di/service_locator.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'models/entity_type_config.dart';
 import 'models/generic_entity.dart';
+
+/// Offline kuyruğunda entity form-submit işlemleri için op-tipi anahtarı
+/// (OfflineSyncService handler'ı bununla kayıtlanır ve tetiklenir).
+const String kEntitySubmitOpType = 'entity_submit';
 
 /// Entity Data Service
 ///
@@ -244,6 +251,55 @@ class EntityDataService {
     String? submissionId,
     bool asDraft = false,
   }) async {
+    // OFFLINE fallback: bağlantı yoksa işlemi kuyruğa al ve iyimser (optimistic)
+    // dön. Online olunca OfflineSyncService kuyruğu boşaltıp bu işlemi
+    // [replaySubmit] üzerinden yeniden oynatır. Online path DEĞİŞMEDİ.
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final op = await sync.addOperation(
+        type: PendingOperationType.create,
+        entityType: kEntitySubmitOpType,
+        entityId: entityId ?? submissionId,
+        data: {
+          'templateId': templateId,
+          'values': values,
+          'entityType': entityType,
+          'entityId': entityId,
+          'submissionId': submissionId,
+          'asDraft': asDraft,
+        },
+      );
+      Logger.info(
+          'Offline: entity submit queued (${op.id}, type=$entityType)');
+      return {
+        'queued': true,
+        'offline': true,
+        'opId': op.id,
+        'submissionId': submissionId,
+        'entityId': entityId,
+      };
+    }
+
+    return _submitEntityToNetwork(
+      templateId: templateId,
+      values: values,
+      entityType: entityType,
+      entityId: entityId,
+      submissionId: submissionId,
+      asDraft: asDraft,
+    );
+  }
+
+  /// Gerçek ağ yazımı (`form-submit` EF). Online path burada; offline kuyruk
+  /// replay'i de doğrudan bunu çağırır.
+  Future<Map<String, dynamic>> _submitEntityToNetwork({
+    required String templateId,
+    required Map<String, dynamic> values,
+    required String entityType,
+    String? entityId,
+    String? submissionId,
+    bool asDraft = false,
+  }) async {
     try {
       final response = await _supabase.functions.invoke(
         'form-submit',
@@ -273,6 +329,41 @@ class EntityDataService {
       Logger.error('Error submitting entity ($entityType): $e');
       rethrow;
     }
+  }
+
+  /// Offline kuyruk replay handler'ı: kaydedilmiş payload ile form-submit'i
+  /// yeniden oynatır. Başarıda `true` döner (OfflineSyncService kaydı siler);
+  /// hata fırlatırsa retry/dead-letter mantığı devreye girer.
+  ///
+  /// Idempotency notu: `form-submit` EF NEW gönderimlerde yalnızca son 10 sn
+  /// içindeki birebir kopyayı ayıklar (kalıcı bir idempotency anahtarı yok) ve
+  /// uydurma bir `submissionId` UPDATE→404 verir; bu yüzden ağ yazımı başarılı
+  /// olup yanıt kaybolursa (kuyruktan silinmeden önce) gecikmiş bir replay
+  /// KOPYA yaratabilir. Birincil koruma kuyruğun başarı→sil davranışıdır.
+  Future<bool> replaySubmit(PendingOperation op) async {
+    final d = op.data;
+    await _submitEntityToNetwork(
+      templateId: d['templateId'] as String,
+      values: (d['values'] as Map).cast<String, dynamic>(),
+      entityType: d['entityType'] as String,
+      entityId: d['entityId'] as String?,
+      submissionId: d['submissionId'] as String?,
+      asDraft: d['asDraft'] as bool? ?? false,
+    );
+    return true;
+  }
+
+  // Offline-queue erişimi (kayıtlı değilse — ör. testte — null döner; bu
+  // durumda submitEntity doğrudan ağ path'ine düşer, davranış değişmez).
+  ConnectivityService? get _connectivityOrNull =>
+      sl.isRegistered<ConnectivityService>()
+          ? sl<ConnectivityService>()
+          : null;
+
+  OfflineSyncService? get _offlineSyncOrNull {
+    if (!sl.isRegistered<OfflineSyncService>()) return null;
+    final s = sl<OfflineSyncService>();
+    return s.isInitialized ? s : null;
   }
 
   // ============================================
