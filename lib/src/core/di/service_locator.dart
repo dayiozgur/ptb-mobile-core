@@ -68,6 +68,13 @@ import '../hr/hr_ess_service.dart';
 import '../hr/hr_profile_service.dart';
 import '../hr/hr_documents_service.dart';
 import '../hr/hr_calendar_review_service.dart';
+import '../hr/admin_leave_service.dart';
+import '../hr/admin_performance_service.dart';
+import '../hr/admin_payroll_service.dart';
+import '../hr/admin_org_service.dart';
+import '../hr/admin_attendance_service.dart';
+import '../hr/admin_recruitment_service.dart';
+import '../hr/admin_tesvik_kvkk_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -646,6 +653,28 @@ Future<void> setupServiceLocator({
     () => HrCalendarReviewService(
       supabase: sl<SupabaseClient>(),
     ),
+  );
+  // PHR admin (yönetim) servisleri
+  sl.registerLazySingleton<AdminLeaveService>(
+    () => AdminLeaveService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminPerformanceService>(
+    () => AdminPerformanceService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminPayrollService>(
+    () => AdminPayrollService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminOrgService>(
+    () => AdminOrgService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminAttendanceService>(
+    () => AdminAttendanceService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminRecruitmentService>(
+    () => AdminRecruitmentService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminTesvikKvkkService>(
+    () => AdminTesvikKvkkService(supabase: sl<SupabaseClient>()),
   );
 
   Logger.debug('Service Locator setup complete');

@@ -29,8 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   UserProfile? _profile;
   String? _avatarUrl;
 
-  int _unreadCount = 0;
-
   /// Aktif alarm sayısı. null → alarm servisi yok/erişilemedi (kart gizlenir).
   int? _alarmCount;
 
@@ -112,17 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadStats() async {
-    // Okunmamış bildirim sayısı.
-    try {
-      final profileId = authService.currentUser?.id;
-      if (profileId != null) {
-        final count = await sl<NotificationService>().getUnreadCount(profileId);
-        if (mounted) setState(() => _unreadCount = count);
-      }
-    } catch (_) {
-      // Bildirim sayısı alınamazsa 0 kalır.
-    }
-
+    // Bildirim sayısı üst-bar'da (shell) yüklenir — burada tekrar edilmez.
     // Aktif alarm sayısı — alarm servisi varsa (opsiyonel, PMS-benzeri
     // platformlar). Servis yoksa/hata alırsa kart gizlenir.
     try {
@@ -257,8 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildGreeting(context),
                     const SizedBox(height: AppSpacing.lg),
-                    _buildStats(context),
-                    const SizedBox(height: AppSpacing.lg),
+                    // Bildirim istatistiği KALDIRILDI — üst-bar'daki çan
+                    // rozetinde zaten var (tekrarı önlemek için). Alarm kartı
+                    // yalnız alarm servisi olan platformlarda gösterilir.
+                    if (_alarmCount != null) ...[
+                      _buildStats(context),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
                     _buildModules(context),
                     const SizedBox(height: AppSpacing.xl),
                   ],
@@ -313,41 +306,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 2) Hızlı istatistik satırı
+  // 2) Hızlı istatistik — yalnız aktif alarm (alarm servisi olan platformlarda).
+  // Bildirim kartı kaldırıldı (üst-bar çan rozetinde var). Çağıran taraf zaten
+  // `_alarmCount != null` guard'ıyla sarar.
   Widget _buildStats(BuildContext context) {
-    final cards = <Widget>[
-      Expanded(
-        child: MetricCard(
-          title: 'Bildirim',
-          value: '$_unreadCount',
-          subtitle: 'Okunmamış',
-          icon: Icons.notifications_outlined,
-          color: AppColors.primary,
-        ),
-      ),
-    ];
-
-    if (_alarmCount != null) {
-      cards.add(const SizedBox(width: AppSpacing.md));
-      cards.add(
-        Expanded(
-          child: MetricCard(
-            title: 'Alarm',
-            value: '${_alarmCount!}',
-            subtitle: 'Aktif',
-            icon: Icons.warning_amber_outlined,
-            color: AppColors.error,
-          ),
-        ),
-      );
-    }
-
-    // IntrinsicHeight ŞART: SingleChildScrollView içinde dikey sınır yok →
-    // `CrossAxisAlignment.stretch` çocukları sonsuz yüksekliğe zorlar (geçersiz
-    // BoxConstraints → tüm ağaç layout-fail + semantics kaskadı). IntrinsicHeight
-    // Row'a sınırlı yükseklik verir, böylece stretch (eşit-yükseklik kart) çalışır.
-    return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: cards),
+    return MetricCard(
+      title: 'Alarm',
+      value: '${_alarmCount ?? 0}',
+      subtitle: 'Aktif',
+      icon: Icons.warning_amber_outlined,
+      color: AppColors.error,
     );
   }
 
