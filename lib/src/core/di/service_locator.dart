@@ -65,6 +65,9 @@ import '../entity/entity_data_service.dart';
 import '../form/form_template_service.dart';
 import '../form/lookup_service.dart';
 import '../hr/hr_ess_service.dart';
+import '../hr/hr_profile_service.dart';
+import '../hr/hr_documents_service.dart';
+import '../hr/hr_calendar_review_service.dart';
 
 /// Service Locator (Dependency Injection)
 ///
@@ -626,6 +629,21 @@ Future<void> setupServiceLocator({
 
   sl.registerLazySingleton<HrEssService>(
     () => HrEssService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+  sl.registerLazySingleton<HrProfileService>(
+    () => HrProfileService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+  sl.registerLazySingleton<HrDocumentsService>(
+    () => HrDocumentsService(
+      supabase: sl<SupabaseClient>(),
+    ),
+  );
+  sl.registerLazySingleton<HrCalendarReviewService>(
+    () => HrCalendarReviewService(
       supabase: sl<SupabaseClient>(),
     ),
   );

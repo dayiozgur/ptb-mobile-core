@@ -201,6 +201,17 @@ export 'src/core/hr/models/leave_request_row.dart';
 export 'src/core/hr/models/payslip.dart';
 export 'src/core/hr/models/pdks_day.dart';
 export 'src/core/hr/models/onboarding_task.dart';
+// PHR ESS eksik-sayfa dalgası: profil / özet / belgeler / KVKK / takvim / değerlendirme
+export 'src/core/hr/hr_profile_service.dart';
+export 'src/core/hr/models/staff_profile.dart';
+export 'src/core/hr/models/hr_summary.dart';
+export 'src/core/hr/hr_documents_service.dart';
+export 'src/core/hr/models/my_hr_document.dart';
+export 'src/core/hr/models/kvkk_models.dart';
+export 'src/core/hr/hr_calendar_review_service.dart';
+export 'src/core/hr/models/leave_calendar_entry.dart';
+export 'src/core/hr/models/review_queue_item.dart';
+export 'src/core/hr/models/review_competency_rating.dart';
 
 // Core - DI & Initialization
 export 'src/core/di/service_locator.dart';
