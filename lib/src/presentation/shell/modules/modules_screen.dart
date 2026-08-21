@@ -16,7 +16,10 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 ///
 /// Platform değişince menü canlı yeniden yüklenir.
 class ModulesScreen extends StatefulWidget {
-  const ModulesScreen({super.key});
+  /// Alt-nav sekmesi olarak gömülüyse (global üst-bar shell'de) kendi AppBar'ını
+  /// çizmez — `showAppBar:false`. Drawer/route'tan tam-ekran açılışta `false`.
+  final bool embedded;
+  const ModulesScreen({super.key, this.embedded = false});
 
   @override
   State<ModulesScreen> createState() => _ModulesScreenState();
@@ -114,7 +117,11 @@ class _ModulesScreenState extends State<ModulesScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Modüller',
-      actions: [AppIconButton(icon: Icons.refresh, onPressed: _loadMenu)],
+      showAppBar: !widget.embedded,
+      showBackButton: false,
+      actions: widget.embedded
+          ? null
+          : [AppIconButton(icon: Icons.refresh, onPressed: _loadMenu)],
       child: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

@@ -97,9 +97,14 @@ class _ProfileCardTileState extends State<ProfileCardTile> {
     final p = _p;
     final name = p?.displayName ?? '';
     final b = Theme.of(context).brightness;
-    return DynWidgetCard(
-      title: title,
-      child: Row(
+    // Profil alt-nav'dan kaldırıldı → karta dokununca tam profil ekranı açılır.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const ProfileHubScreen())),
+      child: DynWidgetCard(
+        title: title,
+        child: Row(
         children: [
           AppAvatar(
               imageUrl: _avatar,
@@ -128,6 +133,7 @@ class _ProfileCardTileState extends State<ProfileCardTile> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

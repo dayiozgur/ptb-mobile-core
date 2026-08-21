@@ -68,8 +68,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
         () => const HomeScreen(embedded: true)),
     _NavDest(Icons.workspaces_outline, 'My Space',
         () => const MySpaceScreen(embedded: true)),
-    _NavDest(Icons.person_outline, 'Profil',
-        () => const ProfileHubScreen(embedded: true)),
+    _NavDest(Icons.grid_view_outlined, 'Modüller',
+        () => const ModulesScreen(embedded: true)),
     _NavDest(Icons.settings_outlined, 'Ayarlar',
         () => const SettingsScreen(embedded: true)),
   ];
