@@ -532,6 +532,60 @@ class WorkflowService {
   }
 
   // ============================================
+  // APPROVAL GATES (human-in-the-loop)
+  // ============================================
+
+  /// Mevcut kullanıcıya atanmış BEKLEYEN workflow onayları — herhangi bir
+  /// entity için (leave'e özel değil). Web `WorkflowApprovalsComponent` ile
+  /// birebir aynı kaynak: `fn_workflow_my_approvals()` RPC.
+  ///
+  /// RPC yalnızca `approver_ids` içinde `auth.uid()` bulunan ve
+  /// `status='pending'` olan, tenant-scoped `workflow_approvals` satırlarını
+  /// döner. UI'a asla exception fırlatmaz — hata/boş durumda `[]` döner.
+  Future<List<WorkflowApproval>> pendingApprovals() async {
+    try {
+      final response = await _supabase.rpc('fn_workflow_my_approvals');
+      if (response is List) {
+        return response
+            .whereType<Map<String, dynamic>>()
+            .map(WorkflowApproval.fromJson)
+            .toList();
+      }
+      return [];
+    } catch (e, stackTrace) {
+      Logger.error('Failed to load pending approvals', e, stackTrace);
+      return [];
+    }
+  }
+
+  /// Bir workflow onay adımına karar ver — web ile aynı sözleşme:
+  /// `fn_workflow_approval_decide(p_id, p_decision, p_comment)` RPC.
+  ///
+  /// NOT: Bu, jenerik workflow-gate sistemidir (`workflow_approvals` +
+  /// suspend/resume). İzin (leave) akışındaki `approval-decision` Edge
+  /// Function AYRI bir sistemdir (`form_approval_steps`) — buraya bir
+  /// `workflow_approvals.id` verilirse eşleşmez. RPC başarıda `{ok:true}`
+  /// döner, yetki/durum hatasında exception fırlatır (UI'a iletilir).
+  Future<void> decideApproval({
+    required String approvalId,
+    required bool approve,
+    String? note,
+  }) async {
+    try {
+      await _supabase.rpc('fn_workflow_approval_decide', params: {
+        'p_id': approvalId,
+        'p_decision': approve ? 'approved' : 'rejected',
+        'p_comment': (note != null && note.trim().isNotEmpty)
+            ? note.trim()
+            : null,
+      });
+    } catch (e, stackTrace) {
+      Logger.error('Failed to decide workflow approval', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  // ============================================
   // HELPERS
   // ============================================
 
@@ -547,5 +601,66 @@ class WorkflowService {
     _workflowsController.close();
     _selectedWorkflow.close();
     _runNotifications.close();
+  }
+}
+
+/// Jenerik workflow onay-gate satırı — `fn_workflow_my_approvals()` çıktısı.
+///
+/// Herhangi bir entity için bekleyen bir insan-onayını temsil eder (leave'e
+/// özel değil). Alanlar RPC'nin döndürdüğü kolonlarla birebir eşleşir.
+class WorkflowApproval {
+  /// `workflow_approvals.id` — karar RPC'sine (`p_id`) verilecek anahtar.
+  final String id;
+  final String? workflowId;
+  final String? executionId;
+
+  /// Onay kartının başlığı (entity konusu). Boşsa UI varsayılan gösterir.
+  final String? title;
+
+  /// Açıklama/gerekçe metni (talep eden vb. gate tarafından yazılır).
+  final String? message;
+
+  /// Onaya konu entity tipi (örn. `leave_request`, `purchase_order`).
+  final String? entityType;
+  final String? entityId;
+
+  /// Onayın zaman aşımına uğrayacağı an (null = süresiz).
+  final DateTime? timeoutAt;
+
+  /// Onayın oluşturulma anı.
+  final DateTime? createdAt;
+
+  const WorkflowApproval({
+    required this.id,
+    this.workflowId,
+    this.executionId,
+    this.title,
+    this.message,
+    this.entityType,
+    this.entityId,
+    this.timeoutAt,
+    this.createdAt,
+  });
+
+  factory WorkflowApproval.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic v) {
+      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
+
+    String? asString(dynamic v) =>
+        (v != null && v.toString().isNotEmpty) ? v.toString() : null;
+
+    return WorkflowApproval(
+      id: json['id']?.toString() ?? '',
+      workflowId: asString(json['workflow_id']),
+      executionId: asString(json['execution_id']),
+      title: asString(json['title']),
+      message: asString(json['message']),
+      entityType: asString(json['entity_type']),
+      entityId: asString(json['entity_id']),
+      timeoutAt: parseDate(json['timeout_at']),
+      createdAt: parseDate(json['created_at']),
+    );
   }
 }

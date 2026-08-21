@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'backlog_screen.dart';
 import 'entity_kanban_screen.dart';
 
 /// Portal'da (low-code builder) tanımlanmış bir entity tipinin kayıtlarını
@@ -108,6 +109,15 @@ class _EntityListScreenState extends State<EntityListScreen> {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => EntityKanbanScreen(typeCode: widget.typeCode),
+              ),
+            ),
+          ),
+        if (_config != null)
+          AppIconButton(
+            icon: Icons.reorder,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => BacklogScreen(typeCode: widget.typeCode),
               ),
             ),
           ),

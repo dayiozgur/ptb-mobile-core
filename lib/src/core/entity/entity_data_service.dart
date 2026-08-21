@@ -372,6 +372,93 @@ class EntityDataService {
   }
 
   // ============================================
+  // BACKLOG (reorder / rank)
+  // ============================================
+
+  /// Backlog sırasında iki komşu kayıt arasına yeni bir kayıt eklerken
+  /// kullanılan boşluk; web `ptb-backlog` RANK_STEP ile aynı.
+  static const int _backlogRankStep = 1000;
+
+  /// Backlog ekranı için kayıtları `backlog_rank`'e göre (NULL'lar sona,
+  /// eşitlikte `created_at` artan) getirir — web `ptb-backlog`'un `sortByRank`
+  /// sırasını yansıtır. Yalnız bağımsız (standalone) entity'ler.
+  Future<List<GenericEntity>> loadBacklog(
+    EntityTypeConfig config, {
+    int limit = 200,
+  }) async {
+    if (_currentTenantId == null) {
+      throw Exception('Tenant context is not set');
+    }
+
+    try {
+      final response = await _supabase
+          .from('form_submissions')
+          .select('*, form_templates(name, code)')
+          .eq('tenant_id', _currentTenantId!)
+          .eq('entity_type', config.code)
+          .eq('is_standalone', true)
+          .eq('active', true)
+          .order('backlog_rank', ascending: true, nullsFirst: false)
+          .order('created_at', ascending: true)
+          .limit(limit);
+      final rows = (response as List).cast<Map<String, dynamic>>();
+
+      Logger.debug('loadBacklog(${config.code}) returned ${rows.length} rows');
+
+      final names = await _resolveAssigneeNames(rows);
+
+      return rows.map((row) {
+        final assignee = row['assigned_to'] as String?;
+        return GenericEntity.fromSubmission(
+          row,
+          assignedToName: assignee != null ? names[assignee] : null,
+        );
+      }).toList();
+    } catch (e) {
+      Logger.error('Error loading backlog (${config.code}): $e');
+      rethrow;
+    }
+  }
+
+  /// Backlog sırasını KALICI yazar: verilen id sırasına göre her kayda eşit
+  /// aralıklı yeni bir `backlog_rank` `((index + 1) * 1000)` atar. Web
+  /// `PtbSprintService.rerankBatch` ile AYNI yol: doğrudan `form_submissions`
+  /// UPDATE (`id` + `tenant_id` scope'lu, `updated_by` yazılır).
+  ///
+  /// Bu, Kanban `status` yazımından FARKLIDIR ve doğrudan tablo UPDATE'i güvenle
+  /// kullanır: `check_submission_status_transition()` trigger'ı yalnız `status`
+  /// değişince tetiklenir; yalnız `backlog_rank` güncellemesi
+  /// `tenant_isolation_form_submissions` RLS'i ve entity `update` izni altında
+  /// geçer (web bu yolu prod'da kullanır). Herhangi bir satır başarısız olursa
+  /// hata fırlatır — çağıran optimistic sırayı geri alır.
+  Future<void> reorderBacklog(List<String> orderedIds) async {
+    if (_currentTenantId == null) {
+      throw Exception('Tenant context is not set');
+    }
+    if (orderedIds.isEmpty) return;
+
+    final userId = _supabase.auth.currentUser?.id;
+
+    try {
+      for (var i = 0; i < orderedIds.length; i++) {
+        final rank = (i + 1) * _backlogRankStep;
+        await _supabase
+            .from('form_submissions')
+            .update({
+              'backlog_rank': rank,
+              if (userId != null) 'updated_by': userId,
+            })
+            .eq('id', orderedIds[i])
+            .eq('tenant_id', _currentTenantId!);
+      }
+      Logger.debug('reorderBacklog persisted ${orderedIds.length} ranks');
+    } catch (e) {
+      Logger.error('Error reordering backlog: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================
   // HELPERS
   // ============================================
 

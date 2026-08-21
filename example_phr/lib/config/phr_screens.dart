@@ -2,10 +2,12 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../features/ess/screens/leave_approvals_screen.dart';
+import '../features/ess/screens/my_goals_screen.dart';
 import '../features/ess/screens/my_leave_screen.dart';
 import '../features/ess/screens/my_onboarding_screen.dart';
 import '../features/ess/screens/my_payslips_screen.dart';
 import '../features/ess/screens/my_pdks_screen.dart';
+import '../features/ess/screens/my_reviews_screen.dart';
 
 /// PHR domain (çalışan-self-servis / ESS) ekran çözümleyicisi.
 ///
@@ -38,6 +40,15 @@ Widget? phrResolve(MenuItem item) {
   // Puantaj (PDKS)
   if (p == '/hr/pdks') {
     return const MyPdksScreen();
+  }
+
+  // Performans self-servis — hedefler / değerlendirmeler (salt-okuma)
+  // DB menü (platform_menu_items, phr-self grubu) yollarıyla birebir.
+  if (p == '/hr/performance/my-goals') {
+    return const MyGoalsScreen();
+  }
+  if (p == '/hr/performance/my-reviews') {
+    return const MyReviewsScreen();
   }
 
   // Oryantasyon

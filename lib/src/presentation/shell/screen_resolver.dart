@@ -7,6 +7,7 @@ import 'admin/bug_reports_screen.dart';
 import 'admin/roles_screen.dart';
 import 'admin/staff_roster_screen.dart';
 import 'admin/user_management_screen.dart';
+import 'workflow/approvals_inbox_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
 import 'organization/organization_selector_screen.dart';
@@ -57,6 +58,10 @@ class ScreenResolver {
     if (p.startsWith('/settings')) return const SettingsScreen();
     if (p.startsWith('/organizations') || p.startsWith('/organization')) {
       return const OrganizationSelectorScreen();
+    }
+    // Generic workflow onay-inbox (leave-özel /workflow/approvals'tan ayrı).
+    if (p == '/workflow/inbox' || p == '/approvals') {
+      return const ApprovalsInboxScreen();
     }
     final t = _parseEntityType(path);
     if (t != null && t.isNotEmpty) return EntityListScreen(typeCode: t);

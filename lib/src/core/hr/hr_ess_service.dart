@@ -3,11 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
+import 'models/employee_goal.dart';
 import 'models/leave_balance.dart';
 import 'models/leave_request_row.dart';
 import 'models/onboarding_task.dart';
 import 'models/payslip.dart';
 import 'models/pdks_day.dart';
+import 'models/performance_review.dart';
+
+// Yeni performans self-servis modellerini barrel'a (protoolbag_core) aktar:
+// barrel bu dosyayı export ettiğinden re-export transitif olarak taşınır.
+export 'models/employee_goal.dart';
+export 'models/performance_review.dart';
 
 /// HR Employee-Self-Service (ESS) data layer.
 ///
@@ -293,6 +300,88 @@ class HrEssService {
     final m = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
     return '$y-$m-$day';
+  }
+
+  // ============================================
+  // PERFORMANCE (self-service, salt-okuma v1)
+  // ============================================
+
+  /// Kullanıcının kendi performans hedefleri — `employee_goals`
+  /// (RLS + `staff_id` ile sahibi-kapsamlı). Web `PerformanceService.getMyGoals`
+  /// ile birebir aynı okuma: `staff_id = benim staff'ım`, `performance_cycles(name)`
+  /// embed'i dönem adını taşır.
+  ///
+  /// Web okuma davranışıyla tutarlı olarak **hata durumunda `[]` döner**
+  /// (UI'a asla fırlatmaz).
+  Future<List<EmployeeGoal>> myGoals({int limit = 100}) async {
+    try {
+      final staffId = await currentStaffId();
+      if (staffId == null) return [];
+
+      var query = _supabase
+          .from('employee_goals')
+          .select(
+            'id,tenant_id,cycle_id,staff_id,organization_id,manager_staff_id,'
+            'title,description,weight,progress,status,active,'
+            'performance_cycles(name)',
+          )
+          .eq('staff_id', staffId);
+
+      final tenantId = _tenant.currentTenantId;
+      if (tenantId != null) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      final response =
+          await query.order('created_at', ascending: false).limit(limit);
+
+      return (response as List)
+          .map((e) => EmployeeGoal.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      Logger.error('Error fetching my goals: $e');
+      return [];
+    }
+  }
+
+  /// Kullanıcının kendi performans değerlendirmeleri — `performance_reviews`
+  /// (RLS + `staff_id` ile değerlendirilen=ben kapsamı). Web
+  /// `PerformanceService.getMyReviews` ile birebir aynı okuma; embed'ler dönem
+  /// adını ve değerlendiren (yönetici) adını taşır.
+  ///
+  /// Web okuma davranışıyla tutarlı olarak **hata durumunda `[]` döner**.
+  Future<List<PerformanceReview>> myReviews({int limit = 100}) async {
+    try {
+      final staffId = await currentStaffId();
+      if (staffId == null) return [];
+
+      var query = _supabase
+          .from('performance_reviews')
+          .select(
+            'id,tenant_id,cycle_id,staff_id,reviewer_staff_id,organization_id,'
+            'self_rating,manager_rating,overall_rating,self_comments,'
+            'manager_comments,status,decided_at,active,created_at,'
+            'performance_cycles(name),'
+            'reviewer:staffs!performance_reviews_reviewer_staff_id_fkey('
+            'name,first_name,last_name)',
+          )
+          .eq('staff_id', staffId);
+
+      final tenantId = _tenant.currentTenantId;
+      if (tenantId != null) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      final response =
+          await query.order('created_at', ascending: false).limit(limit);
+
+      return (response as List)
+          .map((e) => PerformanceReview.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      Logger.error('Error fetching my reviews: $e');
+      return [];
+    }
   }
 
   // ============================================

@@ -270,6 +270,8 @@ export 'src/presentation/shell/platform/platform_switcher_sheet.dart';
 export 'src/presentation/shell/myspace/my_space_screen.dart';
 export 'src/presentation/shell/search/global_search_screen.dart';
 export 'src/presentation/shell/entities/entity_kanban_screen.dart';
+export 'src/presentation/shell/entities/backlog_screen.dart';
+export 'src/presentation/shell/workflow/approvals_inbox_screen.dart';
 export 'src/core/ai/ai_models.dart';
 export 'src/core/ai/ai_assistant_service.dart';
 export 'src/presentation/shell/ai/ai_assistant_screen.dart';
