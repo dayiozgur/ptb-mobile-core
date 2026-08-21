@@ -2,7 +2,24 @@
 
 > **Amaç:** Web portalındaki **tüm dinamik / db-driven** özellikleri `protoolbag_core` (paylaşılan kernel) içine taşımak. Her platform (PHR·PPM·PMS·PEM·CRM) çekirdek üzerinde çalışan **ince bir app**. Core'da bir geliştirme → tüm platformlar kazanır (WindowsOS modeli). Backend **aynı Supabase projesi** — mobil, web'in EF/RPC sözleşmelerini birebir çağırır, **ayrı config yok**.
 
-**Kaynak:** Bu yol haritası, web (`protoolbag-platform`) ↔ mobil (`ptb-mobile-core`) paralel-ajan analizlerine dayanır. Olgunluk (mobil-vs-web, ESS/monitoring app'i için ağırlıklı): **~%75** (çekirdek kernel ~%85, web read-write paritesinde).
+**Kaynak:** Bu yol haritası, web (`protoolbag-platform`) ↔ mobil (`ptb-mobile-core`) paralel-ajan analizlerine dayanır. Olgunluk (mobil-vs-web, ESS/monitoring app'i için ağırlıklı): başlangıç **~%75** → çekirdek-parite dalgası sonrası **~%90+**.
+
+---
+
+## ✅ TAMAMLANMA DURUMU (2026-08-21, loop dalgası)
+
+| Faz | Durum | Not |
+|---|---|---|
+| **Faz 1 — Çekirdek UX** | ✅ TAMAM | Global shell (dinamik sidebar + üst-bar arama/AI/bildirim/platform) · workspace (tenant/org) switcher · admin ekranları (Kullanıcı/Personel/Roller/Bug-reports/Menü-builder) · push deep-link (cold-start hariç) |
+| **Faz 2 — ESS derinliği** | ✅ TAMAM | Performans (hedef/değerlendirme) · onboarding-write · **izin onay-karar** (latent EF-bug düzeltildi) · MFA/TOTP güvenlik. ⚠️ Payslip-PDF = **backend gap** (PDF kolonu/bucket yok; web window.print) |
+| **Faz 3 — Dinamik motor** | ✅ TAMAM | Rapor CSV-export + satır-drilldown · kişisel-pano (widget ekle/çıkar/sırala, `pb_page_instances`) · generic onay-inbox |
+| **Faz 4 — Drag-drop** | ✅ TAMAM | Entity Kanban (status-transition EF) · Backlog reorder (backlog_rank) · Menü-builder reorder (sort_order). ATS-pipeline = niş, ertelendi |
+| **Faz 5 — Admin + domain** | ◐ KISMİ | Admin ekranları ✅. **ESS-dışı domain-app'ler (CRM/PPM/PMS ince-app) = KALAN** — her biri yeni tam-app; ürün-yönü gerektirir. Konsol (integrations/billing) read-only viewer eklenebilir |
+| **Faz 6 — Enabler'lar** | ◐ ÇOĞU | Offline write-queue replay ✅ · push deep-link ✅. Cold-start push routing = platform FCM katmanı gerektirir. i18n yeni-key = ekranlarda TR-literal ile aşıldı. Mobil CI ✅ (analyze+build-check); widget-test eklenebilir |
+
+**Kalan büyük iş:** (1) Faz 5 domain-app'ler — CRM/PPM/PMS'i paylaşılan-core üstünde ince-app olarak kurmak (ispatlı desen: `example_phr`); her domain ayrı bir program. (2) Backend-gap'ler: payslip-PDF üretimi, cold-start FCM. Bunlar mobil-core kapsamı dışı / ürün-yönü gerektiren işler.
+
+---
 
 ---
 
