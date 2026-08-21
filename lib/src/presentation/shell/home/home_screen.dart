@@ -111,8 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadStats() async {
     // Bildirim sayısı üst-bar'da (shell) yüklenir — burada tekrar edilmez.
-    // Aktif alarm sayısı — alarm servisi varsa (opsiyonel, PMS-benzeri
-    // platformlar). Servis yoksa/hata alırsa kart gizlenir.
+    //
+    // Aktif alarm = SCADA/IoT `alarms` tablosu (site/controller/variable
+    // kapsamlı) → YALNIZ izleme (monitoring) platformlarında (PMS) anlamlı.
+    // AlarmService çekirdekte TÜM app'lere kayıtlı olduğundan, platform-kapısı
+    // olmadan PHR gibi izleme-DIŞI platformlarda alakasız PMS alarmları
+    // görünüyordu (leftover). İzleme-dışı platformda kartı hiç yükleme →
+    // `_alarmCount` null kalır → kart gizlenir.
+    if (!_isMonitoringPlatform()) return;
     try {
       if (sl.isRegistered<AlarmService>()) {
         final alarmSvc = sl<AlarmService>();
@@ -125,6 +131,21 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {
       // Alarm servisi erişilemedi → kartı gösterme.
+    }
+  }
+
+  /// SCADA/IoT izleme yapan platformlar (aktif alarm kartı YALNIZ burada).
+  /// İzleme-dışı platformlar (PHR/CRM/PPM/PEM…) alarmı göstermez.
+  static const Set<String> _kMonitoringPlatforms = {'PMS'};
+
+  /// Aktif platform bir izleme platformu mu?
+  bool _isMonitoringPlatform() {
+    try {
+      final code = sl<PlatformContext>().activePlatformCode?.trim().toUpperCase();
+      if (code == null || code.isEmpty) return false;
+      return _kMonitoringPlatforms.contains(code);
+    } catch (_) {
+      return false;
     }
   }
 
