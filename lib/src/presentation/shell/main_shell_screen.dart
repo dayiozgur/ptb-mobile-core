@@ -104,14 +104,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
       });
     }
     try {
+      // forceRefresh: switchable durumu (kaç tenant/org) DB'nin GÜNCEL halini
+      // yansıtmalı — cache'lenmiş liste üyelik değişince (ör. bir tenant
+      // üyeliği kaldırılınca) yanıltıcı "değiştirilebilir" gösterebilir.
       final uid = authService.currentUser?.id;
       if (uid != null) {
-        final tenants = await tenantService.getUserTenants(uid);
+        final tenants =
+            await tenantService.getUserTenants(uid, forceRefresh: true);
         if (mounted) setState(() => _tenants = tenants);
       }
       final tid = tenantService.currentTenantId;
       if (tid != null) {
-        final orgs = await organizationService.getOrganizations(tid);
+        final orgs = await organizationService.getOrganizations(tid,
+            forceRefresh: true);
         if (mounted) setState(() => _orgs = orgs);
       }
     } catch (_) {
