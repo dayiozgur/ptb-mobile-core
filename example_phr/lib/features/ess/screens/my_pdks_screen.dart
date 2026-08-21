@@ -65,6 +65,12 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
       ],
       child: Column(
         children: [
+          // Geofence tabanlı otomatik PDKS giriş/çıkış kartı.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            child: GeofenceClockCard(),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,

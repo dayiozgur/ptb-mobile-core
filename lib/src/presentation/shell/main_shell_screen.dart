@@ -276,13 +276,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
           _push(const ModulesScreen());
         },
       ),
-      // Profilim — tam profil hub (alt-nav'dan kaldırıldı; buradan erişilir).
+      // Hesabım — abonelik/krediler/faturalar/kullanım/güvenlik hub'ı.
       ListTile(
-        leading: Icon(Icons.person_outline, color: AppColors.primary),
-        title: const Text('Profilim'),
+        leading: Icon(Icons.account_circle_outlined, color: AppColors.primary),
+        title: const Text('Hesabım'),
         onTap: () {
           Navigator.of(context).pop();
-          _push(const ProfileHubScreen());
+          _push(const AccountHubScreen());
         },
       ),
       const Divider(height: 1),

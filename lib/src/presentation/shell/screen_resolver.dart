@@ -15,6 +15,7 @@ import 'dashboard/personal_dashboard_screen.dart';
 import 'admin/user_management_screen.dart';
 import 'settings/security_screen.dart';
 import 'workflow/approvals_inbox_screen.dart';
+import 'account/account_hub_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
 import 'organization/organization_selector_screen.dart';
@@ -64,6 +65,10 @@ class ScreenResolver {
     final p = path.toLowerCase();
     if (p.startsWith('/account/security') || p.startsWith('/security')) {
       return const SecurityScreen();
+    }
+    // Hesabım hub (abonelik/krediler/faturalar/kullanım/güvenlik).
+    if (p == '/account' || p == '/account/overview' || p == '/hesabim') {
+      return const AccountHubScreen(embedded: true);
     }
     if (p.startsWith('/settings')) return const SettingsScreen();
     if (p.startsWith('/organizations') || p.startsWith('/organization')) {

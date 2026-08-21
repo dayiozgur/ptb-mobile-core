@@ -290,6 +290,20 @@ export 'src/presentation/dynamic_form/dynamic_form_widget.dart';
 export 'src/presentation/dyn_widgets/dyn_widgets.dart';
 export 'src/presentation/dyn_widgets/dashboard_widget_view.dart';
 export 'src/core/weather/weather_service.dart';
+// Geofence tabanlı otomatik PDKS
+export 'src/core/geofence/geofence_attendance_service.dart';
+export 'src/presentation/shell/geofence/geofence_clock_card.dart';
+// Hesabım (Account) hub
+export 'src/core/account/account_service.dart';
+export 'src/core/account/models/credit_balance.dart';
+export 'src/core/account/models/credit_transaction.dart';
+export 'src/core/account/models/invoice.dart';
+export 'src/core/account/models/invoice_summary.dart';
+export 'src/core/account/models/storage_quota.dart';
+export 'src/presentation/shell/account/account_hub_screen.dart';
+export 'src/presentation/shell/account/credits_screen.dart';
+export 'src/presentation/shell/account/invoices_screen.dart';
+export 'src/presentation/shell/account/usage_screen.dart';
 
 // Page Viewer (web-designed dashboard page templates)
 export 'src/presentation/page_viewer/models/page_template.dart';
