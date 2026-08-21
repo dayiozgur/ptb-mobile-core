@@ -54,6 +54,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
   List<MenuItem> _tree = [];
   StreamSubscription<String>? _platformSub;
 
+  // Çalışma alanı (drawer altı): aktif tenant/organizasyon + değiştirilebilir mi.
+  String? _tenantName;
+  String? _orgName;
+  List<Tenant> _tenants = const [];
+  List<Organization> _orgs = const [];
+  StreamSubscription<Tenant?>? _tenantSub;
+  StreamSubscription<Organization?>? _orgSub;
+
   // Alt-nav hedefleri (sabit çekirdek; ileride DB/kullanıcı-seçimi ile dinamik).
   late final List<_NavDest> _dests = [
     _NavDest(Icons.home_outlined, 'Ana Sayfa',
@@ -72,9 +80,43 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _loadRole();
     _initUnread();
     _loadMenu();
+    _loadWorkspace();
     _platformSub = sl<PlatformContext>().platformStream.listen((_) {
       _loadMenu(forceRefresh: true);
     });
+    // Tenant/org değişince (switcher veya başka akış) drawer'daki adları tazele.
+    _tenantSub = tenantService.tenantStream.listen((_) => _loadWorkspace());
+    _orgSub = organizationService.organizationStream.listen((_) {
+      if (mounted) {
+        setState(() => _orgName = organizationService.currentOrganization?.name);
+      }
+    });
+  }
+
+  /// Drawer çalışma-alanı bilgisini yükle: aktif tenant/org adları + kaç seçenek
+  /// olduğu (tek seçenek → "değiştir" devre dışı). Aktif tenant/org [CoreInitializer]
+  /// tarafından profil-bundle'dan set edilir (yeni mekanizma).
+  Future<void> _loadWorkspace() async {
+    if (mounted) {
+      setState(() {
+        _tenantName = tenantService.currentTenant?.name;
+        _orgName = organizationService.currentOrganization?.name;
+      });
+    }
+    try {
+      final uid = authService.currentUser?.id;
+      if (uid != null) {
+        final tenants = await tenantService.getUserTenants(uid);
+        if (mounted) setState(() => _tenants = tenants);
+      }
+      final tid = tenantService.currentTenantId;
+      if (tid != null) {
+        final orgs = await organizationService.getOrganizations(tid);
+        if (mounted) setState(() => _orgs = orgs);
+      }
+    } catch (_) {
+      // Sayı çözülemezse switcher yine de aktif isim(ler)i gösterir.
+    }
   }
 
   Future<void> _loadRole() async {
@@ -130,6 +172,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void dispose() {
     _unreadSub?.cancel();
     _platformSub?.cancel();
+    _tenantSub?.cancel();
+    _orgSub?.cancel();
     super.dispose();
   }
 
@@ -257,26 +301,21 @@ class _MainShellScreenState extends State<MainShellScreen> {
               child: ListView(padding: EdgeInsets.zero, children: tiles),
             ),
             const Divider(height: 1),
-            // Çalışma alanı — Tenant + Organizasyon değiştiriciler.
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.apartment_outlined),
-              title: const Text('Tenant değiştir'),
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () {
-                Navigator.of(context).pop();
-                _push(const TenantSelectorScreen());
-              },
+            // Çalışma alanı — aktif Tenant + Organizasyon (adları görünür).
+            // Tek seçenek varsa "değiştir" DEVRE DIŞI (seçilemez).
+            _workspaceTile(
+              icon: Icons.apartment_outlined,
+              label: 'Tenant',
+              value: _tenantName,
+              switchable: _tenants.length > 1,
+              onTap: _showTenantSwitcher,
             ),
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.business_outlined),
-              title: const Text('Organizasyon değiştir'),
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () {
-                Navigator.of(context).pop();
-                _push(const OrganizationSelectorScreen());
-              },
+            _workspaceTile(
+              icon: Icons.business_outlined,
+              label: 'Organizasyon',
+              value: _orgName,
+              switchable: _orgs.length > 1,
+              onTap: _showOrgSwitcher,
             ),
             const Divider(height: 1),
             // Protoolbag logosu (sidebar altı).
@@ -309,6 +348,142 @@ class _MainShellScreenState extends State<MainShellScreen> {
     );
   }
 
+  /// Drawer altı çalışma-alanı satırı: aktif değeri ALT-SATIRDA gösterir. Tek
+  /// seçenek varsa devre dışıdır (soluk, chevron yok, tıklanamaz).
+  Widget _workspaceTile({
+    required IconData icon,
+    required String label,
+    required String? value,
+    required bool switchable,
+    required VoidCallback onTap,
+  }) {
+    final brightness = Theme.of(context).brightness;
+    final shown = (value == null || value.trim().isEmpty) ? '—' : value.trim();
+    return ListTile(
+      dense: true,
+      enabled: switchable,
+      leading: Icon(icon,
+          color: switchable ? null : AppColors.tertiaryLabel(context)),
+      title: Text(label,
+          style: AppTypography.footnote
+              .copyWith(color: AppColors.secondaryLabel(context))),
+      subtitle: Text(
+        shown,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.subhead.copyWith(
+          fontWeight: FontWeight.w600,
+          color: switchable
+              ? AppColors.textPrimary(brightness)
+              : AppColors.tertiaryLabel(context),
+        ),
+      ),
+      trailing: switchable ? const Icon(Icons.unfold_more, size: 18) : null,
+      onTap: switchable ? onTap : null,
+    );
+  }
+
+  void _showTenantSwitcher() {
+    Navigator.of(context).pop(); // drawer'ı kapat
+    _showWorkspaceSwitcher<Tenant>(
+      title: 'Tenant seç',
+      items: _tenants,
+      activeId: tenantService.currentTenantId,
+      idOf: (t) => t.id,
+      nameOf: (t) => t.name,
+      onSelect: (t) async {
+        final ok = await CoreInitializer.switchTenant(t.id);
+        if (ok) {
+          await _loadMenu(forceRefresh: true);
+          await _loadRole();
+          await _loadWorkspace();
+        }
+        return ok;
+      },
+    );
+  }
+
+  void _showOrgSwitcher() {
+    Navigator.of(context).pop();
+    _showWorkspaceSwitcher<Organization>(
+      title: 'Organizasyon seç',
+      items: _orgs,
+      activeId: organizationService.currentOrganizationId,
+      idOf: (o) => o.id,
+      nameOf: (o) => o.name,
+      onSelect: (o) async {
+        final ok = await CoreInitializer.switchOrganization(o.id);
+        if (ok) await _loadWorkspace();
+        return ok;
+      },
+    );
+  }
+
+  /// Ortak çalışma-alanı seçici (bottom-sheet). Aktif öğe işaretli; farklı öğeye
+  /// dokununca [onSelect] çağrılır (yeni mekanizma: CoreInitializer.switch*).
+  void _showWorkspaceSwitcher<T>({
+    required String title,
+    required List<T> items,
+    required String? activeId,
+    required String Function(T) idOf,
+    required String Function(T) nameOf,
+    required Future<bool> Function(T) onSelect,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(title, style: AppTypography.headline),
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: items.map((it) {
+                  final active = idOf(it) == activeId;
+                  return ListTile(
+                    leading: Icon(
+                      active
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: active ? AppColors.primary : null,
+                    ),
+                    title: Text(nameOf(it)),
+                    trailing: active
+                        ? Text('Aktif',
+                            style: AppTypography.caption1
+                                .copyWith(color: AppColors.primary))
+                        : null,
+                    onTap: () async {
+                      Navigator.of(sheetCtx).pop();
+                      if (active) return;
+                      final ok = await onSelect(it);
+                      if (!mounted) return;
+                      if (ok) {
+                        AppSnackbar.showSuccess(context,
+                            message: '${nameOf(it)} seçildi');
+                      } else {
+                        AppSnackbar.showError(context,
+                            message: 'Değiştirilemedi');
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Mobilde gizlenen üst-seviye menü grupları (item_key). `admin` = "Yönetim"

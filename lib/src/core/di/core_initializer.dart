@@ -449,6 +449,36 @@ class CoreInitializer {
     }
   }
 
+  /// Uygulama-içi **TENANT değiştir** (drawer çalışma-alanı switcher'ı).
+  ///
+  /// Login/cold-start [resolveSessionContext] profil-bundle'daki VARSAYILAN
+  /// tenant'ı çözer; bu ise kullanıcının AÇIKÇA seçtiği tenant'a geçer:
+  /// `selectTenant` + tüm servislere yeniden yay + alt-tenant (org/site)
+  /// izolasyonlarını temizle (yeni tenant'ın org'u farklıdır → eski org stale
+  /// kalmasın). Menü platform+rol kapsamlı (tenant-bağımsız) olduğundan burada
+  /// yeniden yüklenmez; çağıran ekran gerekiyorsa menüyü/rolü tazeler.
+  static Future<bool> switchTenant(String tenantId) async {
+    final ok = await sl<TenantService>().selectTenant(tenantId);
+    if (!ok) return false;
+    _propagateTenantToServices(tenantId);
+    clearSubTenantContexts();
+    await sl<OrganizationService>().clearOrganization();
+    Logger.info('Tenant switched (in-app): $tenantId');
+    return true;
+  }
+
+  /// Uygulama-içi **ORGANİZASYON değiştir** (drawer çalışma-alanı switcher'ı).
+  /// `selectOrganization` + IoT servislerine yay. Menüyü etkilemez (menü
+  /// platform kapsamlı); org-kapsamlı ekranlar sonraki fetch'te yeni org'u alır.
+  static Future<bool> switchOrganization(String organizationId) async {
+    final ok =
+        await sl<OrganizationService>().selectOrganization(organizationId);
+    if (!ok) return false;
+    propagateOrganizationToServices(organizationId);
+    Logger.info('Organization switched (in-app): $organizationId');
+    return true;
+  }
+
   /// Organization context'ini tüm IoT servislerinden temizle
   static void clearOrganizationFromServices() {
     try {
