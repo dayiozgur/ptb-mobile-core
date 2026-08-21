@@ -27,47 +27,64 @@ class ComingSoonScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = sl<LocalizationService>();
     final title = loc.translate(titleKey);
+    final comingSoon = loc.translate('common.coming_soon');
     final iconData = BootstrapIconMap.resolve(icon);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(iconData, size: 64, color: AppColors.primary),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppTypography.title2,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              loc.translate('common.coming_soon'),
-              textAlign: TextAlign.center,
-              style: AppTypography.body.copyWith(
-                color: AppColors.secondaryLabel(context),
-              ),
-            ),
-            if (path != null && path!.isNotEmpty) ...[
-              const SizedBox(height: 16),
+    // AppScaffold ŞART: diğer tüm ekranlar gibi Scaffold/Material/AppBar sağlar.
+    // Öncesinde salt `Center` dönüyordu → Material atası yoktu → metin "Material
+    // yok" debug stilinde (kırmızı + sarı altçizgi) render oluyor ve geri butonu
+    // olmuyordu. AppScaffold `showBackButton` (varsayılan true) + pushed-route →
+    // otomatik geri butonu + tutarlı tema.
+    return AppScaffold(
+      title: title,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Text(
-                  path!,
-                  style: AppTypography.footnote.copyWith(
-                    color: AppColors.secondaryLabel(context),
+                child: Icon(iconData, size: 48, color: AppColors.primary),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                comingSoon,
+                textAlign: TextAlign.center,
+                style: AppTypography.title3,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Bu ekran mobilde yakında kullanıma açılacak.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.secondaryLabel(context),
+                ),
+              ),
+              if (path != null && path!.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    path!,
+                    style: AppTypography.footnote.copyWith(
+                      color: AppColors.secondaryLabel(context),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
