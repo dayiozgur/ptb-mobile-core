@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/weather/weather_service.dart';
+import 'dashboard_hr_widgets.dart';
 import 'dyn_widgets.dart';
 
 /// Kişisel-pano widget'ının **paylaşılan** görünüm-modu renderer'ı.
@@ -54,6 +55,21 @@ class DashboardWidgetView extends StatelessWidget {
         return const Divider();
       case 'weather':
         return WeatherTile(descriptor: descriptor);
+      // ── PHR (İK) veri-bağlı widget'lar (gri kutu yerine gerçek veri) ──
+      case 'profile_card':
+        return ProfileCardTile(descriptor: descriptor);
+      case 'leave_balance':
+        return LeaveBalanceTile(descriptor: descriptor);
+      case 'payslip_net':
+        return PayslipNetTile(descriptor: descriptor);
+      case 'pdks_today':
+        return PdksTodayTile(descriptor: descriptor);
+      case 'pending_approvals':
+        return PendingApprovalsTile(descriptor: descriptor);
+      case 'news_feed':
+        return NewsFeedTile(descriptor: descriptor);
+      case 'link_card':
+        return LinkCardTile(descriptor: descriptor);
       default:
         return _staticBox(context);
     }
