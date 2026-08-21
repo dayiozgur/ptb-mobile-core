@@ -11,7 +11,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppButton(
                 label: 'Test Button',
@@ -35,12 +35,13 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppButton(
+                // API drift: AppButton no longer has an `enabled` flag; a null
+                // onPressed is the disabled state.
                 label: 'Disabled Button',
-                onPressed: () => tapped = true,
-                enabled: false,
+                onPressed: null,
               ),
             ),
           ),
@@ -56,7 +57,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppButton(
                 label: 'Loading Button',
@@ -75,7 +76,7 @@ void main() {
         for (final variant in AppButtonVariant.values) {
           await tester.pumpWidget(
             MaterialApp(
-              theme: AppTheme.lightTheme,
+              theme: AppTheme.light,
               home: Scaffold(
                 body: AppButton(
                   label: variant.name,
@@ -97,7 +98,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppTextField(
                 controller: controller,
@@ -116,17 +117,27 @@ void main() {
       });
 
       testWidgets('text field shows error state', (WidgetTester tester) async {
+        // API drift: AppTextField has no `errorText`; errors surface through a
+        // `validator` triggered by the enclosing Form.
+        final formKey = GlobalKey<FormState>();
+
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
-              body: AppTextField(
-                label: 'Error Field',
-                errorText: 'This field is required',
+              body: Form(
+                key: formKey,
+                child: AppTextField(
+                  label: 'Error Field',
+                  validator: (value) => 'This field is required',
+                ),
               ),
             ),
           ),
         );
+
+        formKey.currentState!.validate();
+        await tester.pump();
 
         expect(find.text('This field is required'), findsOneWidget);
       });
@@ -134,7 +145,7 @@ void main() {
       testWidgets('text field shows helper text', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppTextField(
                 label: 'Helper Field',
@@ -151,7 +162,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppTextField(
                 label: 'Password',
@@ -175,7 +186,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppCard(
                 child: Text('Card Content'),
@@ -192,7 +203,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppCard(
                 onTap: () => tapped = true,
@@ -213,7 +224,7 @@ void main() {
       testWidgets('empty state renders correctly', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppEmptyState(
                 icon: Icons.inbox,
@@ -235,7 +246,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppEmptyState(
                 icon: Icons.add,
@@ -261,7 +272,7 @@ void main() {
       testWidgets('error view renders correctly', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppErrorView(
                 title: 'Error',
@@ -281,7 +292,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppErrorView(
                 title: 'Error',
@@ -307,7 +318,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: Center(
                 child: AppLoadingIndicator(),
@@ -323,7 +334,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: Center(
                 child: AppLoadingIndicator(
@@ -338,50 +349,52 @@ void main() {
       });
     });
 
+    // API drift: AppBadge is now a standalone badge that renders a `label`
+    // string (no `count` int and no `child` wrapper). It still caps numeric
+    // labels above 99 as '99+', and renders a plain dot when `dot: true`. The
+    // old "hides when count is zero" behavior was removed, so that sub-test is
+    // replaced with the current dot-mode behavior.
     group('AppBadge Integration', () {
-      testWidgets('badge renders with count', (WidgetTester tester) async {
+      testWidgets('badge renders with label', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppBadge(
-                count: 5,
-                child: Icon(Icons.notifications),
+                label: '5',
               ),
             ),
           ),
         );
 
         expect(find.text('5'), findsOneWidget);
-        expect(find.byIcon(Icons.notifications), findsOneWidget);
       });
 
-      testWidgets('badge hides when count is zero',
+      testWidgets('dot badge renders without text',
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppBadge(
-                count: 0,
-                child: Icon(Icons.notifications),
+                dot: true,
               ),
             ),
           ),
         );
 
-        expect(find.text('0'), findsNothing);
+        expect(find.byType(AppBadge), findsOneWidget);
+        expect(find.byType(Text), findsNothing);
       });
 
       testWidgets('badge shows 99+ for large counts',
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppBadge(
-                count: 150,
-                child: Icon(Icons.notifications),
+                label: '150',
               ),
             ),
           ),
@@ -395,7 +408,7 @@ void main() {
       testWidgets('chip renders correctly', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppChip(
                 label: 'Active',
@@ -411,7 +424,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppChip(
                 label: 'Tag',
@@ -430,7 +443,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: AppChip(
                 label: 'Tappable',
@@ -452,7 +465,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.light,
             home: Scaffold(
               body: Text('Light Theme'),
             ),
@@ -468,7 +481,7 @@ void main() {
       testWidgets('dark theme applies correctly', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.dark,
             home: Scaffold(
               body: Text('Dark Theme'),
             ),

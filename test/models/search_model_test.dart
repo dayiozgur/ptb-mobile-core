@@ -2,20 +2,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
+  // API drift: enum `value`s are now UPPERCASE codes and lookups use nullable
+  // `fromString` (not `fromValue`). SearchQuery takes a single `entityType`
+  // (the `entityTypes` list, `hasFilters` and `SearchQuery.defaultQuery()` were
+  // removed). SearchResult/SearchResponse JSON use snake_case keys; SearchResult
+  // has no `hasImage` getter and no value-equality override. SearchResponse now
+  // requires `duration` + `searchedAt`, `fromJson` reads a flat `query_text`,
+  // and `empty()`/`resultsByType` were removed. SearchSuggestion.type is a
+  // `SuggestionType`. RecentSearch requires `id` and uses `searchedAt` (not
+  // `timestamp`). SearchSettings uses `debounceMs` (no debounceMilliseconds/
+  // highlightMatches/debounceDuration).
   group('SearchEntityType', () {
     test('has correct values', () {
-      expect(SearchEntityType.organization.value, 'organization');
-      expect(SearchEntityType.site.value, 'site');
-      expect(SearchEntityType.unit.value, 'unit');
-      expect(SearchEntityType.user.value, 'user');
-      expect(SearchEntityType.activity.value, 'activity');
-      expect(SearchEntityType.all.value, 'all');
+      expect(SearchEntityType.organization.value, 'ORGANIZATION');
+      expect(SearchEntityType.site.value, 'SITE');
+      expect(SearchEntityType.unit.value, 'UNIT');
+      expect(SearchEntityType.user.value, 'USER');
+      expect(SearchEntityType.activity.value, 'ACTIVITY');
+      expect(SearchEntityType.all.value, 'ALL');
     });
 
     test('has correct labels', () {
       expect(SearchEntityType.organization.label, 'Organizasyon');
-      expect(SearchEntityType.site.label, 'Saha');
-      expect(SearchEntityType.unit.label, 'Alan');
+      expect(SearchEntityType.site.label, 'Tesis');
+      expect(SearchEntityType.unit.label, 'Ünite');
       expect(SearchEntityType.user.label, 'Kullanıcı');
       expect(SearchEntityType.activity.label, 'Aktivite');
       expect(SearchEntityType.all.label, 'Tümü');
@@ -23,46 +33,49 @@ void main() {
 
     test('has correct icons', () {
       expect(SearchEntityType.organization.iconName, 'business');
-      expect(SearchEntityType.site.iconName, 'location_on');
-      expect(SearchEntityType.unit.iconName, 'meeting_room');
+      expect(SearchEntityType.site.iconName, 'location_city');
+      expect(SearchEntityType.unit.iconName, 'widgets');
       expect(SearchEntityType.user.iconName, 'person');
-      expect(SearchEntityType.activity.iconName, 'event');
+      expect(SearchEntityType.activity.iconName, 'timeline');
     });
 
-    test('fromValue returns correct type', () {
-      expect(SearchEntityType.fromValue('organization'), SearchEntityType.organization);
-      expect(SearchEntityType.fromValue('site'), SearchEntityType.site);
-      expect(SearchEntityType.fromValue('unit'), SearchEntityType.unit);
-      expect(SearchEntityType.fromValue('user'), SearchEntityType.user);
-      expect(SearchEntityType.fromValue('activity'), SearchEntityType.activity);
-      expect(SearchEntityType.fromValue('all'), SearchEntityType.all);
+    test('fromString returns correct type', () {
+      expect(SearchEntityType.fromString('ORGANIZATION'),
+          SearchEntityType.organization);
+      expect(SearchEntityType.fromString('SITE'), SearchEntityType.site);
+      expect(SearchEntityType.fromString('ALL'), SearchEntityType.all);
     });
 
-    test('fromValue returns all for invalid value', () {
-      expect(SearchEntityType.fromValue('invalid'), SearchEntityType.all);
-      expect(SearchEntityType.fromValue(null), SearchEntityType.all);
+    test('fromString returns null for invalid value', () {
+      expect(SearchEntityType.fromString('invalid'), isNull);
+      expect(SearchEntityType.fromString(null), isNull);
     });
   });
 
   group('SearchQuery', () {
     test('creates correctly', () {
-      final query = SearchQuery(
+      const query = SearchQuery(
         text: 'test query',
-        entityTypes: [SearchEntityType.organization, SearchEntityType.site],
+        entityType: SearchEntityType.organization,
         limit: 20,
         offset: 0,
       );
 
       expect(query.text, 'test query');
-      expect(query.entityTypes.length, 2);
+      expect(query.entityType, SearchEntityType.organization);
       expect(query.limit, 20);
       expect(query.offset, 0);
     });
 
+    test('defaults to all entity types', () {
+      const query = SearchQuery(text: 'test');
+      expect(query.entityType, SearchEntityType.all);
+    });
+
     test('toJson serializes correctly', () {
-      final query = SearchQuery(
+      const query = SearchQuery(
         text: 'test',
-        entityTypes: [SearchEntityType.organization],
+        entityType: SearchEntityType.organization,
         limit: 10,
         offset: 5,
       );
@@ -70,51 +83,28 @@ void main() {
       final json = query.toJson();
 
       expect(json['text'], 'test');
-      expect(json['entityTypes'], ['organization']);
+      expect(json['entity_type'], 'ORGANIZATION');
       expect(json['limit'], 10);
       expect(json['offset'], 5);
     });
 
     test('copyWith creates correct copy', () {
-      final query = SearchQuery(text: 'original', limit: 10);
+      const query = SearchQuery(text: 'original', limit: 10);
       final copy = query.copyWith(text: 'updated', limit: 20);
 
       expect(copy.text, 'updated');
       expect(copy.limit, 20);
     });
 
-    test('default factory creates empty query', () {
-      final query = SearchQuery.defaultQuery();
-
-      expect(query.text, '');
-      expect(query.entityTypes, [SearchEntityType.all]);
-      expect(query.limit, 20);
-      expect(query.offset, 0);
-    });
-
     test('isEmpty returns correct value', () {
-      final emptyQuery = SearchQuery(text: '');
-      expect(emptyQuery.isEmpty, true);
-
-      final emptyQuery2 = SearchQuery(text: '   ');
-      expect(emptyQuery2.isEmpty, true);
-
-      final nonEmptyQuery = SearchQuery(text: 'test');
-      expect(nonEmptyQuery.isEmpty, false);
+      expect(const SearchQuery(text: '').isEmpty, true);
+      expect(const SearchQuery(text: '   ').isEmpty, true);
+      expect(const SearchQuery(text: 'test').isEmpty, false);
     });
 
-    test('hasFilters returns correct value', () {
-      final noFilter = SearchQuery(
-        text: 'test',
-        entityTypes: [SearchEntityType.all],
-      );
-      expect(noFilter.hasFilters, false);
-
-      final withFilter = SearchQuery(
-        text: 'test',
-        entityTypes: [SearchEntityType.organization],
-      );
-      expect(withFilter.hasFilters, true);
+    test('isValid returns correct value', () {
+      expect(const SearchQuery(text: 'a').isValid, false);
+      expect(const SearchQuery(text: 'ab').isValid, true);
     });
   });
 
@@ -122,11 +112,11 @@ void main() {
     test('fromJson parses correctly', () {
       final json = {
         'id': 'result-123',
-        'entityType': 'organization',
+        'entity_type': 'ORGANIZATION',
         'title': 'Test Organization',
         'subtitle': 'Subtitle text',
         'description': 'Description text',
-        'imageUrl': 'https://example.com/image.png',
+        'image_url': 'https://example.com/image.png',
         'score': 0.95,
         'metadata': {'key': 'value'},
       };
@@ -144,7 +134,7 @@ void main() {
     });
 
     test('toJson serializes correctly', () {
-      final result = SearchResult(
+      const result = SearchResult(
         id: 'result-123',
         entityType: SearchEntityType.site,
         title: 'Test Site',
@@ -155,54 +145,33 @@ void main() {
       final json = result.toJson();
 
       expect(json['id'], 'result-123');
-      expect(json['entityType'], 'site');
+      expect(json['entity_type'], 'SITE');
       expect(json['title'], 'Test Site');
       expect(json['subtitle'], 'Subtitle');
       expect(json['score'], 0.8);
     });
 
-    test('hasImage returns correct value', () {
-      final withImage = SearchResult(
+    test('effectiveIconName falls back to entity type icon', () {
+      const result = SearchResult(
         id: '1',
         entityType: SearchEntityType.unit,
         title: 'Test',
-        imageUrl: 'https://example.com/image.png',
       );
-      expect(withImage.hasImage, true);
+      expect(result.effectiveIconName, 'widgets');
 
-      final withoutImage = SearchResult(
+      const withIcon = SearchResult(
         id: '2',
         entityType: SearchEntityType.unit,
         title: 'Test',
+        iconName: 'custom_icon',
       );
-      expect(withoutImage.hasImage, false);
-    });
-
-    test('equality works correctly', () {
-      final result1 = SearchResult(
-        id: 'result-1',
-        entityType: SearchEntityType.organization,
-        title: 'Test',
-      );
-      final result2 = SearchResult(
-        id: 'result-1',
-        entityType: SearchEntityType.organization,
-        title: 'Different',
-      );
-      final result3 = SearchResult(
-        id: 'result-2',
-        entityType: SearchEntityType.organization,
-        title: 'Test',
-      );
-
-      expect(result1, equals(result2));
-      expect(result1, isNot(equals(result3)));
+      expect(withIcon.effectiveIconName, 'custom_icon');
     });
   });
 
   group('SearchResponse', () {
     test('creates correctly', () {
-      final results = [
+      const results = [
         SearchResult(
           id: '1',
           entityType: SearchEntityType.organization,
@@ -218,13 +187,16 @@ void main() {
       final response = SearchResponse(
         results: results,
         totalCount: 100,
-        query: SearchQuery(text: 'test'),
+        query: const SearchQuery(text: 'test'),
         hasMore: true,
+        duration: const Duration(milliseconds: 12),
+        searchedAt: DateTime(2024, 1, 15),
       );
 
       expect(response.results.length, 2);
       expect(response.totalCount, 100);
       expect(response.hasMore, true);
+      expect(response.count, 2);
     });
 
     test('fromJson parses correctly', () {
@@ -232,18 +204,15 @@ void main() {
         'results': [
           {
             'id': '1',
-            'entityType': 'organization',
+            'entity_type': 'ORGANIZATION',
             'title': 'Test',
           },
         ],
-        'totalCount': 50,
-        'hasMore': true,
-        'query': {
-          'text': 'test',
-          'entityTypes': ['all'],
-          'limit': 20,
-          'offset': 0,
-        },
+        'total_count': 50,
+        'has_more': true,
+        'query_text': 'test',
+        'duration_ms': 12,
+        'searched_at': '2024-01-15T10:00:00.000',
       };
 
       final response = SearchResponse.fromJson(json);
@@ -252,82 +221,58 @@ void main() {
       expect(response.totalCount, 50);
       expect(response.hasMore, true);
       expect(response.query.text, 'test');
-    });
-
-    test('empty factory creates empty response', () {
-      final empty = SearchResponse.empty();
-
-      expect(empty.results, isEmpty);
-      expect(empty.totalCount, 0);
-      expect(empty.hasMore, false);
-      expect(empty.isEmpty, true);
+      expect(response.duration.inMilliseconds, 12);
     });
 
     test('isEmpty returns correct value', () {
       final emptyResponse = SearchResponse(
-        results: [],
+        results: const [],
         totalCount: 0,
-        query: SearchQuery.defaultQuery(),
+        query: const SearchQuery(text: ''),
         hasMore: false,
+        duration: Duration.zero,
+        searchedAt: DateTime(2024, 1, 15),
       );
       expect(emptyResponse.isEmpty, true);
 
       final nonEmptyResponse = SearchResponse(
-        results: [
+        results: const [
           SearchResult(id: '1', entityType: SearchEntityType.unit, title: 'Test'),
         ],
         totalCount: 1,
-        query: SearchQuery.defaultQuery(),
+        query: const SearchQuery(text: 'test'),
         hasMore: false,
+        duration: Duration.zero,
+        searchedAt: DateTime(2024, 1, 15),
       );
       expect(nonEmptyResponse.isEmpty, false);
-    });
-
-    test('resultsByType groups correctly', () {
-      final results = [
-        SearchResult(id: '1', entityType: SearchEntityType.organization, title: 'Org 1'),
-        SearchResult(id: '2', entityType: SearchEntityType.organization, title: 'Org 2'),
-        SearchResult(id: '3', entityType: SearchEntityType.site, title: 'Site 1'),
-      ];
-
-      final response = SearchResponse(
-        results: results,
-        totalCount: 3,
-        query: SearchQuery.defaultQuery(),
-        hasMore: false,
-      );
-
-      final byType = response.resultsByType;
-
-      expect(byType[SearchEntityType.organization]?.length, 2);
-      expect(byType[SearchEntityType.site]?.length, 1);
     });
   });
 
   group('SearchSuggestion', () {
     test('creates correctly', () {
-      final suggestion = SearchSuggestion(
+      const suggestion = SearchSuggestion(
         text: 'suggested text',
-        type: SearchSuggestionType.query,
+        type: SuggestionType.query,
         entityType: SearchEntityType.organization,
       );
 
       expect(suggestion.text, 'suggested text');
-      expect(suggestion.type, SearchSuggestionType.query);
+      expect(suggestion.type, SuggestionType.query);
       expect(suggestion.entityType, SearchEntityType.organization);
     });
 
     test('fromJson parses correctly', () {
       final json = {
         'text': 'suggestion',
-        'type': 'recent',
-        'entityType': 'site',
+        'type': 'RECENT',
+        'entity_type': 'SITE',
       };
 
       final suggestion = SearchSuggestion.fromJson(json);
 
       expect(suggestion.text, 'suggestion');
-      expect(suggestion.type, SearchSuggestionType.recent);
+      expect(suggestion.type, SuggestionType.recent);
       expect(suggestion.entityType, SearchEntityType.site);
     });
   });
@@ -335,48 +280,53 @@ void main() {
   group('RecentSearch', () {
     test('creates correctly', () {
       final search = RecentSearch(
+        id: 'rs-1',
         query: 'recent search',
         entityType: SearchEntityType.unit,
-        timestamp: DateTime(2024, 1, 15),
+        searchedAt: DateTime(2024, 1, 15),
       );
 
+      expect(search.id, 'rs-1');
       expect(search.query, 'recent search');
       expect(search.entityType, SearchEntityType.unit);
-      expect(search.timestamp.year, 2024);
+      expect(search.searchedAt.year, 2024);
     });
 
     test('toJson serializes correctly', () {
       final search = RecentSearch(
+        id: 'rs-1',
         query: 'test',
         entityType: SearchEntityType.user,
-        timestamp: DateTime(2024, 1, 15, 10, 30),
+        searchedAt: DateTime(2024, 1, 15, 10, 30),
       );
 
       final json = search.toJson();
 
+      expect(json['id'], 'rs-1');
       expect(json['query'], 'test');
-      expect(json['entityType'], 'user');
-      expect(json['timestamp'], isA<String>());
+      expect(json['entity_type'], 'USER');
+      expect(json['searched_at'], isA<String>());
     });
 
     test('fromJson parses correctly', () {
       final json = {
+        'id': 'rs-1',
         'query': 'test',
-        'entityType': 'activity',
-        'timestamp': '2024-01-15T10:30:00.000',
+        'entity_type': 'ACTIVITY',
+        'searched_at': '2024-01-15T10:30:00.000',
       };
 
       final search = RecentSearch.fromJson(json);
 
       expect(search.query, 'test');
       expect(search.entityType, SearchEntityType.activity);
-      expect(search.timestamp.year, 2024);
+      expect(search.searchedAt.year, 2024);
     });
   });
 
   group('SearchFilter', () {
     test('creates correctly', () {
-      final filter = SearchFilter(
+      const filter = SearchFilter(
         field: 'status',
         operator: SearchFilterOperator.equals,
         value: 'active',
@@ -388,7 +338,7 @@ void main() {
     });
 
     test('toJson serializes correctly', () {
-      final filter = SearchFilter(
+      const filter = SearchFilter(
         field: 'createdAt',
         operator: SearchFilterOperator.greaterThan,
         value: '2024-01-01',
@@ -397,39 +347,41 @@ void main() {
       final json = filter.toJson();
 
       expect(json['field'], 'createdAt');
-      expect(json['operator'], 'greaterThan');
+      expect(json['operator'], 'GT');
       expect(json['value'], '2024-01-01');
     });
   });
 
   group('SearchSettings', () {
     test('creates with defaults', () {
-      final settings = SearchSettings();
+      const settings = SearchSettings();
 
       expect(settings.minQueryLength, 2);
-      expect(settings.debounceMilliseconds, 300);
+      expect(settings.debounceMs, 300);
       expect(settings.maxRecentSearches, 10);
-      expect(settings.highlightMatches, true);
+      expect(settings.enableFuzzySearch, true);
     });
 
     test('custom settings work', () {
-      final settings = SearchSettings(
+      const settings = SearchSettings(
         minQueryLength: 3,
-        debounceMilliseconds: 500,
+        debounceMs: 500,
         maxRecentSearches: 5,
-        highlightMatches: false,
+        enableFuzzySearch: false,
       );
 
       expect(settings.minQueryLength, 3);
-      expect(settings.debounceMilliseconds, 500);
+      expect(settings.debounceMs, 500);
       expect(settings.maxRecentSearches, 5);
-      expect(settings.highlightMatches, false);
+      expect(settings.enableFuzzySearch, false);
     });
 
-    test('debounceDuration returns correct Duration', () {
-      final settings = SearchSettings(debounceMilliseconds: 500);
+    test('round-trips through JSON', () {
+      const settings = SearchSettings(minQueryLength: 4, debounceMs: 250);
+      final restored = SearchSettings.fromJson(settings.toJson());
 
-      expect(settings.debounceDuration, const Duration(milliseconds: 500));
+      expect(restored.minQueryLength, 4);
+      expect(restored.debounceMs, 250);
     });
   });
 }

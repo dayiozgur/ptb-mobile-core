@@ -93,9 +93,10 @@ void main() {
               child: SizedBox(
                 width: 300,
                 child: AppButton(
+                  // API drift: `fullWidth` was renamed to `isFullWidth`.
                   label: 'Full Width',
                   onPressed: () {},
-                  fullWidth: true,
+                  isFullWidth: true,
                 ),
               ),
             ),

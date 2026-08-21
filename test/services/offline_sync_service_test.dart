@@ -2,82 +2,50 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
-  group('SyncOperationType', () {
+  // API drift: the old typed Sync* enums (SyncEntityType, SyncOperationType,
+  // SyncStatus) and the SyncState class were replaced. PendingOperation now
+  // uses a String `entityType`, a `type` of PendingOperationType and a `status`
+  // of PendingOperationStatus (enum values are UPPERCASE, e.g. 'CREATE'); JSON
+  // uses snake_case keys. The old `.isPending`/`.canRetry` convenience getters
+  // were removed. SyncResult exposes `success`/`message`/`processed`/`failed`
+  // (its success()/failure()/partial() factories and isSuccess/hasFailures/
+  // totalCount/syncedCount getters are gone).
+  group('PendingOperationType', () {
     test('has correct values', () {
-      expect(SyncOperationType.create.value, 'create');
-      expect(SyncOperationType.update.value, 'update');
-      expect(SyncOperationType.delete.value, 'delete');
+      expect(PendingOperationType.create.value, 'CREATE');
+      expect(PendingOperationType.update.value, 'UPDATE');
+      expect(PendingOperationType.delete.value, 'DELETE');
     });
 
-    test('fromValue returns correct type', () {
-      expect(SyncOperationType.fromValue('create'), SyncOperationType.create);
-      expect(SyncOperationType.fromValue('update'), SyncOperationType.update);
-      expect(SyncOperationType.fromValue('delete'), SyncOperationType.delete);
-      expect(SyncOperationType.fromValue('invalid'), SyncOperationType.create);
+    test('fromString returns correct type', () {
+      expect(PendingOperationType.fromString('CREATE'),
+          PendingOperationType.create);
+      expect(PendingOperationType.fromString('UPDATE'),
+          PendingOperationType.update);
+      expect(PendingOperationType.fromString('DELETE'),
+          PendingOperationType.delete);
+      expect(PendingOperationType.fromString('invalid'), isNull);
     });
   });
 
-  group('SyncStatus', () {
+  group('PendingOperationStatus', () {
     test('has correct values', () {
-      expect(SyncStatus.pending.value, 'pending');
-      expect(SyncStatus.syncing.value, 'syncing');
-      expect(SyncStatus.completed.value, 'completed');
-      expect(SyncStatus.failed.value, 'failed');
+      expect(PendingOperationStatus.pending.value, 'PENDING');
+      expect(PendingOperationStatus.processing.value, 'PROCESSING');
+      expect(PendingOperationStatus.completed.value, 'COMPLETED');
+      expect(PendingOperationStatus.failed.value, 'FAILED');
     });
 
-    test('isPending returns correct value', () {
-      expect(SyncStatus.pending.isPending, true);
-      expect(SyncStatus.syncing.isPending, false);
-      expect(SyncStatus.completed.isPending, false);
-      expect(SyncStatus.failed.isPending, false);
-    });
-
-    test('isSyncing returns correct value', () {
-      expect(SyncStatus.pending.isSyncing, false);
-      expect(SyncStatus.syncing.isSyncing, true);
-      expect(SyncStatus.completed.isSyncing, false);
-      expect(SyncStatus.failed.isSyncing, false);
-    });
-
-    test('isCompleted returns correct value', () {
-      expect(SyncStatus.pending.isCompleted, false);
-      expect(SyncStatus.syncing.isCompleted, false);
-      expect(SyncStatus.completed.isCompleted, true);
-      expect(SyncStatus.failed.isCompleted, false);
-    });
-
-    test('isFailed returns correct value', () {
-      expect(SyncStatus.pending.isFailed, false);
-      expect(SyncStatus.syncing.isFailed, false);
-      expect(SyncStatus.completed.isFailed, false);
-      expect(SyncStatus.failed.isFailed, true);
-    });
-  });
-
-  group('SyncEntityType', () {
-    test('has correct values', () {
-      expect(SyncEntityType.organization.value, 'organization');
-      expect(SyncEntityType.site.value, 'site');
-      expect(SyncEntityType.unit.value, 'unit');
-      expect(SyncEntityType.activity.value, 'activity');
-      expect(SyncEntityType.notification.value, 'notification');
-    });
-
-    test('has correct labels', () {
-      expect(SyncEntityType.organization.label, 'Organizasyon');
-      expect(SyncEntityType.site.label, 'Saha');
-      expect(SyncEntityType.unit.label, 'Alan');
-      expect(SyncEntityType.activity.label, 'Aktivite');
-      expect(SyncEntityType.notification.label, 'Bildirim');
-    });
-
-    test('fromValue returns correct type', () {
-      expect(SyncEntityType.fromValue('organization'), SyncEntityType.organization);
-      expect(SyncEntityType.fromValue('site'), SyncEntityType.site);
-      expect(SyncEntityType.fromValue('unit'), SyncEntityType.unit);
-      expect(SyncEntityType.fromValue('activity'), SyncEntityType.activity);
-      expect(SyncEntityType.fromValue('notification'), SyncEntityType.notification);
-      expect(SyncEntityType.fromValue('invalid'), SyncEntityType.organization);
+    test('fromString returns correct status', () {
+      expect(PendingOperationStatus.fromString('PENDING'),
+          PendingOperationStatus.pending);
+      expect(PendingOperationStatus.fromString('PROCESSING'),
+          PendingOperationStatus.processing);
+      expect(PendingOperationStatus.fromString('COMPLETED'),
+          PendingOperationStatus.completed);
+      expect(PendingOperationStatus.fromString('FAILED'),
+          PendingOperationStatus.failed);
+      expect(PendingOperationStatus.fromString('invalid'), isNull);
     });
   });
 
@@ -85,52 +53,52 @@ void main() {
     test('creates correctly', () {
       final operation = PendingOperation(
         id: 'op-123',
-        entityType: SyncEntityType.unit,
+        entityType: 'unit',
         entityId: 'unit-123',
-        operationType: SyncOperationType.create,
+        type: PendingOperationType.create,
         data: {'name': 'Test Unit'},
-        status: SyncStatus.pending,
+        status: PendingOperationStatus.pending,
         createdAt: DateTime.now(),
         retryCount: 0,
       );
 
       expect(operation.id, 'op-123');
-      expect(operation.entityType, SyncEntityType.unit);
+      expect(operation.entityType, 'unit');
       expect(operation.entityId, 'unit-123');
-      expect(operation.operationType, SyncOperationType.create);
-      expect(operation.status, SyncStatus.pending);
+      expect(operation.type, PendingOperationType.create);
+      expect(operation.status, PendingOperationStatus.pending);
       expect(operation.retryCount, 0);
     });
 
     test('fromJson parses correctly', () {
       final json = {
         'id': 'op-123',
-        'entityType': 'unit',
-        'entityId': 'unit-123',
-        'operationType': 'create',
+        'entity_type': 'unit',
+        'entity_id': 'unit-123',
+        'type': 'CREATE',
         'data': {'name': 'Test Unit'},
-        'status': 'pending',
-        'createdAt': DateTime.now().toIso8601String(),
-        'retryCount': 0,
+        'status': 'PENDING',
+        'created_at': DateTime.now().toIso8601String(),
+        'retry_count': 0,
       };
 
       final operation = PendingOperation.fromJson(json);
 
       expect(operation.id, 'op-123');
-      expect(operation.entityType, SyncEntityType.unit);
+      expect(operation.entityType, 'unit');
       expect(operation.entityId, 'unit-123');
-      expect(operation.operationType, SyncOperationType.create);
-      expect(operation.status, SyncStatus.pending);
+      expect(operation.type, PendingOperationType.create);
+      expect(operation.status, PendingOperationStatus.pending);
     });
 
     test('toJson serializes correctly', () {
       final operation = PendingOperation(
         id: 'op-123',
-        entityType: SyncEntityType.site,
+        entityType: 'site',
         entityId: 'site-123',
-        operationType: SyncOperationType.update,
+        type: PendingOperationType.update,
         data: {'name': 'Updated Site'},
-        status: SyncStatus.pending,
+        status: PendingOperationStatus.pending,
         createdAt: DateTime(2024, 1, 15),
         retryCount: 0,
       );
@@ -138,245 +106,95 @@ void main() {
       final json = operation.toJson();
 
       expect(json['id'], 'op-123');
-      expect(json['entityType'], 'site');
-      expect(json['entityId'], 'site-123');
-      expect(json['operationType'], 'update');
-      expect(json['status'], 'pending');
+      expect(json['entity_type'], 'site');
+      expect(json['entity_id'], 'site-123');
+      expect(json['type'], 'UPDATE');
+      expect(json['status'], 'PENDING');
+    });
+
+    test('round-trip serialization preserves fields', () {
+      final operation = PendingOperation(
+        id: 'op-123',
+        entityType: 'unit',
+        entityId: 'unit-123',
+        type: PendingOperationType.delete,
+        data: {'reason': 'obsolete'},
+        status: PendingOperationStatus.completed,
+        createdAt: DateTime(2024, 1, 15),
+        retryCount: 2,
+      );
+
+      final restored = PendingOperation.fromJson(operation.toJson());
+
+      expect(restored.id, 'op-123');
+      expect(restored.entityType, 'unit');
+      expect(restored.type, PendingOperationType.delete);
+      expect(restored.status, PendingOperationStatus.completed);
+      expect(restored.retryCount, 2);
     });
 
     test('copyWith creates correct copy', () {
       final operation = PendingOperation(
         id: 'op-123',
-        entityType: SyncEntityType.unit,
+        entityType: 'unit',
         entityId: 'unit-123',
-        operationType: SyncOperationType.create,
+        type: PendingOperationType.create,
         data: {},
-        status: SyncStatus.pending,
+        status: PendingOperationStatus.pending,
         createdAt: DateTime.now(),
         retryCount: 0,
       );
 
       final copy = operation.copyWith(
-        status: SyncStatus.syncing,
+        status: PendingOperationStatus.processing,
         retryCount: 1,
       );
 
       expect(copy.id, 'op-123');
-      expect(copy.status, SyncStatus.syncing);
+      expect(copy.status, PendingOperationStatus.processing);
       expect(copy.retryCount, 1);
-    });
-
-    test('canRetry returns correct value', () {
-      final operationWithLowRetry = PendingOperation(
-        id: 'op-1',
-        entityType: SyncEntityType.unit,
-        entityId: 'unit-123',
-        operationType: SyncOperationType.create,
-        data: {},
-        status: SyncStatus.failed,
-        createdAt: DateTime.now(),
-        retryCount: 2,
-      );
-      expect(operationWithLowRetry.canRetry, true);
-
-      final operationWithHighRetry = PendingOperation(
-        id: 'op-2',
-        entityType: SyncEntityType.unit,
-        entityId: 'unit-123',
-        operationType: SyncOperationType.create,
-        data: {},
-        status: SyncStatus.failed,
-        createdAt: DateTime.now(),
-        retryCount: 5,
-      );
-      expect(operationWithHighRetry.canRetry, false);
-    });
-
-    test('isPending returns correct value', () {
-      final pendingOp = PendingOperation(
-        id: 'op-1',
-        entityType: SyncEntityType.unit,
-        entityId: 'unit-123',
-        operationType: SyncOperationType.create,
-        data: {},
-        status: SyncStatus.pending,
-        createdAt: DateTime.now(),
-        retryCount: 0,
-      );
-      expect(pendingOp.isPending, true);
-
-      final completedOp = PendingOperation(
-        id: 'op-2',
-        entityType: SyncEntityType.unit,
-        entityId: 'unit-123',
-        operationType: SyncOperationType.create,
-        data: {},
-        status: SyncStatus.completed,
-        createdAt: DateTime.now(),
-        retryCount: 0,
-      );
-      expect(completedOp.isPending, false);
-    });
-  });
-
-  group('SyncState', () {
-    test('creates correctly', () {
-      final state = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-        lastSyncAt: DateTime.now(),
-      );
-
-      expect(state.isOnline, true);
-      expect(state.isSyncing, false);
-      expect(state.pendingCount, 5);
-    });
-
-    test('hasPending returns correct value', () {
-      final stateWithPending = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-      expect(stateWithPending.hasPending, true);
-
-      final stateWithoutPending = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 0,
-      );
-      expect(stateWithoutPending.hasPending, false);
-    });
-
-    test('canSync returns correct value', () {
-      final canSyncState = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-      expect(canSyncState.canSync, true);
-
-      final offlineState = SyncState(
-        isOnline: false,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-      expect(offlineState.canSync, false);
-
-      final syncingState = SyncState(
-        isOnline: true,
-        isSyncing: true,
-        pendingCount: 5,
-      );
-      expect(syncingState.canSync, false);
-
-      final noPendingState = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 0,
-      );
-      expect(noPendingState.canSync, false);
-    });
-
-    test('copyWith creates correct copy', () {
-      final state = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-
-      final copy = state.copyWith(
-        isSyncing: true,
-        pendingCount: 3,
-      );
-
-      expect(copy.isOnline, true);
-      expect(copy.isSyncing, true);
-      expect(copy.pendingCount, 3);
-    });
-
-    test('initial factory creates correct state', () {
-      final state = SyncState.initial();
-
-      expect(state.isOnline, false);
-      expect(state.isSyncing, false);
-      expect(state.pendingCount, 0);
-      expect(state.lastSyncAt, isNull);
-    });
-
-    test('equality works correctly', () {
-      final state1 = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-      final state2 = SyncState(
-        isOnline: true,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-      final state3 = SyncState(
-        isOnline: false,
-        isSyncing: false,
-        pendingCount: 5,
-      );
-
-      expect(state1, equals(state2));
-      expect(state1, isNot(equals(state3)));
     });
   });
 
   group('SyncResult', () {
-    test('success factory creates correct result', () {
-      final result = SyncResult.success(syncedCount: 5);
-
-      expect(result.isSuccess, true);
-      expect(result.syncedCount, 5);
-      expect(result.failedCount, 0);
-      expect(result.error, isNull);
-    });
-
-    test('failure factory creates correct result', () {
-      final result = SyncResult.failure(error: 'Network error', failedCount: 3);
-
-      expect(result.isSuccess, false);
-      expect(result.syncedCount, 0);
-      expect(result.failedCount, 3);
-      expect(result.error, 'Network error');
-    });
-
-    test('partial factory creates correct result', () {
-      final result = SyncResult.partial(
-        syncedCount: 7,
-        failedCount: 3,
-        error: 'Some operations failed',
+    test('successful result', () {
+      final result = SyncResult(
+        success: true,
+        message: 'All synced',
+        processed: 5,
+        failed: 0,
       );
 
-      expect(result.isSuccess, false);
-      expect(result.syncedCount, 7);
-      expect(result.failedCount, 3);
-      expect(result.error, 'Some operations failed');
+      expect(result.success, true);
+      expect(result.processed, 5);
+      expect(result.failed, 0);
     });
 
-    test('totalCount returns correct value', () {
-      final result = SyncResult.partial(
-        syncedCount: 7,
-        failedCount: 3,
+    test('failure result', () {
+      final result = SyncResult(
+        success: false,
+        message: 'Network error',
+        processed: 0,
+        failed: 3,
       );
 
-      expect(result.totalCount, 10);
+      expect(result.success, false);
+      expect(result.processed, 0);
+      expect(result.failed, 3);
     });
 
-    test('hasFailures returns correct value', () {
-      final successResult = SyncResult.success(syncedCount: 5);
-      expect(successResult.hasFailures, false);
+    test('partial result', () {
+      final result = SyncResult(
+        success: false,
+        message: 'Some operations failed',
+        processed: 7,
+        failed: 3,
+      );
 
-      final failureResult = SyncResult.failure(error: 'Error', failedCount: 3);
-      expect(failureResult.hasFailures, true);
-
-      final partialResult = SyncResult.partial(syncedCount: 5, failedCount: 2);
-      expect(partialResult.hasFailures, true);
+      expect(result.success, false);
+      expect(result.processed, 7);
+      expect(result.failed, 3);
+      expect(result.processed + result.failed, 10);
     });
   });
 }

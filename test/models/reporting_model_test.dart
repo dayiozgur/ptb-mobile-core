@@ -2,57 +2,69 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
+  // API drift: the reporting models were reworked from computed-helper value
+  // objects into plain data containers.
+  // - MetricType's domain-specific members (organizations/sites/units/users)
+  //   were replaced by count/sum/average/percentage/trend; enum `value`s are now
+  //   UPPERCASE codes and `fromValue` became nullable `fromString`.
+  // - DashboardMetric now takes id/title/value(String) (no previousValue/
+  //   changePercent/formattedValue/formattedChange).
+  // - DashboardSummary requires `tenantId` and carries the entity counts
+  //   directly (getMetric/totalValue removed).
+  // - ActivityStats is now {totalCount, byType, byEntity, timeSeries,
+  //   generatedAt} (completionRate/hasOverdue removed).
+  // - EntityCountSummary is now {total, active, inactive, generatedAt}
+  //   (totalEntities/userActivityRate removed).
+  // - DateRange exposes `days`/`previousPeriod` (duration/contains/overlaps/
+  //   toJson removed).
+  // - ReportType is summary/activity/inventory/performance/custom; ReportFormat
+  //   only exposes value/label (extension/mimeType removed).
+  // - ReportResult is {id, type, format, title, dateRange, generatedAt, data}
+  //   (request/isSuccess/error removed); ReportRequest.toJson uses snake_case.
   group('MetricType', () {
     test('has correct values', () {
-      expect(MetricType.organizations.value, 'organizations');
-      expect(MetricType.sites.value, 'sites');
-      expect(MetricType.units.value, 'units');
-      expect(MetricType.users.value, 'users');
-      expect(MetricType.activities.value, 'activities');
+      expect(MetricType.count.value, 'COUNT');
+      expect(MetricType.sum.value, 'SUM');
+      expect(MetricType.average.value, 'AVG');
+      expect(MetricType.percentage.value, 'PERCENTAGE');
+      expect(MetricType.trend.value, 'TREND');
     });
 
     test('has correct labels', () {
-      expect(MetricType.organizations.label, 'Organizasyonlar');
-      expect(MetricType.sites.label, 'Sahalar');
-      expect(MetricType.units.label, 'Alanlar');
-      expect(MetricType.users.label, 'Kullanıcılar');
-      expect(MetricType.activities.label, 'Aktiviteler');
+      expect(MetricType.count.label, 'Sayı');
+      expect(MetricType.sum.label, 'Toplam');
+      expect(MetricType.average.label, 'Ortalama');
     });
 
-    test('fromValue returns correct type', () {
-      expect(MetricType.fromValue('organizations'), MetricType.organizations);
-      expect(MetricType.fromValue('sites'), MetricType.sites);
-      expect(MetricType.fromValue('invalid'), MetricType.organizations);
+    test('fromString returns correct type', () {
+      expect(MetricType.fromString('COUNT'), MetricType.count);
+      expect(MetricType.fromString('SUM'), MetricType.sum);
+      expect(MetricType.fromString('invalid'), isNull);
+      expect(MetricType.fromString(null), isNull);
     });
   });
 
   group('TrendDirection', () {
     test('has correct values', () {
-      expect(TrendDirection.up.value, 'up');
-      expect(TrendDirection.down.value, 'down');
-      expect(TrendDirection.stable.value, 'stable');
+      expect(TrendDirection.up.value, 'UP');
+      expect(TrendDirection.down.value, 'DOWN');
+      expect(TrendDirection.stable.value, 'STABLE');
     });
 
-    test('isPositive returns correct value', () {
-      expect(TrendDirection.up.isPositive, true);
-      expect(TrendDirection.down.isPositive, false);
-      expect(TrendDirection.stable.isPositive, false);
-    });
-
-    test('isNegative returns correct value', () {
-      expect(TrendDirection.up.isNegative, false);
-      expect(TrendDirection.down.isNegative, true);
-      expect(TrendDirection.stable.isNegative, false);
+    test('fromString returns correct type', () {
+      expect(TrendDirection.fromString('UP'), TrendDirection.up);
+      expect(TrendDirection.fromString('DOWN'), TrendDirection.down);
+      expect(TrendDirection.fromString('invalid'), isNull);
     });
   });
 
   group('ReportPeriod', () {
     test('has correct values', () {
-      expect(ReportPeriod.today.value, 'today');
-      expect(ReportPeriod.thisWeek.value, 'this_week');
-      expect(ReportPeriod.thisMonth.value, 'this_month');
-      expect(ReportPeriod.thisYear.value, 'this_year');
-      expect(ReportPeriod.custom.value, 'custom');
+      expect(ReportPeriod.today.value, 'TODAY');
+      expect(ReportPeriod.thisWeek.value, 'THIS_WEEK');
+      expect(ReportPeriod.thisMonth.value, 'THIS_MONTH');
+      expect(ReportPeriod.thisYear.value, 'THIS_YEAR');
+      expect(ReportPeriod.custom.value, 'CUSTOM');
     });
 
     test('has correct labels', () {
@@ -76,7 +88,6 @@ void main() {
 
     test('getDateRange returns correct range for thisWeek', () {
       final range = ReportPeriod.thisWeek.getDateRange();
-      final now = DateTime.now();
 
       // Start should be Monday of current week
       expect(range.start.weekday, DateTime.monday);
@@ -112,349 +123,229 @@ void main() {
       expect(range.end, end);
     });
 
-    test('duration returns correct value', () {
+    test('days returns correct value', () {
       final range = DateRange(
         start: DateTime(2024, 1, 1),
         end: DateTime(2024, 1, 11),
       );
 
-      expect(range.duration.inDays, 10);
+      expect(range.days, 10);
     });
 
-    test('contains returns correct value', () {
+    test('previousPeriod returns adjacent earlier range', () {
       final range = DateRange(
-        start: DateTime(2024, 1, 1),
-        end: DateTime(2024, 1, 31),
+        start: DateTime(2024, 1, 11),
+        end: DateTime(2024, 1, 21),
       );
 
-      expect(range.contains(DateTime(2024, 1, 15)), true);
-      expect(range.contains(DateTime(2024, 2, 1)), false);
-      expect(range.contains(DateTime(2023, 12, 31)), false);
-    });
+      final previous = range.previousPeriod;
 
-    test('overlaps returns correct value', () {
-      final range1 = DateRange(
-        start: DateTime(2024, 1, 1),
-        end: DateTime(2024, 1, 31),
-      );
-      final range2 = DateRange(
-        start: DateTime(2024, 1, 15),
-        end: DateTime(2024, 2, 15),
-      );
-      final range3 = DateRange(
-        start: DateTime(2024, 3, 1),
-        end: DateTime(2024, 3, 31),
-      );
-
-      expect(range1.overlaps(range2), true);
-      expect(range1.overlaps(range3), false);
-    });
-
-    test('toJson serializes correctly', () {
-      final range = DateRange(
-        start: DateTime(2024, 1, 1),
-        end: DateTime(2024, 1, 31),
-      );
-
-      final json = range.toJson();
-
-      expect(json['start'], isA<String>());
-      expect(json['end'], isA<String>());
+      expect(previous.end, range.start);
+      expect(previous.start, DateTime(2024, 1, 1));
     });
   });
 
   group('DashboardMetric', () {
     test('creates correctly', () {
-      final metric = DashboardMetric(
-        type: MetricType.organizations,
-        value: 100,
-        previousValue: 80,
+      const metric = DashboardMetric(
+        id: 'm-1',
+        title: 'Organizations',
+        value: '100',
+        type: MetricType.count,
         trend: TrendDirection.up,
-        changePercent: 25.0,
+        trendValue: 25.0,
       );
 
-      expect(metric.type, MetricType.organizations);
-      expect(metric.value, 100);
-      expect(metric.previousValue, 80);
+      expect(metric.id, 'm-1');
+      expect(metric.title, 'Organizations');
+      expect(metric.value, '100');
+      expect(metric.type, MetricType.count);
       expect(metric.trend, TrendDirection.up);
-      expect(metric.changePercent, 25.0);
+      expect(metric.trendValue, 25.0);
     });
 
-    test('formattedValue returns correct string', () {
-      final metric = DashboardMetric(
-        type: MetricType.sites,
-        value: 1234,
-      );
-
-      expect(metric.formattedValue, '1,234');
-    });
-
-    test('formattedChange returns correct string', () {
-      final positiveMetric = DashboardMetric(
-        type: MetricType.units,
-        value: 100,
+    test('round-trips through JSON', () {
+      const metric = DashboardMetric(
+        id: 'm-users',
+        title: 'Users',
+        value: '500',
+        type: MetricType.count,
         trend: TrendDirection.up,
-        changePercent: 15.5,
+        trendValue: 11.1,
       );
-      expect(positiveMetric.formattedChange, '+15.5%');
 
-      final negativeMetric = DashboardMetric(
-        type: MetricType.units,
-        value: 100,
-        trend: TrendDirection.down,
-        changePercent: 10.0,
-      );
-      expect(negativeMetric.formattedChange, '-10.0%');
+      final restored = DashboardMetric.fromJson(metric.toJson());
 
-      final stableMetric = DashboardMetric(
-        type: MetricType.units,
-        value: 100,
-        trend: TrendDirection.stable,
-        changePercent: 0.0,
-      );
-      expect(stableMetric.formattedChange, '0.0%');
-    });
-
-    test('fromJson parses correctly', () {
-      final json = {
-        'type': 'users',
-        'value': 500,
-        'previousValue': 450,
-        'trend': 'up',
-        'changePercent': 11.1,
-      };
-
-      final metric = DashboardMetric.fromJson(json);
-
-      expect(metric.type, MetricType.users);
-      expect(metric.value, 500);
-      expect(metric.previousValue, 450);
-      expect(metric.trend, TrendDirection.up);
-      expect(metric.changePercent, 11.1);
+      expect(restored.id, 'm-users');
+      expect(restored.title, 'Users');
+      expect(restored.value, '500');
+      expect(restored.type, MetricType.count);
+      expect(restored.trend, TrendDirection.up);
+      expect(restored.trendValue, 11.1);
     });
   });
 
   group('DashboardSummary', () {
     test('creates correctly', () {
-      final metrics = [
-        DashboardMetric(type: MetricType.organizations, value: 10),
-        DashboardMetric(type: MetricType.sites, value: 50),
-      ];
-
       final summary = DashboardSummary(
-        metrics: metrics,
+        tenantId: 'tenant-123',
+        metrics: const [
+          DashboardMetric(id: 'm-1', title: 'Orgs', value: '10'),
+          DashboardMetric(id: 'm-2', title: 'Sites', value: '50'),
+        ],
         period: ReportPeriod.thisMonth,
+        organizationCount: 10,
+        siteCount: 50,
         generatedAt: DateTime.now(),
       );
 
+      expect(summary.tenantId, 'tenant-123');
       expect(summary.metrics.length, 2);
       expect(summary.period, ReportPeriod.thisMonth);
+      expect(summary.organizationCount, 10);
+      expect(summary.siteCount, 50);
     });
 
-    test('getMetric returns correct metric', () {
+    test('round-trips through JSON', () {
       final summary = DashboardSummary(
-        metrics: [
-          DashboardMetric(type: MetricType.organizations, value: 10),
-          DashboardMetric(type: MetricType.sites, value: 50),
+        tenantId: 'tenant-123',
+        metrics: const [
+          DashboardMetric(
+            id: 'm-org',
+            title: 'Organizations',
+            value: '5',
+            trend: TrendDirection.up,
+          ),
         ],
         period: ReportPeriod.thisMonth,
-        generatedAt: DateTime.now(),
+        organizationCount: 5,
+        siteCount: 20,
+        unitCount: 100,
+        activeUserCount: 50,
+        generatedAt: DateTime(2024, 1, 15, 10, 0),
       );
 
-      expect(summary.getMetric(MetricType.organizations)?.value, 10);
-      expect(summary.getMetric(MetricType.sites)?.value, 50);
-      expect(summary.getMetric(MetricType.users), isNull);
-    });
+      final restored = DashboardSummary.fromJson(summary.toJson());
 
-    test('totalValue returns sum of all metric values', () {
-      final summary = DashboardSummary(
-        metrics: [
-          DashboardMetric(type: MetricType.organizations, value: 10),
-          DashboardMetric(type: MetricType.sites, value: 50),
-          DashboardMetric(type: MetricType.units, value: 40),
-        ],
-        period: ReportPeriod.thisMonth,
-        generatedAt: DateTime.now(),
-      );
-
-      expect(summary.totalValue, 100);
+      expect(restored.tenantId, 'tenant-123');
+      expect(restored.unitCount, 100);
+      expect(restored.activeUserCount, 50);
+      expect(restored.metrics.first.trend, TrendDirection.up);
     });
   });
 
   group('ActivityStats', () {
     test('creates correctly', () {
       final stats = ActivityStats(
-        totalActivities: 100,
-        completedActivities: 80,
-        pendingActivities: 15,
-        overdueActivities: 5,
-        period: ReportPeriod.thisWeek,
+        totalCount: 100,
+        byType: const {'create': 60, 'update': 40},
+        byEntity: const {'unit': 75, 'site': 25},
+        timeSeries: const [],
+        generatedAt: DateTime.now(),
       );
 
-      expect(stats.totalActivities, 100);
-      expect(stats.completedActivities, 80);
-      expect(stats.pendingActivities, 15);
-      expect(stats.overdueActivities, 5);
+      expect(stats.totalCount, 100);
+      expect(stats.byType['create'], 60);
+      expect(stats.byEntity['unit'], 75);
     });
 
-    test('completionRate calculates correctly', () {
+    test('round-trips through JSON', () {
       final stats = ActivityStats(
-        totalActivities: 100,
-        completedActivities: 75,
-        pendingActivities: 20,
-        overdueActivities: 5,
-        period: ReportPeriod.thisWeek,
+        totalCount: 100,
+        byType: const {'create': 60, 'update': 40},
+        byEntity: const {'unit': 75, 'site': 25},
+        timeSeries: const [],
+        generatedAt: DateTime(2024, 1, 15, 10, 0),
       );
 
-      expect(stats.completionRate, 75.0);
-    });
+      final restored = ActivityStats.fromJson(stats.toJson());
 
-    test('completionRate returns 0 when no activities', () {
-      final stats = ActivityStats(
-        totalActivities: 0,
-        completedActivities: 0,
-        pendingActivities: 0,
-        overdueActivities: 0,
-        period: ReportPeriod.thisWeek,
-      );
-
-      expect(stats.completionRate, 0.0);
-    });
-
-    test('hasOverdue returns correct value', () {
-      final withOverdue = ActivityStats(
-        totalActivities: 100,
-        completedActivities: 80,
-        pendingActivities: 10,
-        overdueActivities: 10,
-        period: ReportPeriod.thisWeek,
-      );
-      expect(withOverdue.hasOverdue, true);
-
-      final withoutOverdue = ActivityStats(
-        totalActivities: 100,
-        completedActivities: 80,
-        pendingActivities: 20,
-        overdueActivities: 0,
-        period: ReportPeriod.thisWeek,
-      );
-      expect(withoutOverdue.hasOverdue, false);
+      expect(restored.totalCount, 100);
+      expect(restored.byType['update'], 40);
+      expect(restored.byEntity['site'], 25);
     });
   });
 
   group('EntityCountSummary', () {
     test('creates correctly', () {
       final summary = EntityCountSummary(
-        organizationCount: 5,
-        siteCount: 20,
-        unitCount: 100,
-        userCount: 50,
-        activeUserCount: 45,
+        total: 100,
+        active: 85,
+        inactive: 15,
+        generatedAt: DateTime.now(),
       );
 
-      expect(summary.organizationCount, 5);
-      expect(summary.siteCount, 20);
-      expect(summary.unitCount, 100);
-      expect(summary.userCount, 50);
-      expect(summary.activeUserCount, 45);
+      expect(summary.total, 100);
+      expect(summary.active, 85);
+      expect(summary.inactive, 15);
+      expect(summary.active + summary.inactive, 100);
     });
 
-    test('totalEntities calculates correctly', () {
+    test('round-trips through JSON', () {
       final summary = EntityCountSummary(
-        organizationCount: 5,
-        siteCount: 20,
-        unitCount: 100,
-        userCount: 50,
-        activeUserCount: 45,
+        total: 100,
+        active: 85,
+        inactive: 15,
+        generatedAt: DateTime(2024, 1, 15, 10, 0),
       );
 
-      expect(summary.totalEntities, 175); // 5 + 20 + 100 + 50
-    });
+      final restored = EntityCountSummary.fromJson(summary.toJson());
 
-    test('userActivityRate calculates correctly', () {
-      final summary = EntityCountSummary(
-        organizationCount: 5,
-        siteCount: 20,
-        unitCount: 100,
-        userCount: 100,
-        activeUserCount: 75,
-      );
-
-      expect(summary.userActivityRate, 75.0);
-    });
-
-    test('userActivityRate returns 0 when no users', () {
-      final summary = EntityCountSummary(
-        organizationCount: 5,
-        siteCount: 20,
-        unitCount: 100,
-        userCount: 0,
-        activeUserCount: 0,
-      );
-
-      expect(summary.userActivityRate, 0.0);
+      expect(restored.total, 100);
+      expect(restored.active, 85);
+      expect(restored.inactive, 15);
     });
   });
 
   group('ReportType', () {
     test('has correct values', () {
-      expect(ReportType.dashboard.value, 'dashboard');
-      expect(ReportType.activity.value, 'activity');
-      expect(ReportType.entitySummary.value, 'entity_summary');
-      expect(ReportType.trend.value, 'trend');
-      expect(ReportType.custom.value, 'custom');
+      expect(ReportType.summary.value, 'SUMMARY');
+      expect(ReportType.activity.value, 'ACTIVITY');
+      expect(ReportType.inventory.value, 'INVENTORY');
+      expect(ReportType.performance.value, 'PERFORMANCE');
+      expect(ReportType.custom.value, 'CUSTOM');
     });
 
     test('has correct labels', () {
-      expect(ReportType.dashboard.label, 'Dashboard');
+      expect(ReportType.summary.label, 'Özet Rapor');
       expect(ReportType.activity.label, 'Aktivite Raporu');
-      expect(ReportType.entitySummary.label, 'Varlık Özeti');
-      expect(ReportType.trend.label, 'Trend Analizi');
       expect(ReportType.custom.label, 'Özel Rapor');
     });
   });
 
   group('ReportFormat', () {
     test('has correct values', () {
-      expect(ReportFormat.json.value, 'json');
-      expect(ReportFormat.csv.value, 'csv');
-      expect(ReportFormat.pdf.value, 'pdf');
-      expect(ReportFormat.excel.value, 'excel');
+      expect(ReportFormat.json.value, 'JSON');
+      expect(ReportFormat.csv.value, 'CSV');
+      expect(ReportFormat.pdf.value, 'PDF');
+      expect(ReportFormat.excel.value, 'EXCEL');
     });
 
-    test('has correct extensions', () {
-      expect(ReportFormat.json.extension, 'json');
-      expect(ReportFormat.csv.extension, 'csv');
-      expect(ReportFormat.pdf.extension, 'pdf');
-      expect(ReportFormat.excel.extension, 'xlsx');
-    });
-
-    test('has correct mime types', () {
-      expect(ReportFormat.json.mimeType, 'application/json');
-      expect(ReportFormat.csv.mimeType, 'text/csv');
-      expect(ReportFormat.pdf.mimeType, 'application/pdf');
-      expect(ReportFormat.excel.mimeType,
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    test('has correct labels', () {
+      expect(ReportFormat.json.label, 'JSON');
+      expect(ReportFormat.csv.label, 'CSV');
+      expect(ReportFormat.pdf.label, 'PDF');
+      expect(ReportFormat.excel.label, 'Excel');
     });
   });
 
   group('ReportRequest', () {
     test('creates correctly', () {
-      final request = ReportRequest(
-        type: ReportType.dashboard,
+      const request = ReportRequest(
+        type: ReportType.summary,
         period: ReportPeriod.thisMonth,
         format: ReportFormat.pdf,
         tenantId: 'tenant-123',
       );
 
-      expect(request.type, ReportType.dashboard);
+      expect(request.type, ReportType.summary);
       expect(request.period, ReportPeriod.thisMonth);
       expect(request.format, ReportFormat.pdf);
       expect(request.tenantId, 'tenant-123');
     });
 
     test('toJson serializes correctly', () {
-      final request = ReportRequest(
+      const request = ReportRequest(
         type: ReportType.activity,
         period: ReportPeriod.thisWeek,
         format: ReportFormat.csv,
@@ -464,57 +355,54 @@ void main() {
 
       final json = request.toJson();
 
-      expect(json['type'], 'activity');
-      expect(json['period'], 'this_week');
-      expect(json['format'], 'csv');
-      expect(json['tenantId'], 'tenant-123');
-      expect(json['organizationId'], 'org-123');
+      expect(json['type'], 'ACTIVITY');
+      expect(json['period'], 'THIS_WEEK');
+      expect(json['format'], 'CSV');
+      expect(json['tenant_id'], 'tenant-123');
+      expect(json['organization_id'], 'org-123');
     });
   });
 
   group('ReportResult', () {
     test('creates correctly', () {
       final result = ReportResult(
-        request: ReportRequest(
-          type: ReportType.dashboard,
-          period: ReportPeriod.thisMonth,
-          format: ReportFormat.json,
-          tenantId: 'tenant-123',
+        id: 'report-1',
+        type: ReportType.summary,
+        format: ReportFormat.json,
+        title: 'Monthly Summary',
+        dateRange: DateRange(
+          start: DateTime(2024, 1, 1),
+          end: DateTime(2024, 1, 31),
         ),
-        data: {'metrics': []},
         generatedAt: DateTime.now(),
+        data: {'metrics': []},
       );
 
-      expect(result.request.type, ReportType.dashboard);
+      expect(result.id, 'report-1');
+      expect(result.type, ReportType.summary);
       expect(result.data, isA<Map>());
-      expect(result.isSuccess, true);
     });
 
-    test('isSuccess returns correct value', () {
-      final successResult = ReportResult(
-        request: ReportRequest(
-          type: ReportType.dashboard,
-          period: ReportPeriod.thisMonth,
-          format: ReportFormat.json,
-          tenantId: 'tenant-123',
+    test('round-trips through JSON', () {
+      final result = ReportResult(
+        id: 'report-1',
+        type: ReportType.summary,
+        format: ReportFormat.json,
+        title: 'Monthly Summary',
+        dateRange: DateRange(
+          start: DateTime(2024, 1, 1),
+          end: DateTime(2024, 1, 31),
         ),
-        data: {'data': 'value'},
-        generatedAt: DateTime.now(),
+        generatedAt: DateTime(2024, 1, 15, 10, 0),
+        data: {'value': 'x'},
       );
-      expect(successResult.isSuccess, true);
 
-      final failResult = ReportResult(
-        request: ReportRequest(
-          type: ReportType.dashboard,
-          period: ReportPeriod.thisMonth,
-          format: ReportFormat.json,
-          tenantId: 'tenant-123',
-        ),
-        data: null,
-        generatedAt: DateTime.now(),
-        error: 'Failed to generate report',
-      );
-      expect(failResult.isSuccess, false);
+      final restored = ReportResult.fromJson(result.toJson());
+
+      expect(restored.id, 'report-1');
+      expect(restored.type, ReportType.summary);
+      expect(restored.format, ReportFormat.json);
+      expect(restored.title, 'Monthly Summary');
     });
   });
 }

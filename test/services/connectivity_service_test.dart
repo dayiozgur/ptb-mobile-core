@@ -2,145 +2,89 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
+  // API drift: `ConnectivityState` was renamed to `ConnectivityInfo` and its
+  // `connectionType` field is now `type`; it gained a `checkedAt` timestamp and
+  // lost the `copyWith`/equality/`ConnectionType.hasConnection` helpers. The
+  // `online` factory now takes a named `type:` argument. `ConnectionType` and
+  // `ConnectivityStatus` are now plain enums (no `.value`/`.isWifi`/`.isOnline`
+  // getters), so those checks are expressed against `ConnectivityInfo` instead.
   group('ConnectivityStatus', () {
-    test('has correct values', () {
-      expect(ConnectivityStatus.online.isOnline, true);
-      expect(ConnectivityStatus.offline.isOnline, false);
-      expect(ConnectivityStatus.unknown.isOnline, false);
-    });
-
-    test('isOffline returns correct value', () {
-      expect(ConnectivityStatus.online.isOffline, false);
-      expect(ConnectivityStatus.offline.isOffline, true);
-      expect(ConnectivityStatus.unknown.isOffline, false);
+    test('has expected members', () {
+      expect(ConnectivityStatus.values, contains(ConnectivityStatus.online));
+      expect(ConnectivityStatus.values, contains(ConnectivityStatus.offline));
+      expect(ConnectivityStatus.values, contains(ConnectivityStatus.unknown));
     });
   });
 
   group('ConnectionType', () {
-    test('has correct values', () {
-      expect(ConnectionType.wifi.value, 'wifi');
-      expect(ConnectionType.mobile.value, 'mobile');
-      expect(ConnectionType.ethernet.value, 'ethernet');
-      expect(ConnectionType.none.value, 'none');
-    });
-
-    test('isWifi returns correct value', () {
-      expect(ConnectionType.wifi.isWifi, true);
-      expect(ConnectionType.mobile.isWifi, false);
-    });
-
-    test('isMobile returns correct value', () {
-      expect(ConnectionType.mobile.isMobile, true);
-      expect(ConnectionType.wifi.isMobile, false);
-    });
-
-    test('hasConnection returns correct value', () {
-      expect(ConnectionType.wifi.hasConnection, true);
-      expect(ConnectionType.mobile.hasConnection, true);
-      expect(ConnectionType.ethernet.hasConnection, true);
-      expect(ConnectionType.none.hasConnection, false);
+    test('has expected members', () {
+      expect(ConnectionType.values, contains(ConnectionType.wifi));
+      expect(ConnectionType.values, contains(ConnectionType.mobile));
+      expect(ConnectionType.values, contains(ConnectionType.ethernet));
+      expect(ConnectionType.values, contains(ConnectionType.none));
+      expect(ConnectionType.values, contains(ConnectionType.unknown));
     });
   });
 
-  group('ConnectivityState', () {
+  group('ConnectivityInfo', () {
     test('creates correctly', () {
-      final state = ConnectivityState(
+      final info = ConnectivityInfo(
         status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
+        type: ConnectionType.wifi,
+        checkedAt: DateTime(2024, 1, 15),
       );
 
-      expect(state.status, ConnectivityStatus.online);
-      expect(state.connectionType, ConnectionType.wifi);
+      expect(info.status, ConnectivityStatus.online);
+      expect(info.type, ConnectionType.wifi);
     });
 
     test('isOnline returns correct value', () {
-      final onlineState = ConnectivityState(
-        status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
-      );
-      expect(onlineState.isOnline, true);
+      final onlineInfo = ConnectivityInfo.online(type: ConnectionType.wifi);
+      expect(onlineInfo.isOnline, true);
 
-      final offlineState = ConnectivityState(
-        status: ConnectivityStatus.offline,
-        connectionType: ConnectionType.none,
-      );
-      expect(offlineState.isOnline, false);
+      final offlineInfo = ConnectivityInfo.offline();
+      expect(offlineInfo.isOnline, false);
     });
 
     test('isOffline returns correct value', () {
-      final onlineState = ConnectivityState(
-        status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
-      );
-      expect(onlineState.isOffline, false);
+      final onlineInfo = ConnectivityInfo.online(type: ConnectionType.wifi);
+      expect(onlineInfo.isOffline, false);
 
-      final offlineState = ConnectivityState(
-        status: ConnectivityStatus.offline,
-        connectionType: ConnectionType.none,
-      );
-      expect(offlineState.isOffline, true);
-    });
-
-    test('copyWith creates correct copy', () {
-      final state = ConnectivityState(
-        status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
-      );
-
-      final copy = state.copyWith(
-        status: ConnectivityStatus.offline,
-      );
-
-      expect(copy.status, ConnectivityStatus.offline);
-      expect(copy.connectionType, ConnectionType.wifi);
+      final offlineInfo = ConnectivityInfo.offline();
+      expect(offlineInfo.isOffline, true);
     });
 
     test('unknown factory creates unknown state', () {
-      final state = ConnectivityState.unknown();
+      final info = ConnectivityInfo.unknown();
 
-      expect(state.status, ConnectivityStatus.unknown);
-      expect(state.connectionType, ConnectionType.none);
+      expect(info.status, ConnectivityStatus.unknown);
+      expect(info.type, ConnectionType.unknown);
+      expect(info.isOnline, false);
+      expect(info.isOffline, false);
     });
 
     test('online factory creates online state', () {
-      final state = ConnectivityState.online(ConnectionType.wifi);
+      final info = ConnectivityInfo.online(type: ConnectionType.wifi);
 
-      expect(state.status, ConnectivityStatus.online);
-      expect(state.connectionType, ConnectionType.wifi);
+      expect(info.status, ConnectivityStatus.online);
+      expect(info.type, ConnectionType.wifi);
     });
 
     test('offline factory creates offline state', () {
-      final state = ConnectivityState.offline();
+      final info = ConnectivityInfo.offline();
 
-      expect(state.status, ConnectivityStatus.offline);
-      expect(state.connectionType, ConnectionType.none);
-    });
-
-    test('equality works correctly', () {
-      final state1 = ConnectivityState(
-        status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
-      );
-      final state2 = ConnectivityState(
-        status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
-      );
-      final state3 = ConnectivityState(
-        status: ConnectivityStatus.offline,
-        connectionType: ConnectionType.none,
-      );
-
-      expect(state1, equals(state2));
-      expect(state1, isNot(equals(state3)));
+      expect(info.status, ConnectivityStatus.offline);
+      expect(info.type, ConnectionType.none);
     });
 
     test('toString returns descriptive string', () {
-      final state = ConnectivityState(
+      final info = ConnectivityInfo(
         status: ConnectivityStatus.online,
-        connectionType: ConnectionType.wifi,
+        type: ConnectionType.wifi,
+        checkedAt: DateTime(2024, 1, 15),
       );
 
-      final str = state.toString();
+      final str = info.toString();
 
       expect(str.contains('online'), true);
       expect(str.contains('wifi'), true);

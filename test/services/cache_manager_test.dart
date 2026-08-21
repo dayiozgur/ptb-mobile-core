@@ -1,15 +1,36 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
+  // API/behavior drift: CacheManager is now Hive-backed and requires an
+  // explicit initialize() before use (it no longer lazily self-initializes).
+  // We mock path_provider so Hive.initFlutter() can resolve a real temp
+  // directory in the pure-Dart test environment, then close Hive in tearDown.
   late CacheManager cacheManager;
+  late Directory tempDir;
 
-  setUp(() {
+  setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    tempDir = await Directory.systemTemp.createTemp('ptb_cache_test');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (methodCall) async => tempDir.path,
+    );
     cacheManager = CacheManager();
+    await cacheManager.initialize();
   });
 
   tearDown(() async {
     await cacheManager.clear();
+    await Hive.close();
+    try {
+      await tempDir.delete(recursive: true);
+    } catch (_) {}
   });
 
   group('CacheManager - Basic Operations', () {
@@ -64,19 +85,15 @@ void main() {
   });
 
   group('CacheManager - Typed Operations', () {
-    test('setTyped and getTyped works with model', () async {
+    test('set + getTyped works with model', () async {
+      // API drift: `setTyped` was removed; store via `set(key, toJson())` and
+      // read back with `getTyped`. `Tenant.slug`/`ownerId` were also removed.
       final tenant = Tenant(
         id: 'tenant-123',
         name: 'Test Tenant',
-        slug: 'test-tenant',
-        ownerId: 'owner-123',
       );
 
-      await cacheManager.setTyped<Tenant>(
-        key: 'tenant',
-        value: tenant,
-        toJson: (t) => t.toJson(),
-      );
+      await cacheManager.set('tenant', tenant.toJson());
 
       final result = await cacheManager.getTyped<Tenant>(
         key: 'tenant',
@@ -171,7 +188,7 @@ void main() {
 
   group('CacheManager - Error Handling', () {
     test('getTyped handles invalid JSON gracefully', () async {
-      // Set invalid data directly
+      // Set invalid data directly (a plain string, not a JSON object)
       await cacheManager.set('invalid', 'not a json');
 
       final result = await cacheManager.getTyped<Tenant>(
