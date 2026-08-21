@@ -276,6 +276,79 @@ class EntityDataService {
   }
 
   // ============================================
+  // STATUS (Kanban)
+  // ============================================
+
+  /// Bir entity tipi için aktif durum tanımlarını (`status_definitions`)
+  /// getir. Web `PtbStatusService.fetchDefinitions` ile aynı sözleşme:
+  /// `sort_order`'a göre sıralı; aynı `code` için tenant satırı
+  /// (`is_system=false`) sistem satırını override eder.
+  ///
+  /// Hata durumunda boş liste döner (kanban distinct-status fallback'ine
+  /// düşebilsin diye ASLA fırlatmaz).
+  Future<List<Map<String, dynamic>>> loadStatusDefinitions(
+    String entityType,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('status_definitions')
+          .select(
+            'id, code, name, color, icon, is_initial, is_final, sort_order, is_system',
+          )
+          .eq('entity_type', entityType)
+          .eq('active', true)
+          .order('sort_order', ascending: true);
+
+      final rows = (response as List).cast<Map<String, dynamic>>();
+
+      // Dedup: tenant override (is_system=false) aynı code'da sistemi yener.
+      final byCode = <String, Map<String, dynamic>>{};
+      for (final row in rows) {
+        final code = row['code'] as String?;
+        if (code == null) continue;
+        final existing = byCode[code];
+        if (existing == null || row['is_system'] != true) {
+          byCode[code] = row;
+        }
+      }
+
+      final result = byCode.values.toList()
+        ..sort((a, b) => ((a['sort_order'] as num?) ?? 0)
+            .compareTo((b['sort_order'] as num?) ?? 0));
+
+      Logger.debug(
+        'loadStatusDefinitions($entityType) returned ${result.length} columns',
+      );
+      return result;
+    } catch (e) {
+      Logger.error('Error loading status definitions ($entityType): $e');
+      return [];
+    }
+  }
+
+  /// Bir `form_submissions` kaydının durumunu güncelle (Kanban sürükle-bırak).
+  ///
+  /// `UPDATE form_submissions SET status=:newStatus, updated_at=now()
+  /// WHERE id=:submissionId`. Tenant kapsamı RLS ile sağlanır. Hata olursa
+  /// çağırana fırlatır (ekran optimistic taşımayı geri alır).
+  Future<void> updateStatus(String submissionId, String newStatus) async {
+    try {
+      await _supabase
+          .from('form_submissions')
+          .update({
+            'status': newStatus,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', submissionId);
+
+      Logger.debug('updateStatus($submissionId -> $newStatus) ok');
+    } catch (e) {
+      Logger.error('Error updating status ($submissionId -> $newStatus): $e');
+      rethrow;
+    }
+  }
+
+  // ============================================
   // HELPERS
   // ============================================
 

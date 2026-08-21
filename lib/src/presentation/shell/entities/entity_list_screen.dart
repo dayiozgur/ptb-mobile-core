@@ -2,6 +2,8 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'entity_kanban_screen.dart';
+
 /// Portal'da (low-code builder) tanımlanmış bir entity tipinin kayıtlarını
 /// gezilebilir bir liste olarak gösterir.
 ///
@@ -100,6 +102,15 @@ class _EntityListScreenState extends State<EntityListScreen> {
       title: _title,
       onBack: () => context.pop(),
       actions: [
+        if (_config != null)
+          AppIconButton(
+            icon: Icons.view_kanban_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => EntityKanbanScreen(typeCode: widget.typeCode),
+              ),
+            ),
+          ),
         AppIconButton(
           icon: Icons.refresh,
           onPressed: _loadData,
