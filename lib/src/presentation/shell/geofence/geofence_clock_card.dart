@@ -28,6 +28,9 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
   void initState() {
     super.initState();
     _sub = _svc.punchStream.listen(_onPunch);
+    // Bildirim iznini ekran açılışında iste → punch anında izin hazır olsun
+    // (aksi halde ilk punch bildirimi sessizce düşer).
+    unawaited(sl<LocalNotificationService>().requestPermission());
     _load();
     // Otomatik mod açıkken on-site durumu değişebilir → periyodik tazele.
     _statusTimer = Timer.periodic(const Duration(seconds: 10), (_) {
@@ -89,8 +92,9 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
   Future<void> _toggleAuto(bool v) async {
     setState(() => _busy = true);
     if (v) {
-      // Giriş/çıkış bildirimleri için izin iste (iOS runtime / Android 13+).
-      unawaited(sl<LocalNotificationService>().requestPermission());
+      // Giriş/çıkış bildirimleri için izin iste ve BEKLE → ilk enter punch'ından
+      // önce izin çözülsün (aksi halde ilk bildirim düşmez).
+      await sl<LocalNotificationService>().requestPermission();
       final ok = await _svc.start();
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

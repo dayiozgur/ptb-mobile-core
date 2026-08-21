@@ -54,6 +54,7 @@ dependencies:
   geolocator: ^14.0.2
   geocoding: ^4.0.0
   flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
 
   # UI Helpers
   cached_network_image: ^3.3.1

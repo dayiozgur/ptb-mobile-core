@@ -83,6 +83,7 @@ export 'src/core/activity/activity_service.dart';
 
 // Core - Notification
 export 'src/core/notification/local_notification_service.dart';
+export 'src/core/time/app_clock.dart';
 export 'src/core/notification/notification_model.dart';
 export 'src/core/notification/notification_service.dart';
 

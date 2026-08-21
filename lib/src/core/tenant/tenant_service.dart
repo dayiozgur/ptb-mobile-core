@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../api/api_client.dart';
 import '../storage/cache_manager.dart';
 import '../storage/secure_storage.dart';
+import '../time/app_clock.dart';
 import '../utils/logger.dart';
 import 'tenant_model.dart';
 
@@ -634,6 +635,8 @@ class TenantService {
 
   void _setCurrentTenant(Tenant tenant) {
     _currentTenant = tenant;
+    // İş zaman damgalarını tenant saat dilimine göre göstermek için (çok-tz SaaS).
+    AppClock.setZone(tenant.timeZone);
     _tenantController.add(tenant);
   }
 

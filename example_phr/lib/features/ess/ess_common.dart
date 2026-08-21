@@ -38,9 +38,10 @@ String essMoney(num value) => '₺${_moneyFmt.format(value)}';
 /// Kısa tarih — `gg.aa.yyyy`.
 String essDate(DateTime? d) {
   if (d == null) return '-';
-  final dd = d.day.toString().padLeft(2, '0');
-  final mm = d.month.toString().padLeft(2, '0');
-  return '$dd.$mm.${d.year}';
+  final t = AppClock.toTenant(d); // UTC → tenant saat dilimi
+  final dd = t.day.toString().padLeft(2, '0');
+  final mm = t.month.toString().padLeft(2, '0');
+  return '$dd.$mm.${t.year}';
 }
 
 /// Tarih aralığı — `gg.aa.yyyy → gg.aa.yyyy` (tek gün ise tek tarih).
@@ -75,8 +76,9 @@ String essDuration(int minutes) {
 /// Saat — `HH:mm`.
 String essTime(DateTime? d) {
   if (d == null) return '-';
-  final hh = d.hour.toString().padLeft(2, '0');
-  final mm = d.minute.toString().padLeft(2, '0');
+  final t = AppClock.toTenant(d); // UTC → tenant saat dilimi (3s kayması biter)
+  final hh = t.hour.toString().padLeft(2, '0');
+  final mm = t.minute.toString().padLeft(2, '0');
   return '$hh:$mm';
 }
 
