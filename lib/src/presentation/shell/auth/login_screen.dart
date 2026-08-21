@@ -219,15 +219,23 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      // Marka-nötr: aktif platform markası (yoksa i18n fallback) — PMS-leak yok.
-      title: sl<BrandingService>().current?.brandName ?? _t('auth.login.title'),
+      // App-bar başlığı = marka LOGOSU (metin yerine). DB-driven: branding
+      // logoUrl (http) → network, yoksa paketlenmiş Protoolbag logosu.
+      titleWidget: SizedBox(height: 26, child: _buildBrandLogo()),
       showBackButton: false,
-      // Giriş öncesi dil değiştirme — DB-güdümlü dil seçici.
+      // Giriş öncesi dil değiştirme: seçili dilin BAYRAĞINI gösterir
+      // (jenerik globe yerine) → dokun → DB-güdümlü dil seçici.
       actions: [
-        IconButton(
-          icon: Icon(Icons.language, color: AppColors.primary),
-          tooltip: _t('settings.language'),
+        TextButton(
           onPressed: () => showLanguagePicker(context),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(44, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          child: Text(
+            flagEmoji(sl<LocalizationService>().currentLocale.countryCode),
+            style: const TextStyle(fontSize: 22),
+          ),
         ),
       ],
       child: SingleChildScrollView(
@@ -237,29 +245,13 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.xl),
 
-              // Logo
-              Center(
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  // DB-driven logo: branding'de tam URL varsa onu, yoksa
-                  // paketlenmiş Protoolbag logosu (son çare monitor ikonu).
-                  child: _buildBrandLogo(),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Title
+              // Başlık = aktif platform kodu (ör. "PHR"). Marka logosu artık
+              // app-bar'da; ortadaki büyük logo kutusu kaldırıldı.
               Text(
-                sl<BrandingService>().current?.brandName ??
+                sl<PlatformContext>().activePlatformCode ??
+                    sl<BrandingService>().current?.brandName ??
                     _t('auth.login.app_name'),
                 style: AppTypography.largeTitle,
                 textAlign: TextAlign.center,
@@ -282,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const <BrandingFeature>[];
                 if (features.isEmpty) return const SizedBox.shrink();
                 return Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.lg),
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
                   child: _SlogansCarousel(
                     key: ValueKey('slogans-$_localeCode-${features.length}'),
                     features: features,
@@ -290,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               }),
 
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
 
               // Email field
               AppEmailField(
@@ -328,11 +320,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Login button
+              // Login button — web platform btn-lg paritesi (düz solid primary,
+              // tam genişlik, büyük boy).
               AppButton(
                 label: _t('auth.login'),
                 onPressed: _isLoading ? null : _handleLogin,
                 isLoading: _isLoading,
+                size: AppButtonSize.large,
               ),
 
               const SizedBox(height: AppSpacing.md),
@@ -510,25 +504,20 @@ class _SlogansCarouselState extends State<_SlogansCarousel> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 120,
+          height: 68,
           child: PageView.builder(
             controller: _controller,
             itemCount: features.length,
             onPageChanged: (i) => setState(() => _index = i),
             itemBuilder: (context, i) {
               final f = features[i];
+              // İkon kaldırıldı (kullanıcı isteği) — yalnız başlık + açıklama.
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      BootstrapIconMap.iconFor(f.icon),
-                      color: AppColors.primary,
-                      size: 30,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       f.title,
                       style: AppTypography.headline,
@@ -536,7 +525,7 @@ class _SlogansCarouselState extends State<_SlogansCarousel> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       f.body,
                       style: AppTypography.footnote.copyWith(
