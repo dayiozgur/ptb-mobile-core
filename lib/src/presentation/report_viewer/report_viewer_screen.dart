@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide FormField;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 /// Web builder'ında tasarlanmış bir `dr_report_templates` kaydını yükleyip
@@ -38,6 +39,9 @@ class _ReportViewerScreenState extends State<ReportViewerScreen> {
 
   /// Her artışta tüm widget'lar yeniden çözülür (Uygula / pull-to-refresh).
   int _reloadTick = 0;
+
+  /// CSV dışa aktarım devam ediyor (buton geçici olarak devre dışı).
+  bool _exporting = false;
 
   // Desteklenen widget tipleri.
   static const Set<String> _statTypes = {'stat_card', 'gauge', 'progress'};
@@ -133,10 +137,142 @@ class _ReportViewerScreenState extends State<ReportViewerScreen> {
     return s.startsWith('Exception: ') ? s.substring(11) : s;
   }
 
+  // ============================================
+  // CSV DIŞA AKTARIM
+  // ============================================
+
+  /// Raporun tablo verisini CSV'ye çevirip panoya kopyalar.
+  ///
+  /// `share_plus` bağımlılığı projede yok → SnackBar ile bilgilendirilen
+  /// pano-kopyalama geri dönüşü kullanılır. Öncelik `data_table` widget'ları;
+  /// yoksa desteklenen tüm veri widget'ları. Sorgular dışa aktarım anında
+  /// mevcut filtre değerleriyle yeniden çözülür.
+  Future<void> _exportCsv() async {
+    final template = _template;
+    if (template == null) return;
+
+    final tables =
+        template.widgets.where((w) => w.widgetType == 'data_table').toList();
+    final targets = tables.isNotEmpty
+        ? tables
+        : template.widgets.where((w) => _isSupported(w.widgetType)).toList();
+
+    if (targets.isEmpty) {
+      _showSnack('Dışa aktarılacak veri yok');
+      return;
+    }
+
+    setState(() => _exporting = true);
+    try {
+      final blocks = <String>[];
+      for (final w in targets) {
+        final rows = await reportQueryService.runWidget(
+          dataSourceId: w.dataSourceId,
+          queryConfig: w.queryConfig,
+          filterValues: Map<String, dynamic>.from(_filterValues),
+        );
+        final csv = _buildCsv(w, rows);
+        if (csv.isNotEmpty) blocks.add(csv);
+      }
+
+      final out = blocks.join('\n\n');
+      if (!mounted) return;
+      if (out.trim().isEmpty) {
+        _showSnack('Dışa aktarılacak veri yok');
+        return;
+      }
+
+      await Clipboard.setData(ClipboardData(text: out));
+      if (!mounted) return;
+      _showSnack('Rapor panoya kopyalandı (CSV)');
+    } catch (e) {
+      Logger.error('ReportViewerScreen CSV dışa aktarım başarısız', e);
+      if (!mounted) return;
+      _showSnack('Dışa aktarma başarısız: ${_extractMessage(e)}');
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  /// Tek bir widget'ın satırlarından CSV metni üretir (başlık + gövde).
+  String _buildCsv(ReportWidget w, List<Map<String, dynamic>> rows) {
+    if (rows.isEmpty) return '';
+
+    // Kolonlar: visualConfig.columns varsa onu, yoksa satır anahtar birleşimi.
+    final configured = <String>[];
+    final raw = w.visualConfig['columns'];
+    if (raw is List) {
+      for (final c in raw) {
+        final s = c.toString();
+        if (s.isNotEmpty) configured.add(s);
+      }
+    }
+    final columns = configured.isNotEmpty ? configured : _unionKeys(rows);
+    if (columns.isEmpty) return '';
+
+    final labels = w.visualConfig['columnLabels'];
+    final header = columns.map((c) {
+      final label = (labels is Map && labels[c] != null) ? labels[c] : c;
+      return _csvEscape(label.toString());
+    }).join(',');
+
+    final body = rows.map((row) {
+      return columns.map((c) => _csvEscape(_csvCell(row[c]))).join(',');
+    }).join('\n');
+
+    return '$header\n$body';
+  }
+
+  /// Tüm satırların anahtarlarını ilk-görülme sırasıyla birleştirir.
+  List<String> _unionKeys(List<Map<String, dynamic>> rows) {
+    final keys = <String>[];
+    for (final row in rows) {
+      for (final k in row.keys) {
+        if (!keys.contains(k)) keys.add(k);
+      }
+    }
+    return keys;
+  }
+
+  /// Ham hücre değerini CSV metnine çevirir (biçimlendirmeden).
+  String _csvCell(dynamic value) {
+    if (value == null) return '';
+    return value.toString();
+  }
+
+  /// Tırnak/virgül/yeni-satır içeren alanları RFC-4180'e göre kaçışlar.
+  String _csvEscape(String value) {
+    if (value.contains('"') ||
+        value.contains(',') ||
+        value.contains('\n') ||
+        value.contains('\r')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasWidgets = _template != null && _template!.widgets.isNotEmpty;
     return AppScaffold(
       title: _template?.name ?? 'Rapor',
+      actions: hasWidgets
+          ? [
+              IconButton(
+                icon: const Icon(Icons.ios_share),
+                tooltip: 'Dışa Aktar',
+                color: AppColors.primary,
+                onPressed: _exporting ? null : _exportCsv,
+              ),
+            ]
+          : null,
       child: _buildBody(),
     );
   }

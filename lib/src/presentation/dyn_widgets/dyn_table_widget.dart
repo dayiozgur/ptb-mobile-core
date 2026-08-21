@@ -66,6 +66,8 @@ class DynDataTableWidget extends StatelessWidget {
             rows: List<DataRow>.generate(displayRows.length, (index) {
               final row = displayRows[index];
               return DataRow(
+                // Satıra dokun → tam alan/değer listesini bottom-sheet'te göster.
+                onSelectChanged: (_) => _showRowDetail(context, row),
                 color: striped && index.isOdd
                     ? WidgetStateProperty.all(
                         AppColors.border(brightness).withValues(alpha: 0.15),
@@ -116,6 +118,95 @@ class DynDataTableWidget extends StatelessWidget {
       return labels[column].toString();
     }
     return column;
+  }
+
+  /// Satır detayını salt-okuma bir bottom-sheet'te (tüm alanlar) gösterir.
+  void _showRowDetail(BuildContext context, Map<String, dynamic> row) {
+    final brightness = Theme.of(context).brightness;
+    // Tam alan listesi: satırın kendi anahtarları (kolon kısıtından bağımsız).
+    final keys = row.keys.toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface(brightness),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final b = Theme.of(ctx).brightness;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    'Detay',
+                    style: AppTypography.withColor(
+                      AppTypography.headline,
+                      AppColors.textPrimary(b),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children:
+                          keys.map((k) => _detailRow(b, k, row[k])).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(Brightness brightness, String key, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              _headerLabel(key),
+              style: AppTypography.withColor(
+                AppTypography.caption1,
+                AppColors.textSecondary(brightness),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              DynWidgetHelpers.formatCell(value),
+              style: AppTypography.withColor(
+                AppTypography.footnote,
+                AppColors.textPrimary(brightness),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _emptyState(Color textSecondary) {
