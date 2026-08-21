@@ -42,7 +42,17 @@ enum SubscriptionPlan {
   professional,
 
   /// Kurumsal
-  enterprise,
+  enterprise;
+
+  /// String'den plana dönüştür. Değer yok/tanınmıyorsa null döner
+  /// (bilinmeyen planı yanlışlıkla FREE göstermemek için).
+  static SubscriptionPlan? fromName(String? value) {
+    if (value == null || value.isEmpty) return null;
+    for (final plan in SubscriptionPlan.values) {
+      if (plan.name == value) return plan;
+    }
+    return null;
+  }
 }
 
 /// Tenant (Kiracı) modeli
@@ -140,6 +150,11 @@ class Tenant {
   /// Katılım tarihi (tenant_users.joined_at)
   final DateTime? joinedAt;
 
+  /// Abonelik planı (subscription tablosundan gelir).
+  /// Tenant JSON'ında plan bilgisi taşınmadığından çoğunlukla null olur;
+  /// null = bilinmiyor (UI rozeti gizlemeli, yanlışlıkla FREE göstermemeli).
+  final SubscriptionPlan? plan;
+
   const Tenant({
     required this.id,
     required this.name,
@@ -167,6 +182,7 @@ class Tenant {
     this.userRole,
     this.isDefault = false,
     this.joinedAt,
+    this.plan,
   });
 
   /// Aktif mi?
@@ -186,9 +202,6 @@ class Tenant {
 
   /// İptal edilmiş mi?
   bool get isCancelled => status == TenantStatus.cancelled;
-
-  /// Plan (geriye uyumluluk - subscription tablosundan alınmalı)
-  SubscriptionPlan get plan => SubscriptionPlan.free;
 
   /// JSON'dan oluştur (tenants tablosu)
   factory Tenant.fromJson(Map<String, dynamic> json) {
@@ -232,6 +245,11 @@ class Tenant {
       joinedAt: json['joined_at'] != null
           ? DateTime.tryParse(json['joined_at'] as String)
           : null,
+      // Plan bilgisi tenant JSON'ında genelde yoktur; varsa parse et, yoksa
+      // null bırak (yanlışlıkla FREE göstermemek için).
+      plan: SubscriptionPlan.fromName(
+        json['subscription_plan'] as String? ?? json['plan'] as String?,
+      ),
     );
   }
 
@@ -260,6 +278,7 @@ class Tenant {
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
+      'subscription_plan': plan?.name,
     };
   }
 
@@ -291,6 +310,7 @@ class Tenant {
     TenantRole? userRole,
     bool? isDefault,
     DateTime? joinedAt,
+    SubscriptionPlan? plan,
   }) {
     return Tenant(
       id: id ?? this.id,
@@ -319,6 +339,7 @@ class Tenant {
       userRole: userRole ?? this.userRole,
       isDefault: isDefault ?? this.isDefault,
       joinedAt: joinedAt ?? this.joinedAt,
+      plan: plan ?? this.plan,
     );
   }
 

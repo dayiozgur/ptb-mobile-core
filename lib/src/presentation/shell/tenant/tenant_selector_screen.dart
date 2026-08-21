@@ -271,11 +271,16 @@ class _TenantCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xxs),
                   Row(
                     children: [
-                      AppBadge(
-                        label: tenant.plan.name.toUpperCase(),
-                        variant: _getPlanBadgeVariant(tenant.plan),
-                        size: AppBadgeSize.small,
-                      ),
+                      // Plan bilinmiyorsa (null) rozet gösterme — yanlış "FREE"
+                      // göstermek yerine gizle (tenant satırında plan verisi yok).
+                      if (tenant.plan != null) ...[
+                        AppBadge(
+                          label: tenant.plan!.name.toUpperCase(),
+                          variant: _getPlanBadgeVariant(tenant.plan!),
+                          size: AppBadgeSize.small,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                      ],
                       if (tenant.isTrial) ...[
                         const SizedBox(width: AppSpacing.xs),
                         AppBadge(

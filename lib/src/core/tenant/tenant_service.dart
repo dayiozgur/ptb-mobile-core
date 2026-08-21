@@ -602,14 +602,16 @@ class TenantService {
   /// Mevcut plan özellikleri
   PlanFeatures? get planFeatures {
     if (_currentTenant == null) return null;
-    return PlanFeatures.forPlan(_currentTenant!.plan);
+    // plan null = bilinmiyor; limit hesabında güvenli taban olarak free kullan.
+    return PlanFeatures.forPlan(_currentTenant!.plan ?? SubscriptionPlan.free);
   }
 
   /// Kullanıcı limiti aşıldı mı?
   Future<bool> isUserLimitReached() async {
     if (_currentTenant == null) return true;
 
-    final features = PlanFeatures.forPlan(_currentTenant!.plan);
+    final features =
+        PlanFeatures.forPlan(_currentTenant!.plan ?? SubscriptionPlan.free);
     if (features.hasUnlimitedUsers) return false;
 
     try {

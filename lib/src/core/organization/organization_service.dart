@@ -106,7 +106,10 @@ class OrganizationService {
           .eq('tenant_id', tenantId);
 
       if (activeOnly) {
-        query = query.eq('active', true);
+        // organizations.active NULLABLE + default'suz: `.eq('active', true)`
+        // NULL satırları sessizce düşürür (super_admin org'ları kaybolur).
+        // NULL'ı da "aktif" say.
+        query = query.or('active.eq.true,active.is.null');
       }
 
       final response = await query.order('name');
