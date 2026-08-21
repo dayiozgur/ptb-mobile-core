@@ -15,6 +15,7 @@ import '../reporting/report_query_service.dart';
 import '../reporting/page_service.dart';
 import '../reporting/report_service.dart';
 import '../search/search_service.dart';
+import '../ai/ai_assistant_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
 import '../localization/language_service.dart';
@@ -276,6 +277,11 @@ Future<void> setupServiceLocator({
       supabase: sl<SupabaseClient>(),
       cacheManager: sl<CacheManager>(),
     ),
+  );
+
+  // AI asistan (web `ai-assistant` EF — provider-agnostik, streaming yok)
+  sl.registerLazySingleton<AiAssistantService>(
+    () => AiAssistantService(supabase: sl<SupabaseClient>()),
   );
 
   // ============================================

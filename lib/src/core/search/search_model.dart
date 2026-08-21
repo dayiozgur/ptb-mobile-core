@@ -43,6 +43,67 @@ enum SearchEntityType {
   }
 }
 
+/// Global (evrensel) arama isabeti.
+///
+/// Web portalın `fn_universal_search` SECURITY-DEFINER RPC'sinin döndürdüğü
+/// satır sözleşmesiyle birebir hizalıdır:
+/// `{ source, id, entity_type, code, title, subtitle }`. Tenant sunucu
+/// tarafında `get_my_tenant_id()` ile türetilir — istemci tenant GÖNDERMEZ.
+class GlobalSearchHit {
+  /// Kaynak tür: `form` | `ticket` | `site` | `controller` | `provider` |
+  /// `contact` | `staff` (web sözleşmesiyle aynı).
+  final String source;
+
+  /// Kayıt kimliği (uuid).
+  final String id;
+
+  /// Entity tipi kodu (özellikle `form`/entity isabetleri için, ör. `arge_proje`).
+  final String? entityType;
+
+  /// Kısa kod (varsa).
+  final String? code;
+
+  /// Başlık (birincil gösterim metni).
+  final String title;
+
+  /// Alt başlık (ikincil gösterim metni).
+  final String? subtitle;
+
+  const GlobalSearchHit({
+    required this.source,
+    required this.id,
+    this.entityType,
+    this.code,
+    required this.title,
+    this.subtitle,
+  });
+
+  factory GlobalSearchHit.fromJson(Map<String, dynamic> json) {
+    return GlobalSearchHit(
+      source: (json['source'] as String?) ?? '',
+      id: (json['id'] as String?) ?? '',
+      entityType: json['entity_type'] as String?,
+      code: json['code'] as String?,
+      title: (json['title'] as String?)?.trim().isNotEmpty == true
+          ? (json['title'] as String)
+          : (json['code'] as String?) ?? '',
+      subtitle: json['subtitle'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'source': source,
+        'id': id,
+        'entity_type': entityType,
+        'code': code,
+        'title': title,
+        'subtitle': subtitle,
+      };
+
+  @override
+  String toString() => 'GlobalSearchHit($source, $id, "$title")';
+}
+
 /// Arama sorgusu
 class SearchQuery {
   final String text;

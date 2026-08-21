@@ -161,6 +161,45 @@ class SearchService {
     }
   }
 
+  /// Global (evrensel) arama — web portal ile aynı sözleşme.
+  ///
+  /// SECURITY-DEFINER RPC `fn_universal_search(p_query, p_limit, p_sources)`
+  /// çağrılır; tenant sunucu tarafında `get_my_tenant_id()` ile türetilir
+  /// (istemci tenant GÖNDERMEZ). Dönen satırlar [GlobalSearchHit] listesine
+  /// map'lenir.
+  ///
+  /// - Boş / 2 karakterden kısa sorgu → `[]`.
+  /// - Hata → `[]` (Logger.warning ile loglanır; UI'ı bloklamaz).
+  Future<List<GlobalSearchHit>> globalSearch(
+    String query, {
+    int limit = 8,
+    List<String>? sources,
+  }) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return [];
+
+    try {
+      final response = await _supabase.rpc(
+        'fn_universal_search',
+        params: {
+          'p_query': trimmed,
+          'p_limit': limit,
+          'p_sources': sources,
+        },
+      );
+
+      if (response is! List) return [];
+
+      return response
+          .whereType<Map<String, dynamic>>()
+          .map(GlobalSearchHit.fromJson)
+          .toList();
+    } catch (e) {
+      Logger.warning('Global search failed for: "$trimmed"', e);
+      return [];
+    }
+  }
+
   /// Aramayı gerçekleştir
   Future<List<SearchResult>> _performSearch(SearchQuery query) async {
     final results = <SearchResult>[];
