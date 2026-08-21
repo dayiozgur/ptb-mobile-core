@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import '../../core/menu/menu_item.dart';
 import '../page_viewer/page_viewer_screen.dart';
 import '../report_viewer/report_viewer_screen.dart';
+import 'admin/audit_log_screen.dart';
 import 'admin/bug_reports_screen.dart';
+import 'admin/integrations_screen.dart';
+import 'admin/notifications_hub_screen.dart';
 import 'admin/roles_screen.dart';
+import 'admin/subscription_screen.dart';
 import 'admin/menu_builder_screen.dart';
 import 'admin/staff_roster_screen.dart';
 import 'dashboard/personal_dashboard_screen.dart';
@@ -110,6 +114,19 @@ class ScreenResolver {
     }
     if (p.startsWith('/admin/menu-builder')) {
       return const MenuBuilderScreen();
+    }
+    if (p.startsWith('/admin/integrations')) {
+      return const IntegrationsScreen();
+    }
+    if (p.startsWith('/admin/audit-log') || p.startsWith('/admin/audit')) {
+      return const AuditLogScreen();
+    }
+    if (p.startsWith('/admin/notifications-hub')) {
+      return const NotificationsHubScreen();
+    }
+    if (p.startsWith('/admin/subscription') ||
+        p.startsWith('/account/subscription')) {
+      return const SubscriptionScreen();
     }
     // Diğer admin yolları — henüz özel ekran yok → ComingSoon (menüde görünür).
     if (p.startsWith('/admin')) {

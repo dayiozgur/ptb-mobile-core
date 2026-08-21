@@ -20,6 +20,10 @@ import '../admin/admin_user_service.dart';
 import '../admin/admin_staff_service.dart';
 import '../admin/admin_rbac_service.dart';
 import '../admin/admin_bug_report_service.dart';
+import '../admin/admin_integration_service.dart';
+import '../admin/admin_audit_service.dart';
+import '../admin/admin_notifications_hub_service.dart';
+import '../admin/admin_subscription_service.dart';
 import '../dashboard/personal_dashboard_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
@@ -301,6 +305,18 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<AdminBugReportService>(
     () => AdminBugReportService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminIntegrationService>(
+    () => AdminIntegrationService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminAuditService>(
+    () => AdminAuditService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminNotificationsHubService>(
+    () => AdminNotificationsHubService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminSubscriptionService>(
+    () => AdminSubscriptionService(supabase: sl<SupabaseClient>()),
   );
   sl.registerLazySingleton<PersonalDashboardService>(
     () => PersonalDashboardService(
