@@ -326,24 +326,47 @@ class EntityDataService {
     }
   }
 
-  /// Bir `form_submissions` kaydının durumunu güncelle (Kanban sürükle-bırak).
+  /// Bir entity kaydının durumunu `status-transition` Edge Function üzerinden
+  /// güncelle (Kanban sürükle-bırak). Web `PtbStatusService.executeTransition`
+  /// ile aynı sözleşme: EF geçişi `status_transitions`'a göre doğrular,
+  /// rol/yorum/form kontrollerini yapar ve durumu service-role ile yazar.
   ///
-  /// `UPDATE form_submissions SET status=:newStatus, updated_at=now()
-  /// WHERE id=:submissionId`. Tenant kapsamı RLS ile sağlanır. Hata olursa
-  /// çağırana fırlatır (ekran optimistic taşımayı geri alır).
-  Future<void> updateStatus(String submissionId, String newStatus) async {
+  /// Doğrudan client `UPDATE form_submissions SET status` KULLANILMAZ: hem
+  /// `tenant_isolation_form_submissions` RLS'i hem de `BEFORE UPDATE`
+  /// `check_submission_status_transition()` trigger'ı (geçersiz geçişte
+  /// `check_violation` / 23514) bunu reddeder — bu yüzden yazım EF'e yönlenir.
+  ///
+  /// [entityType] `entity_type_configs.code`'dur; bağımsız (standalone)
+  /// entity'ler için [entityId] doğrudan `form_submissions.id`'dir. EF zarfı
+  /// `{success, data|error}`; başarısızlıkta (2xx-dışı yanıt ya da
+  /// `success == false`) hata fırlatılır ve ekran optimistic taşımayı geri alır.
+  Future<void> updateStatus({
+    required String entityType,
+    required String entityId,
+    required String toStatus,
+    String? comment,
+  }) async {
     try {
-      await _supabase
-          .from('form_submissions')
-          .update({
-            'status': newStatus,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', submissionId);
+      final response = await _supabase.functions.invoke(
+        'status-transition',
+        body: {
+          'entityType': entityType,
+          'entityId': entityId,
+          'toStatus': toStatus,
+          if (comment != null && comment.trim().isNotEmpty)
+            'comment': comment.trim(),
+        },
+      );
 
-      Logger.debug('updateStatus($submissionId -> $newStatus) ok');
+      final data = response.data;
+      if (data is Map<String, dynamic> && data['success'] == false) {
+        final error = data['error'];
+        throw Exception('status-transition failed: ${error ?? 'unknown error'}');
+      }
+
+      Logger.debug('updateStatus($entityType/$entityId -> $toStatus) ok');
     } catch (e) {
-      Logger.error('Error updating status ($submissionId -> $newStatus): $e');
+      Logger.error('Error updating status ($entityId -> $toStatus): $e');
       rethrow;
     }
   }

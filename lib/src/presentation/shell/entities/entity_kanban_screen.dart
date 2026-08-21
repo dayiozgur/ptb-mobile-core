@@ -175,7 +175,13 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
     });
 
     try {
-      await sl<EntityDataService>().updateStatus(entity.id, targetStatus);
+      // Standalone entity'de entity.id == form_submissions.id == entityId.
+      // entityType status_transitions grafiğini sürer (config.code'a düşer).
+      await sl<EntityDataService>().updateStatus(
+        entityType: entity.entityType ?? _config?.code ?? widget.typeCode,
+        entityId: entity.id,
+        toStatus: targetStatus,
+      );
     } catch (e) {
       Logger.error('Kanban updateStatus failed (${entity.id})', e);
       // Geri al.
@@ -184,9 +190,17 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
         target.remove(entity);
         source.insert(index.clamp(0, source.length), entity);
       });
-      final loc = sl<LocalizationService>();
+      // Belirsiz "Hata" yerine gerçek sebebi göster. En sık durum: entity
+      // tipinde bu from→to için `status_transitions` kuralı yok →
+      // status-transition EF `ERR_INVALID_TRANSITION` döner (web ile aynı).
+      final raw = e.toString();
+      final invalidTransition = raw.contains('ERR_INVALID_TRANSITION') ||
+          raw.toLowerCase().contains('transition');
+      final msg = invalidTransition
+          ? 'Bu durum geçişi tanımlı değil'
+          : 'Durum güncellenemedi. Lütfen tekrar deneyin.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.translate('common.error'))),
+        SnackBar(content: Text(msg)),
       );
     }
   }
