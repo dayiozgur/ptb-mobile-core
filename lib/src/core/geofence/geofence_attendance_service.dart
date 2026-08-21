@@ -7,6 +7,7 @@ import '../di/service_locator.dart';
 import '../hr/hr_ess_service.dart';
 import '../map/map_models.dart';
 import '../map/map_service.dart';
+import '../notification/local_notification_service.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
 
@@ -205,6 +206,9 @@ class GeofenceAttendanceService {
       final map =
           res is Map ? Map<String, dynamic>.from(res) : <String, dynamic>{};
       final result = GeoPunchResult(ok: map['ok'] == true, event: event, raw: map);
+      if (result.ok && !result.isNoop) {
+        _notifyPunch(event, g.name);
+      }
       _punchController.add(result);
       return result;
     } catch (e) {
@@ -224,6 +228,24 @@ class GeofenceAttendanceService {
       return r;
     }
     return _geoPunch(g, event, pos.latitude, pos.longitude);
+  }
+
+  /// Başarılı giriş/çıkışta cihaz (local) bildirimi göster.
+  void _notifyPunch(String event, [String? place]) {
+    final isIn = event.contains('in');
+    final now = DateTime.now();
+    final hh = now.hour.toString().padLeft(2, '0');
+    final mm = now.minute.toString().padLeft(2, '0');
+    final body = place != null && place.isNotEmpty
+        ? '$place · $hh:$mm'
+        : 'Saat $hh:$mm';
+    try {
+      sl<LocalNotificationService>().show(
+        title: isIn ? 'Giriş yapıldı ✓' : 'Çıkış yapıldı ✓',
+        body: body,
+        id: isIn ? 1001 : 1002,
+      );
+    } catch (_) {}
   }
 
   Future<void> _captureWeather(WorkGeofence g) async {
@@ -269,6 +291,7 @@ class GeofenceAttendanceService {
         'updated_by': uid,
       });
       final r = GeoPunchResult(ok: true, event: 'manual_in', raw: const {});
+      _notifyPunch('in');
       _punchController.add(r);
       return r;
     } catch (e) {
@@ -303,6 +326,7 @@ class GeofenceAttendanceService {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', open['id']);
       final r = GeoPunchResult(ok: true, event: 'manual_out', raw: const {});
+      _notifyPunch('out');
       _punchController.add(r);
       return r;
     } catch (e) {

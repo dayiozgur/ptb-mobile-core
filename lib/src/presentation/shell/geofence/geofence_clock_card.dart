@@ -89,6 +89,8 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
   Future<void> _toggleAuto(bool v) async {
     setState(() => _busy = true);
     if (v) {
+      // Giriş/çıkış bildirimleri için izin iste (iOS runtime / Android 13+).
+      unawaited(sl<LocalNotificationService>().requestPermission());
       final ok = await _svc.start();
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -102,6 +104,7 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
 
   Future<void> _manual(String event) async {
     setState(() => _busy = true);
+    unawaited(sl<LocalNotificationService>().requestPermission());
     final r = event == 'in'
         ? await _svc.manualClockIn()
         : await _svc.manualClockOut();

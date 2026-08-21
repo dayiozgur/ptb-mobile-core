@@ -82,6 +82,7 @@ export 'src/core/activity/activity_model.dart';
 export 'src/core/activity/activity_service.dart';
 
 // Core - Notification
+export 'src/core/notification/local_notification_service.dart';
 export 'src/core/notification/notification_model.dart';
 export 'src/core/notification/notification_service.dart';
 
@@ -294,6 +295,7 @@ export 'src/core/weather/weather_service.dart';
 export 'src/core/geofence/geofence_attendance_service.dart';
 export 'src/core/geofence/work_geo_session_service.dart';
 export 'src/presentation/shell/geofence/geofence_clock_card.dart';
+export 'src/presentation/shell/geofence/geofence_map_card.dart';
 export 'src/presentation/shell/geofence/work_geo_session_card.dart';
 // Hesabım (Account) hub
 export 'src/core/account/account_service.dart';

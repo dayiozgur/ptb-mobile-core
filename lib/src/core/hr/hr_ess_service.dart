@@ -5,6 +5,7 @@ import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
+import 'models/attendance_record_row.dart';
 import 'models/employee_goal.dart';
 import 'models/leave_balance.dart';
 import 'models/leave_request_row.dart';
@@ -393,6 +394,32 @@ class HrEssService {
     } catch (e) {
       Logger.error('Error fetching pdks range: $e');
       rethrow;
+    }
+  }
+
+  /// Belirli bir **günün** ham giriş/çıkış hareketleri (attendance_records) —
+  /// gün detayında birden fazla giriş/çıkış döngüsünü tek tek listelemek için.
+  /// RLS ile sahibi-kapsamlı; hata durumunda `[]` (UI'a fırlatmaz).
+  Future<List<AttendanceRecordRow>> pdksDayPunches(DateTime? day) async {
+    try {
+      if (day == null) return [];
+      final staffId = await currentStaffId();
+      if (staffId == null) return [];
+      final d = _fmtDate(day);
+      final rows = await _supabase
+          .from('attendance_records')
+          .select(
+              'id, staff_id, work_date, entry_time, exit_time, worked_minutes, source, location, note')
+          .eq('staff_id', staffId)
+          .eq('work_date', d)
+          .order('entry_time', ascending: true);
+      return (rows as List)
+          .map((e) => AttendanceRecordRow.fromJson(
+              Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (e) {
+      Logger.error('pdksDayPunches: $e');
+      return [];
     }
   }
 

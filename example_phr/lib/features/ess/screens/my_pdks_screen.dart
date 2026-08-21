@@ -71,6 +71,12 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
             child: GeofenceClockCard(),
           ),
+          // Konum & kapsam haritası (GPS + geofence dairesi + mesafe).
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            child: GeofenceMapCard(),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -103,6 +109,20 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
     );
   }
 
+  /// Gün detayı: o günün tüm ham giriş/çıkış hareketlerini (birden fazla
+  /// döngü + kaynak) alt sayfada listeler.
+  Future<void> _showDayPunches(PdksDay day) async {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface(Theme.of(context).brightness),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => _DayPunchesSheet(day: day),
+    );
+  }
+
   Widget _buildContent() {
     if (_isLoading) {
       return const Center(child: AppLoadingIndicator());
@@ -132,15 +152,19 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
       padding: AppSpacing.screenPadding,
       itemCount: _days.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _PdksCard(day: _days[i]),
+      itemBuilder: (_, i) => _PdksCard(
+        day: _days[i],
+        onTap: () => _showDayPunches(_days[i]),
+      ),
     );
   }
 }
 
 class _PdksCard extends StatelessWidget {
   final PdksDay day;
+  final VoidCallback? onTap;
 
-  const _PdksCard({required this.day});
+  const _PdksCard({required this.day, this.onTap});
 
   ({String label, AppBadgeVariant variant}) _dayTag() {
     if (day.isHoliday) {
@@ -158,7 +182,10 @@ class _PdksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tag = _dayTag();
-    return AppCard(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AppCard(
       child: Padding(
         padding: AppSpacing.cardInsets,
         child: Column(
@@ -246,6 +273,7 @@ class _PdksCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -258,6 +286,160 @@ class _PdksCard extends StatelessWidget {
         Text(text,
             style: AppTypography.caption2.copyWith(color: color)),
       ],
+    );
+  }
+}
+
+/// Bir günün ham giriş/çıkış hareketlerini (birden fazla döngü + kaynak) listeleyen
+/// alt sayfa. Denetim: aynı gün içinde kaç giriş/çıkış yapıldığı burada görünür.
+class _DayPunchesSheet extends StatefulWidget {
+  final PdksDay day;
+  const _DayPunchesSheet({required this.day});
+
+  @override
+  State<_DayPunchesSheet> createState() => _DayPunchesSheetState();
+}
+
+class _DayPunchesSheetState extends State<_DayPunchesSheet> {
+  bool _loading = true;
+  List<AttendanceRecordRow> _rows = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final rows = await hrEssService.pdksDayPunches(widget.day.workDate);
+    if (mounted) {
+      setState(() {
+        _rows = rows;
+        _loading = false;
+      });
+    }
+  }
+
+  String _sourceLabel(String? s) {
+    switch (s) {
+      case 'mobile_geo':
+        return essT('hr.pdks.source_geo', 'Otomatik (konum)');
+      case 'manual':
+        return essT('hr.pdks.source_manual', 'Manuel');
+      default:
+        return s ?? '—';
+    }
+  }
+
+  AppBadgeVariant _sourceVariant(String? s) =>
+      s == 'mobile_geo' ? AppBadgeVariant.success : AppBadgeVariant.neutral;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.tertiaryLabel(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text('${essDate(widget.day.workDate)} — Hareketler',
+                style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.sm),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Center(child: AppLoadingIndicator()),
+              )
+            else if (_rows.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(
+                  essT('hr.pdks.no_punches', 'Bu gün için hareket kaydı yok'),
+                  style: AppTypography.footnote.copyWith(
+                      color: AppColors.secondaryLabel(context)),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _rows.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.xs),
+                  itemBuilder: (_, i) => _punchTile(_rows[i], i + 1),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _punchTile(AttendanceRecordRow r, int index) {
+    return AppCard(
+      child: Padding(
+        padding: AppSpacing.cardInsets,
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+              child: Text('$index',
+                  style: AppTypography.caption1
+                      .copyWith(color: AppColors.primary)),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.login,
+                          size: 13, color: AppColors.tertiaryLabel(context)),
+                      const SizedBox(width: 4),
+                      Text(essTime(r.entryTime),
+                          style: AppTypography.subhead),
+                      const SizedBox(width: AppSpacing.sm),
+                      Icon(Icons.logout,
+                          size: 13, color: AppColors.tertiaryLabel(context)),
+                      const SizedBox(width: 4),
+                      Text(r.isOpen ? '—' : essTime(r.exitTime),
+                          style: AppTypography.subhead.copyWith(
+                              color: r.isOpen ? AppColors.warning : null)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_sourceLabel(r.source)} · ${essDuration(r.workedMinutes)}'
+                    '${r.isOpen ? ' · açık' : ''}',
+                    style: AppTypography.caption2.copyWith(
+                        color: AppColors.secondaryLabel(context)),
+                  ),
+                ],
+              ),
+            ),
+            AppBadge(
+              label: _sourceLabel(r.source),
+              variant: _sourceVariant(r.source),
+              size: AppBadgeSize.small,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
