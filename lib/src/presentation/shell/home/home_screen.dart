@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'home_widgets_section.dart';
+
 /// Ana Sayfa (Home) — sabit alt-nav'ın ilk sekmesi.
 ///
 /// Sade, dashboard-tarzı karşılama:
@@ -188,6 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                     const SizedBox(height: AppSpacing.lg),
                     _buildModulesCta(context),
+                    const SizedBox(height: AppSpacing.lg),
+                    const HomeWidgetsSection(),
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),

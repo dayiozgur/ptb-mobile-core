@@ -95,13 +95,16 @@ class DashboardWidgetDescriptor {
     }
   }
 
-  DashboardWidgetDescriptor copyWith({DashboardWidgetSource? source}) {
+  DashboardWidgetDescriptor copyWith({
+    DashboardWidgetSource? source,
+    Map<String, dynamic>? config,
+  }) {
     return DashboardWidgetDescriptor(
       id: id,
       type: type,
       title: title,
       subtitle: subtitle,
-      config: config,
+      config: config ?? this.config,
       dataSourceId: dataSourceId,
       queryConfig: queryConfig,
       gridColumn: gridColumn,
@@ -377,10 +380,19 @@ class PersonalDashboardService {
   List<DashboardWidgetDescriptor> _staticPresets() {
     return <DashboardWidgetDescriptor>[
       const DashboardWidgetDescriptor(
+        id: '__preset_weather',
+        type: 'weather',
+        title: 'Hava Durumu',
+        subtitle: 'İstanbul',
+        // config lat/lon/city ile özelleştirilebilir; yoksa varsayılan İstanbul.
+        config: {'city': 'İstanbul'},
+        gridColumn: 'span 6',
+      ),
+      const DashboardWidgetDescriptor(
         id: '__preset_text',
         type: 'text_block',
-        title: 'Not / Metin',
-        config: {'text': 'Notunuzu buraya yazın…'},
+        title: 'Not',
+        config: {'text': ''},
         gridColumn: 'span 6',
       ),
       const DashboardWidgetDescriptor(

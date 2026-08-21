@@ -64,6 +64,7 @@ import '../entity/entity_config_service.dart';
 import '../entity/entity_data_service.dart';
 import '../form/form_template_service.dart';
 import '../form/lookup_service.dart';
+import '../weather/weather_service.dart';
 import '../hr/hr_ess_service.dart';
 import '../hr/hr_profile_service.dart';
 import '../hr/hr_documents_service.dart';
@@ -634,6 +635,7 @@ Future<void> setupServiceLocator({
   // HR EMPLOYEE-SELF-SERVICE (ESS)
   // ============================================
 
+  sl.registerLazySingleton<WeatherService>(() => WeatherService());
   sl.registerLazySingleton<HrEssService>(
     () => HrEssService(
       supabase: sl<SupabaseClient>(),

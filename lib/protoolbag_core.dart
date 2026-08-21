@@ -288,6 +288,8 @@ export 'src/presentation/dynamic_form/dynamic_form_widget.dart';
 
 // Presentation - Dynamic report/page widget primitives (stat/chart/table)
 export 'src/presentation/dyn_widgets/dyn_widgets.dart';
+export 'src/presentation/dyn_widgets/dashboard_widget_view.dart';
+export 'src/core/weather/weather_service.dart';
 
 // Page Viewer (web-designed dashboard page templates)
 export 'src/presentation/page_viewer/models/page_template.dart';

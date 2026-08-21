@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/dashboard/personal_dashboard_service.dart';
-
 /// Kişisel pano ("Panom") — kullanıcının kendi seçtiği widget'ları SIRALI
 /// gösteren, düzenlenebilir dashboard.
 ///
@@ -25,9 +23,6 @@ class PersonalDashboardScreen extends StatefulWidget {
 }
 
 class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
-  /// Grafik widget'ları için sabit yükseklik (scroll view'da sınırsız-Flex'ten kaçınır).
-  static const double _chartHeight = 240;
-
   final PersonalDashboardService _service = sl<PersonalDashboardService>();
 
   bool _loading = true;
@@ -137,7 +132,7 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetCtx) => _CatalogSheet(
+      builder: (sheetCtx) => DashboardCatalogSheet(
         items: selectable,
         onPick: (item) {
           Navigator.of(sheetCtx).pop();
@@ -306,147 +301,29 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
   }
 
   // ─── Widget-type render (görünüm modu) ──────────────────────────────────
+  // Render mantığı paylaşılan [DashboardWidgetView]'a taşındı (Ana Sayfa'daki
+  // gömülü pano ile TEK renderer → sapma yok). Not (text_block) düzenlenebilir.
 
   Widget _buildWidget(DashboardWidgetDescriptor w) {
-    switch (w.type) {
-      case 'stat_card':
-        return _buildStat(w);
-      case 'chart_widget':
-        return _buildChart(w);
-      case 'data_table':
-        return _buildTable(w);
-      case 'heading':
-        return _buildHeading(w);
-      case 'text_block':
-        return _buildText(w);
-      case 'divider':
-        return const Divider();
-      default:
-        return _buildStaticBox(w);
-    }
-  }
-
-  Widget _buildStat(DashboardWidgetDescriptor w) {
-    final inline = w.config['value'];
-    final mode = DynStatWidget.modeFromString(w.config['mode']?.toString());
-    if (inline != null) {
-      return DynWidgetCard(
-        title: w.title,
-        subtitle: w.subtitle,
-        child: DynStatWidget([<String, dynamic>{'value': inline}], w.config,
-            mode: mode),
-      );
-    }
-    final future = _data[w.id];
-    if (future == null) {
-      return DynWidgetCard(
-        title: w.title,
-        subtitle: w.subtitle,
-        child: DynStatWidget(
-            const [<String, dynamic>{'value': '—'}], w.config,
-            mode: mode),
-      );
-    }
-    return _dataCard(
-      w,
-      future,
-      (rows) => DynStatWidget(rows, w.config, mode: mode),
+    return DashboardWidgetView(
+      descriptor: w,
+      dataFuture: w.isDataBacked ? _data[w.id] : null,
+      onRetry: _load,
+      onNoteChanged:
+          w.type == 'text_block' ? (text) => _updateNote(w, text) : null,
     );
   }
 
-  Widget _buildChart(DashboardWidgetDescriptor w) {
-    final future = _data[w.id];
-    if (future == null) return _buildStaticBox(w);
-    final chartKind = w.config['chartType']?.toString() ?? 'bar_chart';
-    return _dataCard(
-      w,
-      future,
-      (rows) => SizedBox(
-        height: _chartHeight,
-        child: DynChartWidget(rows, w.config, chartKind: chartKind),
-      ),
-    );
-  }
-
-  Widget _buildTable(DashboardWidgetDescriptor w) {
-    final future = _data[w.id];
-    if (future == null) return _buildStaticBox(w);
-    return _dataCard(w, future, (rows) => DynDataTableWidget(rows, w.config));
-  }
-
-  Widget _dataCard(
-    DashboardWidgetDescriptor w,
-    Future<List<Map<String, dynamic>>> future,
-    Widget Function(List<Map<String, dynamic>> rows) builder,
-  ) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: future,
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return DynWidgetCard(title: w.title, subtitle: w.subtitle, loading: true);
-        }
-        if (snap.hasError) {
-          return DynWidgetCard(
-            title: w.title,
-            subtitle: w.subtitle,
-            error: 'Hata: ${snap.error}',
-            onRetry: _load,
-          );
-        }
-        final rows = snap.data ?? const <Map<String, dynamic>>[];
-        return DynWidgetCard(
-          title: w.title,
-          subtitle: w.subtitle,
-          child: builder(rows),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeading(DashboardWidgetDescriptor w) {
-    final text = w.config['text']?.toString() ?? w.title ?? '';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Text(
-        text,
-        style: AppTypography.withColor(
-          AppTypography.title3,
-          AppColors.textPrimary(Theme.of(context).brightness),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildText(DashboardWidgetDescriptor w) {
-    final text = w.config['text']?.toString() ?? w.subtitle ?? '';
-    return DynWidgetCard(
-      title: w.title,
-      child: Text(
-        text,
-        style: AppTypography.withColor(
-          AppTypography.body,
-          AppColors.textSecondary(Theme.of(context).brightness),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStaticBox(DashboardWidgetDescriptor w) {
-    final label = w.config['text']?.toString() ??
-        w.config['label']?.toString() ??
-        w.title ??
-        _typeLabel(w.type);
-    return DynWidgetCard(
-      title: w.title,
-      subtitle: w.subtitle,
-      child: Text(
-        label,
-        style: AppTypography.withColor(
-          AppTypography.body,
-          AppColors.textSecondary(Theme.of(context).brightness),
-        ),
-      ),
-    );
+  /// Not metnini güncelle + kaydet. Hem mobil `config.text` hem web `config.content`
+  /// (HTML) yazılır → web↔mobil round-trip.
+  void _updateNote(DashboardWidgetDescriptor w, String text) {
+    final idx = _widgets.indexWhere((e) => e.id == w.id);
+    if (idx < 0) return;
+    final newConfig = Map<String, dynamic>.from(w.config)
+      ..['text'] = text
+      ..['content'] = text.isEmpty ? '' : '<p>$text</p>';
+    setState(() => _widgets[idx] = w.copyWith(config: newConfig));
+    _persist();
   }
 
   /// Boş/hata durumları için ortalanmış, kaydırılabilir (pull-to-refresh) kap.
@@ -488,8 +365,10 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
 }
 
 /// "Widget Ekle" alt sayfası — katalogdan tek dokunuşla ekleme.
-class _CatalogSheet extends StatelessWidget {
-  const _CatalogSheet({required this.items, required this.onPick});
+/// Hem [PersonalDashboardScreen] hem Ana Sayfa'daki gömülü pano kullanır.
+class DashboardCatalogSheet extends StatelessWidget {
+  const DashboardCatalogSheet(
+      {super.key, required this.items, required this.onPick});
 
   final List<DashboardWidgetDescriptor> items;
   final void Function(DashboardWidgetDescriptor item) onPick;
@@ -587,6 +466,8 @@ class _CatalogSheet extends StatelessWidget {
 
   IconData _iconFor(String type) {
     switch (type) {
+      case 'weather':
+        return Icons.wb_sunny_outlined;
       case 'stat_card':
         return Icons.insights_outlined;
       case 'chart_widget':
