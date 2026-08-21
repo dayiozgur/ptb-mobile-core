@@ -203,7 +203,9 @@ class AppNotification {
       dateTime: json['date_time'] != null
           ? DateTime.tryParse(json['date_time'] as String)
           : null,
-      isRead: json['read'] as bool? ?? false,
+      // Kanonik alıcı-okundu kolonu `is_read`; `read` eski/legacy kolon
+      // (çoğu satırda null). Web ile birebir: is_read önce, read fallback.
+      isRead: (json['is_read'] ?? json['read']) as bool? ?? false,
       sent: json['sent'] as bool? ?? false,
       acknowledged: json['acknowledged'] as bool? ?? false,
       acknowledgedAt: json['acknowledged_at'] != null

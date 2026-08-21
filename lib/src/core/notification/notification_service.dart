@@ -88,17 +88,25 @@ class NotificationService {
         }
       }
 
+      // KANONİK alıcı = `recipient_id` (web `notification.service.ts` ile
+      // birebir); eski `profile_id` yalnız ~34 legacy satırda dolu → onu
+      // sorgulamak çoğu kullanıcıda bildirimleri GİZLİYORDU (drift). Gönderen
+      // bilgisi `sender_id` FK'siyle embed edilir (model bunu `profile` olarak
+      // okur).
       var query = _supabase
           .from(_tableName)
           .select('''
             *,
-            profile:profile_id(id, full_name, avatar_url)
+            profile:profiles!notifications_sender_id_fkey(id, full_name, avatar_url)
           ''')
-          .eq('profile_id', profileId)
-          .eq('active', true);
+          .eq('recipient_id', profileId)
+          // `active` çoğu satırda NULL (varsayılan, hedeflenmemiş değil) —
+          // yalnız AÇIKÇA false olanı (mobil soft-delete) gizle. `.eq(active,
+          // true)` NULL'ları da eleyip gerçek bildirimleri gizliyordu.
+          .or('active.is.null,active.eq.true');
 
       if (unreadOnly) {
-        query = query.eq('read', false);
+        query = query.eq('is_read', false);
       }
 
       if (type != null) {
@@ -106,6 +114,7 @@ class NotificationService {
       }
 
       final response = await query
+          .order('priority', ascending: false)
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
 
@@ -139,9 +148,9 @@ class NotificationService {
       final response = await _supabase
           .from(_tableName)
           .select('id')
-          .eq('profile_id', profileId)
-          .eq('active', true)
-          .eq('read', false);
+          .eq('recipient_id', profileId)
+          .or('active.is.null,active.eq.true')
+          .eq('is_read', false);
 
       _unreadCount = (response as List).length;
       _unreadCountController.add(_unreadCount);
@@ -157,13 +166,13 @@ class NotificationService {
     try {
       final allResponse = await _supabase
           .from(_tableName)
-          .select('id, notification_type, read, acknowledged')
-          .eq('profile_id', profileId)
-          .eq('active', true);
+          .select('id, notification_type, is_read, acknowledged')
+          .eq('recipient_id', profileId)
+          .or('active.is.null,active.eq.true');
 
       final notifications = allResponse as List;
       final total = notifications.length;
-      final unread = notifications.where((n) => n['read'] == false).length;
+      final unread = notifications.where((n) => n['is_read'] == false).length;
       final unacknowledged =
           notifications.where((n) => n['acknowledged'] == false).length;
 
@@ -226,6 +235,8 @@ class NotificationService {
   }) async {
     try {
       final insertData = {
+        // Kanonik alıcı = recipient_id (+ legacy profile_id geriye-uyum için).
+        'recipient_id': profileId,
         'profile_id': profileId,
         'title': title,
         'description': description,
@@ -236,6 +247,7 @@ class NotificationService {
         'entity_id': entityId,
         'meta': meta,
         'active': true,
+        'is_read': false,
         'read': false,
         'sent': false,
         'acknowledged': false,
@@ -270,7 +282,8 @@ class NotificationService {
   Future<bool> markAsRead(String notificationId) async {
     try {
       await _supabase.from(_tableName).update({
-        'read': true,
+        'is_read': true,
+        'read_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', notificationId);
 
@@ -296,9 +309,10 @@ class NotificationService {
   Future<bool> markAllAsRead(String profileId) async {
     try {
       await _supabase.from(_tableName).update({
-        'read': true,
+        'is_read': true,
+        'read_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('profile_id', profileId).eq('read', false);
+      }).eq('recipient_id', profileId).eq('is_read', false);
 
       // Local state güncelle
       _notifications = _notifications
@@ -388,7 +402,7 @@ class NotificationService {
       await _supabase.from(_tableName).update({
         'active': false,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('profile_id', profileId);
+      }).eq('recipient_id', profileId);
 
       _notifications = [];
       _notificationsController.add(_notifications);
@@ -426,7 +440,7 @@ class NotificationService {
           table: _tableName,
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'profile_id',
+            column: 'recipient_id',
             value: profileId,
           ),
           callback: (payload) {
