@@ -31,16 +31,17 @@ void main() {
       expect(AppThemeMode.dark.label, 'Koyu');
     });
 
-    test('fromValue returns correct mode', () {
-      expect(AppThemeMode.fromValue('system'), AppThemeMode.system);
-      expect(AppThemeMode.fromValue('light'), AppThemeMode.light);
-      expect(AppThemeMode.fromValue('dark'), AppThemeMode.dark);
+    // API drift: AppThemeMode.fromValue(...) was renamed to fromString(...)
+    test('fromString returns correct mode', () {
+      expect(AppThemeMode.fromString('system'), AppThemeMode.system);
+      expect(AppThemeMode.fromString('light'), AppThemeMode.light);
+      expect(AppThemeMode.fromString('dark'), AppThemeMode.dark);
     });
 
-    test('fromValue returns system for invalid value', () {
-      expect(AppThemeMode.fromValue('invalid'), AppThemeMode.system);
-      expect(AppThemeMode.fromValue(null), AppThemeMode.system);
-      expect(AppThemeMode.fromValue(''), AppThemeMode.system);
+    test('fromString returns system for invalid value', () {
+      expect(AppThemeMode.fromString('invalid'), AppThemeMode.system);
+      expect(AppThemeMode.fromString(null), AppThemeMode.system);
+      expect(AppThemeMode.fromString(''), AppThemeMode.system);
     });
   });
 
@@ -55,7 +56,8 @@ void main() {
     });
 
     test('initializes with saved theme preference', () async {
-      when(() => mockStorage.read(any())).thenAnswer((_) async => '{"themeMode":"dark"}');
+      // API drift: persisted key is 'mode' (was 'themeMode')
+      when(() => mockStorage.read(any())).thenAnswer((_) async => '{"mode":"dark"}');
 
       await themeService.initialize();
 
@@ -170,14 +172,16 @@ void main() {
       expect(themeService.isLightMode, false);
     });
 
-    test('isSystemMode returns correct value', () async {
-      expect(themeService.isSystemMode, true);
+    // API drift: dedicated `isSystemMode` getter was removed; system mode is
+    // now detected via the `themeMode` getter directly.
+    test('system mode is reflected by themeMode', () async {
+      expect(themeService.themeMode, AppThemeMode.system);
 
       await themeService.setThemeMode(AppThemeMode.light);
-      expect(themeService.isSystemMode, false);
+      expect(themeService.themeMode == AppThemeMode.system, false);
 
       await themeService.setThemeMode(AppThemeMode.system);
-      expect(themeService.isSystemMode, true);
+      expect(themeService.themeMode, AppThemeMode.system);
     });
   });
 
@@ -189,9 +193,13 @@ void main() {
       await themeService.initialize();
     });
 
-    test('themeModeStream emits on mode change', () async {
+    // API drift: `themeModeStream` (Stream<AppThemeMode>) was replaced by
+    // `settingsStream` (Stream<ThemeSettings>). Intent preserved by reading the
+    // emitted settings' `mode`.
+    test('settingsStream emits on mode change', () async {
       final emissions = <AppThemeMode>[];
-      final subscription = themeService.themeModeStream.listen(emissions.add);
+      final subscription =
+          themeService.settingsStream.listen((s) => emissions.add(s.mode));
 
       await themeService.setThemeMode(AppThemeMode.light);
       await themeService.setThemeMode(AppThemeMode.dark);
@@ -205,31 +213,34 @@ void main() {
   });
 
   group('ThemeSettings', () {
+    // API drift: field/param/JSON-key renamed from `themeMode` to `mode`.
     test('toJson serializes correctly', () {
-      final settings = ThemeSettings(themeMode: AppThemeMode.dark);
+      final settings = ThemeSettings(mode: AppThemeMode.dark);
       final json = settings.toJson();
 
-      expect(json['themeMode'], 'dark');
+      expect(json['mode'], 'dark');
     });
 
     test('fromJson deserializes correctly', () {
-      final json = {'themeMode': 'dark'};
+      final json = {'mode': 'dark'};
       final settings = ThemeSettings.fromJson(json);
 
-      expect(settings.themeMode, AppThemeMode.dark);
+      expect(settings.mode, AppThemeMode.dark);
     });
 
     test('copyWith creates correct copy', () {
-      final settings = ThemeSettings(themeMode: AppThemeMode.light);
-      final copy = settings.copyWith(themeMode: AppThemeMode.dark);
+      final settings = ThemeSettings(mode: AppThemeMode.light);
+      final copy = settings.copyWith(mode: AppThemeMode.dark);
 
-      expect(copy.themeMode, AppThemeMode.dark);
+      expect(copy.mode, AppThemeMode.dark);
     });
 
+    // API drift: `ThemeSettings.defaultSettings()` factory removed; the default
+    // const constructor now yields system mode.
     test('default settings uses system mode', () {
-      final settings = ThemeSettings.defaultSettings();
+      const settings = ThemeSettings();
 
-      expect(settings.themeMode, AppThemeMode.system);
+      expect(settings.mode, AppThemeMode.system);
     });
   });
 }

@@ -78,7 +78,17 @@ void main() {
     test('requests returns unmodifiable list', () {
       final requests = workRequestService.requests;
       expect(requests, isA<List<WorkRequest>>());
-      expect(() => (requests as List).add(null), throwsUnsupportedError);
+      // Adding a real WorkRequest (not null) so the mutation reaches the
+      // unmodifiable guard instead of failing an element type check first.
+      final extra = WorkRequest(
+        id: 'request-x',
+        title: 'Extra',
+        requestedById: 'user-123',
+        requestedAt: DateTime.now(),
+        tenantId: 'tenant-123',
+        createdAt: DateTime.now(),
+      );
+      expect(() => requests.add(extra), throwsUnsupportedError);
     });
   });
 

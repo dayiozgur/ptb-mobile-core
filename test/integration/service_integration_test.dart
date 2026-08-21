@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
@@ -60,7 +64,9 @@ void main() {
         final themeChanges = <AppThemeMode>[];
 
         final localeSub = localizationService.localeStream.listen(localeChanges.add);
-        final themeSub = themeService.themeModeStream.listen(themeChanges.add);
+        // API drift: themeModeStream -> settingsStream (emits ThemeSettings).
+        final themeSub =
+            themeService.settingsStream.listen((s) => themeChanges.add(s.mode));
 
         await localizationService.setLocale(AppLocale.german);
         await themeService.setThemeMode(AppThemeMode.light);
@@ -76,19 +82,42 @@ void main() {
     });
 
     group('Cache + Service Integration', () {
+      // API/behavior drift: CacheManager now requires an explicit initialize()
+      // (Hive-backed) before use; it no longer lazily self-initializes. We mock
+      // path_provider so Hive.initFlutter() can resolve a real temp directory
+      // in the pure-Dart test environment.
+      late CacheManager cache;
+      late Directory tempDir;
+
+      setUp(() async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        tempDir = await Directory.systemTemp.createTemp('ptb_cache_it');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (methodCall) async => tempDir.path,
+        );
+        cache = CacheManager();
+        await cache.initialize();
+      });
+
+      tearDown(() async {
+        await cache.clear();
+        await Hive.close();
+        try {
+          await tempDir.delete(recursive: true);
+        } catch (_) {}
+      });
+
       test('cache stores and retrieves organization correctly', () async {
-        final cache = CacheManager();
         final org = Organization(
           id: 'org-123',
           name: 'Test Organization',
           tenantId: 'tenant-123',
         );
 
-        await cache.setTyped<Organization>(
-          key: 'org_org-123',
-          value: org,
-          toJson: (o) => o.toJson(),
-        );
+        // API drift: `setTyped` was removed; store via `set(key, toJson())`.
+        await cache.set('org_org-123', org.toJson());
 
         final retrieved = await cache.getTyped<Organization>(
           key: 'org_org-123',
@@ -99,16 +128,14 @@ void main() {
         expect(retrieved!.id, 'org-123');
         expect(retrieved.name, 'Test Organization');
         expect(retrieved.tenantId, 'tenant-123');
-
-        await cache.clear();
       });
 
       test('cache stores and retrieves site list correctly', () async {
-        final cache = CacheManager();
+        // API drift: Site now requires `markerId`.
         final sites = [
-          Site(id: 'site-1', name: 'Site 1', organizationId: 'org-123'),
-          Site(id: 'site-2', name: 'Site 2', organizationId: 'org-123'),
-          Site(id: 'site-3', name: 'Site 3', organizationId: 'org-123'),
+          Site(id: 'site-1', name: 'Site 1', organizationId: 'org-123', markerId: 'm-1'),
+          Site(id: 'site-2', name: 'Site 2', organizationId: 'org-123', markerId: 'm-2'),
+          Site(id: 'site-3', name: 'Site 3', organizationId: 'org-123', markerId: 'm-3'),
         ];
 
         await cache.setList<Site>(
@@ -127,13 +154,9 @@ void main() {
         expect(retrieved[0].name, 'Site 1');
         expect(retrieved[1].name, 'Site 2');
         expect(retrieved[2].name, 'Site 3');
-
-        await cache.clear();
       });
 
       test('cache TTL expires data correctly', () async {
-        final cache = CacheManager();
-
         await cache.set(
           'temp_data',
           {'value': 'temporary'},
@@ -148,8 +171,6 @@ void main() {
 
         // Should be expired
         expect(await cache.get('temp_data'), isNull);
-
-        await cache.clear();
       });
     });
 
@@ -259,11 +280,16 @@ void main() {
             ),
           ],
           totalCount: 100,
+          // API drift: SearchQuery takes a single `entityType` (was
+          // `entityTypes` list); SearchResponse now requires `duration` and
+          // `searchedAt`.
           query: SearchQuery(
             text: 'test',
-            entityTypes: [SearchEntityType.all],
+            entityType: SearchEntityType.all,
           ),
           hasMore: true,
+          duration: const Duration(milliseconds: 12),
+          searchedAt: DateTime(2024, 1, 15, 10, 0),
         );
 
         final json = response.toJson();
@@ -279,155 +305,165 @@ void main() {
     });
 
     group('Sync State Integration', () {
+      // API drift: the old typed Sync* enums (SyncEntityType, SyncOperationType,
+      // SyncStatus) were replaced. PendingOperation now uses a String
+      // `entityType`, a `type` of PendingOperationType and a `status` of
+      // PendingOperationStatus. The `.isPending`/`.canRetry` convenience getters
+      // were removed, so this test now exercises status transitions and
+      // JSON round-trip on the current model instead.
       test('pending operations workflow', () {
-        // Create operation
         var operation = PendingOperation(
           id: 'op-123',
-          entityType: SyncEntityType.unit,
+          entityType: 'unit',
           entityId: 'unit-123',
-          operationType: SyncOperationType.create,
+          type: PendingOperationType.create,
           data: {'name': 'New Unit'},
-          status: SyncStatus.pending,
+          status: PendingOperationStatus.pending,
           createdAt: DateTime.now(),
           retryCount: 0,
         );
 
-        expect(operation.isPending, true);
-        expect(operation.canRetry, true);
+        expect(operation.status, PendingOperationStatus.pending);
+        expect(operation.type, PendingOperationType.create);
 
-        // Start syncing
-        operation = operation.copyWith(status: SyncStatus.syncing);
-        expect(operation.status.isSyncing, true);
+        // Start processing
+        operation = operation.copyWith(status: PendingOperationStatus.processing);
+        expect(operation.status, PendingOperationStatus.processing);
 
         // Complete
-        operation = operation.copyWith(status: SyncStatus.completed);
-        expect(operation.status.isCompleted, true);
+        operation = operation.copyWith(status: PendingOperationStatus.completed);
+        expect(operation.status, PendingOperationStatus.completed);
+
+        // Round-trip serialization preserves fields
+        final restored = PendingOperation.fromJson(operation.toJson());
+        expect(restored.id, 'op-123');
+        expect(restored.entityType, 'unit');
+        expect(restored.type, PendingOperationType.create);
+        expect(restored.status, PendingOperationStatus.completed);
       });
 
-      test('sync state transitions', () {
-        var state = SyncState.initial();
-        expect(state.isOnline, false);
-        expect(state.canSync, false);
+      // Removed: the `SyncState` class (initial/copyWith/canSync/hasPending) was
+      // removed from the lib entirely, so the "sync state transitions" sub-test
+      // no longer has an equivalent to target.
 
-        // Go online with pending operations
-        state = state.copyWith(isOnline: true, pendingCount: 5);
-        expect(state.canSync, true);
-
-        // Start syncing
-        state = state.copyWith(isSyncing: true);
-        expect(state.canSync, false);
-
-        // Complete sync
-        state = state.copyWith(
-          isSyncing: false,
-          pendingCount: 0,
-          lastSyncAt: DateTime.now(),
-        );
-        expect(state.canSync, false); // No pending
-        expect(state.hasPending, false);
-      });
-
+      // API drift: SyncResult no longer has success()/failure()/partial()
+      // factories or isSuccess/hasFailures/totalCount getters. It now exposes
+      // `success`, `message`, `processed`, `failed`.
       test('sync result scenarios', () {
-        // Full success
-        final success = SyncResult.success(syncedCount: 10);
-        expect(success.isSuccess, true);
-        expect(success.hasFailures, false);
-        expect(success.totalCount, 10);
-
-        // Full failure
-        final failure = SyncResult.failure(error: 'Network error', failedCount: 10);
-        expect(failure.isSuccess, false);
-        expect(failure.hasFailures, true);
-
-        // Partial success
-        final partial = SyncResult.partial(
-          syncedCount: 7,
-          failedCount: 3,
-          error: 'Some operations failed',
+        final success = SyncResult(
+          success: true,
+          message: 'All synced',
+          processed: 10,
+          failed: 0,
         );
-        expect(partial.isSuccess, false);
-        expect(partial.hasFailures, true);
-        expect(partial.totalCount, 10);
+        expect(success.success, true);
+        expect(success.failed, 0);
+        expect(success.processed, 10);
+
+        final failure = SyncResult(
+          success: false,
+          message: 'Network error',
+          processed: 0,
+          failed: 10,
+        );
+        expect(failure.success, false);
+        expect(failure.failed, 10);
+
+        final partial = SyncResult(
+          success: false,
+          message: 'Some operations failed',
+          processed: 7,
+          failed: 3,
+        );
+        expect(partial.success, false);
+        expect(partial.processed + partial.failed, 10);
       });
     });
 
+    // API drift: the reporting models were reworked from computed-helper value
+    // objects (totalValue / getMetric / completionRate / hasOverdue /
+    // totalEntities / userActivityRate — all removed) into plain data
+    // containers. DashboardMetric now takes id/title/value(String); MetricType's
+    // domain-specific members (organizations/sites/units/users) were replaced by
+    // count/sum/average/percentage/trend; DashboardSummary carries the counts
+    // directly and requires `tenantId`; ActivityStats and EntityCountSummary
+    // have different shapes. These tests now exercise construction and JSON
+    // round-trip on the current models.
     group('Reporting Integration', () {
       test('dashboard summary aggregation', () {
         final summary = DashboardSummary(
+          tenantId: 'tenant-123',
           metrics: [
-            DashboardMetric(
-              type: MetricType.organizations,
-              value: 5,
-              previousValue: 4,
+            const DashboardMetric(
+              id: 'm-org',
+              title: 'Organizations',
+              value: '5',
+              type: MetricType.count,
               trend: TrendDirection.up,
-              changePercent: 25.0,
+              trendValue: 25.0,
             ),
-            DashboardMetric(
-              type: MetricType.sites,
-              value: 20,
-              previousValue: 20,
+            const DashboardMetric(
+              id: 'm-site',
+              title: 'Sites',
+              value: '20',
+              type: MetricType.count,
               trend: TrendDirection.stable,
-              changePercent: 0.0,
-            ),
-            DashboardMetric(
-              type: MetricType.units,
-              value: 100,
-              previousValue: 110,
-              trend: TrendDirection.down,
-              changePercent: -9.1,
-            ),
-            DashboardMetric(
-              type: MetricType.users,
-              value: 50,
-              previousValue: 45,
-              trend: TrendDirection.up,
-              changePercent: 11.1,
+              trendValue: 0.0,
             ),
           ],
           period: ReportPeriod.thisMonth,
-          generatedAt: DateTime.now(),
+          organizationCount: 5,
+          siteCount: 20,
+          unitCount: 100,
+          activeUserCount: 50,
+          generatedAt: DateTime(2024, 1, 15, 10, 0),
         );
 
-        expect(summary.totalValue, 175); // 5 + 20 + 100 + 50
-        expect(summary.getMetric(MetricType.organizations)?.value, 5);
-        expect(summary.getMetric(MetricType.sites)?.trend, TrendDirection.stable);
-        expect(summary.getMetric(MetricType.units)?.trend.isNegative, true);
+        expect(summary.organizationCount, 5);
+        expect(summary.siteCount, 20);
+        expect(summary.metrics.length, 2);
+
+        final restored = DashboardSummary.fromJson(summary.toJson());
+        expect(restored.tenantId, 'tenant-123');
+        expect(restored.unitCount, 100);
+        expect(restored.activeUserCount, 50);
+        expect(restored.metrics.first.trend, TrendDirection.up);
+        expect(restored.metrics[1].trend, TrendDirection.stable);
       });
 
       test('activity stats calculation', () {
         final stats = ActivityStats(
-          totalActivities: 100,
-          completedActivities: 75,
-          pendingActivities: 20,
-          overdueActivities: 5,
-          period: ReportPeriod.thisWeek,
+          totalCount: 100,
+          byType: const {'create': 60, 'update': 40},
+          byEntity: const {'unit': 75, 'site': 25},
+          timeSeries: const [],
+          generatedAt: DateTime(2024, 1, 15, 10, 0),
         );
 
-        expect(stats.completionRate, 75.0);
-        expect(stats.hasOverdue, true);
+        expect(stats.totalCount, 100);
+        expect(stats.byType['create'], 60);
 
-        final noOverdueStats = ActivityStats(
-          totalActivities: 100,
-          completedActivities: 80,
-          pendingActivities: 20,
-          overdueActivities: 0,
-          period: ReportPeriod.thisWeek,
-        );
-
-        expect(noOverdueStats.hasOverdue, false);
+        final restored = ActivityStats.fromJson(stats.toJson());
+        expect(restored.totalCount, 100);
+        expect(restored.byType['update'], 40);
+        expect(restored.byEntity['unit'], 75);
       });
 
       test('entity count summary', () {
         final entitySummary = EntityCountSummary(
-          organizationCount: 5,
-          siteCount: 25,
-          unitCount: 150,
-          userCount: 100,
-          activeUserCount: 85,
+          total: 100,
+          active: 85,
+          inactive: 15,
+          generatedAt: DateTime(2024, 1, 15, 10, 0),
         );
 
-        expect(entitySummary.totalEntities, 280); // 5 + 25 + 150 + 100
-        expect(entitySummary.userActivityRate, 85.0);
+        expect(entitySummary.total, 100);
+        expect(entitySummary.active + entitySummary.inactive, 100);
+
+        final restored = EntityCountSummary.fromJson(entitySummary.toJson());
+        expect(restored.total, 100);
+        expect(restored.active, 85);
+        expect(restored.inactive, 15);
       });
     });
 
@@ -454,19 +490,18 @@ void main() {
           start: DateTime(2024, 1, 1),
           end: DateTime(2024, 1, 31),
         );
-        final february = DateRange(
-          start: DateTime(2024, 2, 1),
-          end: DateTime(2024, 2, 29),
-        );
         final q1 = DateRange(
           start: DateTime(2024, 1, 1),
           end: DateTime(2024, 3, 31),
         );
 
-        expect(january.overlaps(february), false);
-        expect(january.overlaps(q1), true);
-        expect(q1.contains(DateTime(2024, 2, 15)), true);
-        expect(january.duration.inDays, 30);
+        // API drift: `overlaps()`/`contains()` helpers and the `duration`
+        // getter were removed from DateRange. `duration.inDays` is now the
+        // `days` getter; the overlaps/contains checks have no current
+        // equivalent, so those assertions are dropped.
+        expect(january.days, 30);
+        expect(q1.days, 90);
+        expect(q1.previousPeriod.end, q1.start);
       });
     });
   });
