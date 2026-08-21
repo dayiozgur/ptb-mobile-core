@@ -58,6 +58,9 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  String _fmtDist(double m) =>
+      m >= 1000 ? '${(m / 1000).toStringAsFixed(1)} km' : '${m.round()} m';
+
   String _errMsg(String? code) {
     switch (code) {
       case 'out_of_range':
@@ -131,7 +134,10 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
     } else {
       statusColor = AppColors.warning;
       statusIcon = Icons.my_location_outlined;
-      statusText = 'İşyeri dışındasınız (konum izleniyor)';
+      final dist = _svc.nearestDistanceM;
+      statusText = dist != null
+          ? 'İşyeri dışındasınız · en yakın ${_fmtDist(dist)}'
+          : 'İşyeri dışındasınız (konum bekleniyor)';
     }
 
     return AppCard(

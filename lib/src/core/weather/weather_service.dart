@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../utils/logger.dart';
 
@@ -83,6 +85,57 @@ class WeatherService {
       Logger.warning('Weather fetch failed: $e');
       rethrow;
     }
+  }
+
+  /// **Cihaz konumundan** anlık hava durumu — GPS + ters-geocode ile şehir adı.
+  ///
+  /// Konum izni/servisi yoksa ya da başarısızsa [fallbackLat]/[fallbackLon]/
+  /// [fallbackCity] (yoksa varsayılan İstanbul) ile döner. Böylece ana sayfa
+  /// hava-durumu widget'ı kullanıcının bulunduğu şehre (ör. İzmir) göre gelir.
+  Future<WeatherData> currentAtDevice({
+    double? fallbackLat,
+    double? fallbackLon,
+    String? fallbackCity,
+  }) async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      final granted = perm == LocationPermission.whileInUse ||
+          perm == LocationPermission.always;
+      if (serviceEnabled && granted) {
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.medium),
+        );
+        String? city;
+        try {
+          final places =
+              await placemarkFromCoordinates(pos.latitude, pos.longitude);
+          if (places.isNotEmpty) {
+            final p = places.first;
+            city = (p.locality != null && p.locality!.isNotEmpty)
+                ? p.locality
+                : (p.administrativeArea != null &&
+                        p.administrativeArea!.isNotEmpty)
+                    ? p.administrativeArea
+                    : p.subAdministrativeArea;
+          }
+        } catch (e) {
+          Logger.warning('reverse-geocode başarısız: $e');
+        }
+        return current(
+          lat: pos.latitude,
+          lon: pos.longitude,
+          city: city ?? fallbackCity,
+        );
+      }
+    } catch (e) {
+      Logger.warning('cihaz-konumlu hava durumu başarısız: $e');
+    }
+    return current(lat: fallbackLat, lon: fallbackLon, city: fallbackCity);
   }
 
   /// WMO kodu → Türkçe durum etiketi.

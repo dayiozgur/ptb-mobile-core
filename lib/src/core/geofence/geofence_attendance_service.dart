@@ -95,6 +95,20 @@ class GeofenceAttendanceService {
     return null;
   }
 
+  /// Mevcut konumdan en yakın işyeri geofence merkezine mesafe (metre) — yoksa null.
+  /// UI'da "dışarıdasınız · en yakın X m" göstermek için (kalibrasyon/tanı).
+  double? get nearestDistanceM {
+    final pos = _map.currentPosition;
+    if (pos == null || _geofences.isEmpty) return null;
+    double best = double.infinity;
+    for (final g in _geofences) {
+      final d = _map.calculateDistance(
+          pos.latitude, pos.longitude, g.latitude, g.longitude);
+      if (d < best) best = d;
+    }
+    return best.isFinite ? best : null;
+  }
+
   /// Kullanıcının tenant'ına ait aktif işyeri geofence'leri (RLS kapsamlı).
   Future<List<WorkGeofence>> loadGeofences() async {
     try {

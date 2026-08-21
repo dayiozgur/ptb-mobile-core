@@ -302,11 +302,16 @@ class _WeatherTileState extends State<WeatherTile> {
 
   Future<WeatherData> _fetch() {
     final cfg = widget.descriptor.config;
-    return sl<WeatherService>().current(
-      lat: (cfg['lat'] as num?)?.toDouble(),
-      lon: (cfg['lon'] as num?)?.toDouble(),
-      city: cfg['city']?.toString(),
-    );
+    final lat = (cfg['lat'] as num?)?.toDouble();
+    final lon = (cfg['lon'] as num?)?.toDouble();
+    final city = cfg['city']?.toString();
+    final svc = sl<WeatherService>();
+    // Config'te konum sabitlenmişse onu kullan; aksi halde CİHAZ konumundan
+    // (GPS + ters-geocode) → kullanıcının bulunduğu şehir (ör. İzmir).
+    if (lat != null && lon != null) {
+      return svc.current(lat: lat, lon: lon, city: city);
+    }
+    return svc.currentAtDevice(fallbackCity: city);
   }
 
   @override
