@@ -49,6 +49,39 @@ class _MyOnboardingScreenState extends State<MyOnboardingScreen> {
     }
   }
 
+  /// Tam-ekran spinner tetiklemeden listeyi yeniler (satır-içi aksiyon sonrası).
+  Future<void> _reloadQuiet() async {
+    try {
+      final rows = await hrEssService.myOnboardingTasks();
+      if (mounted) setState(() => _tasks = rows);
+    } catch (e) {
+      Logger.error('Failed to reload onboarding tasks', e);
+    }
+  }
+
+  /// Görev durumunu değiştirir (Tamamla / geri al) → backend + sessiz yenile.
+  ///
+  /// Kartın kendi spinner'ını yönetebilmesi için Future döner ve hata olursa
+  /// SnackBar gösterip yeniden fırlatır.
+  Future<void> _setStatus(OnboardingTask task, bool done) async {
+    final taskId = task.taskId;
+    if (taskId == null) return;
+    try {
+      await hrEssService.completeOnboardingTask(taskId, done: done);
+      await _reloadQuiet();
+    } catch (e) {
+      Logger.error('Failed to update onboarding task', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(essT('common.action_error', 'İşlem başarısız')),
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -103,7 +136,11 @@ class _MyOnboardingScreenState extends State<MyOnboardingScreen> {
         if (index == 0) {
           return _ProgressHeader(done: done, total: _tasks.length);
         }
-        return _TaskCard(task: _tasks[index - 1]);
+        final task = _tasks[index - 1];
+        return _TaskCard(
+          task: task,
+          onToggle: (nextDone) => _setStatus(task, nextDone),
+        );
       },
     );
   }
@@ -156,14 +193,41 @@ class _ProgressHeader extends StatelessWidget {
   }
 }
 
-class _TaskCard extends StatelessWidget {
+class _TaskCard extends StatefulWidget {
   final OnboardingTask task;
 
-  const _TaskCard({required this.task});
+  /// Görev durumunu değiştir: `true` → Tamamla ('done'), `false` → geri al
+  /// ('pending'). Backend çağrısı + yenileme tamamlanınca Future çözülür.
+  final Future<void> Function(bool done) onToggle;
+
+  const _TaskCard({required this.task, required this.onToggle});
+
+  @override
+  State<_TaskCard> createState() => _TaskCardState();
+}
+
+class _TaskCardState extends State<_TaskCard> {
+  bool _busy = false;
+
+  OnboardingTask get task => widget.task;
 
   bool get _isDone =>
       task.status?.toLowerCase() == 'completed' ||
       task.status?.toLowerCase() == 'done';
+
+  bool get _actionable => task.taskId != null && !_busy;
+
+  Future<void> _handle(bool done) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onToggle(done);
+    } catch (_) {
+      // Hata SnackBar'ı üst ekranda gösterildi; burada yut, spinner'ı kapat.
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,14 +237,27 @@ class _TaskCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _isDone
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color: _isDone
-                  ? AppColors.success
-                  : AppColors.tertiaryLabel(context),
-              size: 22,
+            GestureDetector(
+              onTap: _actionable ? () => _handle(!_isDone) : null,
+              behavior: HitTestBehavior.opaque,
+              child: _busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: Padding(
+                        padding: EdgeInsets.all(2),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : Icon(
+                      _isDone
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: _isDone
+                          ? AppColors.success
+                          : AppColors.tertiaryLabel(context),
+                      size: 22,
+                    ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -259,6 +336,25 @@ class _TaskCard extends StatelessWidget {
                           .copyWith(color: AppColors.secondaryLabel(context)),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (task.taskId != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppButton(
+                        label: _isDone
+                            ? essT('common.completed', 'Tamamlandı')
+                            : essT('hr.onboarding.complete', 'Tamamla'),
+                        icon: _isDone ? Icons.check : Icons.done_all,
+                        variant: _isDone
+                            ? AppButtonVariant.success
+                            : AppButtonVariant.primary,
+                        size: AppButtonSize.small,
+                        isFullWidth: false,
+                        isLoading: _busy,
+                        onPressed: () => _handle(!_isDone),
+                      ),
                     ),
                   ],
                 ],

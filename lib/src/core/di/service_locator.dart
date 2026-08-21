@@ -18,6 +18,8 @@ import '../search/search_service.dart';
 import '../ai/ai_assistant_service.dart';
 import '../admin/admin_user_service.dart';
 import '../admin/admin_staff_service.dart';
+import '../admin/admin_rbac_service.dart';
+import '../admin/admin_bug_report_service.dart';
 import '../theme/theme_service.dart';
 import '../branding/branding_service.dart';
 import '../localization/language_service.dart';
@@ -292,6 +294,12 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<AdminStaffService>(
     () => AdminStaffService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminRbacService>(
+    () => AdminRbacService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminBugReportService>(
+    () => AdminBugReportService(supabase: sl<SupabaseClient>()),
   );
 
   // ============================================

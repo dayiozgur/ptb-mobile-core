@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/menu/menu_item.dart';
 import '../page_viewer/page_viewer_screen.dart';
 import '../report_viewer/report_viewer_screen.dart';
+import 'admin/bug_reports_screen.dart';
+import 'admin/roles_screen.dart';
 import 'admin/staff_roster_screen.dart';
 import 'admin/user_management_screen.dart';
 import 'coming_soon_screen.dart';
@@ -82,6 +84,12 @@ class ScreenResolver {
         p.startsWith('/admin/org-chart') ||
         p.startsWith('/admin/departments')) {
       return const StaffRosterScreen();
+    }
+    if (p.startsWith('/admin/roles') || p.startsWith('/admin/rbac')) {
+      return const RolesScreen();
+    }
+    if (p.startsWith('/admin/bug-reports')) {
+      return const BugReportsScreen();
     }
     // Diğer admin yolları — henüz özel ekran yok → ComingSoon (menüde görünür).
     if (p.startsWith('/admin')) {

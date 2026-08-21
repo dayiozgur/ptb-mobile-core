@@ -313,4 +313,45 @@ class HrEssService {
       rethrow;
     }
   }
+
+  /// Bir oryantasyon görevinin durumunu değiştirir (yaz).
+  ///
+  /// Web ESS "Oryantasyonum" ekranıyla **birebir** aynı backend sözleşmesi:
+  ///   `fn_hr_onboarding_task_set_status(p_task_id, p_status, p_notes)`
+  /// (web `my-onboarding.component.ts` — `client.rpc('fn_hr_onboarding_task_set_status', …)`).
+  ///
+  /// [taskId] `staff_onboarding_tasks.id` — okuma modelinde
+  /// [OnboardingTask.taskId] alanı (dikkat: `instanceId` DEĞİL). RPC
+  /// `auth.uid()` üzerinden kendi görevlerine kapsanır (RLS/SECDEF), bu yüzden
+  /// doğrudan tablo yazımı yerine RPC kullanılır.
+  ///
+  /// [done] `true` → durum `'done'` (Tamamlandı); `false` → durum `'pending'`
+  /// (geri al / yeniden aç) — web admin "reopen" akışıyla aynı `p_status`
+  /// parametresi.
+  ///
+  /// Dönüş: RPC gövdesindeki `instance_completed` (bu görevle birlikte üst
+  /// oryantasyon örneğinin de kapandığını gösterir); alan yoksa `false`.
+  Future<bool> completeOnboardingTask(
+    String taskId, {
+    bool done = true,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'fn_hr_onboarding_task_set_status',
+        params: {
+          'p_task_id': taskId,
+          'p_status': done ? 'done' : 'pending',
+          'p_notes': null,
+        },
+      );
+
+      if (response is Map<String, dynamic>) {
+        return response['instance_completed'] as bool? ?? false;
+      }
+      return false;
+    } catch (e) {
+      Logger.error('Error setting onboarding task status: $e');
+      rethrow;
+    }
+  }
 }
