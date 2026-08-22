@@ -163,45 +163,38 @@ void main() {
     });
   });
 
-  group('reorderBacklog (form_submissions update)', () {
-    test('persists equal-spaced ranks and updated_by per id', () async {
+  // reorderBacklog artık ATOMİK tek RPC (fn_reorder_backlog) — eski N-ayrı
+  // form_submissions UPDATE kısmi-fail'de DB/UI drift bırakıyordu.
+  group('reorderBacklog (fn_reorder_backlog RPC)', () {
+    test('atomik RPC — sıralı id + eşit-aralıklı rank', () async {
       service.setTenant('tenant-1');
-      h.stubCurrentUser(id: 'user-9');
-      h.stubFrom('form_submissions', result: null);
+      h.stubRpc('fn_reorder_backlog', result: null);
 
       await service.reorderBacklog(['a', 'b']);
 
-      // queryByTable keeps the LAST from() call = second id, rank 2*1000.
-      final calls = h.queryByTable['form_submissions']!.calls;
-      final update = calls.firstWhere((i) => i.memberName == #update);
-      final patch = update.positionalArguments.first as Map;
-      expect(patch['backlog_rank'], 2000);
-      expect(patch['updated_by'], 'user-9');
-      // Scoped by id + tenant_id.
-      expect(calls.where((i) => i.memberName == #eq).length, 2);
+      final params = h.capturedRpcParams('fn_reorder_backlog');
+      expect(params?['p_ids'], ['a', 'b']);
+      expect(params?['p_ranks'], [1000, 2000]);
     });
 
-    test('omits updated_by when there is no authenticated user', () async {
+    test('3 id → rank [1000, 2000, 3000]', () async {
       service.setTenant('tenant-1');
-      h.stubCurrentUser(id: null);
-      h.stubFrom('form_submissions', result: null);
+      h.stubRpc('fn_reorder_backlog', result: null);
 
-      await service.reorderBacklog(['a']);
+      await service.reorderBacklog(['x', 'y', 'z']);
 
-      final calls = h.queryByTable['form_submissions']!.calls;
-      final update = calls.firstWhere((i) => i.memberName == #update);
-      final patch = update.positionalArguments.first as Map;
-      expect(patch['backlog_rank'], 1000);
-      expect(patch.containsKey('updated_by'), isFalse);
+      expect(h.capturedRpcParams('fn_reorder_backlog')?['p_ranks'],
+          [1000, 2000, 3000]);
     });
 
-    test('empty list short-circuits without touching the table', () async {
+    test('boş liste → RPC çağrılmaz (kısa devre)', () async {
       service.setTenant('tenant-1');
-      h.stubCurrentUser(id: 'user-9');
+      h.stubRpc('fn_reorder_backlog', result: null);
 
       await service.reorderBacklog([]);
 
-      expect(h.queryByTable.containsKey('form_submissions'), isFalse);
+      verifyNever(() => h.client.rpc<dynamic>('fn_reorder_backlog',
+          params: any(named: 'params')));
     });
 
     test('throws when tenant context is not set', () async {
