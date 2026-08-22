@@ -142,6 +142,10 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
               '/entities/${widget.typeCode}/${widget.id}/edit',
             ),
           ),
+        // Platform/tipe özel domain aksiyonları (CRM sonraki-adım, PPM worklog…).
+        if (!_isLoading && _errorMessage == null && _entity != null)
+          ...EntityDetailExtensions.actionsFor(
+              context, widget.typeCode, _entity!, _loadData),
       ],
       child: _buildContent(),
     );
@@ -206,6 +210,10 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
             initialValues: entity.fieldValues,
             viewMode: true,
           ),
+          // Platform/tipe özel domain bölümleri (CRM aktivite-feed, PPM worklog
+          // listesi…) — form ile yorumlar arasına.
+          ...EntityDetailExtensions.sectionsFor(
+              context, widget.typeCode, entity, _loadData),
           // Yorum/tartışma thread'i — yorum-etkin tiplerde (CRM aktivite,
           // PPM issue vb.). Çekirdek paylaşılan primitif.
           if (_config?.enableComments == true) ...[

@@ -4,6 +4,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 import '../features/calendar/crm_agenda_screen.dart';
 import '../features/contacts/contacts_list_screen.dart';
 import '../features/dashboard/crm_dashboard_screen.dart';
+import '../features/deals/crm_entity_actions.dart';
 
 /// CRM "Günlük İşlerim" kaynağı — `fn_crm_my_work` satırlarını generic
 /// [WorkInboxItem]'a eşler (bucket: overdue/today/stale gruplaması).
@@ -59,5 +60,6 @@ bool _done = false;
 void registerCrmScreens() {
   if (_done) return;
   ScreenResolver.addResolver(crmResolve);
+  registerCrmEntityActions(); // entity_detail'e CRM aksiyon-çubuğu + feed
   _done = true;
 }
