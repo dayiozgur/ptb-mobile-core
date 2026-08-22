@@ -33,6 +33,10 @@ dependencies:
   # tel: / mailto: hızlı aksiyonlar
   url_launcher: ^6.3.0
 
+  # Kartvizit tarama — on-device OCR (bulut/anahtar YOK) + kamera yakalama
+  google_mlkit_text_recognition: ^0.13.1
+  image_picker: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

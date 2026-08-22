@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'card_scan.dart';
 import 'contact_detail_screen.dart';
 import 'contacts_service.dart';
 
@@ -52,13 +53,40 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
     _debounce = Timer(const Duration(milliseconds: 350), () => _load(v));
   }
 
-  Future<void> _quickAdd() async {
+  Future<void> _quickAdd({CardScanResult? initial}) async {
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _QuickAddSheet(),
+      builder: (_) => _QuickAddSheet(initial: initial),
     );
     if (created == true) _load(_searchCtrl.text);
+  }
+
+  bool _scanning = false;
+
+  /// Kartvizit tara → OCR → ön-doldurulmuş hızlı-ekle formu.
+  Future<void> _scanCard() async {
+    if (_scanning) return;
+    setState(() => _scanning = true);
+    try {
+      final result = await CardScanner().scanFromCamera();
+      if (!mounted) return;
+      if (result == null) return; // iptal
+      if (result.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Kartvizitten bilgi okunamadı — elle girebilirsiniz')));
+        await _quickAdd();
+        return;
+      }
+      await _quickAdd(initial: result);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tarama başarısız')));
+      }
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
   }
 
   @override
@@ -66,9 +94,15 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
     return AppScaffold(
       title: 'Kişiler',
       onBack: () => context.pop(),
-      actions: [AppIconButton(icon: Icons.refresh, onPressed: () => _load())],
+      actions: [
+        AppIconButton(
+          icon: _scanning ? Icons.hourglass_bottom : Icons.document_scanner_outlined,
+          onPressed: _scanning ? null : _scanCard,
+        ),
+        AppIconButton(icon: Icons.refresh, onPressed: () => _load()),
+      ],
       floatingActionButton: FloatingActionButton(
-        onPressed: _quickAdd,
+        onPressed: () => _quickAdd(),
         child: const Icon(Icons.person_add_alt_1),
       ),
       child: Column(
@@ -168,9 +202,11 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
   }
 }
 
-/// Hızlı kişi ekleme alt-sayfası.
+/// Hızlı kişi ekleme alt-sayfası. [initial] verilirse (kartvizit taraması)
+/// alanları ön-doldurur.
 class _QuickAddSheet extends StatefulWidget {
-  const _QuickAddSheet();
+  final CardScanResult? initial;
+  const _QuickAddSheet({this.initial});
 
   @override
   State<_QuickAddSheet> createState() => _QuickAddSheetState();
@@ -178,10 +214,10 @@ class _QuickAddSheet extends StatefulWidget {
 
 class _QuickAddSheetState extends State<_QuickAddSheet> {
   final _svc = ContactsService();
-  final _first = TextEditingController();
-  final _last = TextEditingController();
-  final _email = TextEditingController();
-  final _phone = TextEditingController();
+  late final _first = TextEditingController(text: widget.initial?.firstName ?? '');
+  late final _last = TextEditingController(text: widget.initial?.lastName ?? '');
+  late final _email = TextEditingController(text: widget.initial?.email ?? '');
+  late final _phone = TextEditingController(text: widget.initial?.phone ?? '');
   bool _saving = false;
 
   @override
@@ -201,6 +237,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
       lastName: _last.text,
       email: _email.text,
       phone: _phone.text,
+      title: widget.initial?.title,
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -221,7 +258,23 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Yeni Kişi', style: AppTypography.headline),
+          Row(
+            children: [
+              Text(widget.initial != null ? 'Kartvizitten Kişi' : 'Yeni Kişi',
+                  style: AppTypography.headline),
+              if (widget.initial != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Icon(Icons.document_scanner_outlined,
+                    size: 18, color: AppColors.primary),
+              ],
+            ],
+          ),
+          if (widget.initial != null) ...[
+            const SizedBox(height: 2),
+            Text('Okunan bilgileri kontrol edip kaydedin',
+                style: AppTypography.caption1
+                    .copyWith(color: AppColors.secondaryLabel(context))),
+          ],
           const SizedBox(height: AppSpacing.md),
           TextField(
               controller: _first,
