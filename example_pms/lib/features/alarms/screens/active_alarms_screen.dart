@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
@@ -20,17 +22,55 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
   String? _selectedPriorityId;
   String _searchQuery = '';
 
+  // Realtime: alarms tablosuna abonelik → değişimde sessiz yeniden yükleme.
+  String? _alarmSubId;
+  Timer? _rtDebounce;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _subscribeRealtime();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+  @override
+  void dispose() {
+    _rtDebounce?.cancel();
+    final id = _alarmSubId;
+    if (id != null) realtimeService.unsubscribe(id);
+    super.dispose();
+  }
+
+  /// alarms tablosundaki her değişimde (insert/update/delete) sessiz yenile.
+  /// Debounce ile art arda değişimlerde tek yenileme. Tenant-scope RLS realtime
+  /// filtresiyle değil, yeniden yükleme sırasında alarmService ile uygulanır.
+  void _subscribeRealtime() {
+    try {
+      final sub = realtimeService.subscribe<Map<String, dynamic>>(
+        table: 'alarms',
+        fromJson: (m) => m,
+        onChange: (_) => _onAlarmRealtime(),
+      );
+      _alarmSubId = sub.id;
+    } catch (e) {
+      Logger.warning('Alarm realtime aboneliği kurulamadı: $e');
+    }
+  }
+
+  void _onAlarmRealtime() {
+    _rtDebounce?.cancel();
+    _rtDebounce = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) _loadData(silent: true);
     });
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     final tenantId = tenantService.currentTenantId;
     if (tenantId != null) {
