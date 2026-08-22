@@ -29,6 +29,10 @@ class GenericEntity {
   /// Atanan kullanıcı adı (ayrı sorgu ile çözülür)
   final String? assignedToName;
 
+  /// Atanan kullanıcının HAM avatar yolu (imzalanmamış; gösterirken
+  /// `FileStorageService.getAvatarUrl` ile signed-URL'e çevir).
+  final String? assignedToAvatar;
+
   /// Termin tarihi
   final DateTime? dueDate;
 
@@ -56,6 +60,7 @@ class GenericEntity {
     this.priority,
     this.assignedTo,
     this.assignedToName,
+    this.assignedToAvatar,
     this.dueDate,
     this.organizationId,
     this.formTemplateId,
@@ -71,6 +76,7 @@ class GenericEntity {
     Map<String, dynamic> json, {
     Map<String, dynamic> fieldValues = const {},
     String? assignedToName,
+    String? assignedToAvatar,
   }) {
     final template = json['form_templates'];
     final templateName = template is Map<String, dynamic>
@@ -86,6 +92,7 @@ class GenericEntity {
       priority: json['priority'] as String?,
       assignedTo: json['assigned_to'] as String?,
       assignedToName: assignedToName,
+      assignedToAvatar: assignedToAvatar,
       dueDate: _parseDate(json['due_date']),
       organizationId: json['organization_id'] as String?,
       formTemplateId: json['form_template_id'] as String?,
@@ -126,6 +133,7 @@ class GenericEntity {
 
   GenericEntity copyWith({
     String? assignedToName,
+    String? assignedToAvatar,
     Map<String, dynamic>? fieldValues,
   }) {
     return GenericEntity(
@@ -137,6 +145,7 @@ class GenericEntity {
       priority: priority,
       assignedTo: assignedTo,
       assignedToName: assignedToName ?? this.assignedToName,
+      assignedToAvatar: assignedToAvatar ?? this.assignedToAvatar,
       dueDate: dueDate,
       organizationId: organizationId,
       formTemplateId: formTemplateId,

@@ -157,19 +157,43 @@ class EntityDataService {
 
       if (row == null) return null;
 
-      final fieldValues = await _loadFieldValues(id);
+      // Alan değerleri İKİ kaynakta olabilir: (a) form_submissions.metadata
+      // (jsonb, field-code anahtarlı — CRM lead/deal buraya yazar; binlerce
+      // kayıt) ve (b) tipli form_field_values tablosu. Taban=metadata, üstüne
+      // tipli değerler (varsa) bindirilir. Tek-kaynak okumak detayı boş
+      // gösteriyordu ("bilgiler yansımıyor").
+      final meta = row['metadata'] is Map
+          ? Map<String, dynamic>.from(row['metadata'] as Map)
+          : <String, dynamic>{};
+      final typed = await _loadFieldValues(id);
+      final fieldValues = <String, dynamic>{...meta};
+      typed.forEach((k, v) {
+        if (v != null) fieldValues[k] = v;
+      });
+      fieldValues.removeWhere((k, v) => v == null);
 
-      final assignee = row['assigned_to'] as String?;
-      String? assigneeName;
-      if (assignee != null) {
-        final names = await _resolveAssigneeNames([row]);
-        assigneeName = names[assignee];
+      // Atanan: base assigned_to kolonu → yoksa metadata owner/assignee lookup
+      // (CRM'de atanan base kolonda DEĞİL, metadata'daki 'owner' lookup'ında).
+      String? assignee = (row['assigned_to'] as String?);
+      if (assignee == null || assignee.isEmpty) {
+        assignee = _ownerIdFrom(meta['owner']) ?? _ownerIdFrom(meta['assignee']);
       }
+      String? assigneeName;
+      String? assigneeAvatar;
+      if (assignee != null && assignee.isNotEmpty) {
+        final profiles = await _resolveAssigneeProfiles([assignee]);
+        final p = profiles[assignee];
+        assigneeName = p?.name;
+        assigneeAvatar = p?.avatar;
+      }
+      // Lookup objesi displayValue taşıyorsa ve profil çözülemediyse ona düş.
+      assigneeName ??= _ownerNameFrom(meta['owner']);
 
       return GenericEntity.fromSubmission(
         row,
         fieldValues: fieldValues,
         assignedToName: assigneeName,
+        assignedToAvatar: assigneeAvatar,
       );
     } catch (e) {
       Logger.error('Error fetching entity (${config.code}/$id): $e');
@@ -608,6 +632,60 @@ class EntityDataService {
     if (email != null && email.isNotEmpty) return email.split('@').first;
 
     return '';
+  }
+
+  /// Verilen profil id'leri için görünen ad + HAM avatar yolunu çöz.
+  /// (Avatar imzalanmamış döner; gösterirken FileStorageService.getAvatarUrl.)
+  Future<Map<String, ({String name, String? avatar})>> _resolveAssigneeProfiles(
+    List<String> ids,
+  ) async {
+    final unique = ids.where((s) => s.isNotEmpty).toSet().toList();
+    if (unique.isEmpty) return {};
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('id, full_name, first_name, last_name, email, avatar_url')
+          .inFilter('id', unique);
+      final rows = (response as List).cast<Map<String, dynamic>>();
+      final result = <String, ({String name, String? avatar})>{};
+      for (final row in rows) {
+        final id = row['id'] as String?;
+        if (id == null) continue;
+        final avatar = (row['avatar_url'] as String?)?.trim();
+        result[id] = (
+          name: _displayName(row),
+          avatar: (avatar != null && avatar.isNotEmpty) ? avatar : null,
+        );
+      }
+      return result;
+    } catch (e) {
+      Logger.warning('Failed to resolve assignee profiles: $e');
+      return {};
+    }
+  }
+
+  /// Bir lookup/owner değerinden profil id'sini çıkar.
+  /// Şekiller: düz uuid String, ya da `{entityId|value|id, displayValue}` objesi.
+  String? _ownerIdFrom(dynamic v) {
+    if (v == null) return null;
+    if (v is String) {
+      final s = v.trim();
+      return s.isEmpty ? null : s;
+    }
+    if (v is Map) {
+      final e = v['entityId'] ?? v['value'] ?? v['id'];
+      if (e is String && e.trim().isNotEmpty) return e.trim();
+    }
+    return null;
+  }
+
+  /// Lookup objesindeki hazır görünen-ad (displayValue) — profil çözülemezse.
+  String? _ownerNameFrom(dynamic v) {
+    if (v is Map) {
+      final d = v['displayValue'];
+      if (d is String && d.trim().isNotEmpty) return d.trim();
+    }
+    return null;
   }
 
   /// Cache'i temizle.
