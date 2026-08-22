@@ -63,25 +63,54 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
 
   bool _scanning = false;
 
-  /// Kartvizit tara → OCR → ön-doldurulmuş hızlı-ekle formu.
+  /// Kartvizit tara → kaynak seç (kamera/galeri) → OCR → ön-doldurulmuş form.
   Future<void> _scanCard() async {
     if (_scanning) return;
+    final source = await showModalBottomSheet<CardScanSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Kamera ile çek'),
+              onTap: () => Navigator.of(context).pop(CardScanSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galeriden seç'),
+              onTap: () => Navigator.of(context).pop(CardScanSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
     setState(() => _scanning = true);
     try {
-      final result = await CardScanner().scanFromCamera();
+      final result = await CardScanner().scan(source: source);
       if (!mounted) return;
       if (result == null) return; // iptal
       if (result.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Kartvizitten bilgi okunamadı — elle girebilirsiniz')));
-        await _quickAdd();
+        // OCR bir şey okuduysa göster (kullanıcı elle aktarsın); hiç okumadıysa
+        // düz uyarı. Her hâlde form açılır.
+        final raw = result.rawText.trim();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(raw.isEmpty
+              ? 'Kartvizitten yazı okunamadı — daha net bir fotoğraf deneyin veya elle girin'
+              : 'Alanlar otomatik ayrıştırılamadı — okunan metinden elle girin'),
+          duration: const Duration(seconds: 3),
+        ));
+        await _quickAdd(initial: result);
         return;
       }
       await _quickAdd(initial: result);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tarama başarısız')));
+            const SnackBar(content: Text('Tarama başarısız — izinleri kontrol edin')));
       }
     } finally {
       if (mounted) setState(() => _scanning = false);

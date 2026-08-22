@@ -1,6 +1,10 @@
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 
+/// Kartvizit görsel kaynağı — image_picker'ı çekirdekte kapsüller (çağıran
+/// app'lerin image_picker'a doğrudan bağımlı olmasına gerek kalmaz).
+enum CardScanSource { camera, gallery }
+
 /// Kartvizit taramasından çıkarılan alanlar (hepsi opsiyonel; kullanıcı
 /// hızlı-ekle formunda düzeltir/tamamlar).
 class CardScanResult {
@@ -10,12 +14,17 @@ class CardScanResult {
   final String? phone;
   final String? title;
 
+  /// OCR'ın okuduğu ham metin (kullanıcı gözden geçirsin / hiçbir şey
+  /// çıkmazsa görüp elle girsin diye).
+  final String rawText;
+
   const CardScanResult({
     this.firstName,
     this.lastName,
     this.email,
     this.phone,
     this.title,
+    this.rawText = '',
   });
 
   bool get isEmpty =>
@@ -33,9 +42,15 @@ class CardScanner {
   CardScanner({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
 
   /// Kamera → OCR → ayrıştırma. Kullanıcı iptal ederse null döner.
-  Future<CardScanResult?> scanFromCamera() async {
+  /// Kamera ([ImageSource.camera]) ya da galeri ([ImageSource.gallery]) →
+  /// OCR → ayrıştırma. Kullanıcı iptal ederse null döner. Ham OCR metni de
+  /// [CardScanResult.rawText]'te döner (kullanıcı gözden geçirsin diye).
+  Future<CardScanResult?> scan(
+      {CardScanSource source = CardScanSource.camera}) async {
     final XFile? shot = await _picker.pickImage(
-      source: ImageSource.camera,
+      source: source == CardScanSource.gallery
+          ? ImageSource.gallery
+          : ImageSource.camera,
       imageQuality: 90,
     );
     if (shot == null) return null;
@@ -50,6 +65,9 @@ class CardScanner {
     }
   }
 
+  /// Geriye-uyumluluk: kameradan tara.
+  Future<CardScanResult?> scanFromCamera() => scan();
+
   /// OCR metnini alanlara ayrıştırır (saf fonksiyon — test edilebilir).
   static CardScanResult parseCardText(String raw) {
     final lines = raw
@@ -57,7 +75,7 @@ class CardScanner {
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
-    if (lines.isEmpty) return const CardScanResult();
+    if (lines.isEmpty) return CardScanResult(rawText: raw);
 
     final emailRe = RegExp(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}');
     // En az 7 rakam içeren telefon-benzeri dizi.
@@ -141,6 +159,7 @@ class CardScanner {
       email: email,
       phone: phone,
       title: title,
+      rawText: raw,
     );
   }
 
