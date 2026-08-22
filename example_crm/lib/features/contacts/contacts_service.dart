@@ -25,7 +25,12 @@ class Contact {
 
   String get displayName {
     final n = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
-    return n.isNotEmpty ? n : (email ?? '—');
+    if (n.isNotEmpty) return n;
+    // email BOŞ STRING (non-null) olabilir → `email ?? '—'` bunu yakalamıyordu,
+    // sonuç '' → `.characters.first` StateError (liste crash). Guard'la.
+    final e = email;
+    if (e != null && e.trim().isNotEmpty) return e.trim();
+    return '—';
   }
 
   factory Contact.fromJson(Map<String, dynamic> j) => Contact(

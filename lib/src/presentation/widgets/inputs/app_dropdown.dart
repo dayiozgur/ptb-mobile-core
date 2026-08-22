@@ -92,6 +92,13 @@ class AppDropdown<T> extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final hasError = errorText != null;
 
+    // GUARD: DropdownButtonFormField, value `items` içinde (tam 1 eşleşme)
+    // değilse debug'da assert-crash / release'te sessiz placeholder verir.
+    // Web builder'da bir option silinir/yeniden adlandırılırsa ya da bir kural
+    // option-dışı değer atarsa bu tetiklenir → değeri güvenli-daralt.
+    final bool valueInItems = value != null && items.any((it) => it.value == value);
+    final T? safeValue = valueInItems ? value : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -110,7 +117,7 @@ class AppDropdown<T> extends StatelessWidget {
 
         // Dropdown
         DropdownButtonFormField<T>(
-          value: value,
+          value: safeValue,
           items: items.map((item) {
             return DropdownMenuItem<T>(
               value: item.value,

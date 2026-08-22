@@ -131,7 +131,10 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
                     backgroundColor:
                         AppColors.primary.withValues(alpha: 0.12),
                     child: Text(
-                      c.displayName.characters.first.toUpperCase(),
+                      (c.displayName.isNotEmpty
+                              ? c.displayName.characters.first
+                              : '?')
+                          .toUpperCase(),
                       style: TextStyle(color: AppColors.primary),
                     ),
                   ),

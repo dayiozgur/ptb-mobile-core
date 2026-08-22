@@ -122,6 +122,15 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList();
+      case 'date':
+      case 'datetime':
+        // Sembolik "now"/"today" → bugünün ISO tarihi (web builder bunları
+        // ön-dolu bekler; ham "now" DateTime.tryParse ile çözülemez → boş açılırdı).
+        final lower = raw.toLowerCase();
+        if (lower == 'now' || lower == 'today') {
+          return DateTime.now().toIso8601String();
+        }
+        return raw;
       default:
         return raw;
     }
@@ -322,6 +331,15 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
   String? _validateField(FormField field, dynamic value) {
     final required =
         field.isRequired || (_dynamicRequired[field.code] ?? false);
+    // Checkbox: zorunlu ise İŞARETLİ (true) olmalı. Generic _isEmpty(false)=false
+    // olduğundan, işaretlenmemiş (false) zorunlu onay kutusu aksi halde hiç
+    // zorlanmıyordu (ör. "Doğrulama Yapıldı", "Elektrik kontrol edildi").
+    if (field.fieldType == 'checkbox') {
+      if (required && value != true) {
+        return _t('validation.required', 'Bu alan zorunludur');
+      }
+      return null;
+    }
     if (required && _isEmpty(value)) {
       return _t('validation.required', 'Bu alan zorunludur');
     }

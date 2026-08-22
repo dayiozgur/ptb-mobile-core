@@ -188,9 +188,12 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         children: [
           _buildHeader(entity),
           const SizedBox(height: AppSpacing.md),
-          // FixFlow konum-tabanlı süre takibi — yalnız worklog-etkin tiplerde
-          // ve FixFlow geofence tanımlıysa görünür (aksi halde kendini gizler).
-          if (_config?.enableWorklogs == true) ...[
+          // FixFlow konum-tabanlı süre takibi — YALNIZ FixFlow platformunda +
+          // worklog-etkin tiplerde. (enableWorklogs CRM/PPM tiplerinde de true
+          // olduğundan tek başına gate DEĞİL: kart CRM activity / PPM task
+          // detayında yanlışlıkla çıkıyordu — cross-domain sızıntı.)
+          if (_config?.enableWorklogs == true &&
+              sl<PlatformContext>().activePlatformCode == 'FIXFLOW') ...[
             WorkGeoSessionCard(
               workRequestId: widget.id,
               siteId: entity.fieldValues['site_id']?.toString() ??
