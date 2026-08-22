@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../board/ppm_board_screen.dart';
+
 /// **PPM Portföy Özeti** — MS-Project "Project Summary" mobil karşılığı (portföy
 /// düzeyi). Projelere göre iş/story-point ilerlemesi; canlı
 /// `fn_ppm_portfolio_rollup` RPC'sinden (durum `done/closed/completed` doğru
-/// sayılır) çekirdek özet primitifleriyle çizilir.
+/// sayılır) çekirdek özet primitifleriyle çizilir. App-bar'dan tek-proje
+/// özet-drill-down'a (fn_ppm_project_overview) geçilir.
 class PpmDashboardScreen extends StatelessWidget {
   const PpmDashboardScreen({super.key});
 
@@ -12,6 +15,17 @@ class PpmDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SummaryScreen(
       title: 'Portföy Özeti',
+      actions: [
+        Builder(
+          builder: (ctx) => AppIconButton(
+            icon: Icons.insights_outlined,
+            onPressed: () => Navigator.of(ctx).push(MaterialPageRoute(
+              builder: (_) =>
+                  const PpmBoardScreen(target: PpmScopeTarget.summary),
+            )),
+          ),
+        ),
+      ],
       cards: const [
         // Projelere göre iş ilerlemesi — tamamlanan vs açık (yığılmış bar).
         AggregateChartCard(

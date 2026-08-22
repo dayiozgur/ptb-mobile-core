@@ -2,8 +2,10 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../dashboard/ppm_project_summary_screen.dart';
+
 /// PPM proje-scope hedefi.
-enum PpmScopeTarget { board, backlog }
+enum PpmScopeTarget { board, backlog, summary }
 
 /// PPM **Board/Backlog** girişi — önce proje seçtirir, sonra o projenin
 /// **alt-ağacına kapsamlı** kanban'ı ([EntityKanbanScreen]) veya backlog'unu
@@ -65,26 +67,47 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
   }
 
   void _openBoard(GenericEntity project) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => widget.target == PpmScopeTarget.backlog
-          ? BacklogScreen(
-              typeCode: 'story',
-              ancestorId: project.id,
-              title: project.displayTitle,
-            )
-          : EntityKanbanScreen(
-              typeCode: 'task',
-              ancestorId: project.id,
-              title: project.displayTitle,
-            ),
-    ));
+    Widget dest;
+    switch (widget.target) {
+      case PpmScopeTarget.backlog:
+        dest = BacklogScreen(
+          typeCode: 'story',
+          ancestorId: project.id,
+          title: project.displayTitle,
+        );
+        break;
+      case PpmScopeTarget.summary:
+        dest = PpmProjectSummaryScreen(
+          projectId: project.id,
+          title: project.displayTitle,
+        );
+        break;
+      case PpmScopeTarget.board:
+        dest = EntityKanbanScreen(
+          typeCode: 'task',
+          ancestorId: project.id,
+          title: project.displayTitle,
+        );
+        break;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => dest));
+  }
+
+  String get _targetLabel {
+    switch (widget.target) {
+      case PpmScopeTarget.backlog:
+        return 'Backlog';
+      case PpmScopeTarget.summary:
+        return 'Özet';
+      case PpmScopeTarget.board:
+        return 'Board';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title:
-          '${widget.target == PpmScopeTarget.backlog ? 'Backlog' : 'Board'} — Proje seç',
+      title: '$_targetLabel — Proje seç',
       onBack: () => context.pop(),
       actions: [AppIconButton(icon: Icons.refresh, onPressed: _load)],
       child: RefreshIndicator(

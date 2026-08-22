@@ -55,8 +55,13 @@ Widget? ppmResolve(MenuItem item) {
   if (p == '/projects/dashboard' ||
       p == '/dashboard' ||
       p == '/projects/reports' ||
+      p == '/projects/portfolio' ||
       p == '/ppm/dashboard') {
     return const PpmDashboardScreen();
+  }
+  if (p == '/projects/summary' || p == '/ppm/summary') {
+    // Proje seç → per-proje MS-Project tarzı özet (fn_ppm_project_overview).
+    return const PpmBoardScreen(target: PpmScopeTarget.summary);
   }
   return null;
 }

@@ -16,11 +16,15 @@ class SummaryScreen extends StatelessWidget {
   /// Geri gösterilsin mi (alt-sekme kökü ise false).
   final bool showBack;
 
+  /// App-bar aksiyonları (ör. drill-down / yenile).
+  final List<Widget>? actions;
+
   const SummaryScreen({
     super.key,
     required this.title,
     required this.cards,
     this.showBack = true,
+    this.actions,
   });
 
   @override
@@ -28,6 +32,7 @@ class SummaryScreen extends StatelessWidget {
     return AppScaffold(
       title: title,
       onBack: showBack ? () => context.pop() : null,
+      actions: actions,
       child: ListView.separated(
         padding: AppSpacing.screenPadding,
         itemCount: cards.length,
