@@ -78,8 +78,13 @@ Widget? phrResolve(MenuItem item) {
   }
 
   // İzin onayları (+ genel workflow onayları)
-  if (p == '/hr/leave/approvals' || p == '/workflow/approvals') {
+  if (p == '/hr/leave/approvals') {
     return const LeaveApprovalsScreen();
+  }
+  // Generic workflow onay-gate'i (izin + masraf/avans + askıya-alınan her workflow)
+  // — çekirdekte hazır ekran, yalnız route bağlanmamıştı.
+  if (p == '/workflow/approvals') {
+    return const ApprovalsInboxScreen();
   }
 
   // Bordro
