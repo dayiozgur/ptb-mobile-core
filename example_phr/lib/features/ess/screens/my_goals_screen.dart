@@ -18,39 +18,7 @@ class MyGoalsScreen extends StatefulWidget {
 }
 
 class _MyGoalsScreenState extends State<MyGoalsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<EmployeeGoal> _goals = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await hrEssService.myGoals();
-      if (mounted) {
-        setState(() {
-          _goals = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load goals', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   void _openDetail(EmployeeGoal goal) {
     showModalBottomSheet<void>(
@@ -71,47 +39,28 @@ class _MyGoalsScreenState extends State<MyGoalsScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _loadData),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _buildContent(),
+      child: AsyncView<List<EmployeeGoal>>(
+        controller: _ctrl,
+        load: () => hrEssService.myGoals(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.flag_outlined,
+        emptyTitle: essT('hr.performance.no_goals', 'Hedef bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
-    }
-    if (_goals.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.flag_outlined,
-                title: essT('hr.performance.no_goals', 'Hedef bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<EmployeeGoal> goals) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _goals.length,
+      itemCount: goals.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) => _GoalCard(
-        goal: _goals[i],
-        onTap: () => _openDetail(_goals[i]),
+        goal: goals[i],
+        onTap: () => _openDetail(goals[i]),
       ),
     );
   }

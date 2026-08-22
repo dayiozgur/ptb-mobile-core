@@ -18,39 +18,7 @@ class MyDocumentsScreen extends StatefulWidget {
 }
 
 class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<MyHrDocument> _docs = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await hrDocumentsService.myDocuments();
-      if (mounted) {
-        setState(() {
-          _docs = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load my documents', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -59,45 +27,26 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _loadData),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _buildContent(),
+      child: AsyncView<List<MyHrDocument>>(
+        controller: _ctrl,
+        load: () => hrDocumentsService.myDocuments(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.folder_open_outlined,
+        emptyTitle: essT('hr.my_docs.empty', 'Belge bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
-    }
-    if (_docs.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.folder_open_outlined,
-                title: essT('hr.my_docs.empty', 'Belge bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<MyHrDocument> docs) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _docs.length,
+      itemCount: docs.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _DocumentCard(doc: _docs[i]),
+      itemBuilder: (_, i) => _DocumentCard(doc: docs[i]),
     );
   }
 }

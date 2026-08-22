@@ -18,39 +18,7 @@ class HrProfileScreen extends StatefulWidget {
 }
 
 class _HrProfileScreenState extends State<HrProfileScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  StaffProfile? _profile;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final p = await hrProfileService.myStaffProfile();
-      if (mounted) {
-        setState(() {
-          _profile = p;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load staff profile', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -58,44 +26,27 @@ class _HrProfileScreenState extends State<HrProfileScreen> {
       title: essT('nav.phr_my_profile', 'İK Profilim'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<StaffProfile?>(
+        controller: _ctrl,
+        load: () => hrProfileService.myStaffProfile(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d == null,
+        emptyBuilder: (context) => Center(
+          child: AppEmptyState(
+            icon: Icons.person_off_outlined,
+            title: essT('hr.profile.no_staff_title', 'Personel kaydı yok'),
+            message: essT('hr.profile.no_staff_message',
+                'Hesabınıza bağlı bir personel kaydı bulunamadı.'),
+          ),
+        ),
+        builder: (context, d) => _content(context, d!),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    final p = _profile;
-    if (p == null) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.person_off_outlined,
-                title: essT('hr.profile.no_staff_title', 'Personel kaydı yok'),
-                message: essT('hr.profile.no_staff_message',
-                    'Hesabınıza bağlı bir personel kaydı bulunamadı.'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
+  Widget _content(BuildContext context, StaffProfile p) {
     return ListView(
       padding: AppSpacing.screenPadding,
       children: [

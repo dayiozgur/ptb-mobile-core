@@ -18,40 +18,8 @@ class LeaveApprovalsScreen extends StatefulWidget {
 }
 
 class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<Map<String, dynamic>> _rows = [];
+  final _ctrl = AsyncViewController();
   final Set<int> _busy = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await hrEssService.pendingLeaveApprovals();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load leave approvals', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   /// Satırdaki karar anahtarı (`leave_requests.id`) — yoksa null.
   String? _leaveRequestId(Map<String, dynamic> row) {
@@ -87,7 +55,7 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
           ),
         );
       }
-      await _loadData();
+      _ctrl.reload();
     } catch (e) {
       Logger.error('Failed to decide leave approval', e);
       if (mounted) {
@@ -143,50 +111,31 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
       title: essT('hr.leave.approvals_title', 'İzin Onayları'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _loadData),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _buildContent(),
+      child: AsyncView<List<Map<String, dynamic>>>(
+        controller: _ctrl,
+        load: () => hrEssService.pendingLeaveApprovals(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.task_alt,
+        emptyTitle: essT('hr.leave.no_pending', 'Bekleyen onay yok'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.task_alt,
-                title: essT('hr.leave.no_pending', 'Bekleyen onay yok'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<Map<String, dynamic>> rows) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: rows.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) => _ApprovalCard(
-        row: _rows[i],
-        actionable: _leaveRequestId(_rows[i]) != null,
+        row: rows[i],
+        actionable: _leaveRequestId(rows[i]) != null,
         busy: _busy.contains(i),
-        onApprove: () => _decide(i, _rows[i], true),
-        onReject: () => _decide(i, _rows[i], false),
+        onApprove: () => _decide(i, rows[i], true),
+        onReject: () => _decide(i, rows[i], false),
       ),
     );
   }

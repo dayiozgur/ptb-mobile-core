@@ -21,39 +21,7 @@ class KvkkScreen extends StatefulWidget {
 }
 
 class _KvkkScreenState extends State<KvkkScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<KvkkConsentRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await hrDocumentsService.myConsents();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load KVKK consents', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -62,45 +30,29 @@ class _KvkkScreenState extends State<KvkkScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _loadData),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _buildContent(),
+      child: AsyncView<List<KvkkConsentRow>>(
+        controller: _ctrl,
+        load: () => hrDocumentsService.myConsents(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyBuilder: (context) => Center(
+          child: AppEmptyState(
+            icon: Icons.privacy_tip_outlined,
+            title: essT('kvkk.empty_title', 'Rıza kaydı bulunamadı'),
+            message: essT('kvkk.empty_message',
+                'Görüntülenecek bir KVKK rıza kategorisi yok.'),
+          ),
+        ),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.privacy_tip_outlined,
-                title: essT('kvkk.empty_title', 'Rıza kaydı bulunamadı'),
-                message: essT('kvkk.empty_message',
-                    'Görüntülenecek bir KVKK rıza kategorisi yok.'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    final required = _rows.where((r) => r.type.required).toList();
-    final optional = _rows.where((r) => !r.type.required).toList();
+  Widget _content(BuildContext context, List<KvkkConsentRow> rows) {
+    final required = rows.where((r) => r.type.required).toList();
+    final optional = rows.where((r) => !r.type.required).toList();
 
     return ListView(
       padding: AppSpacing.screenPadding,

@@ -18,39 +18,7 @@ class MyReviewsScreen extends StatefulWidget {
 }
 
 class _MyReviewsScreenState extends State<MyReviewsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PerformanceReview> _reviews = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await hrEssService.myReviews();
-      if (mounted) {
-        setState(() {
-          _reviews = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load reviews', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   void _openDetail(PerformanceReview review) {
     showModalBottomSheet<void>(
@@ -71,48 +39,29 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _loadData),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _loadData,
-        child: _buildContent(),
+      child: AsyncView<List<PerformanceReview>>(
+        controller: _ctrl,
+        load: () => hrEssService.myReviews(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.assignment_turned_in_outlined,
+        emptyTitle:
+            essT('hr.performance.no_reviews', 'Değerlendirme bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _loadData),
-      );
-    }
-    if (_reviews.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.assignment_turned_in_outlined,
-                title: essT(
-                    'hr.performance.no_reviews', 'Değerlendirme bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<PerformanceReview> reviews) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _reviews.length,
+      itemCount: reviews.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) => _ReviewCard(
-        review: _reviews[i],
-        onTap: () => _openDetail(_reviews[i]),
+        review: reviews[i],
+        onTap: () => _openDetail(reviews[i]),
       ),
     );
   }
