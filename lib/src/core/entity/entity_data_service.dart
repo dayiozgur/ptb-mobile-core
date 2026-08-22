@@ -189,11 +189,25 @@ class EntityDataService {
       // Lookup objesi displayValue taşıyorsa ve profil çözülemediyse ona düş.
       assigneeName ??= _ownerNameFrom(meta['owner']);
 
+      // PPM native ilişkileri: sprint + üst-epik adları (id → ad, hafif sorgu;
+      // yalnız doluysa). PPM gerçek alanları metadata'da değil native
+      // kolonlarda olduğundan detay bunlar olmadan boş görünüyordu.
+      final sprintId = row['sprint_id'] as String?;
+      final sprintName = (sprintId != null && sprintId.isNotEmpty)
+          ? await _lookupName('sprints', sprintId, 'name')
+          : null;
+      final parentId = row['parent_entity_id'] as String?;
+      final parentSubject = (parentId != null && parentId.isNotEmpty)
+          ? await _lookupName('form_submissions', parentId, 'subject')
+          : null;
+
       return GenericEntity.fromSubmission(
         row,
         fieldValues: fieldValues,
         assignedToName: assigneeName,
         assignedToAvatar: assigneeAvatar,
+        sprintName: sprintName,
+        parentSubject: parentSubject,
       );
     } catch (e) {
       Logger.error('Error fetching entity (${config.code}/$id): $e');
@@ -677,6 +691,23 @@ class EntityDataService {
       if (e is String && e.trim().isNotEmpty) return e.trim();
     }
     return null;
+  }
+
+  /// Bir tablodaki tek satırın adını (verilen kolon) id ile çöz — best-effort.
+  Future<String?> _lookupName(String table, String id, String column) async {
+    try {
+      final res = await _supabase
+          .from(table)
+          .select(column)
+          .eq('id', id)
+          .maybeSingle();
+      if (res == null) return null;
+      final v = res[column];
+      return (v is String && v.trim().isNotEmpty) ? v.trim() : null;
+    } catch (e) {
+      Logger.warning('Failed to lookup $table.$column ($id): $e');
+      return null;
+    }
   }
 
   /// Lookup objesindeki hazır görünen-ad (displayValue) — profil çözülemezse.

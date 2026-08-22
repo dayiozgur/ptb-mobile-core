@@ -337,8 +337,67 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                 ],
               ),
             ],
+            _buildFactsStrip(entity),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Öncelik / story-point / sprint / üst-epik / termin gibi native alanları
+  /// kompakt çip şeridi olarak gösterir (yalnız dolu olanlar). PPM görev
+  /// detayları bu native kolonlarda tutulduğundan, form-şablonu bunları
+  /// haritalamasa bile bilgiler burada görünür.
+  Widget _buildFactsStrip(GenericEntity entity) {
+    final chips = <Widget>[];
+    void add(IconData icon, String? value) {
+      if (value == null || value.trim().isEmpty) return;
+      chips.add(_factChip(icon, value.trim()));
+    }
+
+    final priority = entity.priority;
+    if (priority != null && priority.isNotEmpty) {
+      add(Icons.flag_outlined, priority);
+    }
+    if (entity.storyPoints != null) {
+      final p = entity.storyPoints!;
+      final pStr = p == p.roundToDouble() ? p.toInt().toString() : p.toString();
+      add(Icons.speed_outlined, '$pStr SP');
+    }
+    add(Icons.directions_run_outlined, entity.sprintName);
+    add(Icons.account_tree_outlined, entity.parentSubject);
+    final due = entity.dueDate;
+    if (due != null) {
+      add(Icons.event_outlined,
+          '${due.day.toString().padLeft(2, '0')}.${due.month.toString().padLeft(2, '0')}.${due.year}');
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: chips),
+    );
+  }
+
+  Widget _factChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.secondarySystemBackground(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.secondaryLabel(context)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.caption2.copyWith(
+              color: AppColors.primaryLabel(context),
+            ),
+          ),
+        ],
       ),
     );
   }

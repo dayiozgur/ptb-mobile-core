@@ -36,6 +36,15 @@ class GenericEntity {
   /// Termin tarihi
   final DateTime? dueDate;
 
+  /// Story point (PPM native kolon)
+  final num? storyPoints;
+
+  /// Sprint adı (sprint_id → sprints.name, ayrı sorgu ile çözülür)
+  final String? sprintName;
+
+  /// Üst epik/görev konusu (parent_entity_id → subject, ayrı sorgu ile çözülür)
+  final String? parentSubject;
+
   /// Organization ID
   final String? organizationId;
 
@@ -62,6 +71,9 @@ class GenericEntity {
     this.assignedToName,
     this.assignedToAvatar,
     this.dueDate,
+    this.storyPoints,
+    this.sprintName,
+    this.parentSubject,
     this.organizationId,
     this.formTemplateId,
     this.formTemplateName,
@@ -77,6 +89,9 @@ class GenericEntity {
     Map<String, dynamic> fieldValues = const {},
     String? assignedToName,
     String? assignedToAvatar,
+    num? storyPoints,
+    String? sprintName,
+    String? parentSubject,
   }) {
     final template = json['form_templates'];
     final templateName = template is Map<String, dynamic>
@@ -94,6 +109,9 @@ class GenericEntity {
       assignedToName: assignedToName,
       assignedToAvatar: assignedToAvatar,
       dueDate: _parseDate(json['due_date']),
+      storyPoints: storyPoints ?? (json['story_points'] as num?),
+      sprintName: sprintName,
+      parentSubject: parentSubject,
       organizationId: json['organization_id'] as String?,
       formTemplateId: json['form_template_id'] as String?,
       formTemplateName: templateName,
@@ -147,6 +165,9 @@ class GenericEntity {
       assignedToName: assignedToName ?? this.assignedToName,
       assignedToAvatar: assignedToAvatar ?? this.assignedToAvatar,
       dueDate: dueDate,
+      storyPoints: storyPoints,
+      sprintName: sprintName,
+      parentSubject: parentSubject,
       organizationId: organizationId,
       formTemplateId: formTemplateId,
       formTemplateName: formTemplateName,
