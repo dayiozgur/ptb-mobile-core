@@ -339,6 +339,34 @@ class FormField {
     this.helpText,
   });
 
+  /// `validation_rules` yalnız obje ise ayrıştırılır (dizi/null → boş).
+  static FieldValidation _parseValidation(dynamic raw) {
+    if (raw is Map) {
+      return FieldValidation.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return const FieldValidation();
+  }
+
+  /// `options` iki şekilde gelebilir: obje `{type,items,...}` VEYA ham dizi
+  /// `[{label,value},...]` (web bazı select alanlarını doğrudan dizi saklar —
+  /// ör. CRM deal `forecast_category`). Her ikisi de güvenli ayrıştırılır;
+  /// aksi halde `List<dynamic> is not a subtype of Map` cast hatası oluşuyordu.
+  static FieldOptions _parseOptions(dynamic raw) {
+    if (raw is Map) {
+      return FieldOptions.fromJson(Map<String, dynamic>.from(raw));
+    }
+    if (raw is List) {
+      return FieldOptions(
+        type: 'static',
+        items: raw
+            .whereType<Map>()
+            .map((e) => FieldOption.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+      );
+    }
+    return const FieldOptions();
+  }
+
   factory FormField.fromJson(Map<String, dynamic> json) {
     return FormField(
       id: json['id'] as String,
@@ -350,13 +378,8 @@ class FormField {
       isRequired: json['is_required'] as bool? ?? false,
       isReadonly: json['is_readonly'] as bool? ?? false,
       defaultValue: json['default_value'] as String?,
-      validation: json['validation_rules'] != null
-          ? FieldValidation.fromJson(
-              json['validation_rules'] as Map<String, dynamic>)
-          : const FieldValidation(),
-      options: json['options'] != null
-          ? FieldOptions.fromJson(json['options'] as Map<String, dynamic>)
-          : const FieldOptions(),
+      validation: _parseValidation(json['validation_rules']),
+      options: _parseOptions(json['options']),
       gridSpan: (json['grid_span'] as num?)?.toInt() ?? 12,
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       allowedRoles: json['allowed_roles'] != null
