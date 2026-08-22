@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import 'card_scan.dart';
 import 'contact_detail_screen.dart';
 import 'contacts_service.dart';
 

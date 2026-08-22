@@ -103,7 +103,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
     final groups = <String, List<Map<String, dynamic>>>{};
     for (final r in _rows) {
       final d = DateTime.tryParse(r['event_date']?.toString() ?? '');
-      final key = d != null ? _dayKey(AppClock.toTenant(d)) : '—';
+      final key = d != null ? AppClock.dayLabel(d) : '—';
       groups.putIfAbsent(key, () => []).add(r);
     }
 
@@ -137,7 +137,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
     final type = r['entity_type']?.toString();
     final id = r['entity_id']?.toString();
     final d = DateTime.tryParse(r['event_date']?.toString() ?? '');
-    final time = d != null ? _hm(AppClock.toTenant(d)) : '';
+    final time = d != null ? AppClock.hm(d) : '';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -204,14 +204,4 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
     );
   }
 
-  static const _months = [
-    'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
-    'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'
-  ];
-  static const _days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-
-  String _dayKey(DateTime d) =>
-      '${_days[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]}';
-  String _hm(DateTime d) =>
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }

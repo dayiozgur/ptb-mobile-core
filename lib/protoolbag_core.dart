@@ -102,6 +102,8 @@ export 'src/core/reporting/reporting_model.dart';
 export 'src/core/reporting/reporting_service.dart';
 export 'src/core/reporting/report_query_service.dart';
 export 'src/core/reporting/aggregate_service.dart';
+export 'src/core/scan/card_scanner.dart';
+export 'src/core/utils/url_actions.dart';
 export 'src/core/reporting/report_service.dart';
 export 'src/core/reporting/page_service.dart';
 

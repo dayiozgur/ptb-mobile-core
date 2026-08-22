@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'contacts_service.dart';
 
@@ -58,12 +57,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (ok == true) _load();
   }
 
-  String _time(DateTime? d) {
-    if (d == null) return '';
-    final t = AppClock.toTenant(d);
-    return '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')}.${t.year} '
-        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-  }
+  String _time(DateTime? d) => d == null ? '' : AppClock.dateTime(d);
 
   @override
   Widget build(BuildContext context) {
@@ -164,18 +158,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       );
 
   Future<void> _launch(String uri) async {
-    final u = Uri.parse(uri);
-    try {
-      final ok = await launchUrl(u, mode: LaunchMode.externalApplication);
-      if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Uygulama açılamadı')));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Uygulama açılamadı')));
-      }
+    final ok = await UrlActions.openUri(uri); // çekirdek util
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Uygulama açılamadı')));
     }
   }
 

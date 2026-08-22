@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:protoolbag_crm/features/contacts/card_scan.dart';
+import 'package:protoolbag_core/protoolbag_core.dart';
 
 void main() {
   group('CardScanner.parseCardText', () {

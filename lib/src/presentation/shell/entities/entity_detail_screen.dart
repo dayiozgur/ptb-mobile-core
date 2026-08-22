@@ -368,8 +368,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     add(Icons.account_tree_outlined, entity.parentSubject);
     final due = entity.dueDate;
     if (due != null) {
-      add(Icons.event_outlined,
-          '${due.day.toString().padLeft(2, '0')}.${due.month.toString().padLeft(2, '0')}.${due.year}');
+      add(Icons.event_outlined, AppClock.date(due));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();

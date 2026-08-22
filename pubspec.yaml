@@ -64,6 +64,11 @@ dependencies:
   file_picker: ^11.0.3
   signature: ^6.4.0
 
+  # tel:/mailto:/url aksiyonları (core util)
+  url_launcher: ^6.3.0
+  # Kartvizit tarama — on-device OCR (core capability)
+  google_mlkit_text_recognition: ^0.13.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

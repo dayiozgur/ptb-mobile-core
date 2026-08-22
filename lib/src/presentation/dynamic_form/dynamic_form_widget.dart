@@ -623,12 +623,9 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
       case 'datetime':
         final d = DateTime.tryParse(value.toString());
         if (d == null) return value.toString();
-        final t = AppClock.toTenant(d);
-        final base =
-            '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')}.${t.year}';
         return field.fieldType == 'datetime'
-            ? '$base ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}'
-            : base;
+            ? AppClock.dateTime(d)
+            : AppClock.date(d);
       default:
         return value.toString();
     }

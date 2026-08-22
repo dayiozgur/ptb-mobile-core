@@ -29,13 +29,8 @@ dependencies:
 
   # Date formatting
   intl: ^0.19.0
-
-  # tel: / mailto: hızlı aksiyonlar
-  url_launcher: ^6.3.0
-
-  # Kartvizit tarama — on-device OCR (bulut/anahtar YOK) + kamera yakalama
-  google_mlkit_text_recognition: ^0.13.1
-  image_picker: ^1.2.2
+  # NOT: url_launcher / google_mlkit_text_recognition / image_picker
+  # protoolbag_core'a taşındı (UrlActions + CardScanner çekirdek capability).
 
 dev_dependencies:
   flutter_test:
