@@ -75,17 +75,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _handleSwitchTenant() async {
-    await tenantService.clearTenant();
-    if (mounted) {
-      context.go('/tenant-select');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = authService.currentUser;
-    final tenant = tenantService.currentTenant;
 
     return AppScaffold(
       title: sl<LocalizationService>().translate('settings.title'),
@@ -144,45 +136,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.lg),
-
-            // Tenant section
-            AppSectionHeader(
-                title:
-                    sl<LocalizationService>().translate('settings.organization')),
-            const SizedBox(height: AppSpacing.sm),
-            AppCard(
-              child: Column(
-                children: [
-                  AppListTile(
-                    leading: AppAvatar(
-                      imageUrl: tenant?.logoUrl,
-                      name: tenant?.name ?? 'Org',
-                      size: AppAvatarSize.medium,
-                    ),
-                    title: tenant?.name ??
-                        sl<LocalizationService>()
-                            .translate('settings.organization'),
-                    subtitle: tenant?.plan?.name.toUpperCase() ?? 'FREE',
-                  ),
-                  Divider(height: 1, color: AppColors.separator(context)),
-                  AppListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.swap_horiz, color: AppColors.primary),
-                    ),
-                    title: 'Organizasyon Değiştir',
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _handleSwitchTenant,
-                  ),
-                ],
               ),
             ),
 
