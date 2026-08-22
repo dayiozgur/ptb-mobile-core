@@ -94,6 +94,21 @@ class _MyHrScreenState extends State<MyHrScreen> {
       children: [
         _kpiGrid(context, s),
         const SizedBox(height: AppSpacing.lg),
+        // İzin bakiyesi görsel grafiği (tipe göre hakediş/kullanılan/kalan).
+        // Kendini çeker; self (p_staff_id null → oturum sahibi).
+        AggregateChartCard(
+          title: essT('hr.my_hr.leave_balance_chart', 'İzin Bakiyesi'),
+          subtitle: essT('hr.my_hr.leave_balance_chart_sub',
+              'İzin tipine göre hakediş / kullanılan / kalan'),
+          rpc: 'fn_leave_balance_summary',
+          chartKind: 'bar_chart',
+          visualConfig: const {
+            'labelField': 'leave_type_name',
+            'valueFields': ['entitled', 'used', 'remaining'],
+          },
+          height: 240,
+        ),
+        const SizedBox(height: AppSpacing.lg),
         Text(
           essT('hr.my_hr.quick_links', 'Hızlı Erişim'),
           style: AppTypography.headline,
