@@ -45,6 +45,10 @@ PODS:
   - geolocator_apple (1.2.0):
     - Flutter
     - FlutterMacOS
+  - google_mlkit_barcode_scanning (0.12.1):
+    - Flutter
+    - google_mlkit_commons
+    - GoogleMLKit/BarcodeScanning (~> 6.0.0)
   - google_mlkit_commons (0.8.1):
     - Flutter
     - MLKitVision
@@ -56,6 +60,9 @@ PODS:
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30911.0, >= 2.30908.0)
     - PromisesObjC (< 3.0, >= 1.2)
+  - GoogleMLKit/BarcodeScanning (6.0.0):
+    - GoogleMLKit/MLKitCore
+    - MLKitBarcodeScanning (~> 5.0.0)
   - GoogleMLKit/MLKitCore (6.0.0):
     - MLKitCommon (~> 11.0.0)
   - GoogleMLKit/TextRecognition (6.0.0):
@@ -85,6 +92,9 @@ PODS:
     - Flutter
     - FlutterMacOS
   - MLImage (1.0.0-beta5)
+  - MLKitBarcodeScanning (5.0.0):
+    - MLKitCommon (~> 11.0)
+    - MLKitVision (~> 7.0)
   - MLKitCommon (11.0.0):
     - GoogleDataTransport (< 10.0, >= 9.4.1)
     - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
@@ -137,6 +147,7 @@ DEPENDENCIES:
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - geocoding_ios (from `.symlinks/plugins/geocoding_ios/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
+  - google_mlkit_barcode_scanning (from `.symlinks/plugins/google_mlkit_barcode_scanning/ios`)
   - google_mlkit_commons (from `.symlinks/plugins/google_mlkit_commons/ios`)
   - google_mlkit_text_recognition (from `.symlinks/plugins/google_mlkit_text_recognition/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
@@ -158,6 +169,7 @@ SPEC REPOS:
     - GoogleUtilitiesComponents
     - GTMSessionFetcher
     - MLImage
+    - MLKitBarcodeScanning
     - MLKitCommon
     - MLKitTextRecognition
     - MLKitTextRecognitionCommon
@@ -182,6 +194,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/geocoding_ios/ios"
   geolocator_apple:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
+  google_mlkit_barcode_scanning:
+    :path: ".symlinks/plugins/google_mlkit_barcode_scanning/ios"
   google_mlkit_commons:
     :path: ".symlinks/plugins/google_mlkit_commons/ios"
   google_mlkit_text_recognition:
@@ -211,6 +225,7 @@ SPEC CHECKSUMS:
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   geocoding_ios: 33776c9ebb98d037b5e025bb0e7537f6dd19646e
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
+  google_mlkit_barcode_scanning: 27e95b3b57f7b3eb25fbff20176a61c807e0a17c
   google_mlkit_commons: 414fc36ac51758c806381de33a1d148d2ba71ce4
   google_mlkit_text_recognition: 6dd0122107954e64667d826da71de686152109fe
   GoogleDataTransport: 6c09b596d841063d76d4288cc2d2f42cc36e1e2a
@@ -222,6 +237,7 @@ SPEC CHECKSUMS:
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
   local_auth_darwin: c3ee6cce0a8d56be34c8ccb66ba31f7f180aaebb
   MLImage: 1824212150da33ef225fbd3dc49f184cf611046c
+  MLKitBarcodeScanning: 10ca0845a6d15f2f6e911f682a1998b68b973e8b
   MLKitCommon: afec63980417d29ffbb4790529a1b0a2291699e1
   MLKitTextRecognition: c83c18ad25496f2077f6ec93c5940487ff2eb343
   MLKitTextRecognitionCommon: c0b3a63d529296a19bce1f8bc8a513644ed4d1f6

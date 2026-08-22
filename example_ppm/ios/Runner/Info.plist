@@ -45,5 +45,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Barkod/QR taramak için kameraya erişim gerekir.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeriden barkod/QR görseli seçmek için erişim gerekir.</string>
 </dict>
 </plist>

@@ -68,6 +68,9 @@ dependencies:
   url_launcher: ^6.3.0
   # Kartvizit tarama — on-device OCR (core capability)
   google_mlkit_text_recognition: ^0.13.1
+  # Barkod/QR okuma — on-device (barcode/qr_scanner alanları + e-Fatura QR)
+  # ^0.12.x: text_recognition 0.13.1 ile aynı google_mlkit_commons ^0.8.1'e bağlı
+  google_mlkit_barcode_scanning: ^0.12.1
 
 dev_dependencies:
   flutter_test:

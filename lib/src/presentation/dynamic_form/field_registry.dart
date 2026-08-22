@@ -9,6 +9,7 @@ import 'fields/numeric_fields.dart';
 import 'fields/range_fields.dart';
 import 'fields/rating_field.dart';
 import 'fields/rich_text_field.dart';
+import 'fields/scanner_fields.dart';
 import 'fields/signature_field.dart';
 import 'fields/text_fields.dart';
 import 'fields/time_field.dart';
@@ -48,6 +49,9 @@ final Map<String, FieldWidget> kFieldRegistry = <String, FieldWidget>{
   // Konum (geolocator)
   'location': const LocationFieldWidget(),
   'gps_capture': const LocationFieldWidget(),
+  // Tarama (on-device barkod/QR — image_picker + mlkit)
+  'barcode': const BarcodeFieldWidget(),
+  'qr_scanner': const QrScannerFieldWidget(),
   // Medya (image_picker / file_picker / signature)
   'image': const ImageFieldWidget(),
   'file': const FileFieldWidget(),
@@ -57,8 +61,8 @@ final Map<String, FieldWidget> kFieldRegistry = <String, FieldWidget>{
   'divider': const DividerFieldWidget(),
 };
 
-/// Verilen alan tipi için widget'ı çöz; tanınmayan tipler için
-/// [UnsupportedFieldWidget] döner (file, image, signature, barcode, … gibi
-/// mobilde henüz desteklenmeyen ~16 egzotik tip dahil).
+/// Verilen alan tipi için widget'ı çöz; tanınmayan/egzotik tipler için
+/// [UnsupportedFieldWidget] döner. (barcode/qr_scanner/rich_text artık
+/// desteklenir — web paritesi.)
 FieldWidget resolveFieldWidget(String fieldType) =>
     kFieldRegistry[fieldType] ?? const UnsupportedFieldWidget();

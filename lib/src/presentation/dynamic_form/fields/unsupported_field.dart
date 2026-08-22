@@ -5,8 +5,9 @@ import '../field_render_context.dart';
 
 /// Mobilde henüz desteklenmeyen egzotik alan tipleri için yer tutucu.
 ///
-/// (file, image, signature, barcode, qr_scanner, gps_capture, location, rating,
-/// rich_text, matrix_input, table_grid, slider_range, time_picker, daterange …)
+/// (matrix_input, table_grid gibi nadir tipler). Yaygın tipler — barcode,
+/// qr_scanner, rich_text, location, signature, rating, slider_range,
+/// time_picker, daterange — artık registry'de desteklenir.
 /// Alan etiketini ve "yakında" notunu gösterir; değeri yoktur, submit'i bozmaz.
 class UnsupportedFieldWidget extends FieldWidget {
   const UnsupportedFieldWidget();
