@@ -89,6 +89,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                     padding: AppSpacing.screenPadding,
                     children: [
                       _infoCard(c),
+                      if ((c.companyId ?? '').isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        _AccountDealsCard(companyId: c.companyId!),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       Text('Aktiviteler',
                           style: AppTypography.headline),
@@ -208,6 +212,108 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           ),
         ),
       );
+}
+
+/// Firma 360 — kişinin firmasına ait açık fırsatlar (`fn_crm_account_360`).
+/// Kendini çeker; boşsa gizlenir.
+class _AccountDealsCard extends StatefulWidget {
+  final String companyId;
+  const _AccountDealsCard({required this.companyId});
+
+  @override
+  State<_AccountDealsCard> createState() => _AccountDealsCardState();
+}
+
+class _AccountDealsCardState extends State<_AccountDealsCard> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = AggregateService()
+        .rows('fn_crm_account_360', params: {'p_company_id': widget.companyId});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        final deals = snap.data ?? const [];
+        if (deals.isEmpty) return const SizedBox.shrink();
+        return AppCard(
+          child: Padding(
+            padding: AppSpacing.cardInsets,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.business_center_outlined,
+                        size: 16, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Text('Firma Açık Fırsatları',
+                        style: AppTypography.subhead),
+                    const Spacer(),
+                    Text('${deals.length}',
+                        style: AppTypography.caption1.copyWith(
+                            color: AppColors.secondaryLabel(context))),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                for (final d in deals) _dealRow(context, d),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _dealRow(BuildContext context, Map<String, dynamic> d) {
+    final amount = d['amount'];
+    final amtStr = amount is num ? '₺${_group(amount)}' : '';
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(d['subject']?.toString() ?? '—',
+                style: AppTypography.footnote,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ),
+          if ((d['status']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(width: 6),
+            AppBadge(
+                label: d['status'].toString(),
+                variant: AppBadgeVariant.info,
+                size: AppBadgeSize.small),
+          ],
+          if (amtStr.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(amtStr,
+                style: AppTypography.caption1.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryLabel(context))),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _group(num v) {
+    final s = v.toStringAsFixed(0);
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
 }
 
 /// "Aktivite logla" alt-sayfası.
