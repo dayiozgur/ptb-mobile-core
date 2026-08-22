@@ -359,6 +359,19 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
           },
           height: 220,
         ),
+        const SizedBox(height: AppSpacing.md),
+        AggregateChartCard(
+          title: 'Sağlayıcı Sağlığı',
+          subtitle: 'Sağlayıcıya göre sağlık skoru',
+          rpc: 'fn_pms_provider_health',
+          params: base,
+          chartKind: 'bar_chart',
+          visualConfig: const {
+            'labelField': 'provider_name',
+            'valueFields': ['health_score'],
+          },
+          height: 200,
+        ),
       ],
     );
   }
