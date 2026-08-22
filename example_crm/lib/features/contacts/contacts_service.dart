@@ -125,7 +125,26 @@ class ContactsService {
     }
   }
 
-  /// Yeni kişi ekle. Başarılıysa id döner.
+  static const String _kContactCreateOp = 'crm_contact_create';
+  static bool _handlerReady = false;
+
+  /// Offline-replay handler'ını bir kez kaydet — online olunca kuyruktaki
+  /// kişi-ekleme insert'ini yeniden oynatır. (Entity-form zaten çekirdek
+  /// submitEntity ile offline-aware; contacts bespoke tablo, kendi handler'ı.)
+  void _ensureHandler() {
+    if (_handlerReady || !sl.isRegistered<OfflineSyncService>()) return;
+    sl<OfflineSyncService>().registerHandler(_kContactCreateOp, (op) async {
+      final data = op.data['insert'];
+      if (data is Map) {
+        await _sb.from('contacts').insert(Map<String, dynamic>.from(data));
+      }
+      return true; // başarı → kuyruktan sil
+    });
+    _handlerReady = true;
+  }
+
+  /// Yeni kişi ekle. Online → hemen yaz + id döner. Offline → kuyruğa al
+  /// (iyimser 'offline-queued' döner; bağlantı gelince otomatik senkronize).
   Future<String?> create({
     required String firstName,
     String? lastName,
@@ -135,37 +154,47 @@ class ContactsService {
     String? company,
     String? notes,
   }) async {
+    _ensureHandler();
+    final uid = _sb.auth.currentUser?.id;
+    // Firma serbest-metin (kartvizitten) — contacts'ta company_id FK var ama
+    // serbest-metin kolonu yok → notes'a "Firma: X" olarak yaz (kaybolmasın).
+    final noteParts = <String>[
+      if (company != null && company.trim().isNotEmpty)
+        'Firma: ${company.trim()}',
+      if (notes != null && notes.trim().isNotEmpty) notes.trim(),
+    ];
+    final insert = <String, dynamic>{
+      'tenant_id': _tenantId,
+      'organization_id': sl<OrganizationService>().currentOrganizationId,
+      'first_name': firstName.trim(),
+      if (lastName != null && lastName.trim().isNotEmpty)
+        'last_name': lastName.trim(),
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+      if (noteParts.isNotEmpty) 'notes': noteParts.join('\n'),
+      // Tenant-geneli görünür (select-RLS 'tenant' şubesi).
+      'visibility': 'tenant',
+      'active': true,
+      'created_by': uid,
+    };
+
+    // OFFLINE fallback: bağlantı yoksa kuyruğa al, iyimser dön.
+    if (sl.isRegistered<ConnectivityService>() &&
+        sl.isRegistered<OfflineSyncService>() &&
+        sl<ConnectivityService>().isOffline) {
+      await sl<OfflineSyncService>().addOperation(
+        type: PendingOperationType.create,
+        entityType: _kContactCreateOp,
+        data: {'insert': insert},
+      );
+      Logger.info('Offline: contact create queued');
+      return 'offline-queued';
+    }
+
     try {
-      final uid = _sb.auth.currentUser?.id;
-      // Firma serbest-metin (kartvizitten) — contacts'ta company_id FK var ama
-      // serbest-metin kolonu yok → notes'a "Firma: X" olarak yaz (kaybolmasın).
-      final noteParts = <String>[
-        if (company != null && company.trim().isNotEmpty)
-          'Firma: ${company.trim()}',
-        if (notes != null && notes.trim().isNotEmpty) notes.trim(),
-      ];
-      final res = await _sb
-          .from('contacts')
-          .insert({
-            'tenant_id': _tenantId,
-            'organization_id':
-                sl<OrganizationService>().currentOrganizationId,
-            'first_name': firstName.trim(),
-            if (lastName != null && lastName.trim().isNotEmpty)
-              'last_name': lastName.trim(),
-            if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-            if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
-            if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
-            if (noteParts.isNotEmpty) 'notes': noteParts.join('\n'),
-            // Tenant-geneli görünür: aksi halde DB default 'organization' +
-            // select-RLS ('tenant' şubesi) yüzünden manager-altı roller / null
-            // org'da oluşturulan kişi GÖRÜNMÜYORDU.
-            'visibility': 'tenant',
-            'active': true,
-            'created_by': uid,
-          })
-          .select('id')
-          .single();
+      final res =
+          await _sb.from('contacts').insert(insert).select('id').single();
       return (res as Map)['id'] as String?;
     } catch (e) {
       Logger.error('contact create hata', e);
