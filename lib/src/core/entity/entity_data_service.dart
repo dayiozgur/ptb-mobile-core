@@ -483,19 +483,25 @@ class EntityDataService {
   Future<List<GenericEntity>> loadBacklog(
     EntityTypeConfig config, {
     int limit = 200,
+    String? ancestorId,
   }) async {
     if (_currentTenantId == null) {
       throw Exception('Tenant context is not set');
     }
 
     try {
-      final response = await _supabase
+      var q = _supabase
           .from('form_submissions')
           .select('*, form_templates(name, code)')
           .eq('tenant_id', _currentTenantId!)
           .eq('entity_type', config.code)
           .eq('is_standalone', true)
-          .eq('active', true)
+          .eq('active', true);
+      // Proje/üst-öğe kapsamı (hierarchy_path subtree) — board ile aynı.
+      if (ancestorId != null && ancestorId.isNotEmpty) {
+        q = q.ilike('hierarchy_path', '%$ancestorId%');
+      }
+      final response = await q
           .order('backlog_rank', ascending: true, nullsFirst: false)
           .order('created_at', ascending: true)
           .limit(limit);
@@ -535,21 +541,17 @@ class EntityDataService {
     }
     if (orderedIds.isEmpty) return;
 
-    final userId = _supabase.auth.currentUser?.id;
-
     try {
-      for (var i = 0; i < orderedIds.length; i++) {
-        final rank = (i + 1) * _backlogRankStep;
-        await _supabase
-            .from('form_submissions')
-            .update({
-              'backlog_rank': rank,
-              if (userId != null) 'updated_by': userId,
-            })
-            .eq('id', orderedIds[i])
-            .eq('tenant_id', _currentTenantId!);
-      }
-      Logger.debug('reorderBacklog persisted ${orderedIds.length} ranks');
+      // ATOMİK: tek RPC (fn_reorder_backlog) → tek transaction'da unnest UPDATE.
+      // Eski N-ayrı-UPDATE kısmi-fail'de DB/UI drift bırakıyordu.
+      final ranks = List<int>.generate(
+          orderedIds.length, (i) => (i + 1) * _backlogRankStep);
+      await _supabase.rpc('fn_reorder_backlog', params: {
+        'p_ids': orderedIds,
+        'p_ranks': ranks,
+      });
+      Logger.debug(
+          'reorderBacklog persisted ${orderedIds.length} ranks (atomic)');
     } catch (e) {
       Logger.error('Error reordering backlog: $e');
       rethrow;

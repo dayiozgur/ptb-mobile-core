@@ -2,15 +2,18 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-/// PPM **Board** girişi — önce proje seçtirir, sonra o projenin **alt-ağacına
-/// kapsamlı** kanban'ı açar (`EntityKanbanScreen(ancestorId: projectId)`).
+/// PPM proje-scope hedefi.
+enum PpmScopeTarget { board, backlog }
+
+/// PPM **Board/Backlog** girişi — önce proje seçtirir, sonra o projenin
+/// **alt-ağacına kapsamlı** kanban'ı ([EntityKanbanScreen]) veya backlog'unu
+/// ([BacklogScreen]) `ancestorId: projectId` ile açar.
 ///
-/// Aksi halde generic kanban tüm-tenant task'larını gösteriyordu (proje ayrımı
-/// yok + sessiz 50-limit). Jira-benzeri proje-scope board.
+/// Aksi halde generic ekranlar tüm-tenant kayıtlarını gösteriyordu (proje
+/// ayrımı yok + sessiz limit). Jira-benzeri proje-scope.
 class PpmBoardScreen extends StatefulWidget {
-  /// Kanban'da gösterilecek issue tipi (varsayılan 'task').
-  final String issueType;
-  const PpmBoardScreen({super.key, this.issueType = 'task'});
+  final PpmScopeTarget target;
+  const PpmBoardScreen({super.key, this.target = PpmScopeTarget.board});
 
   @override
   State<PpmBoardScreen> createState() => _PpmBoardScreenState();
@@ -63,18 +66,25 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
 
   void _openBoard(GenericEntity project) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => EntityKanbanScreen(
-        typeCode: widget.issueType,
-        ancestorId: project.id,
-        title: project.displayTitle,
-      ),
+      builder: (_) => widget.target == PpmScopeTarget.backlog
+          ? BacklogScreen(
+              typeCode: 'story',
+              ancestorId: project.id,
+              title: project.displayTitle,
+            )
+          : EntityKanbanScreen(
+              typeCode: 'task',
+              ancestorId: project.id,
+              title: project.displayTitle,
+            ),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Board — Proje seç',
+      title:
+          '${widget.target == PpmScopeTarget.backlog ? 'Backlog' : 'Board'} — Proje seç',
       onBack: () => context.pop(),
       actions: [AppIconButton(icon: Icons.refresh, onPressed: _load)],
       child: RefreshIndicator(

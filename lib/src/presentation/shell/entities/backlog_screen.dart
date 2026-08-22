@@ -12,9 +12,20 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 /// önce YERELDE (optimistic) uygulanır, ardından sıra yazılır; yazım
 /// başarısız olursa eski sıra geri alınır ve bir uyarı gösterilir.
 class BacklogScreen extends StatefulWidget {
-  const BacklogScreen({super.key, required this.typeCode});
+  const BacklogScreen({
+    super.key,
+    required this.typeCode,
+    this.ancestorId,
+    this.title,
+  });
 
   final String typeCode;
+
+  /// Opsiyonel proje/üst-öğe kapsamı (PPM proje-scope backlog).
+  final String? ancestorId;
+
+  /// Opsiyonel başlık override (ör. proje adı).
+  final String? title;
 
   @override
   State<BacklogScreen> createState() => _BacklogScreenState();
@@ -59,7 +70,8 @@ class _BacklogScreenState extends State<BacklogScreen> {
         dataService.setTenant(tenantId);
       }
 
-      final entities = await dataService.loadBacklog(config);
+      final entities =
+          await dataService.loadBacklog(config, ancestorId: widget.ancestorId);
 
       if (mounted) {
         setState(() {
@@ -125,7 +137,7 @@ class _BacklogScreenState extends State<BacklogScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: '$_title • Backlog',
+      title: '${widget.title ?? _title} • Backlog',
       showBackButton: true,
       onBack: () => Navigator.of(context).pop(),
       actions: [

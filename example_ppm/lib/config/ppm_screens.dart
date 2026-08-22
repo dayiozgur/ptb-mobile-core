@@ -48,7 +48,8 @@ Widget? ppmResolve(MenuItem item) {
     return const PpmBoardScreen();
   }
   if (p == '/projects/backlog' || p == '/ppm/backlog') {
-    return const BacklogScreen(typeCode: 'story');
+    // Proje-scope backlog: proje seç → o projenin story backlog'u.
+    return const PpmBoardScreen(target: PpmScopeTarget.backlog);
   }
   return null;
 }
