@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/reporting/aggregate_service.dart';
@@ -64,6 +66,14 @@ class _KpiRowCardState extends State<KpiRowCard> {
 
   Map<String, dynamic> _resolveObject(dynamic raw) {
     dynamic node = raw;
+    // Bazı sürücüler json/jsonb'yi String olarak döndürebilir → çöz.
+    if (node is String) {
+      try {
+        node = jsonDecode(node);
+      } catch (_) {
+        node = null;
+      }
+    }
     // TABLE dönen rollup → satır listesi; tek-satır özetlerde ilk satırı
     // nesne olarak al (json-nesne dönenler zaten Map).
     if (node is List) node = node.isNotEmpty ? node.first : null;

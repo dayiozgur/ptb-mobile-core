@@ -13,6 +13,7 @@ class PpmDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tenantId = sl<TenantService>().currentTenantId;
     return SummaryScreen(
       title: 'Portföy Özeti',
       actions: [
@@ -26,7 +27,18 @@ class PpmDashboardScreen extends StatelessWidget {
           ),
         ),
       ],
-      cards: const [
+      cards: [
+        // Tenant-geneli KPI (tüm projeler; p_root boş → hepsi).
+        KpiRowCard(
+          title: 'Genel Bakış',
+          rpc: 'fn_ppm_project_overview',
+          params: {'p_tenant_id': tenantId},
+          kpis: const [
+            KpiSpec('Toplam İş', 'total'),
+            KpiSpec('Tamamlanan', 'done'),
+            KpiSpec('Puan (Toplam)', 'pts_total'),
+          ],
+        ),
         // Projelere göre iş ilerlemesi — tamamlanan vs açık (yığılmış bar).
         AggregateChartCard(
           title: 'Proje İlerlemesi',
