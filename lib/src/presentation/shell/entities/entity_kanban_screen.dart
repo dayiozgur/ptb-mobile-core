@@ -62,7 +62,9 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
       }
 
       final defsRaw = await dataService.loadStatusDefinitions(config.code);
-      final entities = await dataService.listEntities(config);
+      // Kanban tüm kolonları göstermeli — default 50 sessizce kırpıyordu
+      // (proje-scope filtresi eklenene dek makul üst sınır).
+      final entities = await dataService.listEntities(config, limit: 200);
 
       final columns = _buildColumns(defsRaw, entities);
 
