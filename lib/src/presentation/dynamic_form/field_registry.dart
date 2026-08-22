@@ -8,6 +8,7 @@ import 'fields/media_fields.dart';
 import 'fields/numeric_fields.dart';
 import 'fields/range_fields.dart';
 import 'fields/rating_field.dart';
+import 'fields/rich_text_field.dart';
 import 'fields/signature_field.dart';
 import 'fields/text_fields.dart';
 import 'fields/time_field.dart';
@@ -21,6 +22,7 @@ final Map<String, FieldWidget> kFieldRegistry = <String, FieldWidget>{
   // Metin ailesi
   'text': const TextFieldWidget(),
   'textarea': const TextareaFieldWidget(),
+  'rich_text': const RichTextFieldWidget(),
   'email': const EmailFieldWidget(),
   'phone': const PhoneFieldWidget(),
   // Sayısal aile
