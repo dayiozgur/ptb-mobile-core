@@ -11,10 +11,20 @@ class EntityFormScreen extends StatefulWidget {
   final String typeCode;
   final String? id;
 
+  /// CREATE modunda formu ön-dolduran değerler (ör. fiş/fatura OCR taraması).
+  /// EDIT modunda yok sayılır (kaydın kendi değerleri kullanılır).
+  final Map<String, dynamic>? seedValues;
+
+  /// Form üstünde gösterilecek uyarı/bilgi notları (ör. OCR aritmetik
+  /// çapraz-kontrol uyarıları — "KDV toplamı tutmuyor"). Boşsa banner çıkmaz.
+  final List<String> notices;
+
   const EntityFormScreen({
     super.key,
     required this.typeCode,
     this.id,
+    this.seedValues,
+    this.notices = const [],
   });
 
   @override
@@ -214,13 +224,61 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
 
     return SingleChildScrollView(
       padding: AppSpacing.screenPadding,
-      child: DynamicFormWidget(
-        template: template,
-        initialValues: _isCreate ? null : _entity?.fieldValues,
-        viewMode: false,
-        submitting: _submitting,
-        submitLabelKey: 'common.save',
-        onSubmit: _submit,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_isCreate && widget.notices.isNotEmpty) ...[
+            _NoticeBanner(notices: widget.notices),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          DynamicFormWidget(
+            template: template,
+            initialValues: _isCreate ? widget.seedValues : _entity?.fieldValues,
+            viewMode: false,
+            submitting: _submitting,
+            submitLabelKey: 'common.save',
+            onSubmit: _submit,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// OCR/doğrulama uyarılarını form üstünde gösteren amber banner.
+class _NoticeBanner extends StatelessWidget {
+  final List<String> notices;
+  const _NoticeBanner({required this.notices});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              size: 20, color: AppColors.warning),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final n in notices)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 1),
+                    child: Text(n, style: AppTypography.footnote),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

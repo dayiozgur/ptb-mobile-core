@@ -144,6 +144,8 @@ class _MyHrScreenState extends State<MyHrScreen> {
           '/hr/leave/my-requests'),
       _QuickLink(Icons.receipt_long_outlined, AppColors.primary,
           essT('hr.my_hr.payslips', 'Bordrolarım'), '/hr/payroll/my-payslips'),
+      _QuickLink(Icons.document_scanner_outlined, AppColors.info,
+          essT('hr.my_hr.scan_expense', 'Fiş/Fatura Tara'), '/hr/expense/scan'),
       _QuickLink(Icons.access_time_outlined, AppColors.info,
           essT('hr.my_hr.attendance', 'Puantajım'), '/hr/pdks'),
       _QuickLink(Icons.flag_outlined, AppColors.primary,

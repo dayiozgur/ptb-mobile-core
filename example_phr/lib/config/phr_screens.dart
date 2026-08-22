@@ -15,6 +15,7 @@ import '../features/ess/screens/my_payslips_screen.dart';
 import '../features/ess/screens/my_pdks_screen.dart';
 import '../features/ess/screens/my_reviews_screen.dart';
 import '../features/ess/screens/review_queue_screen.dart';
+import '../features/expense/scan_expense_screen.dart';
 // PHR admin (yönetim) ekranları
 import '../features/admin/screens/admin_arge_reports_screen.dart';
 import '../features/admin/screens/admin_attendance_screen.dart';
@@ -116,6 +117,9 @@ Widget? phrResolve(MenuItem item) {
   }
   if (p == '/my-data') {
     return const MyDataScreen();
+  }
+  if (p == '/hr/expense/scan') {
+    return const ScanExpenseScreen();
   }
   if (p == '/hr/kvkk') {
     return const KvkkScreen();
