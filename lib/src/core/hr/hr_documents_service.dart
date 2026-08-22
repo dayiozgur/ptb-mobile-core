@@ -130,10 +130,38 @@ class HrDocumentsService {
       query = query.eq('tenant_id', tenantId);
     }
 
-    final response = await query;
+    // created_at ASC — myConsents byType[]=c overwrite'ında EN YENİ satır kalsın
+    // (kvkk_consents append-audit; tip başına birden fazla satır olabilir).
+    final response = await query.order('created_at', ascending: true);
     return (response as List)
         .map((e) => KvkkConsent.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// **KVKK rıza ver / geri al** — yeni bir `kvkk_consents` satırı ekler
+  /// (audit-append; read en-yeni satırı gösterir). `source='mobile'`.
+  /// RLS own-staff'a izin verir. Başarıda `true`.
+  Future<bool> setConsent({
+    required String consentTypeId,
+    required bool granted,
+  }) async {
+    final staffId = await hrEssService.currentStaffId();
+    if (staffId == null) return false;
+    final nowUtc = DateTime.now().toUtc().toIso8601String();
+    try {
+      await _supabase.from('kvkk_consents').insert({
+        'tenant_id': _tenant.currentTenantId,
+        'staff_id': staffId,
+        'consent_type_id': consentTypeId,
+        'granted': granted,
+        if (granted) 'granted_at': nowUtc else 'revoked_at': nowUtc,
+        'source': 'mobile',
+      });
+      return true;
+    } catch (e) {
+      Logger.error('setConsent hata', e);
+      return false;
+    }
   }
 
   // ============================================

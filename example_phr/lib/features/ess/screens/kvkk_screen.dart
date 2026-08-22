@@ -11,8 +11,9 @@ import '../ess_common.dart';
 /// `HrDocumentsService.myConsents()` (web `KvkkService` + `KvkkConsentComponent`
 /// ile birebir okuma sözleşmesi: `kvkk_consent_types` + `kvkk_consents`).
 ///
-/// v1 SALT-OKUMA: web'de grant/revoke yazımı vardır (RLS kendi staff'ına izin
-/// verir); mobilde v1'de bağlanmadı (durum + tarih görüntülenir).
+/// Onayla/Geri-Al yazımı bağlı (web parity): `HrDocumentsService.setConsent`
+/// yeni kvkk_consents satırı ekler (audit-append, source='mobile'; RLS own-staff).
+/// Zorunlu rıza geri alınamaz.
 class KvkkScreen extends StatefulWidget {
   const KvkkScreen({super.key});
 
@@ -22,6 +23,20 @@ class KvkkScreen extends StatefulWidget {
 
 class _KvkkScreenState extends State<KvkkScreen> {
   final _ctrl = AsyncViewController();
+
+  Future<void> _setConsent(KvkkConsentRow row, bool granted) async {
+    final ok = await hrDocumentsService.setConsent(
+        consentTypeId: row.type.id, granted: granted);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? (granted
+              ? essT('kvkk.granted_ok', 'Rıza verildi ✓')
+              : essT('kvkk.revoked_ok', 'Rıza geri alındı ✓'))
+          : essT('common.action_failed', 'İşlem başarısız')),
+    ));
+    if (ok) _ctrl.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +80,7 @@ class _KvkkScreenState extends State<KvkkScreen> {
           const SizedBox(height: AppSpacing.sm),
           ...required.map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _ConsentCard(row: r),
+                child: _ConsentCard(row: r, onSetConsent: (g) => _setConsent(r, g)),
               )),
         ],
         if (optional.isNotEmpty) ...[
@@ -77,7 +92,7 @@ class _KvkkScreenState extends State<KvkkScreen> {
           const SizedBox(height: AppSpacing.sm),
           ...optional.map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _ConsentCard(row: r),
+                child: _ConsentCard(row: r, onSetConsent: (g) => _setConsent(r, g)),
               )),
         ],
       ],
@@ -135,8 +150,9 @@ class _SectionHeader extends StatelessWidget {
 
 class _ConsentCard extends StatelessWidget {
   final KvkkConsentRow row;
+  final Future<void> Function(bool granted)? onSetConsent;
 
-  const _ConsentCard({required this.row});
+  const _ConsentCard({required this.row, this.onSetConsent});
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +215,26 @@ class _ConsentCard extends StatelessWidget {
                 style: AppTypography.caption1
                     .copyWith(color: AppColors.tertiaryLabel(context)),
               ),
+            ],
+            // Onay/iptal aksiyonu (web parity). Zorunlu rıza geri alınamaz.
+            if (onSetConsent != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              if (row.state != ConsentState.granted)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => onSetConsent!(true),
+                    child: Text(essT('kvkk.grant', 'Onayla')),
+                  ),
+                )
+              else if (!type.required)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => onSetConsent!(false),
+                    child: Text(essT('kvkk.revoke', 'Geri Al')),
+                  ),
+                ),
             ],
           ],
         ),
