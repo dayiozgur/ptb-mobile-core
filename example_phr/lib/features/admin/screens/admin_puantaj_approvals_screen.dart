@@ -20,40 +20,8 @@ class AdminPuantajApprovalsScreen extends StatefulWidget {
 
 class _AdminPuantajApprovalsScreenState
     extends State<AdminPuantajApprovalsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<AttendanceLockRow> _rows = [];
+  final _ctrl = AsyncViewController();
   final Set<String> _busy = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminAttendanceService.puantajApprovals();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load puantaj approvals', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   Future<void> _approve(AttendanceLockRow row) async {
     final key = '${row.periodYear}-${row.periodMonth}';
@@ -93,7 +61,7 @@ class _AdminPuantajApprovalsScreenState
           ),
         );
       }
-      await _load();
+      _ctrl.reload();
     } catch (e) {
       Logger.error('Failed to approve puantaj period', e);
       if (mounted) {
@@ -115,36 +83,29 @@ class _AdminPuantajApprovalsScreenState
       title: essT('hr.puantaj.approvals_title', 'Puantaj Onayları'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<AttendanceLockRow>>(
+        controller: _ctrl,
+        load: () => adminAttendanceService.puantajApprovals(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (rows) => rows.isEmpty,
+        emptyBuilder: (_) => pdksEmptyScroll(
+          icon: Icons.fact_check_outlined,
+          title: essT('hr.puantaj.no_periods', 'Onay dönemi yok'),
+        ),
+        builder: (context, rows) => _content(context, rows),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return pdksEmptyScroll(
-        icon: Icons.fact_check_outlined,
-        title: essT('hr.puantaj.no_periods', 'Onay dönemi yok'),
-      );
-    }
+  Widget _content(BuildContext context, List<AttendanceLockRow> rows) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: rows.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) {
-        final row = _rows[i];
+        final row = rows[i];
         final key = '${row.periodYear}-${row.periodMonth}';
         return _PeriodCard(
           row: row,

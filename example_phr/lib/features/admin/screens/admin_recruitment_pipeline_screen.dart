@@ -21,39 +21,7 @@ class AdminRecruitmentPipelineScreen extends StatefulWidget {
 
 class _AdminRecruitmentPipelineScreenState
     extends State<AdminRecruitmentPipelineScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PipelineStageGroup> _groups = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final groups = await adminRecruitmentService.pipelineByStage();
-      if (mounted) {
-        setState(() {
-          _groups = groups;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminRecruitmentPipelineScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -62,47 +30,25 @@ class _AdminRecruitmentPipelineScreenState
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PipelineStageGroup>>(
+        controller: _ctrl,
+        load: () => adminRecruitmentService.pipelineByStage(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (groups) => groups.fold<int>(0, (a, g) => a + g.count) == 0,
+        emptyIcon: Icons.account_tree_outlined,
+        emptyTitle: essT('ats.pipeline.empty', 'Başvuru bulunamadı'),
+        builder: (context, groups) => _content(context, groups),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-
-    final total = _groups.fold<int>(0, (a, g) => a + g.count);
-    if (total == 0) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.account_tree_outlined,
-                title: essT('ats.pipeline.empty', 'Başvuru bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
+  Widget _content(BuildContext context, List<PipelineStageGroup> groups) {
     return ListView.builder(
       padding: AppSpacing.screenPadding,
-      itemCount: _groups.length,
-      itemBuilder: (_, i) => _StageSection(group: _groups[i]),
+      itemCount: groups.length,
+      itemBuilder: (_, i) => _StageSection(group: groups[i]),
     );
   }
 }

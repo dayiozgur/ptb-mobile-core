@@ -21,39 +21,7 @@ class AdminRecruitmentCandidatesScreen extends StatefulWidget {
 
 class _AdminRecruitmentCandidatesScreenState
     extends State<AdminRecruitmentCandidatesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<JobApplicationRow> _applications = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminRecruitmentService.applications();
-      if (mounted) {
-        setState(() {
-          _applications = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminRecruitmentCandidatesScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -62,45 +30,26 @@ class _AdminRecruitmentCandidatesScreenState
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<JobApplicationRow>>(
+        controller: _ctrl,
+        load: () => adminRecruitmentService.applications(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (applications) => applications.isEmpty,
+        emptyIcon: Icons.people_outline,
+        emptyTitle: essT('ats.candidates.empty', 'Aday bulunamadı'),
+        builder: (context, applications) => _content(context, applications),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_applications.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.people_outline,
-                title: essT('ats.candidates.empty', 'Aday bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<JobApplicationRow> applications) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _applications.length,
+      itemCount: applications.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _ApplicationCard(application: _applications[i]),
+      itemBuilder: (_, i) => _ApplicationCard(application: applications[i]),
     );
   }
 }

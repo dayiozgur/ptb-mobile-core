@@ -20,40 +20,8 @@ class AdminLeaveRequestsScreen extends StatefulWidget {
 }
 
 class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<AdminLeaveRequestRow> _rows = [];
+  final _ctrl = AsyncViewController();
   final Set<String> _busy = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminLeaveService.allLeaveRequests();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load all leave requests', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   Future<void> _decide(AdminLeaveRequestRow row, bool approve) async {
     String? note;
@@ -79,7 +47,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
           ),
         );
       }
-      await _load();
+      _ctrl.reload();
     } catch (e) {
       Logger.error('Failed to decide leave request', e);
       if (mounted) {
@@ -135,49 +103,30 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
       title: essT('hr.leave.all_requests_title', 'Tüm İzin Talepleri'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<AdminLeaveRequestRow>>(
+        controller: _ctrl,
+        load: () => adminLeaveService.allLeaveRequests(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.event_busy_outlined,
+        emptyTitle: essT('hr.leave.no_requests', 'İzin talebi yok'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.event_busy_outlined,
-                title: essT('hr.leave.no_requests', 'İzin talebi yok'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<AdminLeaveRequestRow> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) => _RequestCard(
-        row: _rows[i],
-        busy: _busy.contains(_rows[i].id),
-        onApprove: () => _decide(_rows[i], true),
-        onReject: () => _decide(_rows[i], false),
+        row: d[i],
+        busy: _busy.contains(d[i].id),
+        onApprove: () => _decide(d[i], true),
+        onReject: () => _decide(d[i], false),
       ),
     );
   }

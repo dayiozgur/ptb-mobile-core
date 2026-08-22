@@ -19,39 +19,7 @@ class AdminPayrollSalariesScreen extends StatefulWidget {
 
 class _AdminPayrollSalariesScreenState
     extends State<AdminPayrollSalariesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PayrollSalary> _salaries = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPayrollService.salaries();
-      if (mounted) {
-        setState(() {
-          _salaries = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminPayrollSalariesScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -59,45 +27,26 @@ class _AdminPayrollSalariesScreenState
       title: essT('payroll.salaries.title', 'Maaş Tanımları'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PayrollSalary>>(
+        controller: _ctrl,
+        load: () => adminPayrollService.salaries(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (salaries) => salaries.isEmpty,
+        emptyIcon: Icons.payments_outlined,
+        emptyTitle: essT('payroll.salaries.empty', 'Maaş tanımı yok'),
+        builder: (context, salaries) => _content(context, salaries),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_salaries.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.payments_outlined,
-                title: essT('payroll.salaries.empty', 'Maaş tanımı yok'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<PayrollSalary> salaries) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _salaries.length,
+      itemCount: salaries.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _SalaryCard(salary: _salaries[i]),
+      itemBuilder: (_, i) => _SalaryCard(salary: salaries[i]),
     );
   }
 }

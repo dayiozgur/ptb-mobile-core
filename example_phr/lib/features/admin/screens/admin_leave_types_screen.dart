@@ -16,39 +16,7 @@ class AdminLeaveTypesScreen extends StatefulWidget {
 }
 
 class _AdminLeaveTypesScreenState extends State<AdminLeaveTypesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<LeaveTypeRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminLeaveService.leaveTypes();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load leave types', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -56,45 +24,26 @@ class _AdminLeaveTypesScreenState extends State<AdminLeaveTypesScreen> {
       title: essT('hr.leave.types_title', 'İzin Türleri'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<LeaveTypeRow>>(
+        controller: _ctrl,
+        load: () => adminLeaveService.leaveTypes(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.category_outlined,
+        emptyTitle: essT('hr.leave.no_types', 'İzin türü yok'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.category_outlined,
-                title: essT('hr.leave.no_types', 'İzin türü yok'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<LeaveTypeRow> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _LeaveTypeCard(row: _rows[i]),
+      itemBuilder: (_, i) => _LeaveTypeCard(row: d[i]),
     );
   }
 }

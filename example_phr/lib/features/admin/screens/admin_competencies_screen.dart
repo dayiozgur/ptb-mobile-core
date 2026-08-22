@@ -19,39 +19,7 @@ class AdminCompetenciesScreen extends StatefulWidget {
 }
 
 class _AdminCompetenciesScreenState extends State<AdminCompetenciesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<Competency> _competencies = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPerformanceService.competencies();
-      if (mounted) {
-        setState(() {
-          _competencies = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminCompetenciesScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -60,45 +28,26 @@ class _AdminCompetenciesScreenState extends State<AdminCompetenciesScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<Competency>>(
+        controller: _ctrl,
+        load: () => adminPerformanceService.competencies(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.workspace_premium_outlined,
+        emptyTitle: essT('competencies.empty', 'Yetkinlik bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_competencies.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.workspace_premium_outlined,
-                title: essT('competencies.empty', 'Yetkinlik bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<Competency> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _competencies.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _CompetencyCard(competency: _competencies[i]),
+      itemBuilder: (_, i) => _CompetencyCard(competency: d[i]),
     );
   }
 }

@@ -17,39 +17,7 @@ class AdminPayrollRunsScreen extends StatefulWidget {
 }
 
 class _AdminPayrollRunsScreenState extends State<AdminPayrollRunsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PayrollRun> _runs = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPayrollService.runs();
-      if (mounted) {
-        setState(() {
-          _runs = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminPayrollRunsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   void _open(PayrollRun run) {
     Navigator.of(context).push(
@@ -63,35 +31,28 @@ class _AdminPayrollRunsScreenState extends State<AdminPayrollRunsScreen> {
       title: essT('payroll.runs.title', 'Bordro Çalıştırmaları'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PayrollRun>>(
+        controller: _ctrl,
+        load: () => adminPayrollService.runs(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (runs) => runs.isEmpty,
+        emptyBuilder: (_) => _emptyState(
+          icon: Icons.event_note_outlined,
+          title: essT('payroll.runs.empty', 'Bordro çalıştırması yok'),
+        ),
+        builder: (context, runs) => _content(context, runs),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_runs.isEmpty) {
-      return _emptyState(
-        icon: Icons.event_note_outlined,
-        title: essT('payroll.runs.empty', 'Bordro çalıştırması yok'),
-      );
-    }
+  Widget _content(BuildContext context, List<PayrollRun> runs) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _runs.length,
+      itemCount: runs.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _RunCard(run: _runs[i], onTap: () => _open(_runs[i])),
+      itemBuilder: (_, i) => _RunCard(run: runs[i], onTap: () => _open(runs[i])),
     );
   }
 }
@@ -179,39 +140,7 @@ class _RunPayslipsScreen extends StatefulWidget {
 }
 
 class _RunPayslipsScreenState extends State<_RunPayslipsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PayrollRunPayslip> _payslips = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPayrollService.runPayslips(widget.run.id);
-      if (mounted) {
-        setState(() {
-          _payslips = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('_RunPayslipsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -219,36 +148,29 @@ class _RunPayslipsScreenState extends State<_RunPayslipsScreen> {
       title: essMonthYear(widget.run.periodYear, widget.run.periodMonth),
       onBack: () => Navigator.of(context).pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PayrollRunPayslip>>(
+        controller: _ctrl,
+        load: () => adminPayrollService.runPayslips(widget.run.id),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (payslips) => payslips.isEmpty,
+        emptyBuilder: (_) => _emptyState(
+          icon: Icons.receipt_long_outlined,
+          title: essT('payroll.runs.no_payslips',
+              'Bu çalıştırmada bordro satırı yok'),
+        ),
+        builder: (context, payslips) => _content(context, payslips),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_payslips.isEmpty) {
-      return _emptyState(
-        icon: Icons.receipt_long_outlined,
-        title: essT('payroll.runs.no_payslips',
-            'Bu çalıştırmada bordro satırı yok'),
-      );
-    }
+  Widget _content(BuildContext context, List<PayrollRunPayslip> payslips) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _payslips.length,
+      itemCount: payslips.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _RunPayslipCard(payslip: _payslips[i]),
+      itemBuilder: (_, i) => _RunPayslipCard(payslip: payslips[i]),
     );
   }
 }

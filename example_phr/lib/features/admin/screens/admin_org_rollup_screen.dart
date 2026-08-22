@@ -17,45 +17,7 @@ class AdminOrgRollupScreen extends StatefulWidget {
 }
 
 class _AdminOrgRollupScreenState extends State<AdminOrgRollupScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<OrgRollupRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminOrgService.orgRollup();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminOrgRollupScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  int get _totalHeadcount =>
-      _rows.fold<int>(0, (sum, r) => sum + r.headcount);
-
-  int get _maxHeadcount =>
-      _rows.fold<int>(0, (m, r) => r.headcount > m ? r.headcount : m);
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -63,53 +25,35 @@ class _AdminOrgRollupScreenState extends State<AdminOrgRollupScreen> {
       title: essT('hr.org_rollup.title', 'Organizasyon Kırılımı'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<OrgRollupRow>>(
+        controller: _ctrl,
+        load: () => adminOrgService.orgRollup(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.pie_chart_outline,
+        emptyTitle: essT('hr.org_rollup.empty', 'Organizasyon bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.pie_chart_outline,
-                title: essT('hr.org_rollup.empty', 'Organizasyon bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    final maxHc = _maxHeadcount;
+  Widget _content(BuildContext context, List<OrgRollupRow> d) {
+    final maxHc = d.fold<int>(0, (m, r) => r.headcount > m ? r.headcount : m);
+    final totalHc = d.fold<int>(0, (sum, r) => sum + r.headcount);
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length + 1,
+      itemCount: d.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         if (index == 0) {
           return _SummaryHeader(
-            orgCount: _rows.length,
-            totalHeadcount: _totalHeadcount,
+            orgCount: d.length,
+            totalHeadcount: totalHc,
           );
         }
-        return _RollupCard(row: _rows[index - 1], maxHeadcount: maxHc);
+        return _RollupCard(row: d[index - 1], maxHeadcount: maxHc);
       },
     );
   }

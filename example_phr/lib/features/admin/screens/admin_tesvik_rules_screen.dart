@@ -23,39 +23,7 @@ class AdminTesvikRulesScreen extends StatefulWidget {
 }
 
 class _AdminTesvikRulesScreenState extends State<AdminTesvikRulesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<TesvikRuleRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminTesvikKvkkService.tesvikRules();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminTesvikRulesScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -64,45 +32,26 @@ class _AdminTesvikRulesScreenState extends State<AdminTesvikRulesScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<TesvikRuleRow>>(
+        controller: _ctrl,
+        load: () => adminTesvikKvkkService.tesvikRules(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (rows) => rows.isEmpty,
+        emptyIcon: Icons.rule_outlined,
+        emptyTitle: essT('tesvik.rules.empty', 'Teşvik kuralı bulunamadı'),
+        builder: (context, rows) => _content(context, rows),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.rule_outlined,
-                title: essT('tesvik.rules.empty', 'Teşvik kuralı bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<TesvikRuleRow> rows) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: rows.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _RuleCard(row: _rows[i]),
+      itemBuilder: (_, i) => _RuleCard(row: rows[i]),
     );
   }
 }

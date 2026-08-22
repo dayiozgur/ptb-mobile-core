@@ -21,39 +21,7 @@ class AdminOffboardingScreen extends StatefulWidget {
 }
 
 class _AdminOffboardingScreenState extends State<AdminOffboardingScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<OnboardingInstanceRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminOrgService.offboardingInstances();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminOffboardingScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -61,46 +29,27 @@ class _AdminOffboardingScreenState extends State<AdminOffboardingScreen> {
       title: essT('hr.offboarding.admin_title', 'İşten Çıkış (Yönetim)'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<OnboardingInstanceRow>>(
+        controller: _ctrl,
+        load: () => adminOrgService.offboardingInstances(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.logout_outlined,
+        emptyTitle: essT('hr.offboarding.admin_empty',
+            'İşten çıkış süreci bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.logout_outlined,
-                title: essT('hr.offboarding.admin_empty',
-                    'İşten çıkış süreci bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<OnboardingInstanceRow> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => AdminOnboardingInstanceCard(row: _rows[i]),
+      itemBuilder: (_, i) => AdminOnboardingInstanceCard(row: d[i]),
     );
   }
 }

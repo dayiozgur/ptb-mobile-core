@@ -18,39 +18,7 @@ class AdminPerfCyclesScreen extends StatefulWidget {
 }
 
 class _AdminPerfCyclesScreenState extends State<AdminPerfCyclesScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PerformanceCycle> _cycles = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPerformanceService.cycles();
-      if (mounted) {
-        setState(() {
-          _cycles = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminPerfCyclesScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -59,45 +27,26 @@ class _AdminPerfCyclesScreenState extends State<AdminPerfCyclesScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PerformanceCycle>>(
+        controller: _ctrl,
+        load: () => adminPerformanceService.cycles(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (cycles) => cycles.isEmpty,
+        emptyIcon: Icons.event_note_outlined,
+        emptyTitle: essT('performance.cycles.empty', 'Dönem bulunamadı'),
+        builder: (context, cycles) => _content(context, cycles),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_cycles.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.event_note_outlined,
-                title: essT('performance.cycles.empty', 'Dönem bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<PerformanceCycle> cycles) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _cycles.length,
+      itemCount: cycles.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _CycleCard(cycle: _cycles[i]),
+      itemBuilder: (_, i) => _CycleCard(cycle: cycles[i]),
     );
   }
 }

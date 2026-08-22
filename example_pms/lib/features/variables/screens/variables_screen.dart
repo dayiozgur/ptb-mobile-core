@@ -10,48 +10,20 @@ class VariablesScreen extends StatefulWidget {
 }
 
 class _VariablesScreenState extends State<VariablesScreen> {
-  bool _isLoading = true;
-  List<Variable> _variables = [];
-  String? _errorMessage;
+  final _ctrl = AsyncViewController();
   String _searchQuery = '';
   VariableDataType? _filterType;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadVariables();
+  Future<List<Variable>> _load() {
+    final tenantId = tenantService.currentTenantId;
+    if (tenantId != null) {
+      variableService.setTenant(tenantId);
+    }
+    return variableService.getAll();
   }
 
-  Future<void> _loadVariables() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId != null) {
-        variableService.setTenant(tenantId);
-      }
-
-      final variables = await variableService.getAll();
-      if (mounted) {
-        setState(() => _variables = variables);
-      }
-    } catch (e) {
-      Logger.error('Failed to load variables', e);
-      if (mounted) {
-        setState(() => _errorMessage = sl<LocalizationService>().translate('variable.load_failed'));
-      }
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  List<Variable> get _filteredVariables {
-    var result = _variables;
+  List<Variable> _filtered(List<Variable> variables) {
+    var result = variables;
 
     if (_searchQuery.isNotEmpty) {
       result = result.where((v) =>
@@ -78,7 +50,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
         ),
         AppIconButton(
           icon: Icons.refresh,
-          onPressed: _loadVariables,
+          onPressed: _ctrl.reload,
         ),
       ],
       child: Column(
@@ -93,36 +65,30 @@ class _VariablesScreenState extends State<VariablesScreen> {
           ),
 
           // Content
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: AsyncView<List<Variable>>(
+              controller: _ctrl,
+              load: _load,
+              errorFallback:
+                  sl<LocalizationService>().translate('variable.load_failed'),
+              isEmpty: (variables) => variables.isEmpty,
+              emptyBuilder: (context) => AppEmptyState(
+                icon: Icons.data_object,
+                title: sl<LocalizationService>().translate('variable.not_found'),
+                message: sl<LocalizationService>().translate('variable.empty_message'),
+              ),
+              builder: (context, variables) => _content(context, variables),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-
-    if (_errorMessage != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
-        message: _errorMessage!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadVariables,
-      );
-    }
-
-    final filtered = _filteredVariables;
+  Widget _content(BuildContext context, List<Variable> variables) {
+    final filtered = _filtered(variables);
 
     if (filtered.isEmpty) {
-      if (_variables.isEmpty) {
-        return AppEmptyState(
-          icon: Icons.data_object,
-          title: sl<LocalizationService>().translate('variable.not_found'),
-          message: sl<LocalizationService>().translate('variable.empty_message'),
-        );
-      }
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -135,22 +101,19 @@ class _VariablesScreenState extends State<VariablesScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadVariables,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        itemCount: filtered.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final variable = filtered[index];
-          return _VariableCard(
-            variable: variable,
-            onTap: () => context.push(
-              '/variables/${variable.id}?name=${Uri.encodeComponent(variable.name)}',
-            ),
-          );
-        },
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        final variable = filtered[index];
+        return _VariableCard(
+          variable: variable,
+          onTap: () => context.push(
+            '/variables/${variable.id}?name=${Uri.encodeComponent(variable.name)}',
+          ),
+        );
+      },
     );
   }
 

@@ -19,39 +19,7 @@ class AdminHrAnalyticsScreen extends StatefulWidget {
 }
 
 class _AdminHrAnalyticsScreenState extends State<AdminHrAnalyticsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  HrAnalyticsSnapshot _snapshot = HrAnalyticsSnapshot.empty;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final snap = await adminRecruitmentService.analytics();
-      if (mounted) {
-        setState(() {
-          _snapshot = snap;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminHrAnalyticsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -60,26 +28,18 @@ class _AdminHrAnalyticsScreenState extends State<AdminHrAnalyticsScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<HrAnalyticsSnapshot>(
+        controller: _ctrl,
+        load: () => adminRecruitmentService.analytics(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-
-    final s = _snapshot;
+  Widget _content(BuildContext context, HrAnalyticsSnapshot s) {
     final turnover =
         s.turnoverRate == null ? '—' : '%${_num1(s.turnoverRate!)}';
 

@@ -19,39 +19,7 @@ class AdminOrganizationsScreen extends StatefulWidget {
 }
 
 class _AdminOrganizationsScreenState extends State<AdminOrganizationsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<AdminOrganization> _orgs = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminOrgService.organizations();
-      if (mounted) {
-        setState(() {
-          _orgs = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminOrganizationsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -59,45 +27,26 @@ class _AdminOrganizationsScreenState extends State<AdminOrganizationsScreen> {
       title: essT('hr.organizations.title', 'Organizasyonlar'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<AdminOrganization>>(
+        controller: _ctrl,
+        load: () => adminOrgService.organizations(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.corporate_fare_outlined,
+        emptyTitle: essT('hr.organizations.empty', 'Organizasyon bulunamadı'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_orgs.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.corporate_fare_outlined,
-                title: essT('hr.organizations.empty', 'Organizasyon bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<AdminOrganization> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _orgs.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _OrganizationCard(org: _orgs[i]),
+      itemBuilder: (_, i) => _OrganizationCard(org: d[i]),
     );
   }
 }

@@ -19,39 +19,7 @@ class AdminPayrollParametersScreen extends StatefulWidget {
 
 class _AdminPayrollParametersScreenState
     extends State<AdminPayrollParametersScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<PayrollParameter> _params = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminPayrollService.parameters();
-      if (mounted) {
-        setState(() {
-          _params = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminPayrollParametersScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   void _open(PayrollParameter p) {
     showModalBottomSheet<void>(
@@ -68,46 +36,27 @@ class _AdminPayrollParametersScreenState
       title: essT('payroll.parameters.title', 'Bordro Parametreleri'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<PayrollParameter>>(
+        controller: _ctrl,
+        load: () => adminPayrollService.parameters(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (d) => d.isEmpty,
+        emptyIcon: Icons.tune_outlined,
+        emptyTitle: essT('payroll.parameters.empty', 'Parametre yok'),
+        builder: (context, d) => _content(context, d),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_params.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.tune_outlined,
-                title: essT('payroll.parameters.empty', 'Parametre yok'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<PayrollParameter> d) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _params.length,
+      itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, i) =>
-          _ParameterCard(param: _params[i], onTap: () => _open(_params[i])),
+          _ParameterCard(param: d[i], onTap: () => _open(d[i])),
     );
   }
 }

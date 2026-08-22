@@ -10,49 +10,20 @@ class ControllersScreen extends StatefulWidget {
 }
 
 class _ControllersScreenState extends State<ControllersScreen> {
-  bool _isLoading = true;
-  List<Controller> _controllers = [];
-  String? _errorMessage;
+  final _ctrl = AsyncViewController();
   String _statusFilter = 'all';
   String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _loadControllers();
+  Future<List<Controller>> _load() {
+    final tenantId = tenantService.currentTenantId;
+    if (tenantId != null) {
+      controllerService.setTenant(tenantId);
+    }
+    return controllerService.getAll();
   }
 
-  Future<void> _loadControllers() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId != null) {
-        controllerService.setTenant(tenantId);
-      }
-
-      final controllers = await controllerService.getAll();
-      if (mounted) {
-        setState(() => _controllers = controllers);
-      }
-    } catch (e) {
-      Logger.error('Failed to load controllers', e);
-      if (mounted) {
-        setState(() => _errorMessage =
-            '${sl<LocalizationService>().translate('controller.list_load_failed')}: $e');
-      }
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  List<Controller> get _filteredControllers {
-    var result = _controllers;
+  List<Controller> _filtered(List<Controller> controllers) {
+    var result = controllers;
 
     // Status filter
     if (_statusFilter != 'all') {
@@ -90,44 +61,33 @@ class _ControllersScreenState extends State<ControllersScreen> {
       actions: [
         AppIconButton(
           icon: Icons.refresh,
-          onPressed: _loadControllers,
+          onPressed: _ctrl.reload,
         ),
       ],
-      child: _buildBody(),
+      child: AsyncView<List<Controller>>(
+        controller: _ctrl,
+        load: _load,
+        errorFallback:
+            sl<LocalizationService>().translate('controller.list_load_failed'),
+        isEmpty: (controllers) => controllers.isEmpty,
+        emptyBuilder: (context) => AppEmptyState(
+          icon: Icons.developer_board,
+          title: sl<LocalizationService>().translate('controller.not_found'),
+          message: sl<LocalizationService>().translate('controller.empty_message'),
+        ),
+        builder: (context, controllers) => _content(context, controllers),
+      ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
+  Widget _content(BuildContext context, List<Controller> controllers) {
+    final onlineCount = controllers.where((c) => c.status == ControllerStatus.online).length;
+    final offlineCount = controllers.where((c) => c.status == ControllerStatus.offline).length;
+    final errorCount = controllers.where((c) => c.status == ControllerStatus.error).length;
+    final filtered = _filtered(controllers);
 
-    if (_errorMessage != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
-        message: _errorMessage!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadControllers,
-      );
-    }
-
-    if (_controllers.isEmpty) {
-      return AppEmptyState(
-        icon: Icons.developer_board,
-        title: sl<LocalizationService>().translate('controller.not_found'),
-        message: sl<LocalizationService>().translate('controller.empty_message'),
-      );
-    }
-
-    final onlineCount = _controllers.where((c) => c.status == ControllerStatus.online).length;
-    final offlineCount = _controllers.where((c) => c.status == ControllerStatus.offline).length;
-    final errorCount = _controllers.where((c) => c.status == ControllerStatus.error).length;
-    final filtered = _filteredControllers;
-
-    return RefreshIndicator(
-      onRefresh: _loadControllers,
-      child: Column(
-        children: [
+    return Column(
+      children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -150,7 +110,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
                 Row(
                   children: [
                     AppChip(
-                      label: '${_controllers.length} ${sl<LocalizationService>().translate('common.total')}',
+                      label: '${controllers.length} ${sl<LocalizationService>().translate('common.total')}',
                       variant: AppChipVariant.tonal,
                       color: AppColors.primary,
                       small: true,
@@ -228,8 +188,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
                   ),
           ),
         ],
-      ),
-    );
+      );
   }
 }
 

@@ -10,49 +10,21 @@ class ProvidersScreen extends StatefulWidget {
 }
 
 class _ProvidersScreenState extends State<ProvidersScreen> {
-  bool _isLoading = true;
-  List<DataProvider> _providers = [];
-  String? _errorMessage;
+  final _ctrl = AsyncViewController();
   String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProviders();
+  Future<List<DataProvider>> _load() {
+    final tenantId = tenantService.currentTenantId;
+    if (tenantId != null) {
+      dataProviderService.setTenant(tenantId);
+    }
+    return dataProviderService.getAll();
   }
 
-  Future<void> _loadProviders() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final tenantId = tenantService.currentTenantId;
-      if (tenantId != null) {
-        dataProviderService.setTenant(tenantId);
-      }
-
-      final providers = await dataProviderService.getAll();
-      if (mounted) {
-        setState(() => _providers = providers);
-      }
-    } catch (e) {
-      Logger.error('Failed to load providers', e);
-      if (mounted) {
-        setState(() => _errorMessage = sl<LocalizationService>().translate('provider.load_failed'));
-      }
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  List<DataProvider> get _filteredProviders {
-    if (_searchQuery.isEmpty) return _providers;
+  List<DataProvider> _filtered(List<DataProvider> providers) {
+    if (_searchQuery.isEmpty) return providers;
     final query = _searchQuery.toLowerCase();
-    return _providers.where((p) =>
+    return providers.where((p) =>
         p.name.toLowerCase().contains(query) ||
         (p.ip?.toLowerCase().contains(query) ?? false) ||
         (p.hostname?.toLowerCase().contains(query) ?? false) ||
@@ -67,7 +39,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
       actions: [
         AppIconButton(
           icon: Icons.refresh,
-          onPressed: _loadProviders,
+          onPressed: _ctrl.reload,
         ),
       ],
       child: Column(
@@ -81,36 +53,30 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
             ),
           ),
 
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: AsyncView<List<DataProvider>>(
+              controller: _ctrl,
+              load: _load,
+              errorFallback:
+                  sl<LocalizationService>().translate('provider.load_failed'),
+              isEmpty: (providers) => providers.isEmpty,
+              emptyBuilder: (context) => AppEmptyState(
+                icon: Icons.storage,
+                title: sl<LocalizationService>().translate('provider.not_found'),
+                message: sl<LocalizationService>().translate('provider.empty_message'),
+              ),
+              builder: (context, providers) => _content(context, providers),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-
-    if (_errorMessage != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
-        message: _errorMessage!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadProviders,
-      );
-    }
-
-    final filtered = _filteredProviders;
+  Widget _content(BuildContext context, List<DataProvider> providers) {
+    final filtered = _filtered(providers);
 
     if (filtered.isEmpty) {
-      if (_providers.isEmpty) {
-        return AppEmptyState(
-          icon: Icons.storage,
-          title: sl<LocalizationService>().translate('provider.not_found'),
-          message: sl<LocalizationService>().translate('provider.empty_message'),
-        );
-      }
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -123,20 +89,17 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadProviders,
-      child: ListView.separated(
-        padding: AppSpacing.screenPadding,
-        itemCount: filtered.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final provider = filtered[index];
-          return _ProviderCard(
-            provider: provider,
-            onTap: () => _showProviderDetail(provider),
-          );
-        },
-      ),
+    return ListView.separated(
+      padding: AppSpacing.screenPadding,
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        final provider = filtered[index];
+        return _ProviderCard(
+          provider: provider,
+          onTap: () => _showProviderDetail(provider),
+        );
+      },
     );
   }
 

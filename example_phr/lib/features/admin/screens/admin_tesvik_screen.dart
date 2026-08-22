@@ -19,39 +19,7 @@ class AdminTesvikScreen extends StatefulWidget {
 }
 
 class _AdminTesvikScreenState extends State<AdminTesvikScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<TesvikAccrualRow> _rows = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminTesvikKvkkService.tesvikRecords();
-      if (mounted) {
-        setState(() {
-          _rows = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminTesvikScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -60,45 +28,26 @@ class _AdminTesvikScreenState extends State<AdminTesvikScreen> {
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<TesvikAccrualRow>>(
+        controller: _ctrl,
+        load: () => adminTesvikKvkkService.tesvikRecords(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (rows) => rows.isEmpty,
+        emptyIcon: Icons.savings_outlined,
+        emptyTitle: essT('tesvik.empty', 'Teşvik kaydı bulunamadı'),
+        builder: (context, rows) => _content(context, rows),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_rows.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.savings_outlined,
-                title: essT('tesvik.empty', 'Teşvik kaydı bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<TesvikAccrualRow> rows) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _rows.length,
+      itemCount: rows.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _TesvikCard(row: _rows[i]),
+      itemBuilder: (_, i) => _TesvikCard(row: rows[i]),
     );
   }
 }

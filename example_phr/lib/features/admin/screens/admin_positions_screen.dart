@@ -16,39 +16,7 @@ class AdminPositionsScreen extends StatefulWidget {
 }
 
 class _AdminPositionsScreenState extends State<AdminPositionsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<AdminPosition> _positions = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminOrgService.positions();
-      if (mounted) {
-        setState(() {
-          _positions = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminPositionsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -56,45 +24,26 @@ class _AdminPositionsScreenState extends State<AdminPositionsScreen> {
       title: essT('hr.positions.title', 'Pozisyonlar'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<AdminPosition>>(
+        controller: _ctrl,
+        load: () => adminOrgService.positions(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (positions) => positions.isEmpty,
+        emptyIcon: Icons.badge_outlined,
+        emptyTitle: essT('hr.positions.empty', 'Pozisyon bulunamadı'),
+        builder: (context, positions) => _content(context, positions),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_positions.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.badge_outlined,
-                title: essT('hr.positions.empty', 'Pozisyon bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<AdminPosition> positions) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _positions.length,
+      itemCount: positions.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _PositionCard(position: _positions[i]),
+      itemBuilder: (_, i) => _PositionCard(position: positions[i]),
     );
   }
 }

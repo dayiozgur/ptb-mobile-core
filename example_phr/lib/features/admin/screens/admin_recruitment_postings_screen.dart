@@ -20,39 +20,7 @@ class AdminRecruitmentPostingsScreen extends StatefulWidget {
 
 class _AdminRecruitmentPostingsScreenState
     extends State<AdminRecruitmentPostingsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<JobPostingRow> _postings = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final rows = await adminRecruitmentService.postings();
-      if (mounted) {
-        setState(() {
-          _postings = rows;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('AdminRecruitmentPostingsScreen yükleme hatası', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -61,45 +29,26 @@ class _AdminRecruitmentPostingsScreenState
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      child: AsyncView<List<JobPostingRow>>(
+        controller: _ctrl,
+        load: () => adminRecruitmentService.postings(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        isEmpty: (postings) => postings.isEmpty,
+        emptyIcon: Icons.work_outline,
+        emptyTitle: essT('ats.postings.empty', 'İlan bulunamadı'),
+        builder: (context, postings) => _content(context, postings),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    if (_postings.isEmpty) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: AppEmptyState(
-                icon: Icons.work_outline,
-                title: essT('ats.postings.empty', 'İlan bulunamadı'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _content(BuildContext context, List<JobPostingRow> postings) {
     return ListView.separated(
       padding: AppSpacing.screenPadding,
-      itemCount: _postings.length,
+      itemCount: postings.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _PostingCard(posting: _postings[i]),
+      itemBuilder: (_, i) => _PostingCard(posting: postings[i]),
     );
   }
 }
