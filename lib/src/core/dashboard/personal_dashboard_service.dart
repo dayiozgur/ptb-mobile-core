@@ -245,6 +245,10 @@ class PersonalDashboardService {
       case 'PHR':
       case 'HR':
         return const ['my-dashboard-hr', 'my-dashboard'];
+      case 'CRM':
+        return const ['my-dashboard-crm', 'my-dashboard'];
+      case 'PMP': // PPM platform kodu
+        return const ['my-dashboard-ppm', 'my-dashboard'];
       default:
         return const ['my-dashboard'];
     }
