@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'contacts_service.dart';
+
+/// Satır sonu hızlı-aksiyon (ara/mail): ikon + açılacak uri şeması.
+class _ActionSpec {
+  final IconData icon;
+  final String uri;
+  const _ActionSpec(this.icon, this.uri);
+}
 
 /// CRM **Kişi detayı** — bilgi kartı + aktivite feed'i (`fn_crm_activity_feed`)
 /// + "Aktivite logla" hızlı-aksiyonu (`fn_crm_log_activity`).
@@ -118,9 +126,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             ],
             const SizedBox(height: AppSpacing.sm),
             if ((c.email ?? '').isNotEmpty)
-              _row(Icons.email_outlined, c.email!),
+              _row(Icons.email_outlined, c.email!,
+                  action: _ActionSpec(Icons.send_outlined, 'mailto:${c.email!.trim()}')),
             if ((c.phone ?? '').isNotEmpty)
-              _row(Icons.phone_outlined, c.phone!),
+              _row(Icons.phone_outlined, c.phone!,
+                  action: _ActionSpec(Icons.call_outlined, 'tel:${c.phone!.trim()}')),
             if ((c.notes ?? '').isNotEmpty)
               _row(Icons.notes_outlined, c.notes!),
           ],
@@ -129,16 +139,41 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     );
   }
 
-  Widget _row(IconData icon, String text) => Padding(
+  Widget _row(IconData icon, String text, {_ActionSpec? action}) => Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Row(
           children: [
             Icon(icon, size: 15, color: AppColors.tertiaryLabel(context)),
             const SizedBox(width: 8),
             Expanded(child: Text(text, style: AppTypography.footnote)),
+            if (action != null)
+              IconButton(
+                icon: Icon(action.icon, size: 18, color: AppColors.primary),
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: EdgeInsets.zero,
+                tooltip: text,
+                onPressed: () => _launch(action.uri),
+              ),
           ],
         ),
       );
+
+  Future<void> _launch(String uri) async {
+    final u = Uri.parse(uri);
+    try {
+      final ok = await launchUrl(u, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Uygulama açılamadı')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Uygulama açılamadı')));
+      }
+    }
+  }
 
   Widget _activityTile(CrmActivity a) => Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
