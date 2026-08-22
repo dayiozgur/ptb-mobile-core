@@ -371,6 +371,60 @@ class HrEssService {
   // ATTENDANCE (PDKS)
   // ============================================
 
+  /// **Manuel PDKS giriş/çıkış** — bugünün `attendance_records` satırını bulur:
+  /// yoksa `entry_time` yazar (giriş), varsa+`exit_time` boşsa `exit_time`
+  /// yazar (çıkış). `source='manual'` (RLS own-staff için bunu pin'ler;
+  /// geofence source='geo' SECDEF RPC gerektirir). Geofence kullanılamadığında
+  /// (izin yok/menzil dışı) ESS-fallback.
+  ///
+  /// Döner: `'in'` (giriş) · `'out'` (çıkış) · `'done'` (bugün zaten tamam).
+  Future<String> manualPunch() async {
+    final staffId = await currentStaffId();
+    if (staffId == null) throw Exception('Personel kaydı bulunamadı');
+    final tenantId = _tenant.currentTenantId;
+    final uid = _supabase.auth.currentUser?.id;
+    final now = DateTime.now();
+    final workDate = _fmtDate(now);
+    final nowUtc = now.toUtc().toIso8601String();
+
+    final existing = await _supabase
+        .from('attendance_records')
+        .select('id, entry_time, exit_time')
+        .eq('staff_id', staffId)
+        .eq('work_date', workDate)
+        .maybeSingle();
+
+    if (existing == null) {
+      await _supabase.from('attendance_records').insert({
+        'tenant_id': tenantId,
+        'staff_id': staffId,
+        'work_date': workDate,
+        'entry_time': nowUtc,
+        'source': 'manual',
+        'created_by': uid,
+      });
+      return 'in';
+    }
+    if (existing['entry_time'] == null) {
+      await _supabase.from('attendance_records').update(
+          {'entry_time': nowUtc, 'updated_by': uid}).eq('id', existing['id']);
+      return 'in';
+    }
+    if (existing['exit_time'] == null) {
+      final entry = DateTime.tryParse(existing['entry_time'].toString());
+      final worked = entry != null
+          ? now.toUtc().difference(entry.toUtc()).inMinutes
+          : null;
+      await _supabase.from('attendance_records').update({
+        'exit_time': nowUtc,
+        if (worked != null && worked >= 0) 'worked_minutes': worked,
+        'updated_by': uid,
+      }).eq('id', existing['id']);
+      return 'out';
+    }
+    return 'done';
+  }
+
   /// Puantaj aralığı — `fn_pdks_range(p_tenant, p_staff, p_from, p_to)`.
   Future<List<PdksDay>> pdksRange(DateTime from, DateTime to) async {
     try {

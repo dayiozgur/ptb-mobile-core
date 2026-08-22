@@ -55,6 +55,33 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
     }
   }
 
+  bool _punching = false;
+
+  /// Manuel giriş/çıkış (geofence fallback) — servis in/out/done'ı belirler.
+  Future<void> _manualPunch() async {
+    if (_punching) return;
+    setState(() => _punching = true);
+    try {
+      final r = await hrEssService.manualPunch();
+      if (!mounted) return;
+      final msg = r == 'in'
+          ? essT('hr.pdks.punched_in', 'Giriş kaydedildi ✓')
+          : r == 'out'
+              ? essT('hr.pdks.punched_out', 'Çıkış kaydedildi ✓')
+              : essT('hr.pdks.punch_done', 'Bugün için giriş/çıkış tamamlandı');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
+      await _loadData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('İşlem başarısız')));
+      }
+    } finally {
+      if (mounted) setState(() => _punching = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -74,6 +101,17 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
               padding: EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
               child: GeofenceClockCard(),
+            ),
+            // Manuel giriş/çıkış — geofence kullanılamadığında (izin yok/menzil
+            // dışı) ESS-fallback. source='manual'.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: AppButton(
+                label: essT('hr.pdks.manual_punch', 'Manuel Giriş / Çıkış'),
+                isLoading: _punching,
+                onPressed: _punching ? null : _manualPunch,
+              ),
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(
