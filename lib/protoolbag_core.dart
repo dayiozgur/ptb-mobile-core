@@ -385,6 +385,7 @@ export 'src/presentation/shell/entities/entity_form_screen.dart';
 export 'src/presentation/widgets/feedback/app_loading_indicator.dart';
 export 'src/presentation/widgets/feedback/app_error_view.dart';
 export 'src/presentation/widgets/feedback/app_empty_state.dart';
+export 'src/presentation/widgets/feedback/async_view.dart';
 export 'src/presentation/widgets/feedback/app_badge.dart';
 export 'src/presentation/widgets/feedback/app_snackbar.dart';
 export 'src/presentation/widgets/feedback/notification_badge.dart';

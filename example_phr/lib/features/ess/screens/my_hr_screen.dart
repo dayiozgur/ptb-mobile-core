@@ -19,39 +19,7 @@ class MyHrScreen extends StatefulWidget {
 }
 
 class _MyHrScreenState extends State<MyHrScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  HrSummary? _summary;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final s = await hrProfileService.myHrSummary();
-      if (mounted) {
-        setState(() {
-          _summary = s;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      Logger.error('Failed to load HR summary', e);
-      if (mounted) {
-        setState(() {
-          _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  final _ctrl = AsyncViewController();
 
   void _navTo(String path) {
     Navigator.of(context).push(
@@ -69,26 +37,19 @@ class _MyHrScreenState extends State<MyHrScreen> {
       title: essT('nav.phr_my_hr', 'İK Özetim'),
       onBack: () => context.pop(),
       actions: [
-        AppIconButton(icon: Icons.refresh, onPressed: _load),
+        AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildContent(),
+      // Yükleme/hata/pull-to-refresh çekirdek AsyncView'de (boilerplate dedup).
+      child: AsyncView<HrSummary>(
+        controller: _ctrl,
+        load: () => hrProfileService.myHrSummary(),
+        errorFallback: essT('common.data_load_error', 'Veriler yüklenemedi'),
+        builder: (context, s) => _content(context, s),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(message: _errorMessage!, onRetry: _load),
-      );
-    }
-    final s = _summary ?? const HrSummary();
-
+  Widget _content(BuildContext context, HrSummary s) {
     return ListView(
       padding: AppSpacing.screenPadding,
       children: [
