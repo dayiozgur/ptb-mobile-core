@@ -4,6 +4,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 import '../features/board/ppm_board_screen.dart';
 import '../features/dashboard/ppm_dashboard_screen.dart';
 import '../features/dashboard/ppm_sprint_screen.dart';
+import '../features/worklog/ppm_entity_actions.dart';
 
 /// PPM "İşlerim" kaynağı — `fn_ppm_my_work` satırlarını generic [WorkInboxItem]'a
 /// eşler (bana atanan epic/story/task/sub_task, tüm projeler).
@@ -77,5 +78,6 @@ bool _done = false;
 void registerPpmScreens() {
   if (_done) return;
   ScreenResolver.addResolver(ppmResolve);
+  registerPpmEntityActions(); // entity_detail'e PPM efor-kaydı aksiyonu
   _done = true;
 }
