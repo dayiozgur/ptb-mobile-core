@@ -543,6 +543,15 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
 
   Widget _buildField(BuildContext context, FormField field) {
     final widgetImpl = resolveFieldWidget(field.fieldType);
+    // viewMode (detay): basit alanları grey input-kutusu yerine temiz
+    // "etiket + değer" olarak göster (input-benzeri gri yüzey kaybolur).
+    // Karmaşık/görsel tipler (imza, dosya, resim, konum, rating, qr, barkod,
+    // zengin-metin) ve display-only tipler kendi widget'ıyla render edilir.
+    if (widget.viewMode &&
+        !widgetImpl.isDisplayOnly &&
+        _readOnlySimpleTypes.contains(field.fieldType)) {
+      return _buildReadOnlyField(context, field);
+    }
     return widgetImpl.build(
       context,
       FieldRenderContext(
@@ -554,5 +563,83 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
         formValues: _values,
       ),
     );
+  }
+
+  static const _readOnlySimpleTypes = {
+    'text', 'textarea', 'email', 'phone', 'number', 'currency',
+    'percentage', 'date', 'datetime', 'select', 'radio', 'multiselect',
+    'checkbox', 'lookup', 'url',
+  };
+
+  /// Salt-okunur alan gösterimi — etiket (küçük/ikincil) + değer (gövde),
+  /// altında ince ayraç. Beyaz kart üstünde temiz okunur; gri input yok.
+  Widget _buildReadOnlyField(BuildContext context, FormField field) {
+    final display = _readOnlyDisplayValue(field, _values[field.code]);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            field.label,
+            style: AppTypography.caption1.copyWith(
+              color: AppColors.secondaryLabel(context),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            display.isEmpty ? '—' : display,
+            style: AppTypography.body.copyWith(
+              color: AppColors.primaryLabel(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _readOnlyDisplayValue(FormField field, dynamic value) {
+    if (value == null) return '';
+    switch (field.fieldType) {
+      case 'checkbox':
+        return value == true ? 'Evet' : 'Hayır';
+      case 'select':
+      case 'radio':
+        return _optionLabel(field, value) ?? value.toString();
+      case 'multiselect':
+        if (value is List) {
+          return value
+              .map((v) => _optionLabel(field, v) ?? v.toString())
+              .join(', ');
+        }
+        return value.toString();
+      case 'lookup':
+        if (value is Map) {
+          final d = value['displayValue'] ?? value['label'] ?? value['name'];
+          if (d != null && d.toString().trim().isNotEmpty) return d.toString();
+        }
+        return value.toString();
+      case 'date':
+      case 'datetime':
+        final d = DateTime.tryParse(value.toString());
+        if (d == null) return value.toString();
+        final t = AppClock.toTenant(d);
+        final base =
+            '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')}.${t.year}';
+        return field.fieldType == 'datetime'
+            ? '$base ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}'
+            : base;
+      default:
+        return value.toString();
+    }
+  }
+
+  String? _optionLabel(FormField field, dynamic value) {
+    for (final o in field.options.items) {
+      if (o.value == value || o.value?.toString() == value?.toString()) {
+        return o.label;
+      }
+    }
+    return null;
   }
 }
