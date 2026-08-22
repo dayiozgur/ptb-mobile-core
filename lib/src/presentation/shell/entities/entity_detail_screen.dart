@@ -402,46 +402,9 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     );
   }
 
-  /// Atanan kişi avatarı — 20px. Ham path signed-URL'e çevrilir (raw = 403);
-  /// yoksa/başarısızsa baş-harf rozeti. Web foto davranışıyla tutarlı.
-  Widget _assigneeAvatar(String? rawPath, String name) {
-    final initial =
-        (name.trim().isNotEmpty ? name.trim().characters.first : '?')
-            .toUpperCase();
-    Widget fallback() => CircleAvatar(
-          radius: 10,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-          child: Text(
-            initial,
-            style: AppTypography.caption2.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        );
-
-    if (rawPath == null || rawPath.isEmpty) return fallback();
-
-    return FutureBuilder<String?>(
-      future: sl<FileStorageService>().getAvatarUrl(rawPath),
-      builder: (context, snap) {
-        final url = snap.data;
-        if (url == null || url.isEmpty) return fallback();
-        return CircleAvatar(
-          radius: 10,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-          foregroundImage: NetworkImage(url),
-          child: Text(
-            initial,
-            style: AppTypography.caption2.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        );
-      },
-    );
-  }
+  /// Atanan kişi avatarı — 20px, çekirdek [AppStorageAvatar].
+  Widget _assigneeAvatar(String? rawPath, String name) =>
+      AppStorageAvatar(rawPath: rawPath, name: name, radius: 10);
 
   AppBadgeVariant _statusVariant(String status) {
     switch (status.toLowerCase()) {

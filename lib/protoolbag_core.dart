@@ -414,5 +414,6 @@ export 'src/presentation/widgets/map/geofence_circle.dart';
 
 // Presentation - Widgets - Display
 export 'src/presentation/widgets/display/app_avatar.dart';
+export 'src/presentation/widgets/display/app_storage_avatar.dart';
 export 'src/presentation/widgets/display/app_progress_bar.dart';
 export 'src/presentation/widgets/display/app_chip.dart';

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/reporting/aggregate_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../dyn_widgets/dyn_widgets.dart';
@@ -153,30 +154,16 @@ class _KpiTile extends StatelessWidget {
   String _format(dynamic v) {
     final n = _toNum(v);
     if (n == null) return v?.toString() ?? '—';
-    final fixed = n.toStringAsFixed(spec.decimals);
-    final grouped = _group(fixed);
-    return '${spec.prefix ?? ''}$grouped${spec.suffix ?? ''}';
+    // Çekirdek Formatters (intl tr_TR) — elle binlik-ayraç yerine tek kaynak.
+    return '${spec.prefix ?? ''}'
+        '${Formatters.number(n, decimals: spec.decimals)}'
+        '${spec.suffix ?? ''}';
   }
 
   num? _toNum(dynamic v) {
     if (v is num) return v;
     if (v is String) return num.tryParse(v);
     return null;
-  }
-
-  /// Binlik ayraç (tr): 1234567 → 1.234.567 (ondalık kısmı korunur).
-  String _group(String fixed) {
-    final parts = fixed.split('.');
-    final intPart = parts[0];
-    final neg = intPart.startsWith('-');
-    final digits = neg ? intPart.substring(1) : intPart;
-    final buf = StringBuffer();
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
-      buf.write(digits[i]);
-    }
-    final grouped = (neg ? '-' : '') + buf.toString();
-    return parts.length > 1 ? '$grouped,${parts[1]}' : grouped;
   }
 }
 

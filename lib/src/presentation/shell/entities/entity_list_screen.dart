@@ -316,38 +316,9 @@ class _EntityCard extends StatelessWidget {
     );
   }
 
-  /// Liste satırı için 14px atanan-avatarı — signed-URL (raw=403) + baş-harf
-  /// fallback. Path yoksa doğrudan baş-harf rozeti.
-  Widget _miniAvatar(BuildContext context, String? rawPath, String name) {
-    final initial =
-        (name.trim().isNotEmpty ? name.trim().characters.first : '?')
-            .toUpperCase();
-    Widget fallback() => CircleAvatar(
-          radius: 7,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-          child: Text(
-            initial,
-            style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
-          ),
-        );
-    if (rawPath == null || rawPath.isEmpty) return fallback();
-    return FutureBuilder<String?>(
-      future: sl<FileStorageService>().getAvatarUrl(rawPath),
-      builder: (context, snap) {
-        final url = snap.data;
-        if (url == null || url.isEmpty) return fallback();
-        return CircleAvatar(
-          radius: 7,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-          foregroundImage: NetworkImage(url),
-        );
-      },
-    );
-  }
+  /// Liste satırı için 14px atanan-avatarı — çekirdek [AppStorageAvatar].
+  Widget _miniAvatar(BuildContext context, String? rawPath, String name) =>
+      AppStorageAvatar(rawPath: rawPath, name: name, radius: 7);
 
   AppBadgeVariant _statusVariant(String status) {
     switch (status.toLowerCase()) {

@@ -275,7 +275,7 @@ class _AccountDealsCardState extends State<_AccountDealsCard> {
 
   Widget _dealRow(BuildContext context, Map<String, dynamic> d) {
     final amount = d['amount'];
-    final amtStr = amount is num ? '₺${_group(amount)}' : '';
+    final amtStr = amount is num ? '₺${Formatters.number(amount)}' : '';
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
@@ -305,15 +305,6 @@ class _AccountDealsCardState extends State<_AccountDealsCard> {
     );
   }
 
-  String _group(num v) {
-    final s = v.toStringAsFixed(0);
-    final buf = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
 }
 
 /// "Aktivite logla" alt-sayfası.
