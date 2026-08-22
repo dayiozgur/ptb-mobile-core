@@ -458,23 +458,32 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
         .toList();
     if (visibleFields.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (section.title.trim().isNotEmpty)
-          AppSectionHeader(
-            title: section.title,
-            subtitle: (section.description != null &&
-                    section.description!.trim().isNotEmpty)
-                ? section.description
-                : null,
+    // Her section beyaz bir yüzeye (card) oturur — aksi halde alanlar gri sayfa
+    // zemininde kutu/yüzey olmadan "kayboluyordu". View + edit için evrensel.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (section.title.trim().isNotEmpty) ...[
+                AppSectionHeader(
+                  title: section.title,
+                  subtitle: (section.description != null &&
+                          section.description!.trim().isNotEmpty)
+                      ? section.description
+                      : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              _buildFieldGrid(context, visibleFields),
+            ],
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: _buildFieldGrid(context, visibleFields),
         ),
-      ],
+      ),
     );
   }
 
