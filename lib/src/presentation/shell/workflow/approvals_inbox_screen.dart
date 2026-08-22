@@ -27,14 +27,30 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
   /// Karar verilirken meşgul olan onayın id'si (aynı anda tek karar).
   String? _busyId;
 
+  /// Başka bir cihaz/kullanıcı onay ekleyip/karara bağladığında liste kendini
+  /// sessizce tazeler (debounce'lu).
+  final _rt = RealtimeRefresher();
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _rt.start(
+      table: 'workflow_approvals',
+      onChange: () {
+        if (mounted) _loadData(silent: true);
+      },
+    );
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _rt.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
     // pendingApprovals() UI'a asla fırlatmaz — hata/boş durumda [] döner.
     final rows = await workflowService.pendingApprovals();
     if (!mounted) return;

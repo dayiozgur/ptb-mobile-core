@@ -26,15 +26,31 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
   String? _error;
   List<GenericEntity> _projects = [];
 
+  /// Başka cihaz/kullanıcı proje/görev ekleyip taşıdığında board kendini
+  /// sessizce tazeler (debounce'lu).
+  final _rt = RealtimeRefresher();
+
   @override
   void initState() {
     super.initState();
     _load();
+    _rt.start(
+      table: 'form_submissions',
+      onChange: () {
+        if (mounted) _load(silent: true);
+      },
+    );
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _rt.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
     setState(() {
-      _loading = true;
+      if (!silent) _loading = true;
       _error = null;
     });
     try {
