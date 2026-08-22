@@ -22,22 +22,31 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
 
   bool _loading = true;
   List<Contact> _contacts = [];
+  final _rt = RealtimeRefresher();
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Canlı-yenileme: contacts değişince listeyi sessizce tazele (arama korunur).
+    _rt.start(
+      table: 'contacts',
+      onChange: () {
+        if (mounted) _load(_searchCtrl.text, true);
+      },
+    );
   }
 
   @override
   void dispose() {
+    _rt.dispose();
     _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _load([String? query]) async {
-    setState(() => _loading = true);
+  Future<void> _load([String? query, bool silent = false]) async {
+    if (!silent) setState(() => _loading = true);
     final list = await _svc.list(query: query);
     if (mounted) {
       setState(() {

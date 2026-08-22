@@ -30,17 +30,34 @@ class _EntityListScreenState extends State<EntityListScreen> {
   List<GenericEntity> _entities = [];
   String _search = '';
 
+  final _rt = RealtimeRefresher();
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Canlı-yenileme: form_submissions değişince listeyi sessizce tazele.
+    _rt.start(
+      table: 'form_submissions',
+      onChange: () {
+        if (mounted) _loadData(silent: true);
+      },
+    );
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  @override
+  void dispose() {
+    _rt.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final config = await sl<EntityConfigService>().getByCode(widget.typeCode);

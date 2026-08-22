@@ -20,15 +20,29 @@ class WorkInboxScreen extends StatefulWidget {
 class _WorkInboxScreenState extends State<WorkInboxScreen> {
   bool _loading = true;
   List<WorkInboxItem> _items = [];
+  final _rt = RealtimeRefresher();
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Canlı-yenileme: iş kayıtları (form_submissions) değişince sessizce tazele.
+    _rt.start(
+      table: 'form_submissions',
+      onChange: () {
+        if (mounted) _load(silent: true);
+      },
+    );
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _rt.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final items = await sl<WorkInboxService>().load(widget.source);
     if (mounted) {
       setState(() {

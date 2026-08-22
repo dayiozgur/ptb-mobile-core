@@ -201,8 +201,14 @@ class RealtimeService {
     void Function(T? oldRecord)? onDelete,
     void Function(RealtimeChange<T> change)? onChange,
     void Function(String error)? onError,
+    String? channelKey,
   }) {
-    final subscriptionId = _generateSubscriptionId(table, schema, filter);
+    // [channelKey] verilirse abonelik BENZERSİZ olur (dedup atlanır) — aynı
+    // tabloyu izleyen birden fazla ekran (IndexedStack) kendi bağımsız
+    // channel'ına sahip olur; biri dispose edince diğeri etkilenmez.
+    final suffix = channelKey != null ? ':$channelKey' : '';
+    final subscriptionId =
+        _generateSubscriptionId(table, schema, filter) + suffix;
 
     // Mevcut abonelik varsa döndür
     if (_subscriptions.containsKey(subscriptionId)) {
@@ -211,7 +217,7 @@ class RealtimeService {
     }
 
     // Channel oluştur
-    final channelName = 'realtime:$schema:$table:${filter ?? 'all'}';
+    final channelName = 'realtime:$schema:$table:${filter ?? 'all'}$suffix';
     final channel = _supabase.channel(channelName);
 
     // Event türünü belirle
