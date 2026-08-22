@@ -274,11 +274,7 @@ class _EntityCard extends StatelessWidget {
                     Row(
                       children: [
                         if (assignee != null && assignee.isNotEmpty) ...[
-                          Icon(
-                            Icons.person_outline,
-                            size: 14,
-                            color: AppColors.tertiaryLabel(context),
-                          ),
+                          _miniAvatar(context, entity.assignedToAvatar, assignee),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -317,6 +313,39 @@ class _EntityCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Liste satırı için 14px atanan-avatarı — signed-URL (raw=403) + baş-harf
+  /// fallback. Path yoksa doğrudan baş-harf rozeti.
+  Widget _miniAvatar(BuildContext context, String? rawPath, String name) {
+    final initial =
+        (name.trim().isNotEmpty ? name.trim().characters.first : '?')
+            .toUpperCase();
+    Widget fallback() => CircleAvatar(
+          radius: 7,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+          child: Text(
+            initial,
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+        );
+    if (rawPath == null || rawPath.isEmpty) return fallback();
+    return FutureBuilder<String?>(
+      future: sl<FileStorageService>().getAvatarUrl(rawPath),
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null || url.isEmpty) return fallback();
+        return CircleAvatar(
+          radius: 7,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+          foregroundImage: NetworkImage(url),
+        );
+      },
     );
   }
 

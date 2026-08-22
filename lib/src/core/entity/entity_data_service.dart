@@ -90,13 +90,25 @@ class EntityDataService {
 
       Logger.debug('listEntities(${config.code}) returned ${rows.length} rows');
 
-      final names = await _resolveAssigneeNames(rows);
+      // Atanan id: base assigned_to → yoksa metadata.owner lookup (CRM'de atanan
+      // base kolonda değil). Tek toplu sorguyla ad + avatar çöz (liste rozetleri).
+      final ids = rows
+          .map(_assigneeIdOfRow)
+          .whereType<String>()
+          .toSet()
+          .toList();
+      final profiles = await _resolveAssigneeProfiles(ids);
 
       return rows.map((row) {
-        final assignee = row['assigned_to'] as String?;
+        final aid = _assigneeIdOfRow(row);
+        final p = aid != null ? profiles[aid] : null;
+        final meta = row['metadata'];
+        final name = p?.name ??
+            (meta is Map ? _ownerNameFrom(meta['owner']) : null);
         return GenericEntity.fromSubmission(
           row,
-          assignedToName: assignee != null ? names[assignee] : null,
+          assignedToName: name,
+          assignedToAvatar: p?.avatar,
         );
       }).toList();
     } catch (e) {
@@ -676,6 +688,18 @@ class EntityDataService {
       Logger.warning('Failed to resolve assignee profiles: $e');
       return {};
     }
+  }
+
+  /// Bir form_submissions satırının atanan profil id'si: base `assigned_to` →
+  /// yoksa `metadata.owner`/`metadata.assignee` lookup (CRM).
+  String? _assigneeIdOfRow(Map<String, dynamic> row) {
+    final base = row['assigned_to'] as String?;
+    if (base != null && base.isNotEmpty) return base;
+    final meta = row['metadata'];
+    if (meta is Map) {
+      return _ownerIdFrom(meta['owner']) ?? _ownerIdFrom(meta['assignee']);
+    }
+    return null;
   }
 
   /// Bir lookup/owner değerinden profil id'sini çıkar.

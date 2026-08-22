@@ -948,6 +948,11 @@ class FileStorageService {
   ///
   /// [raw] `profiles.avatar_url` değeri. null/boş → null; tam http(s) URL ya da
   /// storage-path olmayan bir değer → aynen döner.
+  /// Avatar signed-URL oturum-içi memo cache (raw path → url + üretim zamanı).
+  /// Liste ekranlarında aynı kişi onlarca satırda tekrar eder; her satır için
+  /// yeniden imzalamayı önler. ~50dk sonra yeniden imzalanır (1h expiry öncesi).
+  final Map<String, ({String url, DateTime at})> _avatarUrlCache = {};
+
   Future<String?> getAvatarUrl(
     String? raw, {
     Duration expiry = signedUrlExpiry,
@@ -956,11 +961,22 @@ class FileStorageService {
     // Storage path değilse (tam URL ya da düz değer) olduğu gibi döndür — web
     // isStoragePath ile aynı: PLATFORM/(<tenant>/)?(protected|assets|private)/…
     if (!_isStoragePath(raw)) return raw;
-    return getSignedUrl(
+
+    final cached = _avatarUrlCache[raw];
+    if (cached != null &&
+        DateTime.now().difference(cached.at) < const Duration(minutes: 50)) {
+      return cached.url;
+    }
+
+    final signed = await getSignedUrl(
       bucket: StorageBuckets.platformProtected,
       path: raw,
       expiry: expiry,
     );
+    if (signed != null && signed.isNotEmpty) {
+      _avatarUrlCache[raw] = (url: signed, at: DateTime.now());
+    }
+    return signed;
   }
 
   /// Web `StorageService.isStoragePath` ile birebir: değer platform-protected
