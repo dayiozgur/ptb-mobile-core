@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../features/calendar/crm_agenda_screen.dart';
 import '../features/contacts/contacts_list_screen.dart';
 import '../features/dashboard/crm_dashboard_screen.dart';
 
@@ -44,6 +45,9 @@ Widget? crmResolve(MenuItem item) {
   }
   if (p == '/crm/dashboard' || p == '/dashboard' || p == '/crm/reports') {
     return const CrmDashboardScreen();
+  }
+  if (p == '/crm/calendar' || p == '/crm/agenda') {
+    return const CrmAgendaScreen();
   }
   return null;
 }
