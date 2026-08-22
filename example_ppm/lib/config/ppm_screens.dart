@@ -3,6 +3,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../features/board/ppm_board_screen.dart';
 import '../features/dashboard/ppm_dashboard_screen.dart';
+import '../features/dashboard/ppm_sprint_screen.dart';
 
 /// PPM "İşlerim" kaynağı — `fn_ppm_my_work` satırlarını generic [WorkInboxItem]'a
 /// eşler (bana atanan epic/story/task/sub_task, tüm projeler).
@@ -62,6 +63,10 @@ Widget? ppmResolve(MenuItem item) {
   if (p == '/projects/summary' || p == '/ppm/summary') {
     // Proje seç → per-proje MS-Project tarzı özet (fn_ppm_project_overview).
     return const PpmBoardScreen(target: PpmScopeTarget.summary);
+  }
+  if (p == '/projects/sprints' || p == '/ppm/sprints') {
+    // Aktif sprint burndown + ekip kapasitesi.
+    return const PpmSprintScreen();
   }
   return null;
 }
