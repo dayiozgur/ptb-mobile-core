@@ -64,6 +64,9 @@ class _KpiRowCardState extends State<KpiRowCard> {
 
   Map<String, dynamic> _resolveObject(dynamic raw) {
     dynamic node = raw;
+    // TABLE dönen rollup → satır listesi; tek-satır özetlerde ilk satırı
+    // nesne olarak al (json-nesne dönenler zaten Map).
+    if (node is List) node = node.isNotEmpty ? node.first : null;
     final path = widget.objectPath;
     if (node is Map && path != null && path.isNotEmpty) {
       for (final seg in path.split('.')) {

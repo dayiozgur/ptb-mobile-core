@@ -267,6 +267,13 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // Alarm Analitiği — paylaşılan çekirdek grafik kartları
+              const AppSectionHeader(title: 'Alarm Analitiği'),
+              const SizedBox(height: AppSpacing.sm),
+              _buildAlarmCharts(),
+
+              const SizedBox(height: AppSpacing.lg),
+
               // Son Alarmlar
               AppSectionHeader(
                 title:
@@ -298,6 +305,61 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Alarm analitiği grafikleri (paylaşılan çekirdek AggregateChartCard).
+  /// GERÇEK VERİ NOTU: alarmlar yıla yayılı → 365 günlük pencere; dar pencere
+  /// (30g) canlı veride boş görünür. Veri yoksa kartlar dürüst boş-durum.
+  Widget _buildAlarmCharts() {
+    final tenantId = sl<TenantService>().currentTenantId;
+    final now = DateTime.now();
+    final from = now.subtract(const Duration(days: 365)).toIso8601String();
+    final to = now.toIso8601String();
+    final base = <String, dynamic>{
+      'p_tenant_id': tenantId,
+      'p_from': from,
+      'p_to': to,
+    };
+    return Column(
+      children: [
+        AggregateChartCard(
+          title: 'Önceliğe Göre Alarm',
+          rpc: 'fn_pms_alarm_priority_breakdown',
+          params: base,
+          chartKind: 'donut_chart',
+          visualConfig: const {
+            'labelField': 'priority_name',
+            'valueFields': ['cnt'],
+          },
+          height: 220,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AggregateChartCard(
+          title: 'Alarm Trendi',
+          subtitle: 'Haftalık — son 1 yıl',
+          rpc: 'fn_pms_alarm_trend',
+          params: {...base, 'p_bucket': 'week'},
+          chartKind: 'line_chart',
+          visualConfig: const {
+            'labelField': 'period',
+            'valueFields': ['cnt', 'critical'],
+          },
+          height: 220,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AggregateChartCard(
+          title: 'Sahaya Göre Alarm',
+          rpc: 'fn_pms_alarm_by_dimension',
+          params: {...base, 'p_dim': 'site'},
+          chartKind: 'bar_chart',
+          visualConfig: const {
+            'labelField': 'label',
+            'valueFields': ['cnt'],
+          },
+          height: 220,
+        ),
+      ],
     );
   }
 
