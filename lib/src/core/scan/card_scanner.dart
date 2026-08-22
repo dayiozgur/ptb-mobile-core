@@ -13,6 +13,7 @@ class CardScanResult {
   final String? email;
   final String? phone;
   final String? title;
+  final String? company;
 
   /// OCR'ın okuduğu ham metin (kullanıcı gözden geçirsin / hiçbir şey
   /// çıkmazsa görüp elle girsin diye).
@@ -24,6 +25,7 @@ class CardScanResult {
     this.email,
     this.phone,
     this.title,
+    this.company,
     this.rawText = '',
   });
 
@@ -98,6 +100,7 @@ class CardScanner {
     String? email;
     String? phone;
     String? title;
+    String? company;
     final nameCandidates = <String>[];
 
     for (final line in lines) {
@@ -120,6 +123,13 @@ class CardScanner {
 
       if (isTitle && title == null && !hasEmail && !hasPhone) {
         title = line;
+        continue;
+      }
+
+      // Firma adayı: şirket-anahtar kelimesi içeren ilk satır (e-posta/telefon/
+      // url değil). Ör. "Acme Teknoloji A.Ş.", "Global Solutions Ltd".
+      if (isCompany && company == null && !hasEmail && !hasPhone && !isUrl) {
+        company = line;
         continue;
       }
 
@@ -159,6 +169,7 @@ class CardScanner {
       email: email,
       phone: phone,
       title: title,
+      company: company,
       rawText: raw,
     );
   }

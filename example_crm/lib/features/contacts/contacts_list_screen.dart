@@ -246,6 +246,8 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   late final _last = TextEditingController(text: widget.initial?.lastName ?? '');
   late final _email = TextEditingController(text: widget.initial?.email ?? '');
   late final _phone = TextEditingController(text: widget.initial?.phone ?? '');
+  late final _title = TextEditingController(text: widget.initial?.title ?? '');
+  late final _company = TextEditingController(text: widget.initial?.company ?? '');
   bool _saving = false;
 
   @override
@@ -254,6 +256,8 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
     _last.dispose();
     _email.dispose();
     _phone.dispose();
+    _title.dispose();
+    _company.dispose();
     super.dispose();
   }
 
@@ -265,7 +269,8 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
       lastName: _last.text,
       email: _email.text,
       phone: _phone.text,
-      title: widget.initial?.title,
+      title: _title.text,
+      company: _company.text,
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -327,6 +332,20 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                   labelText: 'Telefon',
+                  isDense: true,
+                  border: OutlineInputBorder())),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+              controller: _title,
+              decoration: const InputDecoration(
+                  labelText: 'Pozisyon / Unvan',
+                  isDense: true,
+                  border: OutlineInputBorder())),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+              controller: _company,
+              decoration: const InputDecoration(
+                  labelText: 'Firma',
                   isDense: true,
                   border: OutlineInputBorder())),
           const SizedBox(height: AppSpacing.md),

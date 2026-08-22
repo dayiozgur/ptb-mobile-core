@@ -132,9 +132,18 @@ class ContactsService {
     String? email,
     String? phone,
     String? title,
+    String? company,
+    String? notes,
   }) async {
     try {
       final uid = _sb.auth.currentUser?.id;
+      // Firma serbest-metin (kartvizitten) — contacts'ta company_id FK var ama
+      // serbest-metin kolonu yok → notes'a "Firma: X" olarak yaz (kaybolmasın).
+      final noteParts = <String>[
+        if (company != null && company.trim().isNotEmpty)
+          'Firma: ${company.trim()}',
+        if (notes != null && notes.trim().isNotEmpty) notes.trim(),
+      ];
       final res = await _sb
           .from('contacts')
           .insert({
@@ -147,6 +156,7 @@ class ContactsService {
             if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
             if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
             if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+            if (noteParts.isNotEmpty) 'notes': noteParts.join('\n'),
             // Tenant-geneli görünür: aksi halde DB default 'organization' +
             // select-RLS ('tenant' şubesi) yüzünden manager-altı roller / null
             // org'da oluşturulan kişi GÖRÜNMÜYORDU.

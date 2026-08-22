@@ -18,6 +18,7 @@ www.acme.com
       expect(r.firstName, 'Ahmet');
       expect(r.lastName, 'Yılmaz');
       expect(r.title, contains('Müdür'));
+      expect(r.company, contains('Acme'));
       expect(r.isEmpty, isFalse);
     });
 
