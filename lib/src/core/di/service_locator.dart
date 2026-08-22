@@ -6,8 +6,10 @@ import '../api/api_client.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
+import '../collaboration/comments_service.dart';
 import '../notification/local_notification_service.dart';
 import '../notification/notification_service.dart';
+import '../work/work_inbox_service.dart';
 import '../permission/permission_service.dart';
 import '../push/push_notification_service.dart';
 import '../realtime/realtime_service.dart';
@@ -648,6 +650,12 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<LocalNotificationService>(
     () => LocalNotificationService(),
+  );
+  sl.registerLazySingleton<CommentsService>(
+    () => CommentsService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<WorkInboxService>(
+    () => WorkInboxService(supabase: sl<SupabaseClient>()),
   );
   sl.registerLazySingleton<AccountService>(
     () => AccountService(supabase: sl<SupabaseClient>()),

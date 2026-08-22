@@ -84,6 +84,10 @@ export 'src/core/activity/activity_service.dart';
 // Core - Notification
 export 'src/core/notification/local_notification_service.dart';
 export 'src/core/time/app_clock.dart';
+export 'src/core/collaboration/comments_service.dart';
+export 'src/core/work/work_inbox_service.dart';
+export 'src/presentation/shell/collaboration/comments_thread.dart';
+export 'src/presentation/shell/work/work_inbox_screen.dart';
 export 'src/core/notification/notification_model.dart';
 export 'src/core/notification/notification_service.dart';
 

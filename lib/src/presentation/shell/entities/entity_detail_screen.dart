@@ -130,6 +130,11 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
       title: _title,
       onBack: () => context.pop(),
       actions: [
+        if (!_isLoading && _errorMessage == null && _entity != null)
+          AppIconButton(
+            icon: Icons.swap_horiz,
+            onPressed: _changeStatus,
+          ),
         if (!_isLoading && _errorMessage == null && _template != null)
           AppIconButton(
             icon: Icons.edit_outlined,
@@ -198,9 +203,78 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
             initialValues: entity.fieldValues,
             viewMode: true,
           ),
+          // Yorum/tartışma thread'i — yorum-etkin tiplerde (CRM aktivite,
+          // PPM issue vb.). Çekirdek paylaşılan primitif.
+          if (_config?.enableComments == true) ...[
+            const SizedBox(height: AppSpacing.md),
+            CommentsThread(
+              entityType: widget.typeCode,
+              entityId: widget.id,
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Durum değiştir — status_definitions'tan seçenekleri yükleyip alt-sayfada
+  /// sunar; seçilince `status-transition` EF ile günceller (geçiş doğrulamalı).
+  Future<void> _changeStatus() async {
+    final defs =
+        await sl<EntityDataService>().loadStatusDefinitions(widget.typeCode);
+    if (!mounted) return;
+    if (defs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_t('entity.no_status', 'Bu tip için durum tanımı yok'))));
+      return;
+    }
+    final current = _entity?.status;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(children: [
+                Text(_t('entity.change_status', 'Durum değiştir'),
+                    style: AppTypography.headline),
+              ]),
+            ),
+            for (final d in defs)
+              ListTile(
+                leading: Icon(
+                  (d['code'] as String?) == current
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: AppColors.primary,
+                ),
+                title: Text((d['name'] as String?) ??
+                    (d['code'] as String?) ??
+                    '—'),
+                onTap: () => Navigator.of(ctx).pop(d['code'] as String?),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || selected == current || !mounted) return;
+    try {
+      await sl<EntityDataService>().updateStatus(
+        entityType: widget.typeCode,
+        entityId: widget.id,
+        toStatus: selected,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_t('entity.status_updated', 'Durum güncellendi ✓'))));
+      _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_t('entity.status_failed', 'Durum güncellenemedi'))));
+    }
   }
 
   Widget _buildHeader(GenericEntity entity) {
