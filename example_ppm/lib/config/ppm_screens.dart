@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../features/board/ppm_board_screen.dart';
+import '../features/dashboard/ppm_dashboard_screen.dart';
 
 /// PPM "İşlerim" kaynağı — `fn_ppm_my_work` satırlarını generic [WorkInboxItem]'a
 /// eşler (bana atanan epic/story/task/sub_task, tüm projeler).
@@ -50,6 +51,12 @@ Widget? ppmResolve(MenuItem item) {
   if (p == '/projects/backlog' || p == '/ppm/backlog') {
     // Proje-scope backlog: proje seç → o projenin story backlog'u.
     return const PpmBoardScreen(target: PpmScopeTarget.backlog);
+  }
+  if (p == '/projects/dashboard' ||
+      p == '/dashboard' ||
+      p == '/projects/reports' ||
+      p == '/ppm/dashboard') {
+    return const PpmDashboardScreen();
   }
   return null;
 }
