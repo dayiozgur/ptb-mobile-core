@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../features/board/ppm_board_screen.dart';
+
 /// PPM "İşlerim" kaynağı — `fn_ppm_my_work` satırlarını generic [WorkInboxItem]'a
 /// eşler (bana atanan epic/story/task/sub_task, tüm projeler).
 final WorkInboxSource ppmMyWorkSource = WorkInboxSource(
@@ -42,7 +44,8 @@ Widget? ppmResolve(MenuItem item) {
     return const EntityListScreen(typeCode: 'project');
   }
   if (p == '/projects/board' || p == '/ppm/board') {
-    return const EntityKanbanScreen(typeCode: 'task');
+    // Proje-scope board: önce proje seç → o projenin alt-ağacına kapsamlı kanban.
+    return const PpmBoardScreen();
   }
   if (p == '/projects/backlog' || p == '/ppm/backlog') {
     return const BacklogScreen(typeCode: 'story');

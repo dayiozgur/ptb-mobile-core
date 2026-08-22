@@ -53,6 +53,7 @@ class EntityDataService {
     int limit = 50,
     int offset = 0,
     String? search,
+    String? ancestorId,
   }) async {
     if (_currentTenantId == null) {
       throw Exception('Tenant context is not set');
@@ -70,6 +71,12 @@ class EntityDataService {
           .eq('entity_type', config.code)
           .eq('is_standalone', true)
           .eq('active', true);
+
+      // Proje/üst-öğe kapsamı: hierarchy_path nokta-ayrık materialized-path
+      // (ör. 'projectId.epicId.storyId') → altında olan kayıtları filtreler.
+      if (ancestorId != null && ancestorId.isNotEmpty) {
+        query = query.ilike('hierarchy_path', '%$ancestorId%');
+      }
 
       if (search != null && search.trim().isNotEmpty) {
         final term = search.trim();

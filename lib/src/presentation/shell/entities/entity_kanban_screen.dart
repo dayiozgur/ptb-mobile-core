@@ -12,9 +12,21 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 /// renk + etiket ile). Tanım yoksa kayıtlardaki distinct `status` değerlerinden
 /// türetilir (fallback — asla çökmez).
 class EntityKanbanScreen extends StatefulWidget {
-  const EntityKanbanScreen({super.key, required this.typeCode});
+  const EntityKanbanScreen({
+    super.key,
+    required this.typeCode,
+    this.ancestorId,
+    this.title,
+  });
 
   final String typeCode;
+
+  /// Opsiyonel proje/üst-öğe kapsamı — verilirse yalnız bu öğenin alt-ağacındaki
+  /// kayıtlar gösterilir (PPM proje-scope board).
+  final String? ancestorId;
+
+  /// Opsiyonel başlık override (ör. proje adı).
+  final String? title;
 
   @override
   State<EntityKanbanScreen> createState() => _EntityKanbanScreenState();
@@ -64,7 +76,8 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
       final defsRaw = await dataService.loadStatusDefinitions(config.code);
       // Kanban tüm kolonları göstermeli — default 50 sessizce kırpıyordu
       // (proje-scope filtresi eklenene dek makul üst sınır).
-      final entities = await dataService.listEntities(config, limit: 200);
+      final entities = await dataService.listEntities(config,
+          limit: 200, ancestorId: widget.ancestorId);
 
       final columns = _buildColumns(defsRaw, entities);
 
@@ -217,7 +230,7 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: '$_title • Kanban',
+      title: '${widget.title ?? _title} • Kanban',
       showBackButton: true,
       onBack: () => Navigator.of(context).pop(),
       actions: [
