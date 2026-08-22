@@ -88,6 +88,8 @@ export 'src/core/collaboration/comments_service.dart';
 export 'src/core/work/work_inbox_service.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
 export 'src/presentation/shell/work/work_inbox_screen.dart';
+export 'src/presentation/shell/summary/summary_screen.dart';
+export 'src/presentation/shell/summary/summary_cards.dart';
 export 'src/core/notification/notification_model.dart';
 export 'src/core/notification/notification_service.dart';
 
@@ -99,6 +101,7 @@ export 'src/core/connectivity/offline_sync_service.dart';
 export 'src/core/reporting/reporting_model.dart';
 export 'src/core/reporting/reporting_service.dart';
 export 'src/core/reporting/report_query_service.dart';
+export 'src/core/reporting/aggregate_service.dart';
 export 'src/core/reporting/report_service.dart';
 export 'src/core/reporting/page_service.dart';
 

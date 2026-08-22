@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../features/contacts/contacts_list_screen.dart';
+import '../features/dashboard/crm_dashboard_screen.dart';
 
 /// CRM "Günlük İşlerim" kaynağı — `fn_crm_my_work` satırlarını generic
 /// [WorkInboxItem]'a eşler (bucket: overdue/today/stale gruplaması).
@@ -40,6 +41,9 @@ Widget? crmResolve(MenuItem item) {
   }
   if (p == '/crm/my-work' || p == '/my-work' || p == '/crm/tasks') {
     return WorkInboxScreen(source: crmMyWorkSource);
+  }
+  if (p == '/crm/dashboard' || p == '/dashboard' || p == '/crm/reports') {
+    return const CrmDashboardScreen();
   }
   return null;
 }
