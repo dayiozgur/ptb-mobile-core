@@ -221,12 +221,24 @@ class FieldOptions {
     this.listCategory,
   });
 
+  /// Bir `items` elemanını [FieldOption]'a çevir. Eleman obje `{value,label}`
+  /// VEYA düz string/sayı olabilir (web bazı select alanlarını `["Junior",...]`
+  /// olarak saklar — obje-içi string dizisi) → aksi halde `e as Map` crash'liyordu.
+  static FieldOption? _optionFrom(dynamic e) {
+    if (e is Map) return FieldOption.fromJson(Map<String, dynamic>.from(e));
+    if (e is String || e is num || e is bool) {
+      return FieldOption(value: e, label: e.toString());
+    }
+    return null;
+  }
+
   factory FieldOptions.fromJson(Map<String, dynamic> json) {
     return FieldOptions(
       type: json['type'] as String? ?? 'static',
-      items: json['items'] != null
+      items: json['items'] is List
           ? (json['items'] as List)
-              .map((e) => FieldOption.fromJson(e as Map<String, dynamic>))
+              .map(_optionFrom)
+              .whereType<FieldOption>()
               .toList()
           : const [],
       table: json['table'] as String?,

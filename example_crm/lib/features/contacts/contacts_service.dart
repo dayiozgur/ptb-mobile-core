@@ -142,6 +142,10 @@ class ContactsService {
             if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
             if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
             if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+            // Tenant-geneli görünür: aksi halde DB default 'organization' +
+            // select-RLS ('tenant' şubesi) yüzünden manager-altı roller / null
+            // org'da oluşturulan kişi GÖRÜNMÜYORDU.
+            'visibility': 'tenant',
             'active': true,
             'created_by': uid,
           })

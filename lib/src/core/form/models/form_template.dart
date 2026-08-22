@@ -91,7 +91,9 @@ class FormSection {
       isCollapsible: json['is_collapsible'] as bool? ?? false,
       isRepeatable: json['is_repeatable'] as bool? ?? false,
       maxRepetitions: (json['max_repetitions'] as num?)?.toInt(),
-      visibilityRule: json['visibility_rule'] as Map<String, dynamic>?,
+      visibilityRule: json['visibility_rule'] is Map
+          ? Map<String, dynamic>.from(json['visibility_rule'] as Map)
+          : null,
       icon: json['icon'] as String?,
       fields: fields,
     );
@@ -170,8 +172,12 @@ class FormFieldRule {
       sourceFieldCode: extractCode(json['source_field']),
       targetFieldCode: extractCode(json['target_field']),
       ruleType: json['rule_type'] as String? ?? 'visibility',
-      condition: json['condition'] as Map<String, dynamic>? ?? const {},
-      action: json['action'] as Map<String, dynamic>? ?? const {},
+      condition: json['condition'] is Map
+          ? Map<String, dynamic>.from(json['condition'] as Map)
+          : const {},
+      action: json['action'] is Map
+          ? Map<String, dynamic>.from(json['action'] as Map)
+          : const {},
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
     );
   }
@@ -281,7 +287,9 @@ class FormTemplate {
       entityType: json['entity_type'] as String?,
       version: (json['version'] as num?)?.toInt() ?? 1,
       isPublished: json['is_published'] as bool? ?? false,
-      metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
+      metadata: json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : const {},
       active: json['active'] as bool? ?? true,
       sections: sections,
       rules: rules,
