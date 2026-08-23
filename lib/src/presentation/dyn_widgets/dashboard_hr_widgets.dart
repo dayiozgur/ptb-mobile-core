@@ -422,7 +422,7 @@ class _NewsFeedTileState extends State<NewsFeedTile> {
     final limit = (widget.descriptor.config['limit'] as num?)?.toInt() ?? 5;
     var q = sl<SupabaseClient>()
         .from('announcements')
-        .select('title, body, category, publish_date')
+        .select('id, title, body, category, image_url, publish_date')
         .eq('published', true);
     final tid = sl<TenantService>().currentTenantId;
     if (tid != null) q = q.eq('tenant_id', tid);
@@ -436,6 +436,19 @@ class _NewsFeedTileState extends State<NewsFeedTile> {
     final d = DateTime.tryParse(iso);
     if (d == null) return '';
     return '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+  }
+
+  void _openDetail(String? id) {
+    if (id == null || id.isEmpty) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => AnnouncementDetailScreen(id: id),
+    ));
+  }
+
+  void _openList() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const AnnouncementsListScreen(),
+    ));
   }
 
   @override
@@ -470,22 +483,45 @@ class _NewsFeedTileState extends State<NewsFeedTile> {
             children: [
               for (var i = 0; i < items.length; i++) ...[
                 if (i > 0) const Divider(height: AppSpacing.md),
-                Text(items[i]['title']?.toString() ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.withColor(
-                        AppTypography.subhead, AppColors.textPrimary(b))),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if ((items[i]['category']?.toString() ?? '').isNotEmpty)
-                      items[i]['category'].toString(),
-                    _fmtDate(items[i]['publish_date']?.toString()),
-                  ].where((e) => e.isNotEmpty).join(' · '),
-                  style: AppTypography.withColor(
-                      AppTypography.caption1, AppColors.textSecondary(b)),
+                InkWell(
+                  onTap: () => _openDetail(items[i]['id']?.toString()),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(items[i]['title']?.toString() ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.withColor(AppTypography.subhead,
+                              AppColors.textPrimary(b))),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          if ((items[i]['category']?.toString() ?? '')
+                              .isNotEmpty)
+                            items[i]['category'].toString(),
+                          _fmtDate(items[i]['publish_date']?.toString()),
+                        ].where((e) => e.isNotEmpty).join(' · '),
+                        style: AppTypography.withColor(AppTypography.caption1,
+                            AppColors.textSecondary(b)),
+                      ),
+                    ],
+                  ),
                 ),
               ],
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: InkWell(
+                  onTap: _openList,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 4, horizontal: 4),
+                    child: Text('Tümünü gör',
+                        style: AppTypography.withColor(
+                            AppTypography.footnote, AppColors.primary)),
+                  ),
+                ),
+              ),
             ],
           ),
         );

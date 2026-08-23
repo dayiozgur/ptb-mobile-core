@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/menu/menu_item.dart';
 import '../page_viewer/page_viewer_screen.dart';
 import '../report_viewer/report_viewer_screen.dart';
+import 'announcements/announcement_detail_screen.dart';
+import 'announcements/announcements_list_screen.dart';
+import 'orgchart/org_chart_screen.dart';
 import 'admin/audit_log_screen.dart';
 import 'admin/bug_reports_screen.dart';
 import 'admin/integrations_screen.dart';
@@ -96,6 +99,14 @@ class ScreenResolver {
       final code = _lastSegment(path);
       if (code != null) return PageViewerScreen(pageCode: code);
     }
+    // Duyurular — detay (/announcements/<id>) liste (/announcements)'ten ÖNCE.
+    if (p.startsWith('/announcements/')) {
+      final id = _lastSegment(path);
+      if (id != null) return AnnouncementDetailScreen(id: id);
+    }
+    if (p == '/announcements' || p == '/duyurular') {
+      return const AnnouncementsListScreen();
+    }
     // Admin/yönetim yolları — mobilde henüz özel ekran yok, ama menüde
     // GÖRÜNMELİ (aksi halde _pruneToScreens admin grubunu tümden gizliyordu →
     // admin kullanıcı admin menülerini göremiyordu). ComingSoon'a çöz: menüde
@@ -106,9 +117,13 @@ class ScreenResolver {
         p.startsWith('/admin/users')) {
       return const UserManagementScreen();
     }
-    if (p.startsWith('/admin/staff-roster') ||
-        p.startsWith('/admin/org-chart') ||
-        p.startsWith('/admin/departments')) {
+    // Organizasyon şeması (org + departman ağacı — genişletilebilir chart).
+    if (p.startsWith('/admin/org-chart') ||
+        p.startsWith('/admin/departments') ||
+        p == '/org-chart') {
+      return const OrgChartScreen();
+    }
+    if (p.startsWith('/admin/staff-roster')) {
       return const StaffRosterScreen();
     }
     if (p.startsWith('/admin/roles') || p.startsWith('/admin/rbac')) {

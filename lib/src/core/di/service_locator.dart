@@ -7,6 +7,8 @@ import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
 import '../collaboration/comments_service.dart';
+import '../announcement/announcement_service.dart';
+import '../orgchart/orgchart_service.dart';
 import '../notification/local_notification_service.dart';
 import '../notification/notification_service.dart';
 import '../work/work_inbox_service.dart';
@@ -245,6 +247,14 @@ Future<void> setupServiceLocator({
       supabase: sl<SupabaseClient>(),
       cacheManager: sl<CacheManager>(),
     ),
+  );
+
+  sl.registerLazySingleton<AnnouncementService>(
+    () => AnnouncementService(supabase: sl<SupabaseClient>()),
+  );
+
+  sl.registerLazySingleton<OrgChartService>(
+    () => OrgChartService(supabase: sl<SupabaseClient>()),
   );
 
   // ============================================
