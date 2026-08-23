@@ -24,9 +24,18 @@ Doğru bir Protoolbag ikonu şu iki katmandan oluşur:
 ⛔ **Logoyu düz-beyaz (tek ton) YAPMA.** Geçmişte bir üretim, logoyu luminance
 eşiğiyle düz beyaza çevirdi → 3D gölge kayboldu → ikon "bozuk" göründü.
 
-✅ **Doğru yöntem:** Logo bölgesindeki **orijinal beyaz-gri pikselleri OLDUĞU
-GİBİ koru**; yalnız ARKA PLANI yeni marka-gradyanıyla değiştir. Yani mevcut bir
-referans ikondan (ör. CRM/PPM) logo pikselini taşı, sadece bg rengini çevir.
+✅ **Doğru yöntem:** Logoyu **GRİ-TON (luminance, R=G=B)** olarak taşı; yalnız
+ARKA PLANI yeni marka-gradyanıyla değiştir. Böylece 3D gölge (luminance farkı)
+korunur ve renk-kirliliği olmaz.
+
+⛔ **İKİNCİ TUZAK — kenar renk-halosu.** Raster kaynak ikonun (ör. CRM) logo
+KENARLARI, kaynağın kendi arka-plan rengiyle (CRM mavisi) anti-alias'lıdır.
+Logonun RENGİNİ olduğu gibi taşırsan, bu mavi-kenar farklı-renk bg'ye (mor/mavi
+PMS) taşınınca **kenar renk-halosu/kirlilik** yapar (CRM'de sorun görünmez çünkü
+zaten mavi). ÇÖZÜM: logoyu **gri-tona çevir** (yukarıdaki doğru yöntem) —
+renksiz gri kenar, yeni bg ile temiz karışır. Test: üretileni 180px'e (60@3x,
+telefon boyutu) küçültüp CRM referansıyla yan yana karşılaştır; kenar temiz +
+3D gölge var olmalı.
 
 ## Marka renkleri (radyal gradyan: merkez → kenar)
 
