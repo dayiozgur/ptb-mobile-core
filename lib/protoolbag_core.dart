@@ -436,3 +436,4 @@ export 'src/presentation/shell/announcements/announcement_detail_screen.dart';
 // Core - Org Chart (Organizasyon şeması)
 export 'src/core/orgchart/orgchart_service.dart';
 export 'src/presentation/shell/orgchart/org_chart_screen.dart';
+export 'src/core/announcement/announcement_notifier.dart';

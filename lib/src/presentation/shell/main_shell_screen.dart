@@ -81,16 +81,28 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _initUnread();
     _loadMenu();
     _loadWorkspace();
+    // Duyuru realtime bildirimi: yeni yayınlanan duyuruda yerel-bildirim tetikler.
+    _startAnnouncementNotifier();
     _platformSub = sl<PlatformContext>().platformStream.listen((_) {
       _loadMenu(forceRefresh: true);
     });
-    // Tenant/org değişince (switcher veya başka akış) drawer'daki adları tazele.
-    _tenantSub = tenantService.tenantStream.listen((_) => _loadWorkspace());
+    // Tenant/org değişince (switcher veya başka akış) drawer'daki adları tazele
+    // + duyuru bildiricisini yeni tenant'a bağla.
+    _tenantSub = tenantService.tenantStream.listen((_) {
+      _loadWorkspace();
+      _startAnnouncementNotifier();
+    });
     _orgSub = organizationService.organizationStream.listen((_) {
       if (mounted) {
         setState(() => _orgName = organizationService.currentOrganization?.name);
       }
     });
+  }
+
+  /// Duyuru realtime bildiricisini aktif tenant'a bağla (login/tenant-değişimi).
+  void _startAnnouncementNotifier() {
+    final tid = tenantService.currentTenantId;
+    if (tid != null) announcementNotifier.start(tid);
   }
 
   /// Drawer çalışma-alanı bilgisini yükle: aktif tenant/org adları + kaç seçenek
@@ -179,6 +191,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _platformSub?.cancel();
     _tenantSub?.cancel();
     _orgSub?.cancel();
+    announcementNotifier.stop();
     super.dispose();
   }
 
