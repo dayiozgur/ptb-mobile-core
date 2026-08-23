@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import '../alarm/alarm_service.dart';
 import '../auth/auth_service.dart';
@@ -210,6 +211,16 @@ class CoreInitializer {
       // Step 1: Flutter binding
       onProgress?.call('Flutter binding');
       WidgetsFlutterBinding.ensureInitialized();
+
+      // intl locale-data init — `DateFormat(pattern, 'tr_TR')` çağrıları
+      // initializeDateFormatting olmadan LocaleDataException fırlatıyordu
+      // (tarih/lokalizasyon "yüklenmedi" belirtisi). tr + en yükle.
+      try {
+        await initializeDateFormatting('tr_TR', null);
+        await initializeDateFormatting('en_US', null);
+      } catch (e) {
+        Logger.warning('initializeDateFormatting failed: $e');
+      }
 
       // Step 2: Service Locator kurulumu
       onProgress?.call('Service Locator');
