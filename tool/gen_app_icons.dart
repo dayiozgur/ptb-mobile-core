@@ -13,11 +13,13 @@ import 'dart:math' as math;
 import 'package:image/image.dart' as img;
 
 // app → {kaynakLogo(1024 png), [gradyan-merkez, gradyan-kenar]}
-// Kullanıcı: "CRM logosundan pms VE phr üret; CRM arka rengini değiştir, iç
-// logoyu orijinal koru." → İKİSİ DE kaynak = CRM (aynı 3D beyaz logo), yalnız
-// gradyan farklı.
+// Kaynak-logo RENK-AİLESİYLE eşleşmeli: logonun 3D gölge yüzleri kaynağın bg
+// rengine göre tonlanmıştır (CRM gölgeleri mavi-tonlu). Farklı renk-ailesine
+// taşınırsa gölge-yüzler "bozuk" görünür.
+// → PHR (mor): KENDİ orijinal logosu (mor-tonlu gölge). PMS (mavi): CRM logosu
+//   (mavi-tonlu gölge, mavi-mavi uyumlu). Her ikisine yalnız radyal gradyan.
 final jobs = <String, Map<String, dynamic>>{
-  'example_phr': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]}, // mor
+  'example_phr': {'src': '/tmp/orig_phr_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]}, // mor
   'example_pms': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF2F7BF0, 0xFF11408F]}, // mavi
 };
 
