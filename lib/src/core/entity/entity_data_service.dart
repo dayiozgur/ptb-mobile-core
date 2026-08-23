@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
+import '../platform/platform_context.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'models/entity_type_config.dart';
@@ -40,6 +41,13 @@ class EntityDataService {
     _currentTenantId = null;
   }
 
+  /// Aktif platformId (in-app platform switch). Platform izolasyonu (Tranche 2):
+  /// entity kod-çakışmasında platformlar-arası sızıntıyı önlemek için okuma
+  /// filtresi. Kayıtlı değilse null → filtre uygulanmaz (tenant-scoped RLS korur).
+  String? get _activePlatformId => sl.isRegistered<PlatformContext>()
+      ? sl<PlatformContext>().activePlatformId
+      : null;
+
   // ============================================
   // LIST
   // ============================================
@@ -71,6 +79,12 @@ class EntityDataService {
           .eq('entity_type', config.code)
           .eq('is_standalone', true)
           .eq('active', true);
+
+      // Platform izolasyonu: bu platform + paylaşılan (NULL) kayıtlar.
+      final pid = _activePlatformId;
+      if (pid != null) {
+        query = query.or('platform_id.is.null,platform_id.eq.$pid');
+      }
 
       // Proje/üst-öğe kapsamı: hierarchy_path nokta-ayrık materialized-path
       // (ör. 'projectId.epicId.storyId') → altında olan kayıtları filtreler.
@@ -547,6 +561,11 @@ class EntityDataService {
           .eq('entity_type', config.code)
           .eq('is_standalone', true)
           .eq('active', true);
+      // Platform izolasyonu: bu platform + paylaşılan (NULL) kayıtlar.
+      final pid = _activePlatformId;
+      if (pid != null) {
+        q = q.or('platform_id.is.null,platform_id.eq.$pid');
+      }
       // Proje/üst-öğe kapsamı (hierarchy_path subtree) — board ile aynı.
       if (ancestorId != null && ancestorId.isNotEmpty) {
         q = q.ilike('hierarchy_path', '%$ancestorId%');

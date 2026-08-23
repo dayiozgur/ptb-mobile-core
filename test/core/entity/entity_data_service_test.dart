@@ -208,4 +208,48 @@ void main() {
       );
     });
   });
+
+  // Platform izolasyonu (Tranche 2): PlatformContext kayıtlıysa liste okumaları
+  // 'platform_id.is.null OR platform_id.eq.<aktif>' filtresi ekler (kod-çakışması
+  // sızıntısını önler). Kayıtlı değilse (test varsayılanı) filtre eklenmez.
+  group('platform izolasyonu (Tranche 2)', () {
+    tearDown(() {
+      if (sl.isRegistered<PlatformContext>()) {
+        sl.unregister<PlatformContext>();
+      }
+    });
+
+    test('PlatformContext kayıtlıysa loadBacklog platform filtresi ekler',
+        () async {
+      if (sl.isRegistered<PlatformContext>()) {
+        sl.unregister<PlatformContext>();
+      }
+      sl.registerSingleton<PlatformContext>(
+          PlatformContext(initialPlatformId: 'plat-1'));
+      service.setTenant('tenant-1');
+      h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
+
+      await service.loadBacklog(_config());
+
+      final orCalls = h.queryByTable['form_submissions']!.calls
+          .where((i) => i.memberName == #or)
+          .toList();
+      expect(orCalls, isNotEmpty);
+      expect(orCalls.first.positionalArguments.first.toString(),
+          contains('platform_id.eq.plat-1'));
+    });
+
+    test('PlatformContext kayıtlı değilse platform filtresi eklenmez', () async {
+      service.setTenant('tenant-1');
+      h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
+
+      await service.loadBacklog(_config());
+
+      expect(
+        h.queryByTable['form_submissions']!.calls
+            .where((i) => i.memberName == #or),
+        isEmpty,
+      );
+    });
+  });
 }
