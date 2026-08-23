@@ -1,8 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Environment configuration (PPM app).
 class Environment {
   Environment._();
+
+  /// Splash/marka rengi (platform_app_configs.primary_color ile eşleşir).
+  static const Color brandColor = Color(0xFF0D9488);
+
+  /// Splash slogan (platform_app_configs.brand_tagline).
+  static const String slogan = 'Proje ve portföy yönetimi';
 
   static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
 

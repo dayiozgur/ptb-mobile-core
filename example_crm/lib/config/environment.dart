@@ -1,8 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Environment configuration (CRM app).
 class Environment {
   Environment._();
+
+  /// Splash/marka rengi (platform_app_configs.primary_color ile eşleşir).
+  static const Color brandColor = Color(0xFF2563EB);
+
+  /// Splash slogan (platform_app_configs.brand_tagline).
+  static const String slogan = 'Müşteri ilişkileri yönetimi';
 
   static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
 

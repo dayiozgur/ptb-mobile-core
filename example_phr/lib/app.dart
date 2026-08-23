@@ -30,6 +30,17 @@ class PHRApp extends ConsumerWidget {
               darkTheme: themeService.darkTheme,
               themeMode: themeService.flutterThemeMode,
               routerConfig: router,
+              // Markalı açılış (splash) + biyometrik uygulama kilidi tüm
+              // rotaların üstünde.
+              builder: (context, child) => BrandedSplash(
+                color: Environment.brandColor,
+                appName: Environment.appName,
+                slogan: Environment.slogan,
+                child: BiometricLockGate(
+                  brandColor: Environment.brandColor,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             );
           },
         );

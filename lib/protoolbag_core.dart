@@ -425,3 +425,5 @@ export 'src/presentation/widgets/display/app_avatar.dart';
 export 'src/presentation/widgets/display/app_storage_avatar.dart';
 export 'src/presentation/widgets/display/app_progress_bar.dart';
 export 'src/presentation/widgets/display/app_chip.dart';
+export 'src/presentation/shell/security/biometric_lock_gate.dart';
+export 'src/presentation/shell/branding/branded_splash.dart';

@@ -33,6 +33,15 @@ class PMSApp extends ConsumerWidget {
 
               // Router configuration
               routerConfig: router,
+              builder: (context, child) => BrandedSplash(
+                color: Environment.brandColor,
+                appName: Environment.appName,
+                slogan: Environment.slogan,
+                child: BiometricLockGate(
+                  brandColor: Environment.brandColor,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             );
           },
         );
