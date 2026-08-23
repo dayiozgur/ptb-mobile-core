@@ -48,19 +48,23 @@ void main() {
     for (var y = 0; y < n; y++) {
       for (var x = 0; x < n; x++) {
         final p = src.getPixel(x, y);
+        final lum255 = 0.299 * p.r + 0.587 * p.g + 0.114 * p.b; // 0..255
         // logo alfa: parlak (beyaz-gri logo) → 1, koyu (bg) → 0. Yumuşak geçiş.
-        final lum = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b) / 255.0;
-        final a = ((lum - 0.5) / 0.28).clamp(0.0, 1.0);
+        final a = ((lum255 / 255.0 - 0.5) / 0.28).clamp(0.0, 1.0);
         // arka plan: yeni radyal gradyan
         final d = math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxR;
         final t = _ease(d);
         final gr = _lerp(cr, er, t), gg = _lerp(cg, eg, t), gb = _lerp(cb, eb, t);
-        // logo bölgesinde ORİJİNAL piksel (3D beyaz-gri KORUNUR), bg'de yeni gradyan.
+        // KRİTİK: logo RENGİ DEĞİL, GRİ-TONU (luminance) kullan. Kaynak ikonun
+        // kenar anti-alias pikselleri kaynak-BG rengiyle (ör. CRM mavisi)
+        // karışıktır → farklı-renk bg'ye taşınınca renk-halo/kirlilik yapıyordu.
+        // Gri-ton (R=G=B) hem 3D gölgeyi korur hem renk-kirliliğini giderir.
+        final li = lum255.round().clamp(0, 255);
         master.setPixelRgb(
           x, y,
-          _lerp(gr, p.r.toInt(), a),
-          _lerp(gg, p.g.toInt(), a),
-          _lerp(gb, p.b.toInt(), a),
+          _lerp(gr, li, a),
+          _lerp(gg, li, a),
+          _lerp(gb, li, a),
         );
       }
     }
