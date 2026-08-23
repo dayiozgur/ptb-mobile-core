@@ -244,8 +244,11 @@ class _AppTextFieldState extends State<AppTextField> {
           ? AppColors.systemGray6
           : AppColors.surfaceDark;
     }
+    // Aktif alan: gruplanmış gri zeminde (backgroundLight = systemGray6) görünür
+    // olması için BEYAZ yüzey + hairline border (aksi halde alan zemine karışıp
+    // kayboluyordu).
     return brightness == Brightness.light
-        ? AppColors.systemGray6
+        ? AppColors.surfaceLight
         : AppColors.surfaceElevatedDark;
   }
 
@@ -261,14 +264,15 @@ class _AppTextFieldState extends State<AppTextField> {
     } else if (isFocused) {
       borderColor = AppColors.primary;
     } else {
-      borderColor = Colors.transparent;
+      // Görünür hairline (eskiden transparent'tı → alan zemine karışıyordu).
+      borderColor = AppColors.border(brightness);
     }
 
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       borderSide: BorderSide(
         color: borderColor,
-        width: isFocused || isError ? 2 : 0,
+        width: isFocused || isError ? 2 : 1,
       ),
     );
   }

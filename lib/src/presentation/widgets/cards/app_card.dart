@@ -123,6 +123,11 @@ class AppCard extends StatelessWidget {
         width: 1,
       );
     }
+    // Elevated: gölge çok hafif (8% siyah) → gruplanmış gri zeminde (systemGray6)
+    // kart sınırı belirsizleşiyordu. İnce hairline net çerçeve sağlar.
+    if (variant == AppCardVariant.elevated) {
+      return Border.all(color: AppColors.divider(brightness), width: 0.5);
+    }
     return null;
   }
 

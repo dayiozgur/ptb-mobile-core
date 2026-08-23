@@ -182,7 +182,34 @@ class DynChartWidget extends StatelessWidget {
             maxY: maxY,
             categoryLabelAt: (i) => _categoryLabel(i, labelField),
           ),
-          barTouchData: BarTouchData(enabled: true),
+          barTouchData: BarTouchData(
+            enabled: true,
+            // Varsayılan fl_chart tooltip'i lacivert zemin + okunaksız metin
+            // veriyordu → yüzey zemini + textPrimary ile okunur hale getir.
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (_) => AppColors.surface(brightness),
+              tooltipRoundedRadius: AppSpacing.radiusSm,
+              tooltipPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final label = _categoryLabel(group.x.toInt(), labelField);
+                final val = rod.toY;
+                final valStr = val == val.roundToDouble()
+                    ? val.toInt().toString()
+                    : val.toStringAsFixed(1);
+                return BarTooltipItem(
+                  '$label\n$valStr',
+                  TextStyle(
+                    color: AppColors.textPrimary(brightness),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
