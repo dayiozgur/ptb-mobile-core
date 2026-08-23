@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import 'ppm_gantt_tab.dart';
+
 /// **PPM Proje Çalışma Alanı** — web `PtbProjectWorkspaceComponent` mobil
 /// karşılığı. Tek proje bağlamında SEKME'li yapı: Genel (overview) · Pano
 /// (kanban) · Backlog — hepsi bu projenin alt-ağacına (`ancestorId`) kapsanır.
@@ -71,8 +73,9 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
               ),
             ),
             child: AppTabBar(
-              tabs: const ['Genel', 'Pano', 'Backlog'],
+              tabs: const ['Genel', 'Pano', 'Backlog', 'Zaman'],
               selectedIndex: _tab,
+              isScrollable: true,
               onTabChanged: (i) => setState(() => _tab = i),
             ),
           ),
@@ -93,6 +96,7 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
                   ancestorId: widget.projectId,
                   embedded: true,
                 ),
+                PpmGanttTab(projectId: widget.projectId),
               ],
             ),
           ),

@@ -113,24 +113,31 @@ class _MyHrScreenState extends State<MyHrScreen> {
       ),
     ];
 
+    // NOT: Row+crossAxisAlignment.stretch, ListView (sınırsız-yükseklik) içinde
+    // IntrinsicHeight olmadan layout hatası verebiliyordu → IntrinsicHeight ile
+    // sarıldı (eşit-yükseklik kart korunur, hata giderilir).
     return Column(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: tiles[0]),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: tiles[1]),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: tiles[0]),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: tiles[1]),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: tiles[2]),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: tiles[3]),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: tiles[2]),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: tiles[3]),
+            ],
+          ),
         ),
       ],
     );
