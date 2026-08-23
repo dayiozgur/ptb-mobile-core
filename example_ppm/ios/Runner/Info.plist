@@ -49,5 +49,7 @@
 	<string>Barkod/QR taramak için kameraya erişim gerekir.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Galeriden barkod/QR görseli seçmek için erişim gerekir.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
 </dict>
 </plist>

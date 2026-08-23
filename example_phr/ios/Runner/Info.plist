@@ -51,5 +51,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
 </dict>
 </plist>
