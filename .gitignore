@@ -40,3 +40,7 @@ pubspec.lock
 .worktrees/
 .security-key
 logs/security/
+
+# APNs push keys — ASLA commit edilmez
+.secrets/
+*.p8

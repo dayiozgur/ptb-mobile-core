@@ -8,6 +8,7 @@ import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
 import '../collaboration/comments_service.dart';
 import '../announcement/announcement_notifier.dart';
+import '../push/apns_registrar.dart';
 import '../announcement/announcement_service.dart';
 import '../orgchart/orgchart_service.dart';
 import '../notification/local_notification_service.dart';
@@ -256,6 +257,10 @@ Future<void> setupServiceLocator({
 
   sl.registerLazySingleton<AnnouncementNotifier>(
     () => AnnouncementNotifier(),
+  );
+
+  sl.registerLazySingleton<ApnsRegistrar>(
+    () => ApnsRegistrar(supabase: sl<SupabaseClient>()),
   );
 
   sl.registerLazySingleton<OrgChartService>(

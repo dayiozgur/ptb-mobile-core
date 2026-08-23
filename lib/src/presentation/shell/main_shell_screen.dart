@@ -99,10 +99,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
     });
   }
 
-  /// Duyuru realtime bildiricisini aktif tenant'a bağla (login/tenant-değişimi).
+  /// Duyuru realtime bildiricisini aktif tenant'a bağla (login/tenant-değişimi)
+  /// + APNs push kaydını başlat (izin + token → user_devices).
   void _startAnnouncementNotifier() {
     final tid = tenantService.currentTenantId;
-    if (tid != null) announcementNotifier.start(tid);
+    if (tid != null) {
+      announcementNotifier.start(tid);
+      apnsRegistrar.register();
+    }
   }
 
   /// Drawer çalışma-alanı bilgisini yükle: aktif tenant/org adları + kaç seçenek

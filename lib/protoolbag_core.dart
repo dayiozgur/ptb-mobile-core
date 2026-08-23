@@ -437,3 +437,4 @@ export 'src/presentation/shell/announcements/announcement_detail_screen.dart';
 export 'src/core/orgchart/orgchart_service.dart';
 export 'src/presentation/shell/orgchart/org_chart_screen.dart';
 export 'src/core/announcement/announcement_notifier.dart';
+export 'src/core/push/apns_registrar.dart';
