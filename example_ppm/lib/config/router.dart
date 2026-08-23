@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../features/project/ppm_project_workspace_screen.dart';
+
 /// Kök navigator anahtarı — go_router'ın kök Navigator'ına kararlı erişim
 /// (push-bildirim deep-link köprüsü bunu kullanır, bkz. main.dart).
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -123,6 +125,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => EntityFormScreen(
           typeCode: state.pathParameters['type']!,
           id: state.pathParameters['id'],
+        ),
+      ),
+      // Proje detayı = sekmeli çalışma alanı (generic :type/:id'DEN ÖNCE, daha özel).
+      GoRoute(
+        path: '/entities/project/:id',
+        builder: (context, state) => PpmProjectWorkspaceScreen(
+          projectId: state.pathParameters['id']!,
+          title: state.extra is String ? state.extra as String : null,
         ),
       ),
       GoRoute(

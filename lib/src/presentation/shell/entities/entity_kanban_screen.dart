@@ -17,9 +17,14 @@ class EntityKanbanScreen extends StatefulWidget {
     required this.typeCode,
     this.ancestorId,
     this.title,
+    this.embedded = false,
   });
 
   final String typeCode;
+
+  /// Bir sekme gövdesi olarak gömülürse (ör. PPM proje workspace) kendi
+  /// AppScaffold'unu SARMAZ — yalnız içerik döner (iç-içe app-bar olmaz).
+  final bool embedded;
 
   /// Opsiyonel proje/üst-öğe kapsamı — verilirse yalnız bu öğenin alt-ağacındaki
   /// kayıtlar gösterilir (PPM proje-scope board).
@@ -229,6 +234,7 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _buildContent();
     return AppScaffold(
       title: '${widget.title ?? _title} • Kanban',
       showBackButton: true,

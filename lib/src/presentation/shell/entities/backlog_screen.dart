@@ -17,6 +17,7 @@ class BacklogScreen extends StatefulWidget {
     required this.typeCode,
     this.ancestorId,
     this.title,
+    this.embedded = false,
   });
 
   final String typeCode;
@@ -26,6 +27,9 @@ class BacklogScreen extends StatefulWidget {
 
   /// Opsiyonel başlık override (ör. proje adı).
   final String? title;
+
+  /// Sekme gövdesi olarak gömülürse AppScaffold sarmaz (iç-içe app-bar olmaz).
+  final bool embedded;
 
   @override
   State<BacklogScreen> createState() => _BacklogScreenState();
@@ -136,6 +140,7 @@ class _BacklogScreenState extends State<BacklogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _buildContent();
     return AppScaffold(
       title: '${widget.title ?? _title} • Backlog',
       showBackButton: true,
