@@ -49,20 +49,29 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (imageUrl != null && imageUrl.startsWith('http')) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              child: CachedNetworkImage(
-                imageUrl: imageUrl,
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                placeholder: (_, __) => Container(
-                  height: 180,
-                  color: AppColors.systemGray6,
-                ),
-              ),
+          if ((imageUrl ?? '').isNotEmpty) ...[
+            // Tenant-izolasyonlu: image_url PATH → imzalı-URL (eski http public
+            // kayıtlar doğrudan). FutureBuilder ile çöz.
+            FutureBuilder<String?>(
+              future: announcementService.imageUrlFor(imageUrl),
+              builder: (context, snap) {
+                final url = snap.data;
+                if (url == null || url.isEmpty) return const SizedBox.shrink();
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  child: CachedNetworkImage(
+                    imageUrl: url,
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    placeholder: (_, __) => Container(
+                      height: 180,
+                      color: AppColors.systemGray6,
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.md),
           ],

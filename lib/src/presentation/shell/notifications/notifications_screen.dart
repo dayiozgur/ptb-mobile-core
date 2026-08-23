@@ -102,6 +102,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
+  /// Bildirimi sil (kaydırma) — soft-delete (active=false). Okundu-işareti
+  /// silmez; silme AYRI aksiyondur (kullanıcı bilinçli kaldırır).
+  Future<void> _handleDelete(AppNotification notification) async {
+    // Optimistik: listeden kaldır.
+    setState(() => _notifications.removeWhere((n) => n.id == notification.id));
+    final ok = await notificationService.deleteNotification(notification.id);
+    if (!ok && mounted) {
+      // Başarısızsa geri yükle.
+      _load();
+    }
+  }
+
   @override
   void dispose() {
     unawaited(_notificationsSub?.cancel());
@@ -159,11 +171,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         itemCount: _notifications.length,
         itemBuilder: (context, index) {
           final notification = _notifications[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _NotificationTile(
-              notification: notification,
-              onTap: () => _handleTap(notification),
+          return Dismissible(
+            key: ValueKey(notification.id),
+            direction: DismissDirection.endToStart,
+            onDismissed: (_) => _handleDelete(notification),
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: AppSpacing.lg),
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: const Icon(Icons.delete_outline, color: Colors.white),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _NotificationTile(
+                notification: notification,
+                onTap: () => _handleTap(notification),
+              ),
             ),
           );
         },

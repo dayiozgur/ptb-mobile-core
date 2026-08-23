@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
+import '../storage/file_storage_service.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
 import 'announcement_model.dart';
@@ -37,6 +38,26 @@ class AnnouncementService {
     } catch (e) {
       Logger.error('Duyurular yüklenemedi', e);
       return const [];
+    }
+  }
+
+  /// Kapak görseli için görüntülenebilir URL üretir. `image_url` artık
+  /// tenant-izolasyonlu `platform-protected` bucket'ta PATH tutar → imzalı-URL
+  /// üretilir. Eski kayıtlar http public-URL olabilir → doğrudan döner.
+  /// Boş/null ya da hata → null (görsel gösterilmez).
+  Future<String?> imageUrlFor(String? imageUrl) async {
+    final v = (imageUrl ?? '').trim();
+    if (v.isEmpty) return null;
+    if (v.startsWith('http')) return v; // eski public kayıt
+    if (!sl.isRegistered<FileStorageService>()) return null;
+    try {
+      return await sl<FileStorageService>().getSignedUrl(
+        bucket: StorageBuckets.platformProtected,
+        path: v,
+      );
+    } catch (e) {
+      Logger.warning('Duyuru görseli imzalı-URL hata: $e');
+      return null;
     }
   }
 
