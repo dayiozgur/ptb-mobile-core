@@ -21,6 +21,17 @@ class Announcement {
     this.published = true,
   });
 
+  /// Liste özeti için HTML-etiketsiz düz metin (body HTML olabilir).
+  String get bodyPreview {
+    final b = body ?? '';
+    if (b.isEmpty) return '';
+    return b
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll(RegExp(r'&nbsp;'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   factory Announcement.fromJson(Map<String, dynamic> json) {
     return Announcement(
       id: json['id']?.toString() ?? '',

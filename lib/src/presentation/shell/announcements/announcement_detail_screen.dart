@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 /// **Duyuru detayı** — tekil duyurunun tam görünümü: hero görsel (varsa),
@@ -50,12 +52,16 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
           if (imageUrl != null && imageUrl.startsWith('http')) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              child: Image.network(
-                imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
                 width: double.infinity,
                 height: 180,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                placeholder: (_, __) => Container(
+                  height: 180,
+                  color: AppColors.systemGray6,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -90,9 +96,11 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           if ((a.body ?? '').isNotEmpty)
-            Text(
+            // Web rich-editor sanitize'lı HTML üretir → HtmlWidget render eder
+            // (biçimlendirme + satır-içi <img> public CDN'den). Düz-metin de sorunsuz.
+            HtmlWidget(
               a.body!,
-              style: AppTypography.body.copyWith(
+              textStyle: AppTypography.body.copyWith(
                 color: AppColors.textPrimary(brightness),
                 height: 1.5,
               ),

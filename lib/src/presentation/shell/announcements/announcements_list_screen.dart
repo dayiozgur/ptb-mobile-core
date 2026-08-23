@@ -82,10 +82,10 @@ class _AnnouncementCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if ((a.body ?? '').isNotEmpty) ...[
+                  if (a.bodyPreview.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      a.body!,
+                      a.bodyPreview,
                       style: AppTypography.footnote
                           .copyWith(color: AppColors.secondaryLabel(context)),
                       maxLines: 2,
