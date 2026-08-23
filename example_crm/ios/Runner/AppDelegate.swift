@@ -47,7 +47,8 @@ import UIKit
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-    apnsChannel?.invokeMethod("onToken", arguments: token)
+    let bundleId = Bundle.main.bundleIdentifier ?? ""
+    apnsChannel?.invokeMethod("onToken", arguments: ["token": token, "bundleId": bundleId])
   }
 
   override func application(

@@ -39,8 +39,17 @@ class ApnsRegistrar {
   Future<void> _onNativeCall(MethodCall call) async {
     switch (call.method) {
       case 'onToken':
-        final token = call.arguments as String?;
-        if (token != null && token.isNotEmpty) await _saveToken(token);
+        // Yeni format: {token, bundleId}. Eski format (düz String) geriye-uyumlu.
+        String? token;
+        String? bundleId;
+        final args = call.arguments;
+        if (args is Map) {
+          token = args['token'] as String?;
+          bundleId = args['bundleId'] as String?;
+        } else if (args is String) {
+          token = args;
+        }
+        if (token != null && token.isNotEmpty) await _saveToken(token, bundleId);
         break;
       case 'onError':
         Logger.warning('APNs kayıt hatası (native): ${call.arguments}');
@@ -49,7 +58,7 @@ class ApnsRegistrar {
   }
 
   /// Token'ı user_devices'a upsert (token benzersiz → aynı cihaz güncellenir).
-  Future<void> _saveToken(String token) async {
+  Future<void> _saveToken(String token, [String? bundleId]) async {
     final userId = authService.currentUser?.id;
     if (userId == null) return;
     final tenantId = sl<TenantService>().currentTenantId;
@@ -60,6 +69,7 @@ class ApnsRegistrar {
         'token': token,
         'platform': 'ios',
         'environment': 'production',
+        if (bundleId != null && bundleId.isNotEmpty) 'bundle_id': bundleId,
         'active': true,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'token');
