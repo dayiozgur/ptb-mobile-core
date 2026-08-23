@@ -87,7 +87,9 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
                   embedded: true,
                 ),
                 BacklogScreen(
-                  typeCode: 'story',
+                  // İş-öğeleri board ile aynı tipte (task) — 'story' çoğu projede
+                  // boş olduğundan backlog boş görünüyordu; sıralı liste görünümü.
+                  typeCode: 'task',
                   ancestorId: widget.projectId,
                   embedded: true,
                 ),

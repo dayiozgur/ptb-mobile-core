@@ -257,6 +257,14 @@ class _BacklogRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if ((entity.assignedToName ?? '').isNotEmpty) ...[
+                const SizedBox(width: AppSpacing.sm),
+                AppStorageAvatar(
+                  rawPath: entity.assignedToAvatar,
+                  name: entity.assignedToName!,
+                  radius: 10,
+                ),
+              ],
               const SizedBox(width: AppSpacing.sm),
               // Sürükleme tutamacı (uzun-basmadan da sürüklenebilir).
               ReorderableDragStartListener(

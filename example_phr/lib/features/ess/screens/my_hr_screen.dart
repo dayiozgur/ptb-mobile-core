@@ -55,8 +55,16 @@ class _MyHrScreenState extends State<MyHrScreen> {
       children: [
         _kpiGrid(context, s),
         const SizedBox(height: AppSpacing.lg),
-        // İzin bakiyesi görsel grafiği (tipe göre hakediş/kullanılan/kalan).
-        // Kendini çeker; self (p_staff_id null → oturum sahibi).
+        // Hızlı erişim ÖNCE (aksiyonlar her koşulda görünür — grafik render
+        // sorunundan bağımsız).
+        Text(
+          essT('hr.my_hr.quick_links', 'Hızlı Erişim'),
+          style: AppTypography.headline,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ..._quickLinks(context),
+        const SizedBox(height: AppSpacing.lg),
+        // İzin bakiyesi grafiği EN SONDA (layout-izole; self p_staff_id null).
         AggregateChartCard(
           title: essT('hr.my_hr.leave_balance_chart', 'İzin Bakiyesi'),
           subtitle: essT('hr.my_hr.leave_balance_chart_sub',
@@ -69,13 +77,6 @@ class _MyHrScreenState extends State<MyHrScreen> {
           },
           height: 240,
         ),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          essT('hr.my_hr.quick_links', 'Hızlı Erişim'),
-          style: AppTypography.headline,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ..._quickLinks(context),
         const SizedBox(height: AppSpacing.md),
       ],
     );
@@ -146,6 +147,10 @@ class _MyHrScreenState extends State<MyHrScreen> {
           essT('hr.my_hr.payslips', 'Bordrolarım'), '/hr/payroll/my-payslips'),
       _QuickLink(Icons.document_scanner_outlined, AppColors.info,
           essT('hr.my_hr.scan_expense', 'Fiş/Fatura Tara'), '/hr/expense/scan'),
+      _QuickLink(Icons.campaign_outlined, AppColors.warning,
+          essT('hr.my_hr.announcements', 'Duyurular'), '/announcements'),
+      _QuickLink(Icons.account_tree_outlined, AppColors.secondary,
+          essT('hr.my_hr.org_chart', 'Organizasyon Şeması'), '/admin/org-chart'),
       _QuickLink(Icons.access_time_outlined, AppColors.info,
           essT('hr.my_hr.attendance', 'Puantajım'), '/hr/pdks'),
       _QuickLink(Icons.flag_outlined, AppColors.primary,

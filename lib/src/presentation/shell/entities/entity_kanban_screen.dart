@@ -471,6 +471,29 @@ class _EntityKanbanCard extends StatelessWidget {
                 ),
               ),
             ],
+            if ((entity.assignedToName ?? '').isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  AppStorageAvatar(
+                    rawPath: entity.assignedToAvatar,
+                    name: entity.assignedToName!,
+                    radius: 8,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      entity.assignedToName!,
+                      style: AppTypography.caption2.copyWith(
+                        color: AppColors.secondaryLabel(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
