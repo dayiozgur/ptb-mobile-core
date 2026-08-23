@@ -37,6 +37,16 @@ renksiz gri kenar, yeni bg ile temiz karışır. Test: üretileni 180px'e (60@3x
 telefon boyutu) küçültüp CRM referansıyla yan yana karşılaştır; kenar temiz +
 3D gölge var olmalı.
 
+⛔ **ÜÇÜNCÜ TUZAK — gölge renk-ailesi uyumu.** Logonun 3D gölge yüzleri
+(sol/iç yüzler), kaynak ikonun ARKA-PLAN rengine göre tonlanmıştır. CRM
+logosunun gölge-yüzleri MAVİ-tonlu gridir. Bunu MOR (PHR) bg'ye taşırsan
+gri-yüzler mavi görünüp mor'la çelişir → "gri bölümler bozuk". ÇÖZÜM:
+**kaynak-logo, hedef bg'nin renk-ailesiyle eşleşmeli.** PHR (mor) → PHR'nin
+kendi mor-tonlu logosu. PMS/CRM (mavi) → CRM logosu (mavi-mavi uyumlu). Yeni
+bir platform farklı renk-ailesindeyse, o platform için gölge-uyumlu bir kaynak
+logo gerekir (kendi orijinali veya nötr-gri desatüre — ama desatüre logoyu
+matlaştırır, tercih kendi-renkli kaynak).
+
 ## Marka renkleri (radyal gradyan: merkez → kenar)
 
 | App | Platform rengi | Merkez (açık) | Kenar (koyu) |
