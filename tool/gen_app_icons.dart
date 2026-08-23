@@ -13,11 +13,12 @@ import 'dart:math' as math;
 import 'package:image/image.dart' as img;
 
 // app → {kaynakLogo(1024 png), [gradyan-merkez, gradyan-kenar]}
+// Kullanıcı: "CRM logosundan pms VE phr üret; CRM arka rengini değiştir, iç
+// logoyu orijinal koru." → İKİSİ DE kaynak = CRM (aynı 3D beyaz logo), yalnız
+// gradyan farklı.
 final jobs = <String, Map<String, dynamic>>{
-  // phr: kendi orijinali (3D logo mor-üstünde) → logo korunur, bg gradyan.
-  'example_phr': {'src': '/tmp/orig_phr_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]},
-  // pms: crm orijinalinin 3D beyaz logosu → mavi gradyan.
-  'example_pms': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF2F7BF0, 0xFF11408F]},
+  'example_phr': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]}, // mor
+  'example_pms': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF2F7BF0, 0xFF11408F]}, // mavi
 };
 
 const sizes = <String, int>{
@@ -48,23 +49,22 @@ void main() {
     for (var y = 0; y < n; y++) {
       for (var x = 0; x < n; x++) {
         final p = src.getPixel(x, y);
-        final lum255 = 0.299 * p.r + 0.587 * p.g + 0.114 * p.b; // 0..255
-        // logo alfa: parlak (beyaz-gri logo) → 1, koyu (bg) → 0. Yumuşak geçiş.
-        final a = ((lum255 / 255.0 - 0.5) / 0.28).clamp(0.0, 1.0);
+        final pr = p.r.toInt(), pg = p.g.toInt(), pb = p.b.toInt();
+        final lum255 = 0.299 * pr + 0.587 * pg + 0.114 * pb; // 0..255
+        // logo alfa: parlak (beyaz-gri logo) → 1, koyu (bg) → 0. Yumuşak geçiş →
+        // CRM'in orijinal SMOOTH kenarı korunur (keskin eşik jagged yapıyordu).
+        final a = ((lum255 / 255.0 - 0.5) / 0.26).clamp(0.0, 1.0);
         // arka plan: yeni radyal gradyan
         final d = math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxR;
         final t = _ease(d);
         final gr = _lerp(cr, er, t), gg = _lerp(cg, eg, t), gb = _lerp(cb, eb, t);
-        // KRİTİK: logo RENGİ DEĞİL, GRİ-TONU (luminance) kullan. Kaynak ikonun
-        // kenar anti-alias pikselleri kaynak-BG rengiyle (ör. CRM mavisi)
-        // karışıktır → farklı-renk bg'ye taşınınca renk-halo/kirlilik yapıyordu.
-        // Gri-ton (R=G=B) hem 3D gölgeyi korur hem renk-kirliliğini giderir.
-        final li = lum255.round().clamp(0, 255);
+        // Logo bölgesinde ORİJİNAL CRM piksel (beyaz-gri 3D, birebir korunur),
+        // bg bölgesinde yeni gradyan. Kullanıcı: "iç logoyu orijinal koru".
         master.setPixelRgb(
           x, y,
-          _lerp(gr, li, a),
-          _lerp(gg, li, a),
-          _lerp(gb, li, a),
+          _lerp(gr, pr, a),
+          _lerp(gg, pg, a),
+          _lerp(gb, pb, a),
         );
       }
     }
