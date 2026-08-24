@@ -51,5 +51,9 @@
 	<string>Galeriden barkod/QR görseli seçmek için erişim gerekir.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

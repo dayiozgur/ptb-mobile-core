@@ -7,6 +7,7 @@ import '../auth/auth_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../controller/controller_service.dart';
+import '../collaboration/comments_service.dart';
 import '../entity/entity_data_service.dart';
 import '../hr/hr_ess_service.dart';
 import '../iot_log/iot_log_service.dart';
@@ -417,8 +418,12 @@ class CoreInitializer {
         kLeaveRequestCreateOpType,
         (op) => sl<HrEssService>().replayCreateLeave(op),
       );
-      Logger.debug('Offline replay handlers registered '
-          '($kEntitySubmitOpType, $kLeaveRequestCreateOpType)');
+      sync.registerHandler(
+        kCommentCreateOpType,
+        (op) => sl<CommentsService>().replayAddComment(op),
+      );
+      Logger.debug('Offline replay handlers registered ($kEntitySubmitOpType, '
+          '$kLeaveRequestCreateOpType, $kCommentCreateOpType)');
     } catch (e) {
       Logger.warning('Failed to register offline replay handlers: $e');
     }

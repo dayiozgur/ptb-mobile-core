@@ -1,8 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
+
+/// Offline kuyruğunda yorum-ekleme işlemleri için op-tipi anahtarı
+/// (OfflineSyncService handler'ı bununla kayıtlanır ve tetiklenir).
+const String kCommentCreateOpType = 'comment_create';
 
 /// Bir entity'ye ait tek yorum (`public.comments` satırı).
 class EntityComment {
@@ -90,6 +96,11 @@ class CommentsService {
   }
 
   /// Yorum ekle. Başarılıysa eklenen yorumu döner (yoksa null).
+  ///
+  /// OFFLINE: bağlantı yoksa yorum kuyruğa alınır ve iyimser (optimistic) bir
+  /// [EntityComment] dönülür (UI'da hemen görünür, id geçici op-id'sidir).
+  /// Online olunca OfflineSyncService kuyruğu boşaltıp [replayAddComment] ile
+  /// gerçek insert'i oynatır. Online path DEĞİŞMEDİ.
   Future<EntityComment?> add(
     String entityType,
     String entityId,
@@ -97,6 +108,39 @@ class CommentsService {
   ) async {
     final text = content.trim();
     if (text.isEmpty) return null;
+
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final op = await sync.addOperation(
+        type: PendingOperationType.create,
+        entityType: kCommentCreateOpType,
+        entityId: entityId,
+        data: {
+          'entityType': entityType,
+          'entityId': entityId,
+          'content': text,
+        },
+      );
+      Logger.info('Offline: comment queued (${op.id}, $entityType/$entityId)');
+      return EntityComment(
+        id: op.id,
+        content: text,
+        createdBy: _supabase.auth.currentUser?.id,
+        authorName: 'Siz',
+        createdAt: DateTime.now(),
+      );
+    }
+
+    return _insertCommentToNetwork(entityType, entityId, text);
+  }
+
+  /// Gerçek ağ yazımı (`comments` INSERT). Online path burada; offline kuyruk
+  /// replay'i de doğrudan bunu çağırır. Hata/boşta null döner (UI'a fırlatmaz).
+  Future<EntityComment?> _insertCommentToNetwork(
+    String entityType,
+    String entityId,
+    String text,
+  ) async {
     try {
       final uid = _supabase.auth.currentUser?.id;
       final res = await _supabase
@@ -126,5 +170,34 @@ class CommentsService {
       Logger.error('comment add ($entityType/$entityId) hata', e);
       return null;
     }
+  }
+
+  /// Offline kuyruk replay handler'ı: kaydedilmiş payload ile yorum insert'ini
+  /// yeniden oynatır. Başarıda `true` (kuyruktan silinir); insert null dönerse
+  /// (RLS/ağ hatası) `false` → retry/dead-letter.
+  ///
+  /// Idempotency notu: `comments` INSERT kalıcı bir idempotency anahtarı
+  /// taşımaz; ağ yazımı başarılı olup yanıt kaybolursa gecikmiş replay KOPYA
+  /// yorum yaratabilir (nadir, zararsız). Birincil koruma kuyruğun başarı→sil
+  /// davranışıdır.
+  Future<bool> replayAddComment(PendingOperation op) async {
+    final d = op.data;
+    final r = await _insertCommentToNetwork(
+      d['entityType'] as String,
+      d['entityId'] as String,
+      d['content'] as String,
+    );
+    return r != null;
+  }
+
+  // Offline-queue erişimi (kayıtlı/başlatılmamışsa null → add() doğrudan ağ
+  // path'ine düşer, davranış değişmez).
+  ConnectivityService? get _connectivityOrNull =>
+      sl.isRegistered<ConnectivityService>() ? sl<ConnectivityService>() : null;
+
+  OfflineSyncService? get _offlineSyncOrNull {
+    if (!sl.isRegistered<OfflineSyncService>()) return null;
+    final s = sl<OfflineSyncService>();
+    return s.isInitialized ? s : null;
   }
 }
