@@ -22,6 +22,21 @@ class AdminLeaveRequestsScreen extends StatefulWidget {
 class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
   final _ctrl = AsyncViewController();
   final Set<String> _busy = {};
+  final _rt = RealtimeRefresher();
+
+  @override
+  void initState() {
+    super.initState();
+    // Canlı-yenileme: leave_requests değişince (yeni talep / başka adminin
+    // kararı) listeyi tazele. Pull-to-refresh ve refresh butonu her zaman çalışır.
+    _rt.start(table: 'leave_requests', onChange: () => _ctrl.reload());
+  }
+
+  @override
+  void dispose() {
+    _rt.dispose();
+    super.dispose();
+  }
 
   Future<void> _decide(AdminLeaveRequestRow row, bool approve) async {
     String? note;
