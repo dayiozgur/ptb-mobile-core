@@ -288,6 +288,8 @@ class EntityDataService {
       case 'signature':
       case 'daterange':
       case 'lookup':
+      case 'matrix_input':
+      case 'table_grid':
         byType = row['value_json'];
         break;
       default:

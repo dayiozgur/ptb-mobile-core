@@ -2,6 +2,7 @@ import 'field_render_context.dart';
 import 'fields/choice_fields.dart';
 import 'fields/date_fields.dart';
 import 'fields/display_fields.dart';
+import 'fields/grid_fields.dart';
 import 'fields/location_field.dart';
 import 'fields/lookup_field.dart';
 import 'fields/media_fields.dart';
@@ -56,6 +57,9 @@ final Map<String, FieldWidget> kFieldRegistry = <String, FieldWidget>{
   'image': const ImageFieldWidget(),
   'file': const FileFieldWidget(),
   'signature': const SignatureFieldWidget(),
+  // Bileşik (çok-satır/çok-kolon) — web ptb-field-matrix-input / table-grid
+  'matrix_input': const MatrixInputFieldWidget(),
+  'table_grid': const TableGridFieldWidget(),
   // Görüntüleme (değersiz)
   'heading': const HeadingFieldWidget(),
   'divider': const DividerFieldWidget(),

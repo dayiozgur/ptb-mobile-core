@@ -333,6 +333,11 @@ class FormField {
   /// Yardım metni
   final String? helpText;
 
+  /// `form_fields.metadata` (JSONB) — ek yapılandırma. matrix_input/table_grid
+  /// gibi bileşik alanlar kolon/satır tanımlarını (`columns`, `rows`,
+  /// `minRows`, `maxRows`, `showTotals`...) buradan okur. Web ile aynı sözleşme.
+  final Map<String, dynamic>? metadata;
+
   const FormField({
     required this.id,
     required this.formSectionId,
@@ -349,6 +354,7 @@ class FormField {
     this.sortOrder = 0,
     this.allowedRoles,
     this.helpText,
+    this.metadata,
   });
 
   /// `validation_rules` yalnız obje ise ayrıştırılır (dizi/null → boş).
@@ -398,6 +404,9 @@ class FormField {
           ? List<String>.from(json['allowed_roles'] as List)
           : null,
       helpText: json['help_text'] as String?,
+      metadata: json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
     );
   }
 
@@ -418,6 +427,7 @@ class FormField {
       'sort_order': sortOrder,
       'allowed_roles': allowedRoles,
       'help_text': helpText,
+      'metadata': metadata,
     };
   }
 
