@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+
 import '../utils/logger.dart';
 
 /// Bağlantı durumu
@@ -93,6 +95,7 @@ class ConnectivityService {
   // State
   ConnectivityInfo _currentInfo = ConnectivityInfo.unknown();
   Timer? _periodicCheckTimer;
+  StreamSubscription? _radioSub;
   bool _isInitialized = false;
 
   // Stream controllers
@@ -145,7 +148,17 @@ class ConnectivityService {
     // İlk kontrol
     await checkConnectivity();
 
-    // Periyodik kontrol başlat
+    // Radyo değişimini ANINDA yakala (WiFi/mobil-veri açıldı/kapandı) → hemen
+    // DNS-doğrula. connectivity_plus yalnız TETİKLEYİCİ; "bağlı" demesi internet
+    // garantisi değildir (captive portal), asıl karar checkConnectivity()'nin
+    // DNS-lookup'ında. Sonuç kullanılmaz — versiyon-toleranslı (5.x tekil /
+    // 6.x liste emit eder, ikisi de yok sayılır).
+    _radioSub = Connectivity().onConnectivityChanged.listen(
+      (_) => checkConnectivity(),
+      onError: (Object e) => Logger.warning('connectivity radio stream: $e'),
+    );
+
+    // Periyodik kontrol (fallback — radyo eventi kaçarsa/captive portal değişimi).
     _startPeriodicCheck();
 
     _isInitialized = true;
@@ -290,6 +303,7 @@ class ConnectivityService {
   /// Servisi durdur
   void dispose() {
     _periodicCheckTimer?.cancel();
+    _radioSub?.cancel();
     _statusController.close();
     _isInitialized = false;
     Logger.debug('ConnectivityService disposed');
