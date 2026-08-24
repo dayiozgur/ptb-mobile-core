@@ -1,6 +1,9 @@
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'document_scanner.dart';
+import 'ocr_models.dart';
+
 /// Kartvizit görsel kaynağı — image_picker'ı çekirdekte kapsüller (çağıran
 /// app'lerin image_picker'a doğrudan bağımlı olmasına gerek kalmaz).
 enum CardScanSource { camera, gallery }
@@ -14,6 +17,7 @@ class CardScanResult {
   final String? phone;
   final String? title;
   final String? company;
+  final String? website;
 
   /// OCR'ın okuduğu ham metin (kullanıcı gözden geçirsin / hiçbir şey
   /// çıkmazsa görüp elle girsin diye).
@@ -26,6 +30,7 @@ class CardScanResult {
     this.phone,
     this.title,
     this.company,
+    this.website,
     this.rawText = '',
   });
 
@@ -61,7 +66,12 @@ class CardScanner {
     try {
       final input = InputImage.fromFilePath(shot.path);
       final recognized = await recognizer.processImage(input);
-      return parseCardText(recognized.text);
+      // Bbox/geometri KORUNARAK ayrıştır: isim = en büyük fontlu satır, konum
+      // (üst→alt) ile blok akışı. Düz metin fallback için rawText de geçilir.
+      return parseCardLines(
+        DocumentScanner.toOcrLines(recognized),
+        rawText: recognized.text,
+      );
     } finally {
       await recognizer.close();
     }
@@ -70,14 +80,35 @@ class CardScanner {
   /// Geriye-uyumluluk: kameradan tara.
   Future<CardScanResult?> scanFromCamera() => scan();
 
-  /// OCR metnini alanlara ayrıştırır (saf fonksiyon — test edilebilir).
+  /// Düz OCR metnini ayrıştırır (saf, test-edilebilir). Bbox yoktur → satır
+  /// index'i `top` olarak verilir; font eşit olduğundan [parseCardLines]
+  /// üst-satır sırasına düşer (eski davranışla uyumlu). Gerçek tarama
+  /// [parseCardLines]'ı bbox'lı çağırır (isim = en büyük font).
   static CardScanResult parseCardText(String raw) {
-    final lines = raw
+    final rawLines = raw
         .split(RegExp(r'[\r\n]+'))
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
-    if (lines.isEmpty) return CardScanResult(rawText: raw);
+    final lines = [
+      for (var i = 0; i < rawLines.length; i++)
+        OcrLine(text: rawLines[i], top: i.toDouble(), bottom: i.toDouble()),
+    ];
+    return parseCardLines(lines, rawText: raw);
+  }
+
+  /// Bbox'lı OCR satırlarını alanlara ayrıştırır (saf, test-edilebilir).
+  ///
+  /// Spatial sezgiler (kullanıcı isteği — doğruluk için):
+  /// - **İsim = en büyük fontlu** (satır yüksekliği) isim-adayı; eşitse en
+  ///   üstteki. Kartvizit tasarımının evrensel kuralı (isim daima en büyük).
+  /// - **Firma:** şirket-eki (a.ş./ltd/…) varsa kesin; YOKSA (marka adı,
+  ///   ör. "Trendyol") isimden sonraki en büyük ALL-CAPS isim-adayı firma
+  ///   sayılır — eski keyword-zorunluluğu isim slotunu çalıyordu.
+  /// - **Web sitesi** artık ayrı alana yazılır (eskiden yalnız dışlanıyordu).
+  static CardScanResult parseCardLines(List<OcrLine> lines, {String rawText = ''}) {
+    final items = lines.where((l) => l.text.trim().isNotEmpty).toList();
+    if (items.isEmpty) return CardScanResult(rawText: rawText);
 
     final emailRe = RegExp(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}');
     // En az 7 rakam içeren telefon-benzeri dizi.
@@ -95,48 +126,60 @@ class CardScanner {
       r'teknoloji|technolog|yazılım|yazilim|software|solutions|group|grup)',
       caseSensitive: false,
     );
-    final urlRe = RegExp(r'(https?://|www\.)', caseSensitive: false);
+    final urlRe = RegExp(
+        r'((https?://)?(www\.)[A-Za-z0-9.\-]+\.[A-Za-z]{2,}[^\s]*|(https?://)[^\s]+)',
+        caseSensitive: false);
 
     String? email;
     String? phone;
     String? title;
     String? company;
-    final nameCandidates = <String>[];
+    String? website;
+    final nameCandidates = <OcrLine>[];
 
-    for (final line in lines) {
-      final em = emailRe.firstMatch(line);
+    for (final line in items) {
+      final text = line.text.trim();
+
+      final em = emailRe.firstMatch(text);
       if (em != null && email == null) email = em.group(0);
 
       if (phone == null) {
-        final ph = phoneRe.firstMatch(line);
+        final ph = phoneRe.firstMatch(text);
         if (ph != null) {
           final digits = ph.group(0)!.replaceAll(RegExp(r'\D'), '');
           if (digits.length >= 7) phone = ph.group(0)!.trim();
         }
       }
 
-      final hasEmail = emailRe.hasMatch(line);
-      final hasPhone = phoneRe.hasMatch(line);
-      final isUrl = urlRe.hasMatch(line);
-      final isCompany = companyKw.hasMatch(line);
-      final isTitle = titleKw.hasMatch(line);
+      final hasEmail = emailRe.hasMatch(text);
+      final hasPhone = phoneRe.hasMatch(text);
+      final urlMatch = urlRe.firstMatch(text);
+      final isUrl = urlMatch != null;
+      final isCompany = companyKw.hasMatch(text);
+      final isTitle = titleKw.hasMatch(text);
 
-      if (isTitle && title == null && !hasEmail && !hasPhone) {
-        title = line;
+      // Web sitesi: e-posta İÇERMEYEN url satırı (e-posta @'ından sonra da
+      // nokta var; onu web sanma).
+      if (isUrl && website == null && !hasEmail) {
+        website = urlMatch.group(0);
         continue;
       }
 
-      // Firma adayı: şirket-anahtar kelimesi içeren ilk satır (e-posta/telefon/
-      // url değil). Ör. "Acme Teknoloji A.Ş.", "Global Solutions Ltd".
+      if (isTitle && title == null && !hasEmail && !hasPhone) {
+        title = text;
+        continue;
+      }
+
+      // Firma adayı: şirket-eki içeren satır (kesin). Keyword'süz markalar
+      // aşağıda font/caps sezgisiyle yakalanır.
       if (isCompany && company == null && !hasEmail && !hasPhone && !isUrl) {
-        company = line;
+        company = text;
         continue;
       }
 
       // İsim adayı: e-posta/telefon/url/şirket/unvan DEĞİL, çoğunlukla harf,
-      // 2-4 kelime (tipik ad-soyad).
-      final wordCount = line.split(RegExp(r'\s+')).length;
-      final letterRatio = _letterRatio(line);
+      // 1-4 kelime. Bbox (height/top) sıralama için korunur.
+      final wordCount = text.split(RegExp(r'\s+')).length;
       if (!hasEmail &&
           !hasPhone &&
           !isUrl &&
@@ -144,21 +187,41 @@ class CardScanner {
           !isTitle &&
           wordCount >= 1 &&
           wordCount <= 4 &&
-          letterRatio > 0.6) {
+          _letterRatio(text) > 0.6) {
         nameCandidates.add(line);
       }
     }
 
-    // E-postadan isim tahmini (nameCandidates boşsa): ad.soyad@ → Ad Soyad.
+    // İsim = en büyük font (height DESC); eşitse en üstteki (top ASC). Düz-metin
+    // fallback'te height hepsi 0, top = satır index → orijinal sıra korunur.
+    nameCandidates.sort((a, b) {
+      final byHeight = b.height.compareTo(a.height);
+      return byHeight != 0 ? byHeight : a.top.compareTo(b.top);
+    });
+
     String? first;
     String? last;
     if (nameCandidates.isNotEmpty) {
-      final parts = nameCandidates.first.split(RegExp(r'\s+'));
+      final parts = nameCandidates.first.text.trim().split(RegExp(r'\s+'));
       first = parts.first;
       if (parts.length > 1) last = parts.sublist(1).join(' ');
+
+      // Firma keyword'süz fallback: firma hâlâ boşsa, isimden SONRAKI en büyük
+      // isim-adayı ALL-CAPS ise (marka genelde büyük harf) firma say.
+      if (company == null && nameCandidates.length > 1) {
+        for (final cand in nameCandidates.skip(1)) {
+          final t = cand.text.trim();
+          if (t == t.toUpperCase() && _letterRatio(t) > 0.6) {
+            company = t;
+            break;
+          }
+        }
+      }
     } else if (email != null) {
+      // E-postadan isim tahmini: ad.soyad@ → Ad Soyad.
       final local = email.split('@').first;
-      final segs = local.split(RegExp(r'[._\-]+')).where((s) => s.isNotEmpty).toList();
+      final segs =
+          local.split(RegExp(r'[._\-]+')).where((s) => s.isNotEmpty).toList();
       if (segs.isNotEmpty) first = _capitalize(segs.first);
       if (segs.length > 1) last = _capitalize(segs[1]);
     }
@@ -170,7 +233,8 @@ class CardScanner {
       phone: phone,
       title: title,
       company: company,
-      rawText: raw,
+      website: website,
+      rawText: rawText,
     );
   }
 

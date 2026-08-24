@@ -46,4 +46,44 @@ mehmet.demir@globalsolutions.com
       expect(r.firstName, 'Deniz');
     });
   });
+
+  group('CardScanner.parseCardLines (bbox/spatial doğruluk)', () {
+    test('isim = EN BÜYÜK font, satır sırası değil (firma üstte olsa da)', () {
+      // Kartvizit düzeni: logo/firma en üstte (küçük), isim ortada (büyük).
+      // Eski "ilk satır = isim" mantığı firmayı isim sanardı; bbox ile isim
+      // en büyük fonttan doğru seçilir.
+      final lines = [
+        const OcrLine(text: 'ACME DESIGN', top: 10, bottom: 30), // h=20 (logo)
+        const OcrLine(text: 'Zeynep Ak', top: 60, bottom: 110), // h=50 (en büyük)
+        const OcrLine(text: 'Satış Müdürü', top: 120, bottom: 140),
+        const OcrLine(text: 'zeynep@acme.com', top: 160, bottom: 175),
+      ];
+      final r = CardScanner.parseCardLines(lines);
+      expect(r.firstName, 'Zeynep');
+      expect(r.lastName, 'Ak');
+      expect(r.title, contains('Müdür'));
+      // Keyword'süz marka (ALL-CAPS) firma olarak yakalanır, isim slotunu çalmaz.
+      expect(r.company, 'ACME DESIGN');
+      expect(r.email, 'zeynep@acme.com');
+    });
+
+    test('web sitesi ayrı alana yazılır (e-posta ile karışmaz)', () {
+      final lines = [
+        const OcrLine(text: 'Ali Veli', top: 10, bottom: 40),
+        const OcrLine(text: 'www.aliveli.com.tr', top: 50, bottom: 65),
+        const OcrLine(text: 'ali@aliveli.com.tr', top: 70, bottom: 85),
+      ];
+      final r = CardScanner.parseCardLines(lines);
+      expect(r.firstName, 'Ali');
+      expect(r.website, contains('aliveli'));
+      expect(r.email, 'ali@aliveli.com.tr');
+    });
+
+    test('bbox yoksa (düz metin) üst-satır sırası korunur', () {
+      // parseCardText → index'i top yapar; font eşit → ilk isim-adayı = isim.
+      final r = CardScanner.parseCardText('Ayşe Kara\nProje Yöneticisi\nayse@x.com');
+      expect(r.firstName, 'Ayşe');
+      expect(r.lastName, 'Kara');
+    });
+  });
 }
