@@ -19,7 +19,7 @@ import 'package:image/image.dart' as img;
 // → PHR (mor): KENDİ orijinal logosu (mor-tonlu gölge). PMS (mavi): CRM logosu
 //   (mavi-tonlu gölge, mavi-mavi uyumlu). Her ikisine yalnız radyal gradyan.
 final jobs = <String, Map<String, dynamic>>{
-  'example_phr': {'src': '/tmp/orig_phr_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]}, // mor
+  'example_phr': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF8B5CF6, 0xFF4C1D95]}, // mor
   'example_pms': {'src': '/tmp/orig_crm_1024.png', 'grad': [0xFF2F7BF0, 0xFF11408F]}, // mavi
 };
 
@@ -53,20 +53,27 @@ void main() {
         final p = src.getPixel(x, y);
         final pr = p.r.toInt(), pg = p.g.toInt(), pb = p.b.toInt();
         final lum255 = 0.299 * pr + 0.587 * pg + 0.114 * pb; // 0..255
-        // logo alfa: parlak (beyaz-gri logo) → 1, koyu (bg) → 0. Yumuşak geçiş →
-        // CRM'in orijinal SMOOTH kenarı korunur (keskin eşik jagged yapıyordu).
-        final a = ((lum255 / 255.0 - 0.5) / 0.26).clamp(0.0, 1.0);
+        // logo alfa DOYGUNLUK-tabanlı: CRM bg'si MAVİ (yüksek doygunluk), logo
+        // beyaz-GRİ (düşük doygunluk, nötr). Böylece logonun KOYU sol yüzü de
+        // (düşük-sat) tam-logo sayılır — luminance-eşik onu bg sanıp gradyanla
+        // karıştırıyordu (mor-kirlilik). Yumuşak geçiş → smooth kenar.
+        final maxc = math.max(pr, math.max(pg, pb));
+        final minc = math.min(pr, math.min(pg, pb));
+        final sat = maxc == 0 ? 0.0 : (maxc - minc) / maxc;
+        final a = (1.0 - (sat / 0.30)).clamp(0.0, 1.0);
         // arka plan: yeni radyal gradyan
         final d = math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxR;
         final t = _ease(d);
         final gr = _lerp(cr, er, t), gg = _lerp(cg, eg, t), gb = _lerp(cb, eb, t);
-        // Logo bölgesinde ORİJİNAL CRM piksel (beyaz-gri 3D, birebir korunur),
-        // bg bölgesinde yeni gradyan. Kullanıcı: "iç logoyu orijinal koru".
+        // Logo NÖTR-GRİ (luminance, R=G=B) — master'ın temiz gri gölgeleri gibi.
+        // Kaynak CRM'in mavi-tonlu grisi çıkarılır → herhangi bg ile uyumlu.
+        // Hafif parlatma (×1.06) master'ın canlı beyazına yaklaştırır.
+        final li = (lum255 * 1.06).round().clamp(0, 255);
         master.setPixelRgb(
           x, y,
-          _lerp(gr, pr, a),
-          _lerp(gg, pg, a),
-          _lerp(gb, pb, a),
+          _lerp(gr, li, a),
+          _lerp(gg, li, a),
+          _lerp(gb, li, a),
         );
       }
     }
