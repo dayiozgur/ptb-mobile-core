@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../ppm_common.dart';
 import 'ppm_gantt_tab.dart';
 
 /// **PPM Proje Çalışma Alanı** — web `PtbProjectWorkspaceComponent` mobil
@@ -57,7 +58,7 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: _projectTitle ?? 'Proje',
+      title: _projectTitle ?? ppmT('ppm.project.title', 'Proje'),
       showBackButton: true,
       onBack: () => Navigator.of(context).maybePop(),
       child: Column(
@@ -73,7 +74,12 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
               ),
             ),
             child: AppTabBar(
-              tabs: const ['Genel', 'Pano', 'Backlog', 'Zaman'],
+              tabs: [
+                ppmT('ppm.project.tab_overview', 'Genel'),
+                ppmT('ppm.project.tab_board', 'Pano'),
+                ppmT('ppm.project.tab_backlog', 'Backlog'),
+                ppmT('ppm.project.tab_timeline', 'Zaman'),
+              ],
               selectedIndex: _tab,
               isScrollable: true,
               onTabChanged: (i) => setState(() => _tab = i),
@@ -115,19 +121,21 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
       padding: AppSpacing.screenPadding,
       children: [
         KpiRowCard(
-          title: 'Genel Bakış',
+          title: ppmT('ppm.dashboard.overview', 'Genel Bakış'),
           rpc: 'fn_ppm_project_overview',
           params: params,
-          kpis: const [
-            KpiSpec('Toplam İş', 'total'),
-            KpiSpec('Tamamlanan', 'done'),
-            KpiSpec('Puan (Toplam)', 'pts_total'),
+          kpis: [
+            KpiSpec(ppmT('ppm.dashboard.total_issues', 'Toplam İş'), 'total'),
+            KpiSpec(ppmT('ppm.dashboard.done', 'Tamamlanan'), 'done'),
+            KpiSpec(ppmT('ppm.dashboard.pts_total', 'Puan (Toplam)'),
+                'pts_total'),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
         AggregateChartCard(
-          title: 'Durum Dağılımı',
-          subtitle: 'İşlerin duruma göre dağılımı',
+          title: ppmT('ppm.summary.status_dist', 'Durum Dağılımı'),
+          subtitle: ppmT(
+              'ppm.summary.status_dist_sub', 'İşlerin duruma göre dağılımı'),
           rpc: 'fn_ppm_project_overview',
           params: params,
           chartKind: 'donut_chart',
@@ -140,8 +148,9 @@ class _PpmProjectWorkspaceScreenState extends State<PpmProjectWorkspaceScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         AggregateChartCard(
-          title: 'Tür Dağılımı',
-          subtitle: 'Epik / story / task / alt-görev',
+          title: ppmT('ppm.summary.type_dist', 'Tür Dağılımı'),
+          subtitle: ppmT(
+              'ppm.summary.type_dist_sub', 'Epik / story / task / alt-görev'),
           rpc: 'fn_ppm_project_overview',
           params: params,
           chartKind: 'bar_chart',

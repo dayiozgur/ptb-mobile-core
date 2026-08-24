@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../crm_common.dart';
+
 /// CRM **Takvim / Ajanda** — yaklaşan aktiviteler ve sonraki adımlar
 /// (`fn_crm_calendar`). Tarihe göre gruplu; "Benimkiler / Tümü" filtreli.
 /// Satıra dokununca ilgili kayda (entity-engine) gider.
@@ -52,7 +54,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Takvim',
+      title: crmT('crm.agenda.title', 'Takvim'),
       onBack: () => context.pop(),
       actions: [AppIconButton(icon: Icons.refresh, onPressed: _load)],
       child: Column(
@@ -61,9 +63,12 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
             padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
             child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Benimkiler')),
-                ButtonSegment(value: false, label: Text('Tümü')),
+              segments: [
+                ButtonSegment(
+                    value: true,
+                    label: Text(crmT('crm.common.mine', 'Benimkiler'))),
+                ButtonSegment(
+                    value: false, label: Text(crmT('crm.common.all', 'Tümü'))),
               ],
               selected: {_mineOnly},
               onSelectionChanged: (s) {
@@ -88,12 +93,12 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
     if (_rows.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
             child: AppEmptyState(
                 icon: Icons.event_available_outlined,
-                title: 'Yaklaşan etkinlik yok'),
+                title: crmT('crm.agenda.empty', 'Yaklaşan etkinlik yok')),
           ),
         ],
       );

@@ -5,11 +5,12 @@ import '../features/calendar/crm_agenda_screen.dart';
 import '../features/contacts/contacts_list_screen.dart';
 import '../features/dashboard/crm_dashboard_screen.dart';
 import '../features/deals/crm_entity_actions.dart';
+import '../crm_common.dart';
 
 /// CRM "Günlük İşlerim" kaynağı — `fn_crm_my_work` satırlarını generic
 /// [WorkInboxItem]'a eşler (bucket: overdue/today/stale gruplaması).
 final WorkInboxSource crmMyWorkSource = WorkInboxSource(
-  title: 'Günlük İşlerim',
+  title: crmT('crm.work.my_work', 'Günlük İşlerim'),
   rpcName: 'fn_crm_my_work',
   mapper: (r) => WorkInboxItem(
     id: r['entity_id']?.toString() ?? '',

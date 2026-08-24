@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../crm_common.dart';
 import 'contacts_service.dart';
 
 /// Satır sonu hızlı-aksiyon (ara/mail): ikon + açılacak uri şeması.
@@ -63,20 +64,20 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Widget build(BuildContext context) {
     final c = _contact;
     return AppScaffold(
-      title: c?.displayName ?? 'Kişi',
+      title: c?.displayName ?? crmT('crm.contact.title', 'Kişi'),
       onBack: () => Navigator.of(context).pop(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _logActivity,
         icon: const Icon(Icons.add_comment_outlined),
-        label: const Text('Aktivite'),
+        label: Text(crmT('crm.contact.activity_fab', 'Aktivite')),
       ),
       child: _loading
           ? const Center(child: AppLoadingIndicator())
           : c == null
-              ? const Center(
+              ? Center(
                   child: AppEmptyState(
                       icon: Icons.person_off_outlined,
-                      title: 'Kişi bulunamadı'))
+                      title: crmT('crm.contact.not_found', 'Kişi bulunamadı')))
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
@@ -88,14 +89,16 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                         _AccountDealsCard(companyId: c.companyId!),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      Text('Aktiviteler',
+                      Text(crmT('crm.contact.activities', 'Aktiviteler'),
                           style: AppTypography.headline),
                       const SizedBox(height: AppSpacing.sm),
                       if (_feed.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.md),
-                          child: Text('Henüz aktivite yok.',
+                          child: Text(
+                              crmT('crm.contact.no_activities',
+                                  'Henüz aktivite yok.'),
                               style: AppTypography.footnote.copyWith(
                                   color:
                                       AppColors.secondaryLabel(context))),
@@ -160,8 +163,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Future<void> _launch(String uri) async {
     final ok = await UrlActions.openUri(uri); // çekirdek util
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Uygulama açılamadı')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(crmT('crm.contact.launch_failed', 'Uygulama açılamadı'))));
     }
   }
 
@@ -241,7 +245,9 @@ class _AccountDealsCardState extends State<_AccountDealsCard> {
                     Icon(Icons.business_center_outlined,
                         size: 16, color: AppColors.primary),
                     const SizedBox(width: 6),
-                    Text('Firma Açık Fırsatları',
+                    Text(
+                        crmT('crm.contact.account_open_deals',
+                            'Firma Açık Fırsatları'),
                         style: AppTypography.subhead),
                     const Spacer(),
                     Text('${deals.length}',
@@ -334,8 +340,9 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
     if (ok) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aktivite kaydedilemedi.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              crmT('crm.activity.save_failed', 'Aktivite kaydedilemedi.'))));
     }
   }
 
@@ -348,7 +355,8 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Aktivite Logla', style: AppTypography.headline),
+          Text(crmT('crm.activity.log_title', 'Aktivite Logla'),
+              style: AppTypography.headline),
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: 8,
@@ -363,19 +371,19 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _subject,
-              decoration: const InputDecoration(
-                  labelText: 'Konu *',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.activity.subject', 'Konu *'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _notes,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
-                  labelText: 'Notlar',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.activity.notes', 'Notlar'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
             onPressed: _saving ? null : _save,
@@ -384,7 +392,7 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Kaydet'),
+                : Text(crmT('crm.common.save', 'Kaydet')),
           ),
         ],
       ),

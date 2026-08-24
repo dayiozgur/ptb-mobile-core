@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../ppm_common.dart';
+
 /// **PPM Gantt / Zaman Çizelgesi** — projenin task'larını basit bir zaman
 /// çizelgesinde gösterir. task'ta yalnız `due_date` olduğundan bar
 /// `created_at → due_date` aralığıdır (created_at yoksa/bitişten sonraysa
@@ -43,13 +45,14 @@ class _PpmGanttTabState extends State<PpmGanttTab> {
     return AsyncView<List<GenericEntity>>(
       controller: _ctrl,
       load: _load,
-      errorFallback: 'Zaman çizelgesi yüklenemedi',
+      errorFallback: ppmT('ppm.gantt.load_error', 'Zaman çizelgesi yüklenemedi'),
       isEmpty: (d) => d.isEmpty,
-      emptyBuilder: (context) => const Center(
+      emptyBuilder: (context) => Center(
         child: AppEmptyState(
           icon: Icons.timeline_outlined,
-          title: 'Zaman çizelgesi yok',
-          message: 'Bitiş tarihi olan görev bulunmuyor.',
+          title: ppmT('ppm.gantt.empty_title', 'Zaman çizelgesi yok'),
+          message: ppmT(
+              'ppm.gantt.empty_msg', 'Bitiş tarihi olan görev bulunmuyor.'),
         ),
       ),
       builder: (context, tasks) => _gantt(context, tasks),
@@ -76,7 +79,7 @@ class _PpmGanttTabState extends State<PpmGanttTab> {
               Text(_fmt(minD),
                   style: AppTypography.caption1.copyWith(
                       color: AppColors.textSecondary(brightness))),
-              Text('${tasks.length} görev',
+              Text('${tasks.length} ${ppmT('ppm.gantt.tasks_unit', 'görev')}',
                   style: AppTypography.caption1.copyWith(
                       color: AppColors.textSecondary(brightness))),
               Text(_fmt(maxD),

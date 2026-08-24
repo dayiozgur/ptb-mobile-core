@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../ppm_common.dart';
+
 /// **PPM entity-detay domain aksiyonları** — generic entity_detail'e çekirdek
 /// [EntityDetailExtensions] registry'si üzerinden PPM'e özel write-aksiyonu
 /// (efor/worklog kaydı) ekler. `registerPpmScreens()`'ten bir kez çağrılır.
@@ -72,8 +74,8 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Efor kaydedilemedi')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(ppmT('ppm.worklog.save_failed', 'Efor kaydedilemedi'))));
       }
     }
   }
@@ -87,33 +89,35 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Efor Kaydet', style: AppTypography.headline),
+          Text(ppmT('ppm.worklog.title', 'Efor Kaydet'),
+              style: AppTypography.headline),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _hours,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-                labelText: 'Harcanan saat *',
+            decoration: InputDecoration(
+                labelText: ppmT('ppm.worklog.hours', 'Harcanan saat *'),
                 isDense: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _remaining,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-                labelText: 'Kalan tahmin (saat)',
+            decoration: InputDecoration(
+                labelText:
+                    ppmT('ppm.worklog.remaining', 'Kalan tahmin (saat)'),
                 isDense: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _note,
             maxLines: 2,
-            decoration: const InputDecoration(
-                labelText: 'Not',
+            decoration: InputDecoration(
+                labelText: ppmT('ppm.common.note', 'Not'),
                 isDense: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
@@ -123,7 +127,7 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Kaydet'),
+                : Text(ppmT('ppm.common.save', 'Kaydet')),
           ),
         ],
       ),

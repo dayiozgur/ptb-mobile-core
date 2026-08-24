@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../crm_common.dart';
 import 'contact_detail_screen.dart';
 import 'contacts_service.dart';
 
@@ -83,12 +84,12 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Kamera ile çek'),
+              title: Text(crmT('crm.contact.scan_camera', 'Kamera ile çek')),
               onTap: () => Navigator.of(context).pop(CardScanSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden seç'),
+              title: Text(crmT('crm.contact.scan_gallery', 'Galeriden seç')),
               onTap: () => Navigator.of(context).pop(CardScanSource.gallery),
             ),
           ],
@@ -108,8 +109,10 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
         final raw = result.rawText.trim();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(raw.isEmpty
-              ? 'Kartvizitten yazı okunamadı — daha net bir fotoğraf deneyin veya elle girin'
-              : 'Alanlar otomatik ayrıştırılamadı — okunan metinden elle girin'),
+              ? crmT('crm.contact.ocr_no_text',
+                  'Kartvizitten yazı okunamadı — daha net bir fotoğraf deneyin veya elle girin')
+              : crmT('crm.contact.ocr_no_parse',
+                  'Alanlar otomatik ayrıştırılamadı — okunan metinden elle girin')),
           duration: const Duration(seconds: 3),
         ));
         await _quickAdd(initial: result);
@@ -118,8 +121,9 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
       await _quickAdd(initial: result);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tarama başarısız — izinleri kontrol edin')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(crmT('crm.contact.scan_failed',
+                'Tarama başarısız — izinleri kontrol edin'))));
       }
     } finally {
       if (mounted) setState(() => _scanning = false);
@@ -129,7 +133,7 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Kişiler',
+      title: crmT('crm.contact.list_title', 'Kişiler'),
       onBack: () => context.pop(),
       actions: [
         AppIconButton(
@@ -149,11 +153,12 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: _onSearch,
-              decoration: const InputDecoration(
-                hintText: 'Ara: ad, e-posta, telefon…',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText:
+                    crmT('crm.contact.search_hint', 'Ara: ad, e-posta, telefon…'),
+                prefixIcon: const Icon(Icons.search),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
@@ -173,11 +178,12 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
     if (_contacts.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
             child: AppEmptyState(
-                icon: Icons.people_outline, title: 'Kişi bulunamadı'),
+                icon: Icons.people_outline,
+                title: crmT('crm.contact.not_found', 'Kişi bulunamadı')),
           ),
         ],
       );
@@ -286,8 +292,9 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
     if (id != null) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kişi eklenemedi.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(crmT('crm.contact.create_failed', 'Kişi eklenemedi.'))));
     }
   }
 
@@ -302,7 +309,10 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         children: [
           Row(
             children: [
-              Text(widget.initial != null ? 'Kartvizitten Kişi' : 'Yeni Kişi',
+              Text(
+                  widget.initial != null
+                      ? crmT('crm.contact.from_card', 'Kartvizitten Kişi')
+                      : crmT('crm.contact.new', 'Yeni Kişi'),
                   style: AppTypography.headline),
               if (widget.initial != null) ...[
                 const SizedBox(width: AppSpacing.sm),
@@ -313,50 +323,56 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
           ),
           if (widget.initial != null) ...[
             const SizedBox(height: 2),
-            Text('Okunan bilgileri kontrol edip kaydedin',
+            Text(
+                crmT('crm.contact.review_scanned',
+                    'Okunan bilgileri kontrol edip kaydedin'),
                 style: AppTypography.caption1
                     .copyWith(color: AppColors.secondaryLabel(context))),
           ],
           const SizedBox(height: AppSpacing.md),
           TextField(
               controller: _first,
-              decoration: const InputDecoration(
-                  labelText: 'Ad *', isDense: true, border: OutlineInputBorder())),
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.first_name', 'Ad *'),
+                  isDense: true,
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _last,
-              decoration: const InputDecoration(
-                  labelText: 'Soyad', isDense: true, border: OutlineInputBorder())),
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.last_name', 'Soyad'),
+                  isDense: true,
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                  labelText: 'E-posta',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.email', 'E-posta'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                  labelText: 'Telefon',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.phone', 'Telefon'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _title,
-              decoration: const InputDecoration(
-                  labelText: 'Pozisyon / Unvan',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.title_field', 'Pozisyon / Unvan'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _company,
-              decoration: const InputDecoration(
-                  labelText: 'Firma',
+              decoration: InputDecoration(
+                  labelText: crmT('crm.contact.company', 'Firma'),
                   isDense: true,
-                  border: OutlineInputBorder())),
+                  border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
             onPressed: _saving ? null : _save,
@@ -365,7 +381,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Kaydet'),
+                : Text(crmT('crm.common.save', 'Kaydet')),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../ppm_common.dart';
 import '../board/ppm_board_screen.dart';
 
 /// **PPM Portföy Özeti** — MS-Project "Project Summary" mobil karşılığı (portföy
@@ -15,7 +16,7 @@ class PpmDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tenantId = sl<TenantService>().currentTenantId;
     return SummaryScreen(
-      title: 'Portföy Özeti',
+      title: ppmT('ppm.dashboard.title', 'Portföy Özeti'),
       actions: [
         Builder(
           builder: (ctx) => AppIconButton(
@@ -30,22 +31,24 @@ class PpmDashboardScreen extends StatelessWidget {
       cards: [
         // Tenant-geneli KPI (tüm projeler; p_root boş → hepsi).
         KpiRowCard(
-          title: 'Genel Bakış',
+          title: ppmT('ppm.dashboard.overview', 'Genel Bakış'),
           rpc: 'fn_ppm_project_overview',
           params: {'p_tenant_id': tenantId},
-          kpis: const [
-            KpiSpec('Toplam İş', 'total'),
-            KpiSpec('Tamamlanan', 'done'),
-            KpiSpec('Puan (Toplam)', 'pts_total'),
+          kpis: [
+            KpiSpec(ppmT('ppm.dashboard.total_issues', 'Toplam İş'), 'total'),
+            KpiSpec(ppmT('ppm.dashboard.done', 'Tamamlanan'), 'done'),
+            KpiSpec(ppmT('ppm.dashboard.pts_total', 'Puan (Toplam)'),
+                'pts_total'),
           ],
         ),
         // Projelere göre iş ilerlemesi — tamamlanan vs açık (yığılmış bar).
         AggregateChartCard(
-          title: 'Proje İlerlemesi',
-          subtitle: 'Projeye göre tamamlanan / açık iş',
+          title: ppmT('ppm.dashboard.project_progress', 'Proje İlerlemesi'),
+          subtitle: ppmT('ppm.dashboard.project_progress_sub',
+              'Projeye göre tamamlanan / açık iş'),
           rpc: 'fn_ppm_portfolio_rollup',
           chartKind: 'stacked_bar',
-          visualConfig: {
+          visualConfig: const {
             'labelField': 'project_name',
             'valueFields': ['done_issues', 'open_issues'],
           },
@@ -53,11 +56,12 @@ class PpmDashboardScreen extends StatelessWidget {
         ),
         // Story point — toplam vs tamamlanan.
         AggregateChartCard(
-          title: 'Story Point',
-          subtitle: 'Projeye göre toplam / tamamlanan puan',
+          title: ppmT('ppm.dashboard.story_point', 'Story Point'),
+          subtitle: ppmT('ppm.dashboard.story_point_sub',
+              'Projeye göre toplam / tamamlanan puan'),
           rpc: 'fn_ppm_portfolio_rollup',
           chartKind: 'bar_chart',
-          visualConfig: {
+          visualConfig: const {
             'labelField': 'project_name',
             'valueFields': ['total_points', 'done_points'],
           },

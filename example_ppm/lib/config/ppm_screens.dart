@@ -5,11 +5,12 @@ import '../features/board/ppm_board_screen.dart';
 import '../features/dashboard/ppm_dashboard_screen.dart';
 import '../features/dashboard/ppm_sprint_screen.dart';
 import '../features/worklog/ppm_entity_actions.dart';
+import '../ppm_common.dart';
 
 /// PPM "İşlerim" kaynağı — `fn_ppm_my_work` satırlarını generic [WorkInboxItem]'a
 /// eşler (bana atanan epic/story/task/sub_task, tüm projeler).
 final WorkInboxSource ppmMyWorkSource = WorkInboxSource(
-  title: 'İşlerim',
+  title: ppmT('ppm.work.title', 'İşlerim'),
   rpcName: 'fn_ppm_my_work',
   mapper: (r) => WorkInboxItem(
     id: r['id']?.toString() ?? '',

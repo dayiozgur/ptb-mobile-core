@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../ppm_common.dart';
 import '../dashboard/ppm_project_summary_screen.dart';
 
 /// PPM proje-scope hedefi.
@@ -112,18 +113,18 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
   String get _targetLabel {
     switch (widget.target) {
       case PpmScopeTarget.backlog:
-        return 'Backlog';
+        return ppmT('ppm.board.backlog', 'Backlog');
       case PpmScopeTarget.summary:
-        return 'Özet';
+        return ppmT('ppm.board.summary', 'Özet');
       case PpmScopeTarget.board:
-        return 'Board';
+        return ppmT('ppm.board.board', 'Board');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: '$_targetLabel — Proje seç',
+      title: '$_targetLabel — ${ppmT('ppm.board.select_project', 'Proje seç')}',
       onBack: () => context.pop(),
       actions: [AppIconButton(icon: Icons.refresh, onPressed: _load)],
       child: RefreshIndicator(
@@ -141,11 +142,12 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
     if (_projects.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
             child: AppEmptyState(
-                icon: Icons.folder_off_outlined, title: 'Proje bulunamadı'),
+                icon: Icons.folder_off_outlined,
+                title: ppmT('ppm.board.no_projects', 'Proje bulunamadı')),
           ),
         ],
       );

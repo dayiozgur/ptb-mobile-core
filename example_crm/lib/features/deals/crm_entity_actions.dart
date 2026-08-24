@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../crm_common.dart';
 import '../contacts/contacts_service.dart' show CrmActivity;
 
 /// **CRM entity-detay domain aksiyonları** — generic `entity_detail`'e
@@ -64,14 +65,15 @@ Future<void> _logNextStep(
       'p_next_date': date.toIso8601String().split('T').first,
     });
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('Sonraki adım kaydedildi ✓')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(
+              crmT('crm.deal.next_step_saved', 'Sonraki adım kaydedildi ✓'))));
     }
     await reload();
   } catch (_) {
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx)
-          .showSnackBar(const SnackBar(content: Text('Kaydedilemedi')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(crmT('crm.common.save_failed', 'Kaydedilemedi'))));
     }
   }
 }
@@ -82,14 +84,15 @@ Future<void> _completeActivity(
     await _sb.rpc('fn_crm_complete_activity',
         params: {'p_activity_id': activityId});
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('Aktivite tamamlandı ✓')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content:
+              Text(crmT('crm.activity.completed', 'Aktivite tamamlandı ✓'))));
     }
     await reload();
   } catch (_) {
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx)
-          .showSnackBar(const SnackBar(content: Text('İşlem başarısız')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(crmT('crm.common.action_failed', 'İşlem başarısız'))));
     }
   }
 }
@@ -143,7 +146,9 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Aktivite eklenemedi')));
+            .showSnackBar(SnackBar(
+                content:
+                    Text(crmT('crm.activity.add_failed', 'Aktivite eklenemedi'))));
       }
     }
   }
@@ -157,7 +162,8 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Aktivite Ekle', style: AppTypography.headline),
+          Text(crmT('crm.activity.add_title', 'Aktivite Ekle'),
+              style: AppTypography.headline),
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.xs,
@@ -173,19 +179,19 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _subject,
-            decoration: const InputDecoration(
-                labelText: 'Konu *',
+            decoration: InputDecoration(
+                labelText: crmT('crm.activity.subject', 'Konu *'),
                 isDense: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _notes,
             maxLines: 3,
-            decoration: const InputDecoration(
-                labelText: 'Not',
+            decoration: InputDecoration(
+                labelText: crmT('crm.common.note', 'Not'),
                 isDense: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
@@ -195,7 +201,7 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Kaydet'),
+                : Text(crmT('crm.common.save', 'Kaydet')),
           ),
         ],
       ),
@@ -248,7 +254,8 @@ class _ActivityFeedSectionState extends State<_ActivityFeedSection> {
                   Icon(Icons.timeline_outlined,
                       size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
-                  Text('Aktiviteler', style: AppTypography.subhead),
+                  Text(crmT('crm.contact.activities', 'Aktiviteler'),
+                      style: AppTypography.subhead),
                   const Spacer(),
                   Text('${acts.length}',
                       style: AppTypography.caption1

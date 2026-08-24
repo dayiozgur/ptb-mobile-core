@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../ppm_common.dart';
+
 /// **PPM Proje Özeti** — MS-Project "Project Summary" mobil karşılığı (per-proje).
 ///
 /// Tek RPC `fn_ppm_project_overview(p_tenant_id, p_root)` tüm özeti verir:
@@ -28,18 +30,20 @@ class PpmProjectSummaryScreen extends StatelessWidget {
       title: title,
       cards: [
         KpiRowCard(
-          title: 'Genel Bakış',
+          title: ppmT('ppm.dashboard.overview', 'Genel Bakış'),
           rpc: 'fn_ppm_project_overview',
           params: params,
-          kpis: const [
-            KpiSpec('Toplam İş', 'total'),
-            KpiSpec('Tamamlanan', 'done'),
-            KpiSpec('Puan (Toplam)', 'pts_total'),
+          kpis: [
+            KpiSpec(ppmT('ppm.dashboard.total_issues', 'Toplam İş'), 'total'),
+            KpiSpec(ppmT('ppm.dashboard.done', 'Tamamlanan'), 'done'),
+            KpiSpec(ppmT('ppm.dashboard.pts_total', 'Puan (Toplam)'),
+                'pts_total'),
           ],
         ),
         AggregateChartCard(
-          title: 'Durum Dağılımı',
-          subtitle: 'İşlerin duruma göre dağılımı',
+          title: ppmT('ppm.summary.status_dist', 'Durum Dağılımı'),
+          subtitle: ppmT(
+              'ppm.summary.status_dist_sub', 'İşlerin duruma göre dağılımı'),
           rpc: 'fn_ppm_project_overview',
           params: params,
           chartKind: 'donut_chart',
@@ -51,8 +55,9 @@ class PpmProjectSummaryScreen extends StatelessWidget {
           height: 220,
         ),
         AggregateChartCard(
-          title: 'Tür Dağılımı',
-          subtitle: 'Epik / story / task / alt-görev',
+          title: ppmT('ppm.summary.type_dist', 'Tür Dağılımı'),
+          subtitle: ppmT(
+              'ppm.summary.type_dist_sub', 'Epik / story / task / alt-görev'),
           rpc: 'fn_ppm_project_overview',
           params: params,
           chartKind: 'bar_chart',
