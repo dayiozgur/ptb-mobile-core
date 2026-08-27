@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../alarms/alarm_actions_helper.dart';
+
 class MonitoringDashboardScreen extends StatefulWidget {
   const MonitoringDashboardScreen({super.key});
 
@@ -544,10 +546,11 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   ),
                 ),
                 onTap: () {
-                  ActiveAlarmDetailSheet.show(
+                  showAlarmActions(
                     context,
                     alarm: alarm,
                     priority: priority,
+                    onRefresh: _loadData,
                   );
                 },
               ),

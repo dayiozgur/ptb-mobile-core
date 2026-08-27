@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../alarms/alarm_actions_helper.dart';
+
 /// Renk paleti - çoklu variable serileri için
 const _seriesColors = [
   Color(0xFF007AFF),
@@ -728,7 +730,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
         return _ActiveAlarmCard(
           alarm: alarm,
           priority: priority,
-          onTap: () => ActiveAlarmDetailSheet.show(context, alarm: alarm, priority: priority),
+          onTap: () => showAlarmActions(context, alarm: alarm, priority: priority, onRefresh: _loadData),
         );
       },
     );

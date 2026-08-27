@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../alarm_actions_helper.dart';
+
 class AlarmDashboardScreen extends StatefulWidget {
   const AlarmDashboardScreen({super.key});
 
@@ -342,12 +344,13 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               priorities: _priorityMap,
                               emptyMessage: sl<LocalizationService>().translate('alarm.no_active'),
                               onAlarmTap: (alarm) {
-                                ActiveAlarmDetailSheet.show(
+                                showAlarmActions(
                                   context,
                                   alarm: alarm,
                                   priority: alarm.priorityId != null
                                       ? _priorityMap[alarm.priorityId!]
                                       : null,
+                                  onRefresh: _loadData,
                                 );
                               },
                             ),

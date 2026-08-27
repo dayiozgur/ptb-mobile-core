@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../../alarms/alarm_actions_helper.dart';
+
 /// Site Landing Page - Site detaylari ve IoT verileri icin sekmeli yapi
 class SiteLandingScreen extends StatefulWidget {
   final String siteId;
@@ -676,7 +678,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           alarm: alarm,
           priority: priority,
           onTap: () {
-            ActiveAlarmDetailSheet.show(context, alarm: alarm, priority: priority);
+            showAlarmActions(context, alarm: alarm, priority: priority, onRefresh: _loadData);
           },
         );
       },
