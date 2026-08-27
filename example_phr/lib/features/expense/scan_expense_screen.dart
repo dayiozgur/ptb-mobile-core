@@ -32,6 +32,29 @@ class ScanExpenseScreen extends StatefulWidget {
       'description': desc.join(' • '),
     };
   }
+
+  /// Düşük-güvenle okunan alanlar için insan-okunur uyarılar (form üstünde
+  /// banner). `fieldConfidence` (0..1) parser'da hesaplanıyordu ama UI'da hiç
+  /// gösterilmiyordu — kullanıcı hangi alanı kontrol edeceğini bilsin. Saf.
+  static List<String> lowConfidenceNotices(ReceiptScanResult r,
+      {double threshold = 0.6}) {
+    const labels = <String, String>{
+      'total': 'Tutar',
+      'subTotal': 'Ara toplam',
+      'date': 'Tarih',
+      'taxNumber': 'VKN/TCKN',
+      'merchant': 'İşletme',
+      'documentNo': 'Belge No',
+    };
+    final out = <String>[];
+    r.fieldConfidence.forEach((key, value) {
+      if (value < threshold) {
+        final label = labels[key] ?? key;
+        out.add('$label düşük güvenle okundu — kontrol edin.');
+      }
+    });
+    return out;
+  }
 }
 
 class _ScanExpenseScreenState extends State<ScanExpenseScreen> {
@@ -69,7 +92,9 @@ class _ScanExpenseScreenState extends State<ScanExpenseScreen> {
       builder: (_) => EntityFormScreen(
         typeCode: 'hr_expense',
         seedValues: ScanExpenseScreen.expenseSeed(r),
-        notices: r.warnings,
+        // Aritmetik uyarılar + düşük-güven alan uyarıları birlikte (kullanıcı
+        // OCR sonucunu güvenle kontrol etsin — kartvizit "kontrol et" paritesi).
+        notices: [...r.warnings, ...ScanExpenseScreen.lowConfidenceNotices(r)],
       ),
     ));
   }
