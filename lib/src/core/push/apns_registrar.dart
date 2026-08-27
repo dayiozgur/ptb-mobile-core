@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
+import 'push_notification_service.dart';
 
 /// **APNs kayıt yöneticisi** — saf Apple push (Firebase/FCM YOK).
 ///
@@ -51,10 +52,49 @@ class ApnsRegistrar {
         }
         if (token != null && token.isNotEmpty) await _saveToken(token, bundleId);
         break;
+      case 'onNotificationTap':
+        // Kullanıcı bildirime tıkladı → payload'ı (aps + custom route/entityId)
+        // PushNotificationService'e ilet; deep-link köprüsü ekranı açar.
+        final args = call.arguments;
+        if (args is Map) {
+          _dispatchTap(
+              args.map((k, v) => MapEntry(k.toString(), v)).cast<String, dynamic>());
+        }
+        break;
       case 'onError':
         Logger.warning('APNs kayıt hatası (native): ${call.arguments}');
         break;
     }
+  }
+
+  /// Native APNs userInfo'sunu [PushNotificationData]'ya çevirip tap'i dağıtır.
+  /// Başlık/gövde `aps.alert`'ten; yönlendirme verisi (`route`/`entityId`/
+  /// `type`) top-level custom anahtarlardan (`data`'ya konur → deep-link).
+  void _dispatchTap(Map<String, dynamic> userInfo) {
+    String? title;
+    String? body;
+    final aps = userInfo['aps'];
+    if (aps is Map) {
+      final alert = aps['alert'];
+      if (alert is Map) {
+        title = alert['title']?.toString();
+        body = alert['body']?.toString();
+      } else if (alert is String) {
+        body = alert;
+      }
+    }
+    final data = <String, dynamic>{};
+    userInfo.forEach((k, v) {
+      if (k != 'aps') data[k] = v;
+    });
+
+    final n = PushNotificationData(
+      id: userInfo['id']?.toString() ?? '',
+      title: title ?? '',
+      body: body ?? '',
+      data: data,
+    );
+    sl<PushNotificationService>().handleNotificationTap(n);
   }
 
   /// Token'ı user_devices'a upsert (token benzersiz → aynı cihaz güncellenir).

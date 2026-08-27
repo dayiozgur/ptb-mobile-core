@@ -10,6 +10,7 @@ import 'admin/audit_log_screen.dart';
 import 'admin/bug_reports_screen.dart';
 import 'admin/integrations_screen.dart';
 import 'admin/notifications_hub_screen.dart';
+import 'notifications/notifications_screen.dart';
 import 'admin/roles_screen.dart';
 import 'admin/subscription_screen.dart';
 import 'admin/menu_builder_screen.dart';
@@ -106,6 +107,11 @@ class ScreenResolver {
     }
     if (p == '/announcements' || p == '/duyurular') {
       return const AnnouncementsListScreen();
+    }
+    // Bildirim gelen-kutusu — /notifications | /bildirimler (push deep-link
+    // hedefi; şimdiye kadar yalnız shell zil ikonundan imperatif açılıyordu).
+    if (p == '/notifications' || p == '/bildirimler') {
+      return const NotificationsScreen();
     }
     // Admin/yönetim yolları — mobilde henüz özel ekran yok, ama menüde
     // GÖRÜNMELİ (aksi halde _pruneToScreens admin grubunu tümden gizliyordu →

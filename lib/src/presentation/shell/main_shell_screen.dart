@@ -153,10 +153,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
     try {
       final count = await sl<NotificationService>().getUnreadCount(uid);
       if (mounted) setState(() => _unreadCount = count);
+      sl<PushNotificationService>().setBadgeCount(count); // app-icon senkron
       await sl<NotificationService>().startListening(uid);
     } catch (_) {}
     _unreadSub = sl<NotificationService>().unreadCountStream.listen((c) {
       if (mounted) setState(() => _unreadCount = c);
+      // Okunmamış sayısı değişince app-icon rozetini de güncelle (okundu →
+      // azalır → 0'da kaybolur). In-app zil rozeti zaten _unreadCount ile bağlı.
+      sl<PushNotificationService>().setBadgeCount(c);
     });
   }
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
@@ -498,8 +499,8 @@ class PushNotificationService {
     Logger.info('Notification received: ${notification.title}');
   }
 
-  /// Bildirime tıklandığında
-  @protected
+  /// Bildirime tıklandığında (native tap köprüsü ApnsRegistrar'dan çağırır →
+  /// deep-link için public'tir).
   void handleNotificationTap(PushNotificationData notification) {
     onNotificationTap?.call(notification);
     Logger.info('Notification tapped: ${notification.title}');
@@ -557,11 +558,20 @@ class PushNotificationService {
   // BADGE MANAGEMENT
   // ============================================
 
-  /// Badge sayısını güncelle
+  /// Native APNs köprüsü — app-icon rozetini güncellemek için (ptb/apns).
+  static const MethodChannel _apnsChannel = MethodChannel('ptb/apns');
+
+  /// App-icon rozet sayısını güncelle (okunmamış bildirim sayısı). 0 → rozet
+  /// kaybolur. iOS-dışı platformda kanal yok → sessiz no-op.
   Future<void> setBadgeCount(int count) async {
     if (!_settings.badgeEnabled) return;
-    // Platform-specific implementation gerekli
-    Logger.warning('setBadgeCount() should be implemented for platform');
+    try {
+      await _apnsChannel.invokeMethod('setBadge', {'count': count});
+    } on MissingPluginException {
+      // Android/desktop → kanal yok, sessiz.
+    } catch (e) {
+      Logger.warning('setBadgeCount hata: $e');
+    }
   }
 
   /// Badge'i temizle
