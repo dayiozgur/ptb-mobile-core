@@ -23,6 +23,12 @@ export 'models/performance_review.dart';
 /// (OfflineSyncService handler'ı bununla kayıtlanır ve tetiklenir).
 const String kLeaveRequestCreateOpType = 'leave_request_create';
 
+/// Offline kuyruğunda PDKS giriş-punch'ı için op-tipi anahtarı. Çevrimdışı
+/// yapılan giriş, client-timestamp korunarak kuyruğa alınır; online olunca
+/// `attendance_records`'a INSERT edilir. (Çıkış ve geo-punch offline DEĞİL —
+/// çıkış read-modify-write, geo-punch sunucu-taraflı mesafe doğrulaması ister.)
+const String kPunchCreateOpType = 'attendance_punch_create';
+
 /// HR Employee-Self-Service (ESS) data layer.
 ///
 /// PHR mobil uygulamasının izin / bordro / puantaj (PDKS) / oryantasyon
@@ -387,6 +393,31 @@ class HrEssService {
     final workDate = _fmtDate(now);
     final nowUtc = now.toUtc().toIso8601String();
 
+    // OFFLINE: bağlantı yoksa GİRİŞ punch'ını kuyruğa al (client-timestamp =
+    // çevrimdışı-an korunur). Read-modify-write burada yapılamaz (canlı okuma
+    // yok) → koşulsuz INSERT modeli: yeni entry satırı. Çıkış için online şart
+    // (fn_pdks_range çoklu-döngü topladığından ekstra satır zararsız). Online
+    // olunca [replayPunch] payload'ı aynen INSERT eder.
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final payload = <String, dynamic>{
+        'tenant_id': tenantId,
+        'staff_id': staffId,
+        'work_date': workDate,
+        'entry_time': nowUtc,
+        'source': 'manual',
+        'created_by': uid,
+      };
+      final op = await sync.addOperation(
+        type: PendingOperationType.create,
+        entityType: kPunchCreateOpType,
+        entityId: staffId,
+        data: payload,
+      );
+      Logger.info('Offline: punch (giriş) queued (${op.id})');
+      return 'queued_in';
+    }
+
     final existing = await _supabase
         .from('attendance_records')
         .select('id, entry_time, exit_time')
@@ -423,6 +454,24 @@ class HrEssService {
       return 'out';
     }
     return 'done';
+  }
+
+  /// Gerçek ağ yazımı (`attendance_records` INSERT) — offline punch replay'i
+  /// buraya düşer. Saf INSERT (read-modify-write DEĞİL): kuyruğa alınmış
+  /// giriş satırını olduğu gibi yazar.
+  Future<void> _insertPunchToNetwork(Map<String, dynamic> payload) async {
+    await _supabase.from('attendance_records').insert(payload);
+  }
+
+  /// Offline kuyruk replay handler'ı: çevrimdışı yapılmış giriş-punch'ını
+  /// (client-timestamp korunarak) yeniden oynatır. Başarıda `true`.
+  ///
+  /// Idempotency notu: `attendance_records` için kalıcı dedupe anahtarı YOK;
+  /// yanıt kaybolursa gecikmiş replay kopya satır yaratabilir — fn_pdks_range
+  /// çoklu-döngü topladığından zararsız, birincil koruma kuyruğun başarı→sil'i.
+  Future<bool> replayPunch(PendingOperation op) async {
+    await _insertPunchToNetwork(Map<String, dynamic>.from(op.data));
+    return true;
   }
 
   /// Puantaj aralığı — `fn_pdks_range(p_tenant, p_staff, p_from, p_to)`.

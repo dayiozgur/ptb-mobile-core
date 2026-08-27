@@ -422,6 +422,10 @@ class CoreInitializer {
         kCommentCreateOpType,
         (op) => sl<CommentsService>().replayAddComment(op),
       );
+      sync.registerHandler(
+        kPunchCreateOpType,
+        (op) => sl<HrEssService>().replayPunch(op),
+      );
       Logger.debug('Offline replay handlers registered ($kEntitySubmitOpType, '
           '$kLeaveRequestCreateOpType, $kCommentCreateOpType)');
     } catch (e) {

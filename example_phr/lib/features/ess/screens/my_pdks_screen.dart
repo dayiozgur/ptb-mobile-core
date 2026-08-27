@@ -68,7 +68,11 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
           ? essT('hr.pdks.punched_in', 'Giriş kaydedildi ✓')
           : r == 'out'
               ? essT('hr.pdks.punched_out', 'Çıkış kaydedildi ✓')
-              : essT('hr.pdks.punch_done', 'Bugün için giriş/çıkış tamamlandı');
+              : r == 'queued_in'
+                  ? essT('hr.pdks.punch_queued',
+                      'Çevrimdışı — giriş kuyruğa alındı, bağlantı gelince gönderilecek')
+                  : essT('hr.pdks.punch_done',
+                      'Bugün için giriş/çıkış tamamlandı');
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg)));
       await _loadData();
