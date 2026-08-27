@@ -142,12 +142,73 @@ class _RunPayslipsScreen extends StatefulWidget {
 class _RunPayslipsScreenState extends State<_RunPayslipsScreen> {
   final _ctrl = AsyncViewController();
 
+  /// "Düzeltmeleri uygula" aksiyonu çalışırken true (çift-tıklama guard'ı +
+  /// AppBar'da yükleniyor göstergesi).
+  bool _applying = false;
+
+  /// Bekleyen bordro ek/kesintilerini bu çalıştırmanın bordrosuna işle
+  /// (`fn_payroll_apply_adjustments`, web `PayrollService.applyAdjustments`
+  /// aynası). Onay diyaloğu → servis → "N düzeltme uygulandı" snackbar + liste
+  /// yenile. Servis hata → `null` döndürür (fırlatmaz); hata snackbar'ı gösterilir.
+  /// Aksiyon-deseni `admin_payroll_adjustments_screen.dart` iptal akışıyla aynı.
+  Future<void> _applyAdjustments() async {
+    if (_applying) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(essT(
+            'payroll.runs.apply_adjustments_title', 'Düzeltmeleri uygula')),
+        content: Text(essT('payroll.runs.apply_adjustments_confirm',
+            'Bu çalıştırma için bekleyen bordro ek/kesintilerini uygulamak istiyor musunuz?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(essT('common.cancel', 'Vazgeç')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(essT('common.confirm', 'Onayla')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _applying = true);
+    final count =
+        await adminPayrollAdjustmentService.applyAdjustments(widget.run.id);
+    if (!mounted) return;
+    setState(() => _applying = false);
+
+    final outcome = payrollApplyOutcome(
+      count,
+      successTemplate: essT(
+          'payroll.runs.adjustments_applied', '{n} düzeltme uygulandı'),
+      errorText:
+          essT('payroll.runs.apply_adjustments_failed', 'Düzeltmeler uygulanamadı'),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(outcome.message),
+        backgroundColor: outcome.ok ? AppColors.success : AppColors.error,
+      ),
+    );
+    if (outcome.ok) _ctrl.reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: essMonthYear(widget.run.periodYear, widget.run.periodMonth),
       onBack: () => Navigator.of(context).pop(),
       actions: [
+        AppIconButton(
+          icon: Icons.playlist_add_check,
+          isLoading: _applying,
+          tooltip: essT('payroll.runs.apply_adjustments_title',
+              'Düzeltmeleri uygula'),
+          onPressed: _applyAdjustments,
+        ),
         AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
       child: AsyncView<List<PayrollRunPayslip>>(
@@ -230,6 +291,19 @@ class _RunPayslipCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// `applyAdjustments` dönüşünü (işlenen adet; `null` = servis hatası)
+/// kullanıcı mesajına çevirir. Saf/test-edilebilir — çeviri şablonları dışarıdan
+/// verilir (çeviri runtime'ına bağımlı değil). `null` → hata; aksi halde
+/// [successTemplate] içindeki `{n}` işaretçisi adetle değiştirilir.
+({bool ok, String message}) payrollApplyOutcome(
+  int? count, {
+  required String successTemplate,
+  required String errorText,
+}) {
+  if (count == null) return (ok: false, message: errorText);
+  return (ok: true, message: successTemplate.replaceFirst('{n}', '$count'));
 }
 
 /// Kaydırılabilir boş-durum (RefreshIndicator ile uyumlu).
