@@ -47,6 +47,16 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Placeholder .env (asset bundling — gerçek secret gerekmez, derleme-doğrulaması)
+        run: |
+          cd example_phr
+          cat > .env <<'ENV'
+          SUPABASE_URL=https://placeholder.supabase.co
+          SUPABASE_ANON_KEY=placeholder-anon-key
+          API_BASE_URL=https://placeholder.example.com
+          APP_NAME=PHR CI
+          DEBUG_MODE=false
+          ENV
       - name: PHR debug APK (derleme doğrulaması)
         run: |
           cd example_phr
@@ -62,6 +72,18 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Placeholder .env (asset bundling — gerçek secret gerekmez, derleme-doğrulaması)
+        run: |
+          cd example_phr
+          cat > .env <<'ENV'
+          SUPABASE_URL=https://placeholder.supabase.co
+          SUPABASE_ANON_KEY=placeholder-anon-key
+          API_BASE_URL=https://placeholder.example.com
+          APP_NAME=PHR CI
+          DEBUG_MODE=false
+          ENV
+      - name: SPM'i kapat — CocoaPods'a zorla (image_cropper TOCrop 3.x ⟂ DKImagePickerController SPM-manifest TOCrop 2.x; Pods'ta DKImage 4.3.9 + TOCrop 3.1.2 temiz çözülür)
+        run: flutter config --no-enable-swift-package-manager
       - name: PHR iOS (no-codesign derleme doğrulaması)
         run: |
           cd example_phr
