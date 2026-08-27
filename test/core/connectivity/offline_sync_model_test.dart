@@ -20,6 +20,16 @@ void main() {
       expect(PendingOperationType.fromString(null), isNull);
       expect(PendingOperationType.fromString('MERGE'), isNull);
     });
+
+    test('generic write türleri (RPC / INSERT) parse edilir', () {
+      // MOB-09: form-submit dışı generic write akışları için yeni tipler.
+      expect(PendingOperationType.fromString('RPC'),
+          PendingOperationType.genericRpc);
+      expect(PendingOperationType.fromString('INSERT'),
+          PendingOperationType.tableInsert);
+      expect(PendingOperationType.genericRpc.value, 'RPC');
+      expect(PendingOperationType.tableInsert.value, 'INSERT');
+    });
   });
 
   group('PendingOperationStatus.fromString', () {
@@ -97,6 +107,105 @@ void main() {
       expect(restored.status, PendingOperationStatus.pending);
       expect(restored.retryCount, 0); // eksik alan → 0
       expect(restored.entityId, isNull);
+    });
+  });
+
+  group('PendingOperation generic-write (MOB-09: form-submit dışı)', () {
+    test('PendingOperation.rpc → payload + entityType = fn adı', () {
+      final op = PendingOperation.rpc(
+        id: 'rpc-1',
+        function: 'fn_ppm_log_work',
+        params: {'p_submission_id': 's1', 'p_hours_spent': 2.5},
+        createdAt: DateTime.parse('2026-08-25T09:00:00.000'),
+        idempotencyKey: 'idem-abc',
+      );
+
+      expect(op.type, PendingOperationType.genericRpc);
+      expect(op.entityType, 'fn_ppm_log_work'); // dispatch-doğal-anahtar
+      expect(op.rpcFunction, 'fn_ppm_log_work');
+      expect(op.rpcParams, {'p_submission_id': 's1', 'p_hours_spent': 2.5});
+      expect(op.idempotencyKey, 'idem-abc');
+      // tip uyuşmazlığı getter'ları → null/boş
+      expect(op.tableName, isNull);
+      expect(op.insertRow, isEmpty);
+    });
+
+    test('PendingOperation.rpc params yoksa boş map', () {
+      final op = PendingOperation.rpc(
+        id: 'rpc-2',
+        function: 'fn_status_change',
+        createdAt: DateTime.parse('2026-08-25T00:00:00.000'),
+      );
+      expect(op.rpcParams, isEmpty);
+      expect(op.idempotencyKey, isNull);
+    });
+
+    test('PendingOperation.tableInsert → payload + entityType = tablo adı', () {
+      final op = PendingOperation.tableInsert(
+        id: 'ins-1',
+        table: 'activity_logs',
+        row: {'action': 'approve', 'entity_id': 'e1'},
+        createdAt: DateTime.parse('2026-08-25T09:00:00.000'),
+      );
+
+      expect(op.type, PendingOperationType.tableInsert);
+      expect(op.entityType, 'activity_logs');
+      expect(op.tableName, 'activity_logs');
+      expect(op.insertRow, {'action': 'approve', 'entity_id': 'e1'});
+      // tip uyuşmazlığı getter'ları → null/boş
+      expect(op.rpcFunction, isNull);
+      expect(op.rpcParams, isEmpty);
+    });
+
+    test('genericRpc JSON round-trip (idempotency_key dahil)', () {
+      final op = PendingOperation.rpc(
+        id: 'rpc-3',
+        function: 'fn_approve',
+        params: {'p_id': 'x', 'p_note': 'ok'},
+        createdAt: DateTime.parse('2026-08-25T12:00:00.000'),
+        idempotencyKey: 'idem-1',
+        retryCount: 1,
+        status: PendingOperationStatus.pending,
+      );
+
+      final json = op.toJson();
+      expect(json['type'], 'RPC');
+      expect(json['idempotency_key'], 'idem-1');
+
+      final restored = PendingOperation.fromJson(json);
+      expect(restored.type, PendingOperationType.genericRpc);
+      expect(restored.rpcFunction, 'fn_approve');
+      expect(restored.rpcParams, {'p_id': 'x', 'p_note': 'ok'});
+      expect(restored.idempotencyKey, 'idem-1');
+      expect(restored.retryCount, 1);
+    });
+
+    test('tableInsert JSON round-trip', () {
+      final op = PendingOperation.tableInsert(
+        id: 'ins-2',
+        table: 'worklog_events',
+        row: {'hours': 3},
+        createdAt: DateTime.parse('2026-08-25T12:00:00.000'),
+      );
+      final restored = PendingOperation.fromJson(op.toJson());
+      expect(restored.type, PendingOperationType.tableInsert);
+      expect(restored.tableName, 'worklog_events');
+      expect(restored.insertRow, {'hours': 3});
+    });
+
+    test('geriye-uyum: idempotency_key olmayan eski kayıt → null', () {
+      // MOB-10 formatında yazılmış (idempotency_key alanı yok) bir kaydın
+      // hâlâ sorunsuz parse edilmesi gerekir.
+      final restored = PendingOperation.fromJson({
+        'id': 'legacy-1',
+        'type': 'CREATE',
+        'entity_type': 'unit',
+        'data': {'name': 'X'},
+        'created_at': '2026-08-20T00:00:00.000',
+        'status': 'PENDING',
+      });
+      expect(restored.idempotencyKey, isNull);
+      expect(restored.type, PendingOperationType.create);
     });
   });
 

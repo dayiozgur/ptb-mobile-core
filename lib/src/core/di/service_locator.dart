@@ -82,6 +82,7 @@ import '../hr/hr_calendar_review_service.dart';
 import '../hr/admin_leave_service.dart';
 import '../hr/admin_performance_service.dart';
 import '../hr/admin_payroll_service.dart';
+import '../hr/admin_payroll_adjustment_service.dart';
 import '../hr/admin_org_service.dart';
 import '../hr/admin_attendance_service.dart';
 import '../hr/admin_recruitment_service.dart';
@@ -709,6 +710,9 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<AdminPayrollService>(
     () => AdminPayrollService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<AdminPayrollAdjustmentService>(
+    () => AdminPayrollAdjustmentService(supabase: sl<SupabaseClient>()),
   );
   sl.registerLazySingleton<AdminOrgService>(
     () => AdminOrgService(supabase: sl<SupabaseClient>()),

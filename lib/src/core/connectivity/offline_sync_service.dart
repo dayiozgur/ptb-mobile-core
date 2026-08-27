@@ -7,10 +7,20 @@ import '../utils/logger.dart';
 import 'connectivity_service.dart';
 
 /// Bekleyen işlem türü
+///
+/// [create]/[update]/[delete] klasik entity-CRUD fiilleridir; hangi Supabase
+/// çağrısına karşılık geldiğini o entity'nin handler'ı bilir.
+///
+/// [genericRpc] ve [tableInsert] ise FORM-SUBMIT DIŞI generic write akışları
+/// içindir (durum-değişimi, worklog, aktivite-log, onay/red gibi). Bunlar
+/// entity handler'ına ihtiyaç duymadan, taşıdıkları payload'la doğrudan bir
+/// RPC ya da tablo-insert'e map edilebilir ([SupabaseReplayDispatcher]).
 enum PendingOperationType {
   create('CREATE'),
   update('UPDATE'),
-  delete('DELETE');
+  delete('DELETE'),
+  genericRpc('RPC'),
+  tableInsert('INSERT');
 
   final String value;
   const PendingOperationType(this.value);
@@ -45,6 +55,18 @@ enum PendingOperationStatus {
 
 /// Bekleyen işlem modeli
 class PendingOperation {
+  /// [genericRpc] payload'unda RPC fonksiyon adının tutulduğu anahtar.
+  static const String kRpcFn = 'fn';
+
+  /// [genericRpc] payload'unda RPC parametre map'inin tutulduğu anahtar.
+  static const String kRpcParams = 'params';
+
+  /// [tableInsert] payload'unda hedef tablo adının tutulduğu anahtar.
+  static const String kTable = 'table';
+
+  /// [tableInsert] payload'unda insert edilecek satırın tutulduğu anahtar.
+  static const String kRow = 'row';
+
   final String id;
   final PendingOperationType type;
   final String entityType;
@@ -53,6 +75,12 @@ class PendingOperation {
   final DateTime createdAt;
   final int retryCount;
   final String? lastError;
+
+  /// İdempotency anahtarı (opsiyonel). Aynı yazma iki kez kuyruğa girse/replay
+  /// edilse bile sunucu tarafında tekilleştirilebilmesi için taşınır. Serialize
+  /// formatı geriye-uyumludur: eski kayıtlarda alan yoksa `null` kalır.
+  final String? idempotencyKey;
+
   PendingOperationStatus status;
 
   PendingOperation({
@@ -64,8 +92,64 @@ class PendingOperation {
     required this.createdAt,
     this.retryCount = 0,
     this.lastError,
+    this.idempotencyKey,
     this.status = PendingOperationStatus.pending,
   });
+
+  /// FORM-SUBMIT DIŞI generic bir RPC yazımını ([genericRpc]) kuyruğa uygun
+  /// biçimde kurar. `entityType` doğal olarak fonksiyon adıdır; böylece istenirse
+  /// fonksiyon-bazlı bir handler da kayıtlıysa yine eşleşir.
+  factory PendingOperation.rpc({
+    required String id,
+    required String function,
+    Map<String, dynamic>? params,
+    required DateTime createdAt,
+    String? entityId,
+    String? idempotencyKey,
+    int retryCount = 0,
+    String? lastError,
+    PendingOperationStatus status = PendingOperationStatus.pending,
+  }) {
+    return PendingOperation(
+      id: id,
+      type: PendingOperationType.genericRpc,
+      entityType: function,
+      entityId: entityId,
+      data: {kRpcFn: function, kRpcParams: params ?? <String, dynamic>{}},
+      createdAt: createdAt,
+      idempotencyKey: idempotencyKey,
+      retryCount: retryCount,
+      lastError: lastError,
+      status: status,
+    );
+  }
+
+  /// FORM-SUBMIT DIŞI generic bir tablo-insert yazımını ([tableInsert]) kuyruğa
+  /// uygun biçimde kurar. `entityType` doğal olarak tablo adıdır.
+  factory PendingOperation.tableInsert({
+    required String id,
+    required String table,
+    required Map<String, dynamic> row,
+    required DateTime createdAt,
+    String? entityId,
+    String? idempotencyKey,
+    int retryCount = 0,
+    String? lastError,
+    PendingOperationStatus status = PendingOperationStatus.pending,
+  }) {
+    return PendingOperation(
+      id: id,
+      type: PendingOperationType.tableInsert,
+      entityType: table,
+      entityId: entityId,
+      data: {kTable: table, kRow: row},
+      createdAt: createdAt,
+      idempotencyKey: idempotencyKey,
+      retryCount: retryCount,
+      lastError: lastError,
+      status: status,
+    );
+  }
 
   factory PendingOperation.fromJson(Map<String, dynamic> json) {
     return PendingOperation(
@@ -80,6 +164,7 @@ class PendingOperation {
           : DateTime.now(),
       retryCount: json['retry_count'] as int? ?? 0,
       lastError: json['last_error'] as String?,
+      idempotencyKey: json['idempotency_key'] as String?,
       status: PendingOperationStatus.fromString(json['status'] as String?) ??
           PendingOperationStatus.pending,
     );
@@ -94,8 +179,29 @@ class PendingOperation {
         'created_at': createdAt.toIso8601String(),
         'retry_count': retryCount,
         'last_error': lastError,
+        'idempotency_key': idempotencyKey,
         'status': status.value,
       };
+
+  // --- Generic-write payload okuyucuları (tipe göre güvenli) ---
+
+  /// [genericRpc] için çağrılacak RPC fonksiyon adı (aksi tipte `null`).
+  String? get rpcFunction =>
+      type == PendingOperationType.genericRpc ? data[kRpcFn] as String? : null;
+
+  /// [genericRpc] için RPC parametreleri (yoksa boş map).
+  Map<String, dynamic> get rpcParams =>
+      (data[kRpcParams] as Map?)?.cast<String, dynamic>() ??
+      const <String, dynamic>{};
+
+  /// [tableInsert] için hedef tablo adı (aksi tipte `null`).
+  String? get tableName =>
+      type == PendingOperationType.tableInsert ? data[kTable] as String? : null;
+
+  /// [tableInsert] için insert edilecek satır (yoksa boş map).
+  Map<String, dynamic> get insertRow =>
+      (data[kRow] as Map?)?.cast<String, dynamic>() ??
+      const <String, dynamic>{};
 
   PendingOperation copyWith({
     String? id,
@@ -106,6 +212,7 @@ class PendingOperation {
     DateTime? createdAt,
     int? retryCount,
     String? lastError,
+    String? idempotencyKey,
     PendingOperationStatus? status,
   }) {
     return PendingOperation(
@@ -117,6 +224,7 @@ class PendingOperation {
       createdAt: createdAt ?? this.createdAt,
       retryCount: retryCount ?? this.retryCount,
       lastError: lastError ?? this.lastError,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       status: status ?? this.status,
     );
   }
@@ -166,6 +274,12 @@ class OfflineSyncService {
 
   // Handler'lar (entity type -> handler)
   final Map<String, OperationHandler> _handlers = {};
+
+  // entityType için özel handler bulunamazsa devreye giren yedek handler.
+  // FORM-SUBMIT DIŞI generic write akışları (genericRpc/tableInsert) için tek
+  // bir dispatcher'ı (ör. SupabaseReplayDispatcher.dispatch) buraya bağlamak
+  // yeterlidir; her fonksiyon/tablo için ayrı handler kaydına gerek kalmaz.
+  OperationHandler? _defaultHandler;
 
   // Stream controllers
   final _syncProgressController = StreamController<SyncProgress>.broadcast();
@@ -256,6 +370,21 @@ class OfflineSyncService {
     Logger.debug('Handler unregistered for: $entityType');
   }
 
+  /// entityType-bazlı handler bulunmadığında kullanılacak yedek handler'ı kaydet.
+  ///
+  /// Generic write akışlarını ([PendingOperationType.genericRpc] /
+  /// [PendingOperationType.tableInsert]) tek noktadan replay etmek için idealdir.
+  void registerDefaultHandler(OperationHandler handler) {
+    _defaultHandler = handler;
+    Logger.debug('Default (fallback) handler registered');
+  }
+
+  /// Yedek handler'ı kaldır.
+  void unregisterDefaultHandler() {
+    _defaultHandler = null;
+    Logger.debug('Default (fallback) handler unregistered');
+  }
+
   // ============================================
   // OPERATIONS MANAGEMENT
   // ============================================
@@ -266,6 +395,7 @@ class OfflineSyncService {
     required String entityType,
     String? entityId,
     required Map<String, dynamic> data,
+    String? idempotencyKey,
   }) async {
     _ensureInitialized();
 
@@ -276,6 +406,7 @@ class OfflineSyncService {
       entityId: entityId,
       data: data,
       createdAt: DateTime.now(),
+      idempotencyKey: idempotencyKey,
     );
 
     await _saveOperation(operation);
@@ -290,6 +421,84 @@ class OfflineSyncService {
     }
 
     return operation;
+  }
+
+  /// FORM-SUBMIT DIŞI generic bir RPC yazımını kuyruğa al.
+  ///
+  /// Durum-değişimi, worklog-logla, onay/red gibi akışlar için: replay sırasında
+  /// [SupabaseReplayDispatcher] bunu `client.rpc(function, params: ...)` çağrısına
+  /// map eder.
+  Future<PendingOperation> enqueueRpc({
+    required String function,
+    Map<String, dynamic>? params,
+    String? entityId,
+    String? idempotencyKey,
+  }) {
+    return addOperation(
+      type: PendingOperationType.genericRpc,
+      entityType: function,
+      entityId: entityId,
+      data: {
+        PendingOperation.kRpcFn: function,
+        PendingOperation.kRpcParams: params ?? <String, dynamic>{},
+      },
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  /// FORM-SUBMIT DIŞI generic bir tablo-insert yazımını kuyruğa al.
+  ///
+  /// Aktivite-log gibi düz insert akışları için: replay sırasında
+  /// [SupabaseReplayDispatcher] bunu `client.from(table).insert(row)` çağrısına
+  /// map eder.
+  Future<PendingOperation> enqueueTableInsert({
+    required String table,
+    required Map<String, dynamic> row,
+    String? entityId,
+    String? idempotencyKey,
+  }) {
+    return addOperation(
+      type: PendingOperationType.tableInsert,
+      entityType: table,
+      entityId: entityId,
+      data: {
+        PendingOperation.kTable: table,
+        PendingOperation.kRow: row,
+      },
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  /// Çevrimdışıysa yazımı kuyruğa alır ve `true` (kuyruğa alındı) döner.
+  ///
+  /// Çevrimiçiyse hiçbir şey kuyruğa EKLEMEZ ve `false` döner — çağıran taraf
+  /// yazmayı doğrudan (online yolla) yapmalıdır. Böylece bir feature'ın gerçek
+  /// write yolu, dosyasına dokunmadan, tek satırla offline-aware yapılabilir:
+  ///
+  /// ```dart
+  /// final queued = await sync.enqueueIfOffline(
+  ///   type: PendingOperationType.genericRpc,
+  ///   entityType: 'fn_ppm_log_work',
+  ///   data: {PendingOperation.kRpcFn: 'fn_ppm_log_work', PendingOperation.kRpcParams: params},
+  /// );
+  /// if (!queued) await supabase.rpc('fn_ppm_log_work', params: params);
+  /// ```
+  Future<bool> enqueueIfOffline({
+    required PendingOperationType type,
+    required String entityType,
+    String? entityId,
+    required Map<String, dynamic> data,
+    String? idempotencyKey,
+  }) async {
+    if (_connectivityService.isOnline) return false;
+    await addOperation(
+      type: type,
+      entityType: entityType,
+      entityId: entityId,
+      data: data,
+      idempotencyKey: idempotencyKey,
+    );
+    return true;
   }
 
   /// Bekleyen işlemleri getir
@@ -435,7 +644,7 @@ class OfflineSyncService {
   }
 
   Future<bool> _processOperation(PendingOperation operation) async {
-    final handler = _handlers[operation.entityType];
+    final handler = _handlers[operation.entityType] ?? _defaultHandler;
 
     if (handler == null) {
       Logger.warning('No handler for entity type: ${operation.entityType}');

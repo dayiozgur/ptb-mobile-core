@@ -49,6 +49,10 @@ void registerCrmEntityActions() {
 
 SupabaseClient get _sb => sl<SupabaseClient>();
 
+/// Tüm write-aksiyonları çekirdek [CrmActionsService] üzerinden gider
+/// (tek, test-edilmiş RPC kaynağı — inline RPC string'i tekrar edilmez).
+CrmActionsService get _actions => CrmActionsService(supabase: _sb);
+
 Future<void> _logNextStep(
     BuildContext ctx, String dealId, Future<void> Function() reload) async {
   final now = DateTime.now();
@@ -59,42 +63,24 @@ Future<void> _logNextStep(
     lastDate: now.add(const Duration(days: 365)),
   );
   if (date == null) return;
-  try {
-    await _sb.rpc('fn_crm_log_next_step', params: {
-      'p_deal_id': dealId,
-      'p_next_date': date.toIso8601String().split('T').first,
-    });
-    if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text(
-              crmT('crm.deal.next_step_saved', 'Sonraki adım kaydedildi ✓'))));
-    }
-    await reload();
-  } catch (_) {
-    if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text(crmT('crm.common.save_failed', 'Kaydedilemedi'))));
-    }
-  }
+  final ok = await _actions.logNextStep(dealId: dealId, dueDate: date);
+  if (!ctx.mounted) return;
+  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(ok
+          ? crmT('crm.deal.next_step_saved', 'Sonraki adım kaydedildi ✓')
+          : crmT('crm.common.save_failed', 'Kaydedilemedi'))));
+  if (ok) await reload();
 }
 
 Future<void> _completeActivity(
     BuildContext ctx, String activityId, Future<void> Function() reload) async {
-  try {
-    await _sb.rpc('fn_crm_complete_activity',
-        params: {'p_activity_id': activityId});
-    if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content:
-              Text(crmT('crm.activity.completed', 'Aktivite tamamlandı ✓'))));
-    }
-    await reload();
-  } catch (_) {
-    if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text(crmT('crm.common.action_failed', 'İşlem başarısız'))));
-    }
-  }
+  final ok = await _actions.completeActivity(activityId: activityId);
+  if (!ctx.mounted) return;
+  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(ok
+          ? crmT('crm.activity.completed', 'Aktivite tamamlandı ✓')
+          : crmT('crm.common.action_failed', 'İşlem başarısız'))));
+  if (ok) await reload();
 }
 
 Future<void> _logActivity(BuildContext ctx,
@@ -134,22 +120,19 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
   Future<void> _save() async {
     if (_subject.text.trim().isEmpty || _saving) return;
     setState(() => _saving = true);
-    try {
-      await _sb.rpc('fn_crm_log_activity', params: {
-        'p_subject': _subject.text.trim(),
-        'p_activity_type': _type,
-        if (_notes.text.trim().isNotEmpty) 'p_notes': _notes.text.trim(),
-        'p_related_deal_id': widget.dealId,
-      });
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(
-                content:
-                    Text(crmT('crm.activity.add_failed', 'Aktivite eklenemedi'))));
-      }
+    final ok = await _actions.logActivity(
+      subject: _subject.text,
+      activityType: _type,
+      notes: _notes.text,
+      relatedDealId: widget.dealId,
+    );
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(crmT('crm.activity.add_failed', 'Aktivite eklenemedi'))));
     }
   }
 

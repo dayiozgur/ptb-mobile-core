@@ -20,6 +20,56 @@ class AdminPayrollAdjustmentsScreen extends StatefulWidget {
 class _AdminPayrollAdjustmentsScreenState
     extends State<AdminPayrollAdjustmentsScreen> {
   final _ctrl = AsyncViewController();
+  final Set<String> _busy = {};
+
+  /// Bekleyen bir ek/kesintiyi iptal et (web `cancelAdjustment` aynası). Onay
+  /// diyaloğu → servis → başarıda liste yenile. Servis hata → `false` döndürür
+  /// (fırlatmaz); kullanıcıya hata snackbar'ı gösterilir.
+  Future<void> _cancel(PayrollAdjustment adj) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title:
+            Text(essT('payroll.adjustments.cancel_title', 'Ek/kesintiyi iptal et')),
+        content: Text(essT('payroll.adjustments.cancel_confirm',
+            'Bu bekleyen ek/kesintiyi iptal etmek istiyor musunuz?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(essT('common.cancel', 'Vazgeç')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(essT('common.confirm', 'Onayla')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy.add(adj.id));
+    final ok = await adminPayrollAdjustmentService.cancelAdjustment(adj.id);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              essT('payroll.adjustments.cancelled_ok', 'Ek/kesinti iptal edildi')),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _ctrl.reload();
+    } else {
+      setState(() => _busy.remove(adj.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              essT('payroll.adjustments.cancel_failed', 'İptal başarısız')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +96,11 @@ class _AdminPayrollAdjustmentsScreenState
       padding: AppSpacing.screenPadding,
       itemCount: d.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _AdjustmentCard(adj: d[i]),
+      itemBuilder: (_, i) => _AdjustmentCard(
+        adj: d[i],
+        busy: _busy.contains(d[i].id),
+        onCancel: () => _cancel(d[i]),
+      ),
     );
   }
 }
@@ -72,12 +126,19 @@ String _sourceLabel(PayrollAdjustment a) {
 
 class _AdjustmentCard extends StatelessWidget {
   final PayrollAdjustment adj;
+  final bool busy;
+  final VoidCallback onCancel;
 
-  const _AdjustmentCard({required this.adj});
+  const _AdjustmentCard({
+    required this.adj,
+    required this.busy,
+    required this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context) {
     final deduction = adj.isDeduction;
+    final isPending = adj.status == 'pending';
     final amountColor = deduction ? AppColors.error : AppColors.success;
     final sign = deduction ? '-' : '+';
     final name = (adj.staffName ?? '').isEmpty ? '—' : adj.staffName!;
@@ -91,7 +152,10 @@ class _AdjustmentCard extends StatelessWidget {
     return AppCard(
       child: Padding(
         padding: AppSpacing.cardInsets,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
           children: [
             Container(
               width: 44,
@@ -161,6 +225,26 @@ class _AdjustmentCard extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+            ),
+            if (isPending) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: busy
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                        child: AppLoadingIndicator(),
+                      )
+                    : AppButton(
+                        label: essT('payroll.adjustments.cancel', 'İptal et'),
+                        variant: AppButtonVariant.secondary,
+                        size: AppButtonSize.small,
+                        icon: Icons.close,
+                        onPressed: onCancel,
+                      ),
+              ),
+            ],
           ],
         ),
       ),

@@ -88,6 +88,7 @@ export 'src/core/collaboration/comments_service.dart';
 export 'src/core/work/work_inbox_service.dart';
 export 'src/core/ppm/worklog_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
+export 'src/core/crm/crm_actions_service.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
 export 'src/presentation/shell/work/work_inbox_screen.dart';
 export 'src/presentation/shell/summary/summary_screen.dart';
@@ -98,6 +99,7 @@ export 'src/core/notification/notification_service.dart';
 // Core - Connectivity (Offline Support)
 export 'src/core/connectivity/connectivity_service.dart';
 export 'src/core/connectivity/offline_sync_service.dart';
+export 'src/core/connectivity/supabase_replay_dispatcher.dart';
 
 // Core - Reporting (Analytics)
 export 'src/core/reporting/reporting_model.dart';
@@ -238,6 +240,7 @@ export 'src/core/hr/admin_performance_service.dart';
 export 'src/core/hr/models/performance_cycle.dart';
 export 'src/core/hr/models/admin_performance_review.dart';
 export 'src/core/hr/models/competency.dart';
+export 'src/core/hr/admin_payroll_adjustment_service.dart';
 export 'src/core/hr/admin_payroll_service.dart';
 export 'src/core/hr/models/payroll_helpers.dart';
 export 'src/core/hr/models/payroll_run.dart';
