@@ -86,6 +86,8 @@ export 'src/core/notification/local_notification_service.dart';
 export 'src/core/time/app_clock.dart';
 export 'src/core/collaboration/comments_service.dart';
 export 'src/core/work/work_inbox_service.dart';
+export 'src/core/ppm/worklog_service.dart';
+export 'src/core/ppm/ppm_metrics.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
 export 'src/presentation/shell/work/work_inbox_screen.dart';
 export 'src/presentation/shell/summary/summary_screen.dart';

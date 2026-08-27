@@ -49,6 +49,15 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
   final _note = TextEditingController();
   bool _saving = false;
 
+  late final WorklogService _worklog = WorklogService(supabase: _sb);
+  late Future<List<WorklogEntry>> _history;
+
+  @override
+  void initState() {
+    super.initState();
+    _history = _worklog.listWorklogs(widget.submissionId);
+  }
+
   @override
   void dispose() {
     _hours.dispose();
@@ -61,22 +70,21 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
     final hours = num.tryParse(_hours.text.trim().replaceAll(',', '.'));
     if (hours == null || hours <= 0 || _saving) return;
     setState(() => _saving = true);
-    try {
-      final remaining =
-          num.tryParse(_remaining.text.trim().replaceAll(',', '.'));
-      await _sb.rpc('fn_ppm_log_work', params: {
-        'p_submission_id': widget.submissionId,
-        'p_hours_spent': hours,
-        if (remaining != null) 'p_remaining_estimate': remaining,
-        if (_note.text.trim().isNotEmpty) 'p_note': _note.text.trim(),
-      });
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(ppmT('ppm.worklog.save_failed', 'Efor kaydedilemedi'))));
-      }
+    final remaining = num.tryParse(_remaining.text.trim().replaceAll(',', '.'));
+    final ok = await _worklog.logWork(
+      submissionId: widget.submissionId,
+      hours: hours,
+      remainingEstimate: remaining,
+      note: _note.text,
+    );
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(ppmT('ppm.worklog.save_failed', 'Efor kaydedilemedi'))));
     }
   }
 
@@ -129,8 +137,62 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : Text(ppmT('ppm.common.save', 'Kaydet')),
           ),
+          const SizedBox(height: AppSpacing.md),
+          _WorklogHistory(future: _history),
         ],
       ),
+    );
+  }
+}
+
+/// Bu iş öğesinin efor geçmişi (son kayıtlar). Boş/hata → sessizce gizlenir.
+class _WorklogHistory extends StatelessWidget {
+  final Future<List<WorklogEntry>> future;
+  const _WorklogHistory({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<WorklogEntry>>(
+      future: future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+        final logs = snap.data ?? const <WorklogEntry>[];
+        if (logs.isEmpty) return const SizedBox.shrink();
+        final shown = logs.take(5).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(ppmT('ppm.worklog.history', 'Efor geçmişi'),
+                style: AppTypography.caption1),
+            const SizedBox(height: AppSpacing.xs),
+            for (final w in shown)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Text('${(w.hoursSpent ?? 0).toStringAsFixed(1)} sa',
+                        style: AppTypography.withWeight(
+                            AppTypography.body, FontWeight.w600)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        [w.createdAt?.formatted, w.note]
+                            .whereType<String>()
+                            .where((s) => s.isNotEmpty)
+                            .join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
