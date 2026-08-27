@@ -32,6 +32,7 @@ import '../features/admin/screens/admin_organizations_screen.dart';
 import '../features/admin/screens/admin_payroll_adjustments_screen.dart';
 import '../features/admin/screens/admin_payroll_cost_summary_screen.dart';
 import '../features/admin/screens/admin_payroll_parameters_screen.dart';
+import '../features/admin/screens/admin_payroll_pushable_screen.dart';
 import '../features/admin/screens/admin_payroll_runs_screen.dart';
 import '../features/admin/screens/admin_payroll_salaries_screen.dart';
 import '../features/admin/screens/admin_pdks_screen.dart';
@@ -150,6 +151,9 @@ Widget? phrResolve(MenuItem item) {
   }
   if (p == '/admin/payroll/adjustments') {
     return const AdminPayrollAdjustmentsScreen();
+  }
+  if (p == '/admin/payroll/pushable') {
+    return const AdminPayrollPushableScreen();
   }
   if (p == '/admin/payroll/cost-summary') {
     return const AdminPayrollCostSummaryScreen();

@@ -5,10 +5,12 @@ import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
 import 'models/payroll_adjustment.dart';
 import 'models/payroll_cost_row.dart';
+import 'models/payroll_helpers.dart';
 import 'models/payroll_parameter.dart';
 import 'models/payroll_run.dart';
 import 'models/payroll_run_payslip.dart';
 import 'models/payroll_salary.dart';
+import 'models/pushable_submission.dart';
 
 /// Admin Bordro (Payroll) yönetim ekranları için salt-okuma veri servisi.
 ///
@@ -180,6 +182,132 @@ class AdminPayrollService {
       Logger.error('AdminPayrollService.adjustments hata: $e');
       rethrow;
     }
+  }
+
+  // ============================================
+  // PUSHABLE SUBMISSIONS (bordroya bekleyenler)
+  // ============================================
+
+  /// Bordroya itilebilir (onaylı) avans/masraf başvuruları. Web
+  /// `PayrollService.getPushableSubmissions` istemci-okumasının **birebir**
+  /// aynası (3 sorgu + eleme):
+  ///   1. `form_submissions` (entity_type `hr_advance`/`hr_expense`, active).
+  ///   2. `payroll_adjustments` (`status <> 'cancelled'`) → `source_ref` seti;
+  ///      bir başvuru zaten itilmişse listeden ELENİR (çift-itme guard'ı).
+  ///   3. `staffs` (`profile_id in submitted_by`) → başvuran adı eşlemesi.
+  ///
+  /// Statü literaline göre filtre YOK — statü rozet olarak gösterilir, itme
+  /// kararını admin verir. Hata → `[]` (inbox'ı çökertmemek için sessiz-boş;
+  /// diğer salt-okuma metodlarının rethrow deseninden bilinçli ayrılır).
+  Future<List<PushableSubmission>> getPushableSubmissions() async {
+    try {
+      final tenantId = _tenant.currentTenantId;
+
+      // 1) Aday başvurular.
+      var subQuery = _supabase
+          .from('form_submissions')
+          .select(
+              'id,entity_type,status,code,subject,metadata,submitted_by,active')
+          .inFilter('entity_type', const ['hr_advance', 'hr_expense'])
+          .eq('active', true);
+      if (tenantId != null) subQuery = subQuery.eq('tenant_id', tenantId);
+      final subs = await subQuery.order('created_at', ascending: false);
+
+      // 2) Zaten itilmiş (iptal edilmemiş) başvuru referansları.
+      var adjQuery = _supabase
+          .from('payroll_adjustments')
+          .select('source_ref,status')
+          .neq('status', 'cancelled');
+      if (tenantId != null) adjQuery = adjQuery.eq('tenant_id', tenantId);
+      final adjs = await adjQuery;
+
+      // 3) Başvuran adları (submitted_by → staffs.profile_id).
+      final submitterIds = <String>{
+        for (final r in (subs as List))
+          if ((r as Map)['submitted_by'] != null)
+            r['submitted_by'].toString(),
+      }.toList();
+
+      List<dynamic> staffRows = const [];
+      if (submitterIds.isNotEmpty) {
+        var staffQuery = _supabase
+            .from('staffs')
+            .select('profile_id,name,first_name,last_name')
+            .inFilter('profile_id', submitterIds);
+        if (tenantId != null) staffQuery = staffQuery.eq('tenant_id', tenantId);
+        staffRows = await staffQuery as List;
+      }
+
+      return mapPushableSubmissions(
+        submissions: subs,
+        adjustments: adjs as List,
+        staffs: staffRows,
+      );
+    } catch (e) {
+      Logger.error('AdminPayrollService.getPushableSubmissions hata: $e');
+      return const [];
+    }
+  }
+
+  /// Saf mapper — 3 ham sorgu sonucundan itilebilir başvuru listesini üretir.
+  /// Test-edilebilir (Supabase'e bağımsız). Web mantığının aynası: itilmiş
+  /// (`source_ref` ∈ taken) başvurular elenir; `submitterName` staffs'tan
+  /// (`name ?? '<first> <last>'`); `amount` = `metadata.amount`.
+  static List<PushableSubmission> mapPushableSubmissions({
+    required List<dynamic> submissions,
+    required List<dynamic> adjustments,
+    required List<dynamic> staffs,
+  }) {
+    final taken = <String>{
+      for (final a in adjustments)
+        if ((a as Map)['source_ref'] != null) a['source_ref'].toString(),
+    };
+
+    final nameByProfile = <String, String>{};
+    for (final s in staffs) {
+      if (s is! Map) continue;
+      final pid = s['profile_id']?.toString();
+      if (pid == null) continue;
+      final full = _staffFullName(s);
+      if (full != null) nameByProfile[pid] = full;
+    }
+
+    final result = <PushableSubmission>[];
+    for (final r in submissions) {
+      if (r is! Map) continue;
+      final id = r['id']?.toString();
+      if (id == null) continue;
+      final ref = id; // adjustment.source_ref = form_submission.id
+      if (taken.contains(ref)) continue;
+
+      final meta = r['metadata'];
+      final amount =
+          meta is Map ? payrollNum(meta['amount']) : payrollNum(null);
+      final submittedBy = r['submitted_by']?.toString();
+
+      result.add(PushableSubmission(
+        id: id,
+        entityType: (r['entity_type'] as String?) ?? 'hr_advance',
+        status: (r['status'] as String?) ?? 'pending',
+        code: r['code'] as String?,
+        subject: r['subject'] as String?,
+        amount: amount,
+        submitterName:
+            submittedBy == null ? null : nameByProfile[submittedBy],
+      ));
+    }
+    return result;
+  }
+
+  /// Başvuran görünen adı — web `getPushableSubmissions` önceliği:
+  /// `name ?? '<first> <last>'` (name önce; boşsa ad+soyad).
+  static String? _staffFullName(Map s) {
+    final name = (s['name'] as String?)?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final first = (s['first_name'] as String?)?.trim() ?? '';
+    final last = (s['last_name'] as String?)?.trim() ?? '';
+    final full = [first, last].where((e) => e.isNotEmpty).join(' ');
+    return full.isEmpty ? null : full;
   }
 
   // ============================================

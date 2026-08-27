@@ -248,6 +248,7 @@ export 'src/core/hr/models/payroll_run_payslip.dart';
 export 'src/core/hr/models/payroll_salary.dart';
 export 'src/core/hr/models/payroll_parameter.dart';
 export 'src/core/hr/models/payroll_adjustment.dart';
+export 'src/core/hr/models/pushable_submission.dart';
 export 'src/core/hr/models/payroll_cost_row.dart';
 export 'src/core/hr/admin_org_service.dart';
 export 'src/core/hr/models/admin_position.dart';

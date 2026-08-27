@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../ess/ess_common.dart';
+import 'admin_payroll_pushable_screen.dart';
 
 /// Admin "Bordro Ek/Kesintileri" (salt-okuma, v1).
 ///
@@ -77,6 +78,15 @@ class _AdminPayrollAdjustmentsScreenState
       title: essT('payroll.adjustments.title', 'Bordro Ek/Kesintileri'),
       onBack: () => context.pop(),
       actions: [
+        AppIconButton(
+          icon: Icons.playlist_add_check,
+          tooltip: essT('payroll.pushable.title', 'Bordroya Bekleyenler'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const AdminPayrollPushableScreen(),
+            ),
+          ),
+        ),
         AppIconButton(icon: Icons.refresh, onPressed: _ctrl.reload),
       ],
       child: AsyncView<List<PayrollAdjustment>>(
