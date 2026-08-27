@@ -77,6 +77,16 @@ class ReceiptScanResult {
   /// Doğrulama uyarıları (ör. "KDV toplamı genel toplamla tutmuyor").
   final List<String> warnings;
 
+  /// Alan-başına kaynak OCR satırı + bounding-box (görüntü-piksel koordinat).
+  /// Anahtarlar [fieldConfidence] ile aynı (total/subTotal/date/taxNumber/
+  /// merchant/documentNo). Onay ekranında taranan görüntü üzerine okunan
+  /// alanların kutusu çizilir (düşük-güven kırmızı). Boş = geometri yok.
+  final Map<String, OcrLine> fieldBoxes;
+
+  /// Kırpılmış/taranan görüntünün yerel dosya yolu (onay ekranında Image.file
+  /// ile gösterilip üstüne [fieldBoxes] overlay çizilir). null = görüntü yok.
+  final String? imagePath;
+
   const ReceiptScanResult({
     this.total,
     this.subTotal,
@@ -89,7 +99,43 @@ class ReceiptScanResult {
     this.rawText = '',
     this.fieldConfidence = const {},
     this.warnings = const [],
+    this.fieldBoxes = const {},
+    this.imagePath,
   });
+
+  /// Belirli alanları değiştirip yeni sonuç üretir (onay ekranı düzeltmeleri
+  /// [fieldBoxes]/[imagePath] gibi geometriyi kaybetmesin diye).
+  ReceiptScanResult copyWith({
+    double? total,
+    double? subTotal,
+    List<VatLine>? vatLines,
+    String? date,
+    String? time,
+    String? documentNo,
+    String? taxNumber,
+    String? merchant,
+    String? rawText,
+    Map<String, double>? fieldConfidence,
+    List<String>? warnings,
+    Map<String, OcrLine>? fieldBoxes,
+    String? imagePath,
+  }) {
+    return ReceiptScanResult(
+      total: total ?? this.total,
+      subTotal: subTotal ?? this.subTotal,
+      vatLines: vatLines ?? this.vatLines,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      documentNo: documentNo ?? this.documentNo,
+      taxNumber: taxNumber ?? this.taxNumber,
+      merchant: merchant ?? this.merchant,
+      rawText: rawText ?? this.rawText,
+      fieldConfidence: fieldConfidence ?? this.fieldConfidence,
+      warnings: warnings ?? this.warnings,
+      fieldBoxes: fieldBoxes ?? this.fieldBoxes,
+      imagePath: imagePath ?? this.imagePath,
+    );
+  }
 
   /// Hiçbir anlamlı alan çıkmadı mı?
   bool get isEmpty =>

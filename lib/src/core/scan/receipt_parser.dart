@@ -83,27 +83,41 @@ class ReceiptParser {
   static List<String> _amountTokens(String text) =>
       _decimalAmount.allMatches(text).map((m) => m.group(0)!).toList();
 
-  /// Anahtar-kelime satırı için değeri bulur: önce satırın KENDİ metnindeki
-  /// (en sağdaki) tutar, yoksa AYNI SATIRDAKİ (centerY yakın) en-sağ tutar.
-  static double? _valueFor(OcrLine kw, List<OcrLine> lines) {
+  /// Anahtar-kelime satırı için değeri + değerin OKUNDUĞU satırı bulur: önce
+  /// satırın KENDİ metnindeki (en sağdaki) tutar → kaynak = kw satırı, yoksa
+  /// AYNI SATIRDAKİ (centerY yakın) en-sağ tutar → kaynak = o tutar satırı.
+  /// Overlay bbox okunan tutarın gerçek konumunu gösterebilsin diye satır döner.
+  static ({double? value, OcrLine? line}) _valueLineFor(
+      OcrLine kw, List<OcrLine> lines) {
     final own = _amountTokens(kw.text);
     if (own.isNotEmpty) {
-      return parseTurkishAmount(own.last);
+      return (value: parseTurkishAmount(own.last), line: kw);
     }
     final tol = kw.height == 0 ? 12.0 : kw.height * 0.7;
     final row = lines.where((l) =>
         !identical(l, kw) && (l.centerY - kw.centerY).abs() <= tol);
-    final candidates = <MapEntry<double, double>>[];
+    final candidates = <({double right, double value, OcrLine line})>[];
     for (final l in row) {
       for (final tok in _amountTokens(l.text)) {
         final v = parseTurkishAmount(tok);
-        if (v != null) candidates.add(MapEntry(l.right, v));
+        if (v != null) candidates.add((right: l.right, value: v, line: l));
       }
     }
-    if (candidates.isEmpty) return null;
-    candidates.sort((a, b) => b.key.compareTo(a.key)); // en sağdaki
-    return candidates.first.value;
+    if (candidates.isEmpty) return (value: null, line: null);
+    candidates.sort((a, b) => b.right.compareTo(a.right)); // en sağdaki
+    return (value: candidates.first.value, line: candidates.first.line);
   }
+
+  /// Yalnız değeri döndüren ince sarmalayıcı (geriye-uyum).
+  static double? _valueFor(OcrLine kw, List<OcrLine> lines) =>
+      _valueLineFor(kw, lines).value;
+
+  /// Anahtar-kelime eşleşmesi için Türkçe büyük-İ/I katlaması: 'İ' (U+0130) ve
+  /// 'I' → 'i'. Dart'ın `caseSensitive:false`'u i/İ çiftini katlamadığından
+  /// büyük-harf fişlerde 'FİŞ NO' / 'VERGİ DAİRESİ' / 'MAL/HİZMET' gibi
+  /// anahtarlar aksi halde hiç yakalanmaz. Yalnız EŞLEŞME katmanında kullanılır;
+  /// değer/bbox çıkarımı ham metni kullanmaya devam eder.
+  static String _kw(String s) => s.replaceAll('İ', 'i').replaceAll('I', 'i');
 
   /// Ana ayrıştırma.
   static ReceiptScanResult parse(List<OcrLine> lines, {String? rawText}) {
@@ -114,27 +128,37 @@ class ReceiptParser {
 
     final conf = <String, double>{};
     final warnings = <String>[];
+    // Alan → okunan OCR satırı (görüntü-üstü bbox overlay için).
+    final boxes = <String, OcrLine>{};
 
     // --- Genel toplam ---
     double? total;
-    OcrLine? grandLine = clean.firstWhereOrNull((l) => _grandTotalKw.hasMatch(l.text));
-    grandLine ??= clean.firstWhereOrNull((l) => _totalKw.hasMatch(l.text) && !_subTotalKw.hasMatch(l.text) && !_vatKw.hasMatch(l.text));
+    OcrLine? grandLine = clean.firstWhereOrNull((l) => _grandTotalKw.hasMatch(_kw(l.text)));
+    grandLine ??= clean.firstWhereOrNull((l) => _totalKw.hasMatch(_kw(l.text)) && !_subTotalKw.hasMatch(_kw(l.text)) && !_vatKw.hasMatch(_kw(l.text)));
     if (grandLine != null) {
-      total = _valueFor(grandLine, clean);
-      if (total != null) conf['total'] = 0.7;
+      final vl = _valueLineFor(grandLine, clean);
+      total = vl.value;
+      if (total != null) {
+        conf['total'] = 0.7;
+        if (vl.line != null) boxes['total'] = vl.line!;
+      }
     }
 
     // --- Ara toplam ---
     double? subTotal;
-    final subLine = clean.firstWhereOrNull((l) => _subTotalKw.hasMatch(l.text));
+    final subLine = clean.firstWhereOrNull((l) => _subTotalKw.hasMatch(_kw(l.text)));
     if (subLine != null) {
-      subTotal = _valueFor(subLine, clean);
-      if (subTotal != null) conf['subTotal'] = 0.6;
+      final vl = _valueLineFor(subLine, clean);
+      subTotal = vl.value;
+      if (subTotal != null) {
+        conf['subTotal'] = 0.6;
+        if (vl.line != null) boxes['subTotal'] = vl.line!;
+      }
     }
 
     // --- KDV satırları ---
     final vatLines = <VatLine>[];
-    for (final l in clean.where((l) => _vatKw.hasMatch(l.text))) {
+    for (final l in clean.where((l) => _vatKw.hasMatch(_kw(l.text)))) {
       final rm = _rateRe.firstMatch(l.text);
       final rate = rm == null
           ? null
@@ -149,7 +173,11 @@ class ReceiptParser {
     String? date;
     String? time;
     for (final l in clean) {
-      date ??= parseDate(l.text);
+      final d = parseDate(l.text);
+      if (date == null && d != null) {
+        date = d;
+        boxes['date'] = l; // tarihin okunduğu satır
+      }
       time ??= parseTime(l.text);
       if (date != null && time != null) break;
     }
@@ -157,21 +185,25 @@ class ReceiptParser {
 
     // --- Belge no ---
     String? documentNo;
-    final docLine = clean.firstWhereOrNull((l) => _docNoKw.hasMatch(l.text));
+    final docLine = clean.firstWhereOrNull((l) => _docNoKw.hasMatch(_kw(l.text)));
     if (docLine != null) {
       final m = RegExp(r'[:\s]([A-Z0-9\-]{3,})\s*$').firstMatch(docLine.text.toUpperCase());
       documentNo = m?.group(1) ??
           RegExp(r'(\d{3,})').firstMatch(docLine.text)?.group(1);
+      if (documentNo != null) boxes['documentNo'] = docLine;
     }
 
     // --- Vergi no (VKN 10 / TCKN 11) ---
     String? taxNumber;
-    final taxLine = clean.firstWhereOrNull((l) => _taxKw.hasMatch(l.text));
+    final taxLine = clean.firstWhereOrNull((l) => _taxKw.hasMatch(_kw(l.text)));
     final taxSearch = taxLine?.text ?? raw;
     final tckn = RegExp(r'\b\d{11}\b').firstMatch(taxSearch)?.group(0);
     final vkn = RegExp(r'\b\d{10}\b').firstMatch(taxSearch)?.group(0);
     taxNumber = vkn ?? tckn;
-    if (taxNumber != null) conf['taxNumber'] = taxLine != null ? 0.7 : 0.4;
+    if (taxNumber != null) {
+      conf['taxNumber'] = taxLine != null ? 0.7 : 0.4;
+      if (taxLine != null) boxes['taxNumber'] = taxLine; // ham metinden ise satır yok
+    }
 
     // --- Satıcı (üst 1-2 satır, harf-ağırlıklı) ---
     String? merchant;
@@ -179,8 +211,9 @@ class ReceiptParser {
     for (final l in sorted.take(3)) {
       final t = l.text.trim();
       final letters = t.replaceAll(RegExp(r'[^A-Za-zÇĞİÖŞÜçğıöşü]'), '').length;
-      if (t.length >= 3 && letters / t.length > 0.5 && !_taxKw.hasMatch(t)) {
+      if (t.length >= 3 && letters / t.length > 0.5 && !_taxKw.hasMatch(_kw(t))) {
         merchant = t;
+        boxes['merchant'] = l;
         break;
       }
     }
@@ -223,6 +256,7 @@ class ReceiptParser {
       rawText: raw,
       fieldConfidence: conf,
       warnings: warnings,
+      fieldBoxes: boxes,
     );
   }
 }

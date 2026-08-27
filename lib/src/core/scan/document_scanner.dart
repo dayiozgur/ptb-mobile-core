@@ -39,10 +39,14 @@ class DocumentScanner {
     try {
       final input = InputImage.fromFilePath(path);
       final recognized = await recognizer.processImage(input);
-      return ReceiptParser.parse(
+      final parsed = ReceiptParser.parse(
         toOcrLines(recognized),
         rawText: recognized.text,
       );
+      // Onay ekranı taranan görüntü üstüne bbox overlay çizebilsin diye
+      // kırpılmış görselin yolunu sonuca iliştir (OCR piksel koordinatları
+      // bu görsele göredir).
+      return parsed.copyWith(imagePath: path);
     } finally {
       await recognizer.close();
     }

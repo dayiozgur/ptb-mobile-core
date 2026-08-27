@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
@@ -216,6 +219,8 @@ class _ReceiptReviewSheetState extends State<_ReceiptReviewSheet> {
       rawText: r.rawText,
       fieldConfidence: r.fieldConfidence,
       warnings: r.warnings,
+      fieldBoxes: r.fieldBoxes,
+      imagePath: r.imagePath,
     ));
   }
 
@@ -243,6 +248,17 @@ class _ReceiptReviewSheetState extends State<_ReceiptReviewSheet> {
                     'Bilgileri kontrol edip düzeltin. Kırmızı alanlar düşük güvenle okundu.'),
                 style: AppTypography.caption1
                     .copyWith(color: AppColors.secondaryLabel(context))),
+            if (r.imagePath != null && r.fieldBoxes.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _ReceiptOverlay(
+                imagePath: r.imagePath!,
+                boxes: r.fieldBoxes,
+                lowKeys: {
+                  for (final k in r.fieldBoxes.keys)
+                    if ((r.fieldConfidence[k] ?? 1.0) < 0.6) k
+                },
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             _field(_merchant, essT('expense.f_merchant', 'İşletme'),
                 _low('merchant')),
@@ -325,4 +341,112 @@ class _ReceiptReviewSheetState extends State<_ReceiptReviewSheet> {
       ),
     );
   }
+}
+
+/// Taranan fiş görüntüsü + üstünde okunan alanların bounding-box'ları
+/// (MOB-14). Kutular OCR piksel-koordinatındadır; görüntü ekran genişliğine
+/// sığdırılır ve kutular AYNI ölçekle çizilir. Düşük-güven alan kırmızı,
+/// güvenli yeşil. Görüntü çözülemezse sessizce gizlenir.
+class _ReceiptOverlay extends StatefulWidget {
+  final String imagePath;
+  final Map<String, OcrLine> boxes;
+  final Set<String> lowKeys;
+  const _ReceiptOverlay({
+    required this.imagePath,
+    required this.boxes,
+    required this.lowKeys,
+  });
+
+  @override
+  State<_ReceiptOverlay> createState() => _ReceiptOverlayState();
+}
+
+class _ReceiptOverlayState extends State<_ReceiptOverlay> {
+  ui.Image? _img;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final bytes = await File(widget.imagePath).readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      if (mounted) setState(() => _img = frame.image);
+    } catch (_) {
+      // Görüntü okunamadıysa overlay atlanır — alan düzenleme yine çalışır.
+    }
+  }
+
+  @override
+  void dispose() {
+    _img?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final img = _img;
+    if (img == null || img.width == 0 || img.height == 0) {
+      return const SizedBox.shrink();
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      child: AspectRatio(
+        aspectRatio: img.width / img.height,
+        child: CustomPaint(
+          painter: _ReceiptBoxPainter(img, widget.boxes, widget.lowKeys),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReceiptBoxPainter extends CustomPainter {
+  final ui.Image image;
+  final Map<String, OcrLine> boxes;
+  final Set<String> lowKeys;
+  _ReceiptBoxPainter(this.image, this.boxes, this.lowKeys);
+
+  static const _low = Color(0xFFEB5757); // kırmızı — düşük güven
+  static const _ok = Color(0xFF27AE60); // yeşil — güvenli
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final iw = image.width.toDouble();
+    final ih = image.height.toDouble();
+    if (iw == 0 || ih == 0) return;
+    final scale = size.width / iw; // fit-width
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, iw, ih),
+      Rect.fromLTWH(0, 0, size.width, ih * scale),
+      Paint(),
+    );
+    for (final e in boxes.entries) {
+      final b = e.value;
+      final color = lowKeys.contains(e.key) ? _low : _ok;
+      final rect = Rect.fromLTRB(
+          b.left * scale, b.top * scale, b.right * scale, b.bottom * scale);
+      final rr = RRect.fromRectAndRadius(rect, const Radius.circular(3));
+      canvas.drawRRect(
+          rr,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = color.withValues(alpha: 0.12));
+      canvas.drawRRect(
+          rr,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..color = color);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ReceiptBoxPainter old) =>
+      old.image != image || old.boxes != boxes || old.lowKeys != lowKeys;
 }

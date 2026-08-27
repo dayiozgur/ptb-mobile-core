@@ -115,5 +115,67 @@ void main() {
       final r = ReceiptParser.parse([line('rastgele metin')], rawText: 'ham');
       expect(r.rawText, 'ham');
     });
+    test('yeni alanlar varsayılan (fieldBoxes boş / imagePath null)', () {
+      const r = ReceiptScanResult();
+      expect(r.fieldBoxes, isEmpty);
+      expect(r.imagePath, isNull);
+    });
+  });
+
+  group('parse — fieldBoxes (görüntü-üstü bbox overlay eşlemesi)', () {
+    test('aynı-satır anahtar+değer → her alan doğru satıra eşlenir', () {
+      final merchantL = line('MİGROS TİCARET A.Ş.', top: 0);
+      final vknL = line('VKN: 1234567890', top: 20);
+      final dateL = line('TARİH: 23.08.2026 SAAT: 14:35', top: 40);
+      final subL = line('ARA TOPLAM        100,00', top: 100);
+      final totalL = line('GENEL TOPLAM      120,00', top: 140);
+      final docL = line('FİŞ NO: 0042', top: 160);
+      final r = ReceiptParser.parse([
+        merchantL,
+        vknL,
+        dateL,
+        subL,
+        line('KDV %20            20,00', top: 120),
+        totalL,
+        docL,
+      ]);
+      // Her alanın kutusu, değeri okunan satırla aynı metni taşır.
+      expect(r.fieldBoxes['total']?.text, totalL.text);
+      expect(r.fieldBoxes['subTotal']?.text, subL.text);
+      expect(r.fieldBoxes['date']?.text, dateL.text);
+      expect(r.fieldBoxes['taxNumber']?.text, vknL.text);
+      expect(r.fieldBoxes['merchant']?.text, merchantL.text);
+      expect(r.fieldBoxes['documentNo']?.text, docL.text);
+    });
+
+    test('ayrı-satır tutar → kutu ANAHTAR değil DEĞER satırını gösterir', () {
+      const kw = OcrLine(
+          text: 'GENEL TOPLAM', top: 200, bottom: 220, left: 10, right: 120);
+      const valueLine =
+          OcrLine(text: '150,00', top: 201, bottom: 219, left: 300, right: 380);
+      final r = ReceiptParser.parse([kw, valueLine]);
+      expect(r.total, 150.0);
+      // bbox okunan tutarın (sağdaki) gerçek konumunu gösterir.
+      expect(r.fieldBoxes['total']?.text, '150,00');
+      expect(r.fieldBoxes['total']?.left, 300);
+    });
+
+    test('okunmayan alan için kutu yok', () {
+      final r = ReceiptParser.parse([line('rastgele metin', top: 0)]);
+      expect(r.fieldBoxes.containsKey('total'), isFalse);
+      expect(r.fieldBoxes.containsKey('date'), isFalse);
+    });
+  });
+
+  group('copyWith — geometri korunur', () {
+    test('imagePath eklenir, diğer alanlar aynı kalır', () {
+      final base = ReceiptParser.parse([
+        line('GENEL TOPLAM 120,00', top: 0),
+      ]);
+      final withImg = base.copyWith(imagePath: '/tmp/receipt.jpg');
+      expect(withImg.imagePath, '/tmp/receipt.jpg');
+      expect(withImg.total, base.total);
+      expect(withImg.fieldBoxes['total']?.text, base.fieldBoxes['total']?.text);
+    });
   });
 }
