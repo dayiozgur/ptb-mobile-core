@@ -42,6 +42,12 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
 
   String _t(String key) => sl<LocalizationService>().translate(key);
 
+  /// Widget başlık/alt-başlıklarını i18n'den çözer. Web page-viewer başlıkları
+  /// çeviri-anahtarı (ör. 'dashboard.widget.tasks') tutabildiğinden mobilde de
+  /// çevrilmeli; düz-metin başlıklar `translate` miss'te ham döner (değişmez).
+  String? _tn(String? key) =>
+      (key == null || key.isEmpty) ? key : _t(key);
+
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
@@ -100,7 +106,8 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final template = _template;
-    final title = template?.headerTitle ?? template?.name ?? widget.pageCode;
+    final title =
+        _tn(template?.headerTitle) ?? _tn(template?.name) ?? widget.pageCode;
 
     return AppScaffold(
       title: title,
@@ -278,8 +285,8 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
     final inlineValue = w.config['value'];
     if (inlineValue != null) {
       return DynWidgetCard(
-        title: w.title,
-        subtitle: w.subtitle,
+        title: _tn(w.title),
+        subtitle: _tn(w.subtitle),
         child: DynStatWidget(
           [<String, dynamic>{'value': inlineValue}],
           w.config,
@@ -292,8 +299,8 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
     if (future == null) {
       // dataSourceId/value yok (ör. entity_count) → placeholder.
       return DynWidgetCard(
-        title: w.title,
-        subtitle: w.subtitle,
+        title: _tn(w.title),
+        subtitle: _tn(w.subtitle),
         child: DynStatWidget(
           const [<String, dynamic>{'value': '—'}],
           w.config,
@@ -349,23 +356,23 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return DynWidgetCard(
-            title: w.title,
-            subtitle: w.subtitle,
+            title: _tn(w.title),
+            subtitle: _tn(w.subtitle),
             loading: true,
           );
         }
         if (snap.hasError) {
           return DynWidgetCard(
-            title: w.title,
-            subtitle: w.subtitle,
+            title: _tn(w.title),
+            subtitle: _tn(w.subtitle),
             error: '${_t('common.error')}: ${snap.error}',
             onRetry: _load,
           );
         }
         final rows = snap.data ?? const <Map<String, dynamic>>[];
         return DynWidgetCard(
-          title: w.title,
-          subtitle: w.subtitle,
+          title: _tn(w.title),
+          subtitle: _tn(w.subtitle),
           child: builder(rows),
         );
       },
@@ -373,7 +380,7 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
   }
 
   Widget _buildHeading(PageWidget w) {
-    final text = w.config['text']?.toString() ?? w.title ?? '';
+    final text = w.config['text']?.toString() ?? _tn(w.title) ?? '';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Text(
@@ -387,7 +394,7 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
   }
 
   Widget _buildText(PageWidget w) {
-    final text = w.config['text']?.toString() ?? w.subtitle ?? '';
+    final text = w.config['text']?.toString() ?? _tn(w.subtitle) ?? '';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Text(
@@ -404,8 +411,8 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
     final reportCode =
         w.config['reportCode']?.toString() ?? w.config['reportId']?.toString();
     return DynWidgetCard(
-      title: w.title,
-      subtitle: w.subtitle,
+      title: _tn(w.title),
+      subtitle: _tn(w.subtitle),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: const Icon(Icons.assessment_outlined),
@@ -419,11 +426,11 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
   Widget _buildStaticBox(PageWidget w) {
     final label = w.config['text']?.toString() ??
         w.config['label']?.toString() ??
-        w.title ??
+        _tn(w.title) ??
         w.widgetType;
     return DynWidgetCard(
-      title: w.title,
-      subtitle: w.subtitle,
+      title: _tn(w.title),
+      subtitle: _tn(w.subtitle),
       child: Text(
         label,
         style: AppTypography.withColor(
@@ -436,8 +443,8 @@ class _PageViewerScreenState extends State<PageViewerScreen> {
 
   Widget _buildPlaceholder(PageWidget w, String hint) {
     return DynWidgetCard(
-      title: w.title ?? w.code,
-      subtitle: w.subtitle,
+      title: _tn(w.title) ?? w.code,
+      subtitle: _tn(w.subtitle),
       child: Row(
         children: [
           Icon(
