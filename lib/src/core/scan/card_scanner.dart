@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'document_scanner.dart';
 import 'ocr_models.dart';
+import 'scan_cropper.dart';
 
 /// Kartvizit görsel kaynağı — image_picker'ı çekirdekte kapsüller (çağıran
 /// app'lerin image_picker'a doğrudan bağımlı olmasına gerek kalmaz).
@@ -62,9 +63,18 @@ class CardScanner {
     );
     if (shot == null) return null;
 
+    // OCR öncesi: kullanıcı kartı çerçevelesin (kartvizit oranı kilitli) →
+    // arka plan gürültüsü atılır, doğruluk artar. İptal → ham görselle devam.
+    final path = await ScanCropper.crop(
+      shot.path,
+      ratioX: 85.6,
+      ratioY: 54,
+      title: 'Kartviziti çerçevele',
+    );
+
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
-      final input = InputImage.fromFilePath(shot.path);
+      final input = InputImage.fromFilePath(path);
       final recognized = await recognizer.processImage(input);
       // Bbox/geometri KORUNARAK ayrıştır: isim = en büyük fontlu satır, konum
       // (üst→alt) ile blok akışı. Düz metin fallback için rawText de geçilir.

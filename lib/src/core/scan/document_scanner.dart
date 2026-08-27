@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'ocr_models.dart';
 import 'receipt_parser.dart';
+import 'scan_cropper.dart';
 
 /// Fatura/fiş görsel kaynağı (image_picker'ı çekirdekte kapsüller).
 enum DocumentScanSource { camera, gallery }
@@ -30,9 +31,13 @@ class DocumentScanner {
     );
     if (shot == null) return null;
 
+    // OCR öncesi: kullanıcı fişi/faturayı çerçevelesin (serbest oran — belge
+    // uzunluğu değişken). İptal → ham görselle devam.
+    final path = await ScanCropper.crop(shot.path, title: 'Belgeyi çerçevele');
+
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
-      final input = InputImage.fromFilePath(shot.path);
+      final input = InputImage.fromFilePath(path);
       final recognized = await recognizer.processImage(input);
       return ReceiptParser.parse(
         toOcrLines(recognized),
