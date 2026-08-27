@@ -83,8 +83,19 @@ class _ScanExpenseScreenState extends State<ScanExpenseScreen> {
         content: Text(essT('expense.scan_empty',
             'Fiş okunamadı — bilgileri elle girebilirsiniz')),
       ));
+      _openForm(result);
+      return;
     }
-    _openForm(result);
+
+    // Onay/düzeltme adımı: okunan alanları (düşük-güven kırmızı işaretli)
+    // forma aktarmadan ÖNCE kullanıcı kontrol edip düzeltir (kartvizit paritesi).
+    final reviewed = await showModalBottomSheet<ReceiptScanResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ReceiptReviewSheet(result: result!),
+    );
+    if (!mounted || reviewed == null) return; // iptal → forma gitme
+    _openForm(reviewed);
   }
 
   void _openForm(ReceiptScanResult r) {
@@ -153,6 +164,164 @@ class _ScanExpenseScreenState extends State<ScanExpenseScreen> {
             onPressed: _busy ? null : () => _scan(DocumentScanSource.gallery),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fiş/fatura OCR sonucunu forma aktarmadan ÖNCE gösteren onay/düzeltme sheet'i
+/// (kartvizit `_QuickAddSheet` paritesi). Düşük-güvenle okunan alanlar (fieldConf
+/// < eşik) kırmızı işaretli; kullanıcı düzeltir → düzeltilmiş [ReceiptScanResult]
+/// döner (iptal → null). Ham OCR metni genişletilebilir bölümde görünür.
+class _ReceiptReviewSheet extends StatefulWidget {
+  final ReceiptScanResult result;
+  const _ReceiptReviewSheet({required this.result});
+
+  @override
+  State<_ReceiptReviewSheet> createState() => _ReceiptReviewSheetState();
+}
+
+class _ReceiptReviewSheetState extends State<_ReceiptReviewSheet> {
+  late final _merchant =
+      TextEditingController(text: widget.result.merchant ?? '');
+  late final _total = TextEditingController(
+      text: widget.result.total?.toStringAsFixed(2) ?? '');
+  late final _date = TextEditingController(text: widget.result.date ?? '');
+  late final _taxNo =
+      TextEditingController(text: widget.result.taxNumber ?? '');
+
+  @override
+  void dispose() {
+    _merchant.dispose();
+    _total.dispose();
+    _date.dispose();
+    _taxNo.dispose();
+    super.dispose();
+  }
+
+  bool _low(String key) => (widget.result.fieldConfidence[key] ?? 1.0) < 0.6;
+
+  void _apply() {
+    final r = widget.result;
+    final t = _total.text.trim().replaceAll(',', '.');
+    Navigator.of(context).pop(ReceiptScanResult(
+      merchant: _merchant.text.trim().isEmpty ? null : _merchant.text.trim(),
+      total: t.isEmpty ? null : double.tryParse(t),
+      date: _date.text.trim().isEmpty ? null : _date.text.trim(),
+      taxNumber: _taxNo.text.trim().isEmpty ? null : _taxNo.text.trim(),
+      subTotal: r.subTotal,
+      vatLines: r.vatLines,
+      time: r.time,
+      documentNo: r.documentNo,
+      rawText: r.rawText,
+      fieldConfidence: r.fieldConfidence,
+      warnings: r.warnings,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.result;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md,
+          MediaQuery.of(context).viewInsets.bottom + AppSpacing.md),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              Icon(Icons.receipt_long_outlined,
+                  size: 18, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Text(essT('expense.review_title', 'Okunan Fiş Bilgileri'),
+                  style: AppTypography.headline),
+            ]),
+            const SizedBox(height: 2),
+            Text(
+                essT('expense.review_hint',
+                    'Bilgileri kontrol edip düzeltin. Kırmızı alanlar düşük güvenle okundu.'),
+                style: AppTypography.caption1
+                    .copyWith(color: AppColors.secondaryLabel(context))),
+            const SizedBox(height: AppSpacing.md),
+            _field(_merchant, essT('expense.f_merchant', 'İşletme'),
+                _low('merchant')),
+            const SizedBox(height: AppSpacing.sm),
+            _field(_total, essT('expense.f_total', 'Tutar'), _low('total'),
+                numeric: true),
+            const SizedBox(height: AppSpacing.sm),
+            _field(_date, essT('expense.f_date', 'Tarih (yyyy-AA-gg)'),
+                _low('date')),
+            const SizedBox(height: AppSpacing.sm),
+            _field(_taxNo, essT('expense.f_taxno', 'VKN / TCKN'),
+                _low('taxNumber')),
+            if (r.warnings.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              for (final w in r.warnings)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        size: 15, color: AppColors.warning),
+                    const SizedBox(width: 6),
+                    Expanded(
+                        child: Text(w,
+                            style: AppTypography.caption1
+                                .copyWith(color: AppColors.warning))),
+                  ]),
+                ),
+            ],
+            if (r.rawText.trim().isNotEmpty)
+              Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: Text(essT('expense.raw_text', 'Okunan ham metin'),
+                      style: AppTypography.footnote),
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface(Theme.of(context).brightness),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSm),
+                      ),
+                      child: Text(r.rawText, style: AppTypography.caption1),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton(
+              onPressed: _apply,
+              child: Text(essT('expense.to_form', 'Forma Aktar')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field(TextEditingController c, String label, bool low,
+      {bool numeric = false}) {
+    return TextField(
+      controller: c,
+      keyboardType: numeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: low ? '⚠ $label' : label,
+        isDense: true,
+        border: const OutlineInputBorder(),
+        enabledBorder: low
+            ? const OutlineInputBorder(borderSide: BorderSide(color: AppColors.error))
+            : const OutlineInputBorder(),
+        helperText:
+            low ? essT('expense.low_conf', 'Düşük güven — kontrol edin') : null,
+        helperStyle: low ? const TextStyle(color: AppColors.error) : null,
       ),
     );
   }
