@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../ppm_common.dart';
+import 'gantt_geometry.dart';
 
 /// **PPM Gantt / Zaman Çizelgesi** — projenin task'larını basit bir zaman
 /// çizelgesinde gösterir. task'ta yalnız `due_date` olduğundan bar
@@ -33,12 +34,8 @@ class _PpmGanttTabState extends State<PpmGanttTab> {
     return withDue;
   }
 
-  DateTime _start(GenericEntity t) {
-    final due = t.dueDate!;
-    final c = t.createdAt;
-    if (c != null && c.isBefore(due)) return c;
-    return due.subtract(const Duration(days: 3));
-  }
+  DateTime _start(GenericEntity t) =>
+      GanttGeometry.startOf(t.dueDate!, t.createdAt);
 
   @override
   Widget build(BuildContext context) {
@@ -105,9 +102,9 @@ class _PpmGanttTabState extends State<PpmGanttTab> {
       int totalDays, Brightness brightness) {
     final s = _start(t);
     final e = t.dueDate!;
-    final leftFrac = (s.difference(minD).inDays / totalDays).clamp(0.0, 1.0);
-    final widthFrac =
-        (e.difference(s).inDays / totalDays).clamp(0.02, 1.0 - leftFrac);
+    final geo = GanttGeometry.bar(s, e, minD, totalDays);
+    final leftFrac = geo.left;
+    final widthFrac = geo.width;
     final barColor = _statusColor(t.status);
 
     return Padding(
@@ -176,13 +173,16 @@ class _PpmGanttTabState extends State<PpmGanttTab> {
   }
 
   Color _statusColor(String? status) {
-    final s = (status ?? '').toLowerCase();
-    if (s.contains('done') || s.contains('complete') || s.contains('tamam')) {
-      return AppColors.success;
+    switch (GanttGeometry.classifyStatus(status)) {
+      case GanttStatusKind.done:
+        return AppColors.success;
+      case GanttStatusKind.inProgress:
+        return AppColors.primary;
+      case GanttStatusKind.blocked:
+        return AppColors.error;
+      case GanttStatusKind.neutral:
+        return AppColors.systemGray;
     }
-    if (s.contains('progress') || s.contains('devam')) return AppColors.primary;
-    if (s.contains('block') || s.contains('engel')) return AppColors.error;
-    return AppColors.systemGray;
   }
 
   String _fmt(DateTime d) =>
