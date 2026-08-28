@@ -139,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       size: AppAvatarSize.medium,
                     ),
                     title: tenant?.name ?? 'Organizasyon',
-                    subtitle: tenant?.plan.name.toUpperCase() ?? 'FREE',
+                    subtitle: (tenant?.plan)?.name.toUpperCase() ?? 'FREE',
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showTenantSettingsSheet(),
                   ),
@@ -644,8 +644,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AppBadge(
-                          label: tenant.plan.name.toUpperCase(),
-                          variant: _getPlanVariant(tenant.plan),
+                          label: (tenant.plan ?? SubscriptionPlan.free)
+                              .name
+                              .toUpperCase(),
+                          variant: _getPlanVariant(
+                              tenant.plan ?? SubscriptionPlan.free),
                         ),
                         if (tenant.isTrial) ...[
                           const SizedBox(width: AppSpacing.xs),
@@ -678,7 +681,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       _InfoRow(
                         label: 'Mevcut Plan',
-                        value: tenant.plan.name,
+                        value: (tenant.plan ?? SubscriptionPlan.free).name,
                       ),
                       if (tenant.isTrial) ...[
                         const SizedBox(height: AppSpacing.xs),

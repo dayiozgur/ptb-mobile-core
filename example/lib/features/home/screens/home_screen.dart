@@ -341,8 +341,11 @@ class _WelcomeCard extends StatelessWidget {
                     Row(
                       children: [
                         AppBadge(
-                          label: tenant!.plan.name.toUpperCase(),
-                          variant: _getPlanBadgeVariant(tenant!.plan),
+                          label: (tenant!.plan ?? SubscriptionPlan.free)
+                              .name
+                              .toUpperCase(),
+                          variant: _getPlanBadgeVariant(
+                              tenant!.plan ?? SubscriptionPlan.free),
                           size: AppBadgeSize.small,
                         ),
                         if (tenant!.isTrial) ...[

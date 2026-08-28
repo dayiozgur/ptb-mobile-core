@@ -214,7 +214,7 @@ class _ControllerLogsScreenState extends State<ControllerLogsScreen> {
               emptyMessage: 'Numerik log verisi bulunamadı',
               child: LogLineChart(
                 entries: _timeSeries,
-                config: const LogChartConfig(
+                config: LogChartConfig(
                   lineColor: AppColors.primary,
                   showArea: true,
                   enableTouch: true,

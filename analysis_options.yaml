@@ -4,6 +4,9 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    # Tek-seferlik geliştirici script'i (`dart run tool/gen_app_icons.dart`);
+    # yalnız `package:image`'e (uygulama-dışı dev bağımlılığı) ihtiyaç duyar.
+    - "tool/**"
   errors:
     invalid_annotation_target: ignore
 

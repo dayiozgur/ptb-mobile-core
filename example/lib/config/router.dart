@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:protoolbag_core/protoolbag_core.dart';
+// Bu örnek-app kendi feature-ekranlarını (../features/...) kullanır; core barrel
+// aynı isimleri de export ettiğinden (shell shell-ekranları sonradan eklendi)
+// çakışanları gizle — router aşağıda örneğin KENDİ ekranlarını inşa eder.
+import 'package:protoolbag_core/protoolbag_core.dart'
+    hide
+        LoginScreen,
+        TenantSelectorScreen,
+        OrganizationSelectorScreen,
+        HomeScreen,
+        SettingsScreen,
+        NotificationsScreen,
+        GlobalSearchScreen;
 
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';

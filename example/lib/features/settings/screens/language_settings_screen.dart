@@ -214,6 +214,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
         return '🇺🇸';
       case AppLocale.german:
         return '🇩🇪';
+      case AppLocale.italian:
+        return '🇮🇹';
     }
   }
 
@@ -225,6 +227,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
         return 'United States';
       case AppLocale.german:
         return 'Deutschland';
+      case AppLocale.italian:
+        return 'Italia';
     }
   }
 }
@@ -370,6 +374,8 @@ class LanguageSwitcher extends StatelessWidget {
         return '🇺🇸';
       case AppLocale.german:
         return '🇩🇪';
+      case AppLocale.italian:
+        return '🇮🇹';
     }
   }
 }
