@@ -265,35 +265,3 @@ class _ProviderCard extends StatelessWidget {
 }
 
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: AppTypography.subheadline.copyWith(
-              color: AppColors.secondaryLabel(context),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTypography.subheadline,
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -26,7 +26,6 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
   List<AlarmTimelineEntry> _timeline = [];
   Map<String, Priority> _priorityMap = {};
   Map<String, Site> _siteMap = {};
-  Map<String, Organization> _orgMap = {};
 
   // Filters
   int _selectedDays = 30;
@@ -36,7 +35,6 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
 
   // Sites & Organizations for filter
   List<Site> _sites = [];
-  List<Organization> _organizations = [];
 
   @override
   void initState() {
@@ -88,10 +86,6 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       for (final site in sites) {
         siteMap[site.id] = site;
       }
-      final orgMap = <String, Organization>{};
-      for (final org in organizations) {
-        orgMap[org.id] = org;
-      }
 
       // Load alarms data
       final results = await Future.wait([
@@ -115,8 +109,6 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
         setState(() {
           _priorityMap = pMap;
           _siteMap = siteMap;
-          _orgMap = orgMap;
-          _organizations = organizations;
           _sites = sites;
           _distribution = results[0] as AlarmDistribution;
           _timeline = results[1] as List<AlarmTimelineEntry>;

@@ -13,7 +13,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _notificationsEnabled = true;
   late AppThemeMode _themeMode;
-  String _selectedLanguage = 'tr';
+  final String _selectedLanguage = 'tr';
 
   final _languages = [
     {'code': 'tr', 'name': 'Turkce', 'flag': 'TR'},
@@ -340,7 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Gecici verileri sil',
                     onTap: () async {
                       await cacheManager.clear();
-                      if (mounted) {
+                      if (context.mounted) {
                         AppSnackbar.showSuccess(
                           context,
                           message: 'Onbellek temizlendi',
@@ -520,7 +520,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () async {
                 await themeService.setThemeMode(AppThemeMode.system);
                 setState(() => _themeMode = AppThemeMode.system);
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               },
             ),
             Divider(height: 1, color: AppColors.separator(context)),
@@ -532,7 +532,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () async {
                 await themeService.setThemeMode(AppThemeMode.light);
                 setState(() => _themeMode = AppThemeMode.light);
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               },
             ),
             Divider(height: 1, color: AppColors.separator(context)),
@@ -544,7 +544,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () async {
                 await themeService.setThemeMode(AppThemeMode.dark);
                 setState(() => _themeMode = AppThemeMode.dark);
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               },
             ),
             const SizedBox(height: AppSpacing.lg),

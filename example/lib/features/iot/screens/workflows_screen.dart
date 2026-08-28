@@ -138,17 +138,26 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
   }
 
   Future<void> _toggleWorkflow(Workflow workflow) async {
+    final wasActive = workflow.status == WorkflowStatus.active;
+    String message;
+    bool isError = false;
     try {
-      if (workflow.status == WorkflowStatus.active) {
+      if (wasActive) {
         await workflowService.deactivate(workflow.id);
-        AppSnackbar.showSuccess(context, message: 'Workflow durduruldu');
       } else {
         await workflowService.activate(workflow.id);
-        AppSnackbar.showSuccess(context, message: 'Workflow başlatıldı');
       }
-      _loadWorkflows();
+      message = wasActive ? 'Workflow durduruldu' : 'Workflow başlatıldı';
     } catch (e) {
-      AppSnackbar.showError(context, message: 'İşlem başarısız: $e');
+      message = 'İşlem başarısız: $e';
+      isError = true;
+    }
+    if (!mounted) return;
+    if (isError) {
+      AppSnackbar.showError(context, message: message);
+    } else {
+      _loadWorkflows();
+      AppSnackbar.showSuccess(context, message: message);
     }
   }
 }

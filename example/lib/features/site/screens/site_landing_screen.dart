@@ -830,7 +830,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
               onTap: () async {
                 Navigator.pop(context);
                 await siteService.selectSite(widget.siteId);
-                if (mounted) {
+                if (context.mounted) {
                   context.go('/home');
                 }
               },

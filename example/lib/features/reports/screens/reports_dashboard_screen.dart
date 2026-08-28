@@ -20,10 +20,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   int _organizationCount = 0;
   int _siteCount = 0;
   int _unitCount = 0;
-  int _userCount = 0;
   int _activityCount = 0;
-  int _workRequestCount = 0;
-  int _calendarEventCount = 0;
 
   @override
   void initState() {
@@ -89,7 +86,6 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   Future<void> _loadUserCount(String tenantId) async {
     try {
       // Approximate from member count
-      setState(() => _userCount = 0);
     } catch (_) {}
   }
 
@@ -106,14 +102,12 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   Future<void> _loadWorkRequestStats() async {
     try {
       // Work request stats would be loaded here
-      setState(() => _workRequestCount = 0);
     } catch (_) {}
   }
 
   Future<void> _loadCalendarStats() async {
     try {
       // Calendar stats would be loaded here
-      setState(() => _calendarEventCount = 0);
     } catch (_) {}
   }
 
