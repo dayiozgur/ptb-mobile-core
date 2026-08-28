@@ -312,15 +312,22 @@ class AppRadioListTile<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // RadioGroup ata-widget'ı grup değerini + değişimi yönetir (Flutter 3.32'de
+    // Radio.groupValue/onChanged deprecate edildi). Tek-öğeli grup: davranış
+    // birebir korunur — seçili durum value==groupValue, tıklama onChanged.
+    final effectiveOnChanged = enabled ? onChanged : null;
     return AppListTile(
       title: title,
       subtitle: subtitle,
       enabled: enabled,
-      trailing: Radio<T>(
-        value: value,
+      trailing: RadioGroup<T>(
         groupValue: groupValue,
-        onChanged: enabled ? onChanged : null,
-        activeColor: AppColors.primary,
+        onChanged: (v) => effectiveOnChanged?.call(v),
+        child: Radio<T>(
+          value: value,
+          enabled: effectiveOnChanged != null,
+          activeColor: AppColors.primary,
+        ),
       ),
       onTap: enabled ? () => onChanged?.call(value) : null,
       showDivider: showDivider,

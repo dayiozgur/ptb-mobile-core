@@ -291,8 +291,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                       color: AppColors.textPrimary(brightness),
                     ),
                   ),
-                  leading: Radio<_SortOption>(
-                    value: option,
+                  leading: RadioGroup<_SortOption>(
                     groupValue: _sortOption,
                     onChanged: (value) {
                       setState(() {
@@ -301,7 +300,10 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                       });
                       Navigator.pop(context);
                     },
-                    activeColor: AppColors.primary,
+                    child: Radio<_SortOption>(
+                      value: option,
+                      activeColor: AppColors.primary,
+                    ),
                   ),
                   contentPadding: EdgeInsets.zero,
                   onTap: () {

@@ -351,16 +351,18 @@ class _MembersScreenState extends State<MembersScreen>
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ...TenantRole.values.where((r) => r != TenantRole.owner).map(
-                  (role) => RadioListTile<TenantRole>(
-                    title: Text(role.displayName),
-                    subtitle: Text(_getRoleDescription(role)),
-                    value: role,
+                  (role) => RadioGroup<TenantRole>(
                     groupValue: selectedRole,
                     onChanged: (value) {
                       if (value != null) {
                         setModalState(() => selectedRole = value);
                       }
                     },
+                    child: RadioListTile<TenantRole>(
+                      title: Text(role.displayName),
+                      subtitle: Text(_getRoleDescription(role)),
+                      value: role,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
