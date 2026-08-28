@@ -385,7 +385,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
           drawVerticalLine: false,
           horizontalInterval: 2,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             strokeWidth: 1,
           ),
         ),
@@ -435,7 +435,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
             ),
           ),
         ],

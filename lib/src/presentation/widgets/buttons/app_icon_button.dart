@@ -88,7 +88,7 @@ class AppIconButton extends StatelessWidget {
 
     if (tooltip != null) {
       button = Tooltip(
-        message: tooltip!,
+        message: tooltip,
         child: button,
       );
     }
@@ -199,7 +199,7 @@ class _FilledIconButton extends StatelessWidget {
       width: buttonSize,
       height: buttonSize,
       child: Material(
-        color: onPressed != null ? bgColor : bgColor.withOpacity(0.5),
+        color: onPressed != null ? bgColor : bgColor.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         child: InkWell(
           onTap: onPressed,
@@ -219,7 +219,7 @@ class _FilledIconButton extends StatelessWidget {
                     size: iconSize,
                     color: onPressed != null
                         ? fgColor
-                        : fgColor.withOpacity(0.7),
+                        : fgColor.withValues(alpha: 0.7),
                   ),
           ),
         ),
@@ -266,7 +266,7 @@ class _OutlinedIconButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           side: BorderSide(
-            color: onPressed != null ? border : border.withOpacity(0.5),
+            color: onPressed != null ? border : border.withValues(alpha: 0.5),
             width: 1.5,
           ),
         ),
@@ -287,7 +287,7 @@ class _OutlinedIconButton extends StatelessWidget {
                     icon,
                     size: iconSize,
                     color:
-                        onPressed != null ? color : color.withOpacity(0.5),
+                        onPressed != null ? color : color.withValues(alpha: 0.5),
                   ),
           ),
         ),
@@ -347,7 +347,7 @@ class _GhostIconButton extends StatelessWidget {
                     icon,
                     size: iconSize,
                     color:
-                        onPressed != null ? color : color.withOpacity(0.5),
+                        onPressed != null ? color : color.withValues(alpha: 0.5),
                   ),
           ),
         ),

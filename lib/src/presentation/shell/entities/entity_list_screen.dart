@@ -2,8 +2,6 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import 'backlog_screen.dart';
-import 'entity_kanban_screen.dart';
 
 /// Portal'da (low-code builder) tanımlanmış bir entity tipinin kayıtlarını
 /// gezilebilir bir liste olarak gösterir.

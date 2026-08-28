@@ -335,7 +335,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                   ),
                 )
               : _team == null
-                  ? Center(
+                  ? const Center(
                       child: AppEmptyState(
                         icon: Icons.groups_outlined,
                         title: 'Ekip Bulunamadı',
@@ -605,14 +605,14 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: _deleteTeam,
-        icon: Icon(Icons.delete_outline, color: AppColors.error),
-        label: Text(
+        icon: const Icon(Icons.delete_outline, color: AppColors.error),
+        label: const Text(
           'Ekibi Sil',
           style: TextStyle(color: AppColors.error),
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.error,
-          side: BorderSide(color: AppColors.error),
+          side: const BorderSide(color: AppColors.error),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         ),
       ),
@@ -628,13 +628,11 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color? valueColor;
 
   const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   @override
@@ -661,7 +659,7 @@ class _DetailRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: valueColor ?? AppColors.textPrimary(brightness),
+                color: AppColors.textPrimary(brightness),
               ),
               textAlign: TextAlign.end,
             ),

@@ -346,7 +346,7 @@ class _TeamCard extends StatelessWidget {
                             color: AppColors.info.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Bağımsız',
                             style: TextStyle(
                               fontSize: 11,
@@ -363,7 +363,7 @@ class _TeamCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               color: AppColors.systemGray,
             ),

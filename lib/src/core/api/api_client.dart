@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide MultipartFile;
@@ -250,7 +249,7 @@ class ApiClient {
     }
 
     try {
-      var query = _supabase!.from(table).select(select ?? '*');
+      var query = _supabase.from(table).select(select ?? '*');
 
       if (filter != null) {
         query = filter(query);
@@ -281,7 +280,7 @@ class ApiClient {
     }
 
     try {
-      var query = _supabase!.from(table).select(select ?? '*');
+      var query = _supabase.from(table).select(select ?? '*');
       query = filter(query);
 
       final response = await query.maybeSingle();
@@ -308,7 +307,7 @@ class ApiClient {
 
     try {
       final response =
-          await _supabase!.from(table).insert(data).select().single();
+          await _supabase.from(table).insert(data).select().single();
       return fromJson(response);
     } catch (e) {
       Logger.error('Supabase insert error: $table', e);
@@ -333,7 +332,7 @@ class ApiClient {
     }
 
     try {
-      final query = _supabase!.from(table).update(data);
+      final query = _supabase.from(table).update(data);
       final response = await filter(query).select().single();
       return fromJson(response);
     } catch (e) {
@@ -357,7 +356,7 @@ class ApiClient {
     }
 
     try {
-      final query = _supabase!.from(table).delete();
+      final query = _supabase.from(table).delete();
       await filter(query);
     } catch (e) {
       Logger.error('Supabase delete error: $table', e);

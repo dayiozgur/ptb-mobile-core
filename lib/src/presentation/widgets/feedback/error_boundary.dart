@@ -203,10 +203,10 @@ class _DefaultErrorView extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.error_outline,
                     size: 40,
                     color: AppColors.error,
@@ -364,7 +364,7 @@ class TryCatch extends StatelessWidget {
           Center(
             child: Text(
               '${_boundaryTr('common.error', 'Hata')}: $e',
-              style: TextStyle(color: AppColors.error),
+              style: const TextStyle(color: AppColors.error),
             ),
           );
     }
@@ -403,11 +403,11 @@ class SafeFutureBuilder<T> extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
                     const SizedBox(height: 16),
                     Text(
                       _boundaryTr('error.occurred', 'Bir hata oluştu'),
-                      style: TextStyle(color: AppColors.error),
+                      style: const TextStyle(color: AppColors.error),
                     ),
                   ],
                 ),
@@ -459,11 +459,11 @@ class SafeStreamBuilder<T> extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
                     const SizedBox(height: 16),
                     Text(
                       _boundaryTr('error.occurred', 'Bir hata oluştu'),
-                      style: TextStyle(color: AppColors.error),
+                      style: const TextStyle(color: AppColors.error),
                     ),
                   ],
                 ),

@@ -45,8 +45,8 @@ class _PlatformSwitcherSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Platform Değiştir', style: AppTypography.title3),

@@ -566,7 +566,7 @@ class CalendarService {
       final response = await query;
       final data = response as List;
 
-      int total = data.length;
+      final int total = data.length;
       int completed = 0;
       int maintenance = 0;
       int meetings = 0;

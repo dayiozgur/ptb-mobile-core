@@ -86,7 +86,7 @@ class _ControllersScreenState extends State<ControllersScreen> {
           children: [
             Icon(Icons.developer_board, size: 64, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.md),
-            Text('Controller Bulunamadı', style: AppTypography.headline),
+            const Text('Controller Bulunamadı', style: AppTypography.headline),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Henüz tanımlanmış controller yok',
@@ -230,7 +230,7 @@ class _ControllerCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _getStatusColor(context).withOpacity(0.1),
+                color: _getStatusColor(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -408,7 +408,7 @@ class _ControllerDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Cihaz Bilgileri
-            AppSectionHeader(title: 'Cihaz Bilgileri'),
+            const AppSectionHeader(title: 'Cihaz Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -430,7 +430,7 @@ class _ControllerDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // İletişim Bilgileri
-            AppSectionHeader(title: 'İletişim Bilgileri'),
+            const AppSectionHeader(title: 'İletişim Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -454,7 +454,7 @@ class _ControllerDetailSheet extends StatelessWidget {
 
             if (controller.description != null && controller.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Açıklama'),
+              const AppSectionHeader(title: 'Açıklama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -470,7 +470,7 @@ class _ControllerDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Zaman Bilgileri
-            AppSectionHeader(title: 'Kayıt Bilgileri'),
+            const AppSectionHeader(title: 'Kayıt Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(

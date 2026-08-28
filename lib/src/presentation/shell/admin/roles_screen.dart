@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/admin/admin_rbac_service.dart';
 
 /// Admin — Roller (RBAC) görüntüleyici ekranı.
 ///

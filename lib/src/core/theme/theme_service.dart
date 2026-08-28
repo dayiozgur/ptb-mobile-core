@@ -389,7 +389,7 @@ class ThemeService {
       if (colonIndex == -1) continue;
 
       final key = pair.substring(0, colonIndex).trim().replaceAll('"', '');
-      var value = pair.substring(colonIndex + 1).trim();
+      final value = pair.substring(colonIndex + 1).trim();
 
       // Parse value
       if (value == 'null') {
@@ -415,9 +415,9 @@ class ThemeService {
       final value = e.value;
       final valueStr = switch (value) {
         null => 'null',
-        bool b => b.toString(),
-        num n => n.toString(),
-        String s => '"$s"',
+        final bool b => b.toString(),
+        final num n => n.toString(),
+        final String s => '"$s"',
         _ => '"$value"',
       };
       return '"${e.key}":$valueStr';

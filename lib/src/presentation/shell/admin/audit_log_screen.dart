@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/admin/admin_audit_service.dart';
 
 /// Admin — Denetim İzi (audit trail) görüntüleyici ekranı.
 ///

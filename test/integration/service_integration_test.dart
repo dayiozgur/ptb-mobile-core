@@ -264,14 +264,14 @@ void main() {
       test('search response serialization', () {
         final response = SearchResponse(
           results: [
-            SearchResult(
+            const SearchResult(
               id: 'org-1',
               entityType: SearchEntityType.organization,
               title: 'Test Org',
               subtitle: 'Organization',
               score: 0.95,
             ),
-            SearchResult(
+            const SearchResult(
               id: 'site-1',
               entityType: SearchEntityType.site,
               title: 'Test Site',
@@ -283,7 +283,7 @@ void main() {
           // API drift: SearchQuery takes a single `entityType` (was
           // `entityTypes` list); SearchResponse now requires `duration` and
           // `searchedAt`.
-          query: SearchQuery(
+          query: const SearchQuery(
             text: 'test',
             entityType: SearchEntityType.all,
           ),

@@ -2,6 +2,7 @@
 ///
 /// Dashboard metrikleri, raporlar ve istatistikler için
 /// veri modelleri.
+library;
 
 /// Dashboard metrik türü
 enum MetricType {

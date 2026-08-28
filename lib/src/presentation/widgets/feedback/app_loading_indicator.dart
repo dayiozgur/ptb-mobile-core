@@ -137,7 +137,7 @@ class AppLoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: backgroundColor ?? Colors.black.withOpacity(0.5),
+      color: backgroundColor ?? Colors.black.withValues(alpha: 0.5),
       child: Center(
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -159,7 +159,7 @@ class AppLoadingOverlay extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (context) => PopScope(
         canPop: false,
         child: AppLoadingOverlay(

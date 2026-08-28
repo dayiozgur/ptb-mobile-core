@@ -215,7 +215,7 @@ void main() {
   group('ThemeSettings', () {
     // API drift: field/param/JSON-key renamed from `themeMode` to `mode`.
     test('toJson serializes correctly', () {
-      final settings = ThemeSettings(mode: AppThemeMode.dark);
+      const settings = ThemeSettings(mode: AppThemeMode.dark);
       final json = settings.toJson();
 
       expect(json['mode'], 'dark');
@@ -229,7 +229,7 @@ void main() {
     });
 
     test('copyWith creates correct copy', () {
-      final settings = ThemeSettings(mode: AppThemeMode.light);
+      const settings = ThemeSettings(mode: AppThemeMode.light);
       final copy = settings.copyWith(mode: AppThemeMode.dark);
 
       expect(copy.mode, AppThemeMode.dark);

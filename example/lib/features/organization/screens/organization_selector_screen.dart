@@ -340,7 +340,7 @@ class _OrganizationCard extends StatelessWidget {
   }
 
   Widget _buildIcon(BuildContext context) {
-    return Icon(
+    return const Icon(
       Icons.apartment,
       color: Colors.white,
       size: 24,

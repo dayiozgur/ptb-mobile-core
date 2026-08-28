@@ -475,7 +475,7 @@ class CursorPagination<T, C> {
 
   /// Boş
   factory CursorPagination.empty() {
-    return CursorPagination(
+    return const CursorPagination(
       items: [],
       hasMore: false,
     );

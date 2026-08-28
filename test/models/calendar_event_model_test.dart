@@ -95,7 +95,7 @@ void main() {
         location: 'Conference Room A',
         meetingUrl: 'https://meet.example.com/abc',
         attendees: [
-          EventAttendee(
+          const EventAttendee(
             userId: 'user-456',
             userName: 'John Doe',
             email: 'john@example.com',
@@ -103,7 +103,7 @@ void main() {
           ),
         ],
         reminders: [
-          EventReminder(
+          const EventReminder(
             id: 'reminder-1',
             minutesBefore: 15,
             type: ReminderType.notification,
@@ -295,15 +295,15 @@ void main() {
   group('EventReminder', () {
     test('formattedTime returns correct string', () {
       expect(
-        EventReminder(id: '1', minutesBefore: 15).formattedTime,
+        const EventReminder(id: '1', minutesBefore: 15).formattedTime,
         '15 dakika önce',
       );
       expect(
-        EventReminder(id: '2', minutesBefore: 60).formattedTime,
+        const EventReminder(id: '2', minutesBefore: 60).formattedTime,
         '1 saat önce',
       );
       expect(
-        EventReminder(id: '3', minutesBefore: 1440).formattedTime,
+        const EventReminder(id: '3', minutesBefore: 1440).formattedTime,
         '1 gün önce',
       );
     });

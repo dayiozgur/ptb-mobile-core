@@ -502,7 +502,7 @@ class _CalendarEventFormScreenState extends State<CalendarEventFormScreen> {
               ),
               value: _isAllDay,
               onChanged: (value) => setState(() => _isAllDay = value),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
               contentPadding: EdgeInsets.zero,
             ),
 
@@ -710,7 +710,7 @@ class _DateTimeSelector extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: AppColors.systemGray),
+          const Icon(Icons.chevron_right, color: AppColors.systemGray),
         ],
       ),
     );

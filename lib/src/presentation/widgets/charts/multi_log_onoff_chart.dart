@@ -382,7 +382,7 @@ class _OnOffBandPainter extends CustomPainter {
         final tp = TextPainter(
           text: TextSpan(
             text: label,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 9,
               fontWeight: FontWeight.w700,

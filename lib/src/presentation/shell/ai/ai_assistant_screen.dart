@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/ai/ai_assistant_service.dart';
-import '../../../core/ai/ai_models.dart';
 
 /// AI Asistanı sohbet ekranı.
 ///

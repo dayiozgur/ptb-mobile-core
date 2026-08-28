@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/secure_storage.dart';
@@ -222,7 +221,7 @@ class AuthService {
       'No account created.',
     );
     _updateState(const AuthState(status: AuthStatus.unauthenticated));
-    return AuthResult.failure(AuthError(
+    return AuthResult.failure(const AuthError(
       type: AuthErrorType.unknown,
       message: 'Kayıt davet ile yapılır. Lütfen erişim talebinde bulunun '
           'veya davet e-postanızdaki bağlantıyı kullanın.',
@@ -243,7 +242,7 @@ class AuthService {
       );
 
       if (response.user == null || response.session == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.invalidCredentials,
           message: 'Giriş başarısız',
         ));
@@ -295,7 +294,7 @@ class AuthService {
       );
 
       if (response.user == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.unknown,
           message: 'Şifre güncelleme başarısız',
         ));
@@ -502,7 +501,7 @@ class AuthService {
       );
 
       if (response.user == null || response.session == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.invalidToken,
           message: 'Geçersiz veya süresi dolmuş doğrulama bağlantısı',
         ));
@@ -544,7 +543,7 @@ class AuthService {
 
       final response = await _supabase.auth.setSession(refreshToken);
       if (response.user == null || response.session == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.invalidToken,
           message: 'Oturum kurulamadı — geçersiz bağlantı',
         ));
@@ -613,7 +612,7 @@ class AuthService {
       final response = await _supabase.auth.refreshSession();
 
       if (response.user == null || response.session == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.tokenExpired,
           status: AuthStatus.sessionExpired,
           message: 'Session yenilenemedi',
@@ -676,7 +675,7 @@ class AuthService {
       }
 
       _updateState(const AuthState(status: AuthStatus.unauthenticated));
-      return AuthResult.failure(AuthError(
+      return AuthResult.failure(const AuthError(
         type: AuthErrorType.tokenExpired,
         status: AuthStatus.sessionExpired,
         message: 'Session bulunamadı',
@@ -708,7 +707,7 @@ class AuthService {
       );
 
       if (response.user == null) {
-        return AuthResult.failure(AuthError(
+        return AuthResult.failure(const AuthError(
           type: AuthErrorType.unknown,
           message: 'Kullanıcı güncelleme başarısız',
         ));

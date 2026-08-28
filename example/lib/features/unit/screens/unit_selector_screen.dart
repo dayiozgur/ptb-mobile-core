@@ -329,7 +329,7 @@ class _UnitSelectorScreenState extends State<UnitSelectorScreen> {
                     // Parent seçimi
                     if (_units.isNotEmpty) ...[
                       DropdownButtonFormField<String?>(
-                        value: selectedParentId,
+                        initialValue: selectedParentId,
                         decoration: const InputDecoration(
                           labelText: 'Üst Alan (Opsiyonel)',
                           prefixIcon: Icon(Icons.account_tree),
@@ -497,7 +497,7 @@ class _UnitCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _getCategoryColor(unit.category).withOpacity(0.1),
+                color: _getCategoryColor(unit.category).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
@@ -518,7 +518,7 @@ class _UnitCard extends StatelessWidget {
                   Row(
                     children: [
                       if (unit.isMainArea) ...[
-                        Icon(
+                        const Icon(
                           Icons.star,
                           size: 14,
                           color: Colors.amber,
@@ -574,7 +574,7 @@ class _UnitCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(

@@ -251,11 +251,11 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
                       unselectedLabelColor: AppColors.secondaryLabel(context),
                       indicatorColor: AppColors.primary,
                       tabs: [
-                        Tab(
+                        const Tab(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Dashboard'),
+                              Text('Dashboard'),
                             ],
                           ),
                         ),
@@ -422,7 +422,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
 
             // Alarms by Site (AlarmHistory için siteId mevcut)
             if (_sites.isNotEmpty) ...[
-              AppSectionHeader(title: 'Site Bazlı Alarm Geçmişi'),
+              const AppSectionHeader(title: 'Site Bazlı Alarm Geçmişi'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -921,7 +921,7 @@ class _ResetAlarmCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.check_circle,
                         size: 14,
                         color: AppColors.success,
@@ -1112,7 +1112,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Period selector
-            Text('Dönem', style: AppTypography.subheadline),
+            const Text('Dönem', style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,
@@ -1131,7 +1131,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: AppSpacing.md),
 
             // Site filter
-            Text('Site', style: AppTypography.subheadline),
+            const Text('Site', style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: DropdownButton<String?>(
@@ -1169,7 +1169,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: AppSpacing.md),
 
             // Priority filter
-            Text('Öncelik', style: AppTypography.subheadline),
+            const Text('Öncelik', style: AppTypography.subheadline),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,

@@ -2,6 +2,7 @@
 ///
 /// Chart ve dashboard widget'ları için kullanılan veri yapıları.
 /// logs tablosundaki kayıtların zaman serisi ve istatistik formuna dönüşümü.
+library;
 
 /// Zaman serisi log verisi (line chart data noktası)
 ///

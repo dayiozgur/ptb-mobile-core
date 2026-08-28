@@ -240,7 +240,7 @@ class _MembersScreenState extends State<MembersScreen>
                     const SizedBox(height: AppSpacing.md),
 
                     // Role selection
-                    Text(
+                    const Text(
                       'Rol',
                       style: AppTypography.subheadline,
                     ),
@@ -345,7 +345,7 @@ class _MembersScreenState extends State<MembersScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
+                const Text(
                   'Yeni rol seçin:',
                   style: AppTypography.subheadline,
                 ),

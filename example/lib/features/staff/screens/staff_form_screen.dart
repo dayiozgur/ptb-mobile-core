@@ -377,7 +377,7 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
-              value: _selectedStaffTypeId,
+              initialValue: _selectedStaffTypeId,
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   Icons.category_outlined,

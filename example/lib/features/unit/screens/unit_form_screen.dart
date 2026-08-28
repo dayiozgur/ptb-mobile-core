@@ -224,7 +224,7 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Temel Bilgiler
-            AppSectionHeader(title: 'Temel Bilgiler'),
+            const AppSectionHeader(title: 'Temel Bilgiler'),
             const SizedBox(height: AppSpacing.sm),
 
             AppTextField(
@@ -274,7 +274,7 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Ek Bilgiler
-            AppSectionHeader(title: 'Ek Bilgiler'),
+            const AppSectionHeader(title: 'Ek Bilgiler'),
             const SizedBox(height: AppSpacing.sm),
 
             AppTextField(
@@ -402,7 +402,7 @@ class _UnitTypeSelector extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Alan Tipi Seç', style: AppTypography.headline),
+                  const Text('Alan Tipi Seç', style: AppTypography.headline),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
@@ -424,7 +424,7 @@ class _UnitTypeSelector extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -540,7 +540,7 @@ class _ParentSelector extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Üst Alan Seç', style: AppTypography.headline),
+                  const Text('Üst Alan Seç', style: AppTypography.headline),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
@@ -562,7 +562,7 @@ class _ParentSelector extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(

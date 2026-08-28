@@ -13,7 +13,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   List<Site> _sites = [];
   bool _isLoading = true;
   String? _error;
-  Map<String, int> _siteAlarmCounts = {};
+  final Map<String, int> _siteAlarmCounts = {};
 
   @override
   void initState() {
@@ -463,13 +463,13 @@ class _SiteCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.warning_amber, size: 14, color: AppColors.error),
+                      const Icon(Icons.warning_amber, size: 14, color: AppColors.error),
                       const SizedBox(width: 4),
                       Text(
                         '$alarmCount',
@@ -491,7 +491,7 @@ class _SiteCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -575,7 +575,7 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: (color ?? AppColors.primary).withOpacity(0.1),
+        color: (color ?? AppColors.primary).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(

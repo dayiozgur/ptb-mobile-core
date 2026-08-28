@@ -192,8 +192,8 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
         ),
 
         // Legend
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+        const Padding(
+          padding: EdgeInsets.all(AppSpacing.sm),
           child: MapLegend(
             items: [
               MapLegendItem(label: 'Aktif', color: AppColors.success),
@@ -253,7 +253,7 @@ class _MapInfoBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(
+            const Text(
               'Konum aktif',
               style: TextStyle(
                 fontSize: 13,

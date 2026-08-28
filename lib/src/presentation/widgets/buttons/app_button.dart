@@ -193,8 +193,8 @@ class _PrimaryButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-        disabledForegroundColor: Colors.white.withOpacity(0.7),
+        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
         elevation: 0,
         padding: _getPadding(),
         shape: RoundedRectangleBorder(
@@ -251,11 +251,11 @@ class _SecondaryButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        disabledForegroundColor: AppColors.primary.withOpacity(0.5),
+        disabledForegroundColor: AppColors.primary.withValues(alpha: 0.5),
         side: BorderSide(
           color: onPressed != null
               ? AppColors.primary
-              : AppColors.primary.withOpacity(0.5),
+              : AppColors.primary.withValues(alpha: 0.5),
         ),
         elevation: 0,
         padding: _getPadding(),
@@ -313,7 +313,7 @@ class _TertiaryButton extends StatelessWidget {
       onPressed: onPressed,
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        disabledForegroundColor: AppColors.primary.withOpacity(0.5),
+        disabledForegroundColor: AppColors.primary.withValues(alpha: 0.5),
         padding: _getPadding(),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -370,8 +370,8 @@ class _DestructiveButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.error,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: AppColors.error.withOpacity(0.5),
-        disabledForegroundColor: Colors.white.withOpacity(0.7),
+        disabledBackgroundColor: AppColors.error.withValues(alpha: 0.5),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
         elevation: 0,
         padding: _getPadding(),
         shape: RoundedRectangleBorder(
@@ -429,8 +429,8 @@ class _SuccessButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.success,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: AppColors.success.withOpacity(0.5),
-        disabledForegroundColor: Colors.white.withOpacity(0.7),
+        disabledBackgroundColor: AppColors.success.withValues(alpha: 0.5),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
         elevation: 0,
         padding: _getPadding(),
         shape: RoundedRectangleBorder(
@@ -500,11 +500,11 @@ class _ButtonContent extends StatelessWidget {
       children: [
         if (icon != null) ...[
           Icon(icon, size: _getIconSize(), color: color),
-          SizedBox(width: AppSpacing.iconTextSpacing),
+          const SizedBox(width: AppSpacing.iconTextSpacing),
         ],
         Text(label, style: _getTextStyle()),
         if (trailingIcon != null) ...[
-          SizedBox(width: AppSpacing.iconTextSpacing),
+          const SizedBox(width: AppSpacing.iconTextSpacing),
           Icon(trailingIcon, size: _getIconSize(), color: color),
         ],
       ],

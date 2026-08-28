@@ -254,7 +254,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
                   ),
@@ -779,7 +779,7 @@ class _EventCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.chevron_right, color: AppColors.systemGray),
+            const Icon(Icons.chevron_right, color: AppColors.systemGray),
           ],
         ),
       ),

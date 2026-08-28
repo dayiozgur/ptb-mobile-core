@@ -85,7 +85,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
           children: [
             Icon(Icons.storage, size: 64, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.md),
-            Text('Veri Sağlayıcı Bulunamadı', style: AppTypography.headline),
+            const Text('Veri Sağlayıcı Bulunamadı', style: AppTypography.headline),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Henüz tanımlanmış veri sağlayıcı yok',
@@ -159,7 +159,7 @@ class _ProviderCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _getStatusColor(context).withOpacity(0.1),
+                color: _getStatusColor(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -452,7 +452,7 @@ class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
             ],
 
             // Bağlantı Bilgileri
-            AppSectionHeader(title: 'Bağlantı Bilgileri'),
+            const AppSectionHeader(title: 'Bağlantı Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -471,7 +471,7 @@ class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
 
             if (provider.description != null && provider.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Açıklama'),
+              const AppSectionHeader(title: 'Açıklama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -487,7 +487,7 @@ class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
             // Son Alarmlar
             if (_recentAlarms.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Son Alarmlar'),
+              const AppSectionHeader(title: 'Son Alarmlar'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -529,7 +529,7 @@ class _ProviderDetailSheetState extends State<_ProviderDetailSheet> {
             const SizedBox(height: AppSpacing.md),
 
             // Kayıt Bilgileri
-            AppSectionHeader(title: 'Kayıt Bilgileri'),
+            const AppSectionHeader(title: 'Kayıt Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(

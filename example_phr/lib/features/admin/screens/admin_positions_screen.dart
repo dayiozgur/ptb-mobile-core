@@ -108,8 +108,7 @@ class _PositionCard extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             if (position.level != null)
               AppBadge(
-                label: essT('hr.positions.level', 'Kademe') +
-                    ' ${position.level}',
+                label: '${essT('hr.positions.level', 'Kademe')} ${position.level}',
                 variant: AppBadgeVariant.neutral,
                 size: AppBadgeSize.small,
               ),

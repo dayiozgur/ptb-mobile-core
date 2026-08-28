@@ -608,7 +608,7 @@ class WorkRequestService {
       final response = await query;
       final data = response as List;
 
-      int total = data.length;
+      final int total = data.length;
       int pending = 0;
       int active = 0;
       int completed = 0;

@@ -341,7 +341,7 @@ class _StaffCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               color: AppColors.systemGray,
             ),

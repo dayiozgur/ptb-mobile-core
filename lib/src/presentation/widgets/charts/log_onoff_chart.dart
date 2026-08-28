@@ -220,7 +220,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
               maxY: 1.1,
               minX: 0,
               maxX: timeRange,
-              clipData: FlClipData.all(),
+              clipData: const FlClipData.all(),
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchSpotThreshold: 30,
@@ -293,7 +293,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                       dashArray: [4, 4],
                     );
                   }
-                  return FlLine(color: Colors.transparent);
+                  return const FlLine(color: Colors.transparent);
                 },
               ),
               titlesData: FlTitlesData(
@@ -385,10 +385,10 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                     },
                   ),
                 ),
-                topTitles: AxisTitles(
+                topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: AxisTitles(
+                rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
@@ -398,7 +398,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                   spots: spots,
                   isCurved: false,
                   isStepLineChart: true,
-                  lineChartStepData: LineChartStepData(stepDirection: LineChartStepData.stepDirectionForward),
+                  lineChartStepData: const LineChartStepData(stepDirection: LineChartStepData.stepDirectionForward),
                   color: widget.onColor,
                   barWidth: 2.5,
                   dotData: FlDotData(

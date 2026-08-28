@@ -222,7 +222,7 @@ class AppTheme {
         // Chip Theme
         chipTheme: ChipThemeData(
           backgroundColor: AppColors.systemGray6,
-          selectedColor: AppColors.primary.withOpacity(0.16),
+          selectedColor: AppColors.primary.withValues(alpha: 0.16),
           checkmarkColor: AppColors.primary,
           // Etiket her iki durumda da KOYU/okunur (M3 varsayılanı faint
           // onSurfaceVariant kullanıyordu → unselected chip'ler kayboluyordu).
@@ -234,7 +234,7 @@ class AppTheme {
             color: AppColors.primary,
             fontWeight: FontWeight.w600,
           ),
-          side: BorderSide(color: AppColors.systemGray4),
+          side: const BorderSide(color: AppColors.systemGray4),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
             vertical: AppSpacing.xs,
@@ -524,7 +524,7 @@ class AppTheme {
         // Chip Theme
         chipTheme: ChipThemeData(
           backgroundColor: AppColors.surfaceElevatedDark,
-          selectedColor: AppColors.primary.withOpacity(0.32),
+          selectedColor: AppColors.primary.withValues(alpha: 0.32),
           checkmarkColor: AppColors.textPrimaryDark,
           labelStyle: AppTypography.subhead.copyWith(
             color: AppColors.textPrimaryDark,
@@ -534,7 +534,7 @@ class AppTheme {
             color: AppColors.textPrimaryDark,
             fontWeight: FontWeight.w600,
           ),
-          side: BorderSide(color: AppColors.textPrimaryDark.withOpacity(0.18)),
+          side: BorderSide(color: AppColors.textPrimaryDark.withValues(alpha: 0.18)),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
             vertical: AppSpacing.xs,

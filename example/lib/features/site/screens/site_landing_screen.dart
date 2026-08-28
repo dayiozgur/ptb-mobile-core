@@ -344,7 +344,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             ],
 
             // IoT Summary
-            AppSectionHeader(title: 'IoT Özeti'),
+            const AppSectionHeader(title: 'IoT Özeti'),
             const SizedBox(height: AppSpacing.sm),
             _buildIotSummary(),
 
@@ -492,7 +492,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       child: Column(
         children: [
           AppListTile(
-            leading: _IconBox(
+            leading: const _IconBox(
               icon: Icons.developer_board,
               color: Colors.blue,
             ),
@@ -503,7 +503,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           AppListTile(
-            leading: _IconBox(
+            leading: const _IconBox(
               icon: Icons.storage,
               color: Colors.green,
             ),
@@ -514,7 +514,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           AppListTile(
-            leading: _IconBox(
+            leading: const _IconBox(
               icon: Icons.space_dashboard,
               color: Colors.orange,
             ),
@@ -525,7 +525,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           AppListTile(
-            leading: _IconBox(
+            leading: const _IconBox(
               icon: Icons.history,
               color: Colors.purple,
             ),
@@ -544,7 +544,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   // ============================================================================
   Widget _buildProvidersTab() {
     if (_providers.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.storage,
           title: 'Provider Bulunamadı',
@@ -577,7 +577,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   // ============================================================================
   Widget _buildAlarmsTab() {
     if (_activeAlarms.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.check_circle_outline,
           title: 'Aktif Alarm Yok',
@@ -618,7 +618,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   // ============================================================================
   Widget _buildAlarmHistoryTab() {
     if (_resetAlarms.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.history,
           title: 'Alarm Geçmişi Boş',
@@ -659,7 +659,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   // ============================================================================
   Widget _buildControllersTab() {
     if (_controllers.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.developer_board,
           title: 'Controller Bulunamadı',
@@ -706,7 +706,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Basic Info
-            AppSectionHeader(title: 'Temel Bilgiler'),
+            const AppSectionHeader(title: 'Temel Bilgiler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -740,7 +740,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Address Info
-            AppSectionHeader(title: 'Adres Bilgileri'),
+            const AppSectionHeader(title: 'Adres Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -759,7 +759,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Technical Info
-            AppSectionHeader(title: 'Teknik Bilgiler'),
+            const AppSectionHeader(title: 'Teknik Bilgiler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -836,7 +836,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
               },
             ),
             AppListTile(
-              leading: Icon(Icons.delete, color: AppColors.error),
+              leading: const Icon(Icons.delete, color: AppColors.error),
               title: 'Siteyi Sil',
               onTap: () {
                 Navigator.pop(context);
@@ -1485,7 +1485,7 @@ class _ResetAlarmCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                      const Icon(Icons.check_circle, size: 14, color: AppColors.success),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(

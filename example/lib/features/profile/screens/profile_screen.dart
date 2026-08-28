@@ -210,7 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.camera_alt, color: AppColors.primary),
@@ -227,7 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.photo_library, color: Colors.purple),
@@ -245,10 +245,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.delete, color: AppColors.error),
+                  child: const Icon(Icons.delete, color: AppColors.error),
                 ),
                 title: 'Fotoğrafı Kaldır',
                 onTap: () async {
@@ -371,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.black.withOpacity(0.5),
+                                  color: Colors.black.withValues(alpha: 0.5),
                                 ),
                                 child: const Center(
                                   child: CircularProgressIndicator(
@@ -418,7 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: AppSpacing.xl),
 
               // Personal info section
-              AppSectionHeader(title: 'Kişisel Bilgiler'),
+              const AppSectionHeader(title: 'Kişisel Bilgiler'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -464,7 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Notification settings
-              AppSectionHeader(title: 'Bildirim Tercihleri'),
+              const AppSectionHeader(title: 'Bildirim Tercihleri'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -473,7 +473,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.email, color: Colors.blue),
@@ -493,7 +493,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.notifications, color: Colors.orange),
@@ -513,7 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.sms, color: Colors.green),
@@ -535,7 +535,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Account info
-              AppSectionHeader(title: 'Hesap Bilgileri'),
+              const AppSectionHeader(title: 'Hesap Bilgileri'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -564,7 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Danger zone
-              AppSectionHeader(title: 'Tehlikeli Bölge'),
+              const AppSectionHeader(title: 'Tehlikeli Bölge'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -573,10 +573,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
+                          color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.delete_forever, color: AppColors.error),
+                        child: const Icon(Icons.delete_forever, color: AppColors.error),
                       ),
                       title: 'Hesabı Sil',
                       subtitle: 'Bu işlem geri alınamaz',
@@ -599,7 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final initials = _getInitials(user?.email ?? 'U');
 
     return Container(
-      color: AppColors.primary.withOpacity(0.1),
+      color: AppColors.primary.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           initials,

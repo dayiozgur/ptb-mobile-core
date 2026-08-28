@@ -69,7 +69,7 @@ class AppSnackbar {
             )
           : null,
       showCloseIcon: showCloseIcon,
-      closeIconColor: Colors.white.withOpacity(0.7),
+      closeIconColor: Colors.white.withValues(alpha: 0.7),
     );
 
     return ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -351,12 +351,12 @@ class _ToastWidgetState extends State<_ToastWidget>
               ),
               decoration: BoxDecoration(
                 color: brightness == Brightness.light
-                    ? AppColors.textPrimaryLight.withOpacity(0.9)
+                    ? AppColors.textPrimaryLight.withValues(alpha: 0.9)
                     : AppColors.surfaceElevatedDark,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),

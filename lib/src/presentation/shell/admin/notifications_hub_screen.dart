@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/admin/admin_notifications_hub_service.dart';
 
 /// Admin — Bildirim Merkezi görüntüleyici ekranı (salt-okuma).
 ///

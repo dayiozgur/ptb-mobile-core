@@ -476,9 +476,7 @@ class Variable {
       addressInput: json['address_input'] != null
           ? json['address_input'].toString()
           : json['address'] as String?,
-      addressOutput: json['address_output'] != null
-          ? json['address_output'].toString()
-          : null,
+      addressOutput: json['address_output']?.toString(),
       bitPosition: json['bit_position'] as int?,
       minimum: json['minimum'] as String?,
       maximum: json['maximum'] as String?,

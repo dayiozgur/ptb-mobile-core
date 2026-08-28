@@ -25,7 +25,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // BUTTONS
             // ==================
-            AppSectionHeader(title: 'Butonlar'),
+            const AppSectionHeader(title: 'Butonlar'),
             const SizedBox(height: AppSpacing.sm),
             _ButtonsShowcase(),
 
@@ -34,7 +34,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // TEXT FIELDS
             // ==================
-            AppSectionHeader(title: 'Metin Alanlari'),
+            const AppSectionHeader(title: 'Metin Alanlari'),
             const SizedBox(height: AppSpacing.sm),
             _TextFieldsShowcase(),
 
@@ -43,7 +43,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // DATE PICKERS
             // ==================
-            AppSectionHeader(title: 'Tarih Seciciler'),
+            const AppSectionHeader(title: 'Tarih Seciciler'),
             const SizedBox(height: AppSpacing.sm),
             _DatePickerShowcase(),
 
@@ -52,7 +52,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // DROPDOWN
             // ==================
-            AppSectionHeader(title: 'Acilir Menuler'),
+            const AppSectionHeader(title: 'Acilir Menuler'),
             const SizedBox(height: AppSpacing.sm),
             _DropdownShowcase(),
 
@@ -61,7 +61,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // CARDS
             // ==================
-            AppSectionHeader(title: 'Kartlar'),
+            const AppSectionHeader(title: 'Kartlar'),
             const SizedBox(height: AppSpacing.sm),
             _CardsShowcase(),
 
@@ -70,7 +70,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // METRIC CARDS
             // ==================
-            AppSectionHeader(title: 'Metrik Kartlar'),
+            const AppSectionHeader(title: 'Metrik Kartlar'),
             const SizedBox(height: AppSpacing.sm),
             _MetricCardsShowcase(),
 
@@ -79,7 +79,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // CHIPS
             // ==================
-            AppSectionHeader(title: 'Chip / Etiketler'),
+            const AppSectionHeader(title: 'Chip / Etiketler'),
             const SizedBox(height: AppSpacing.sm),
             _ChipsShowcase(),
 
@@ -88,7 +88,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // BADGES
             // ==================
-            AppSectionHeader(title: 'Rozetler (Badge)'),
+            const AppSectionHeader(title: 'Rozetler (Badge)'),
             const SizedBox(height: AppSpacing.sm),
             _BadgesShowcase(),
 
@@ -97,7 +97,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // PROGRESS BARS
             // ==================
-            AppSectionHeader(title: 'Ilerleme Cubugu'),
+            const AppSectionHeader(title: 'Ilerleme Cubugu'),
             const SizedBox(height: AppSpacing.sm),
             _ProgressShowcase(),
 
@@ -106,7 +106,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // AVATARS
             // ==================
-            AppSectionHeader(title: 'Avatar'),
+            const AppSectionHeader(title: 'Avatar'),
             const SizedBox(height: AppSpacing.sm),
             _AvatarShowcase(),
 
@@ -115,7 +115,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // LIST TILES
             // ==================
-            AppSectionHeader(title: 'Liste Ogeleri'),
+            const AppSectionHeader(title: 'Liste Ogeleri'),
             const SizedBox(height: AppSpacing.sm),
             _ListTileShowcase(),
 
@@ -124,7 +124,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // FEEDBACK
             // ==================
-            AppSectionHeader(title: 'Geri Bildirim'),
+            const AppSectionHeader(title: 'Geri Bildirim'),
             const SizedBox(height: AppSpacing.sm),
             _FeedbackShowcase(),
 
@@ -133,7 +133,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // SEARCH BAR
             // ==================
-            AppSectionHeader(title: 'Arama Cubugu'),
+            const AppSectionHeader(title: 'Arama Cubugu'),
             const SizedBox(height: AppSpacing.sm),
             _SearchBarShowcase(),
 
@@ -142,7 +142,7 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
             // ==================
             // ALARM LISTS
             // ==================
-            AppSectionHeader(title: 'Alarm Listeleri'),
+            const AppSectionHeader(title: 'Alarm Listeleri'),
             const SizedBox(height: AppSpacing.sm),
             _AlarmListsShowcase(),
 
@@ -206,7 +206,7 @@ class _ButtonsShowcase extends StatelessWidget {
               onPressed: () {},
             ),
             const SizedBox(height: AppSpacing.sm),
-            AppButton(
+            const AppButton(
               label: 'Devre Disi',
               onPressed: null,
             ),
@@ -331,14 +331,14 @@ class _TextFieldsShowcaseState extends State<_TextFieldsShowcase> {
               prefixIcon: Icons.description_outlined,
             ),
             const SizedBox(height: AppSpacing.md),
-            AppTextField(
+            const AppTextField(
               label: 'Hatali Alan',
               placeholder: 'Bu alan hatali',
               helperText: 'Hata durumu validator ile gosterilir',
               prefixIcon: Icons.error_outline,
             ),
             const SizedBox(height: AppSpacing.md),
-            AppTextField(
+            const AppTextField(
               label: 'Devre Disi Alan',
               placeholder: 'Duzenlenemez',
               enabled: false,
@@ -474,7 +474,7 @@ class _CardsShowcase extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Standart Kart', style: AppTypography.headline),
+                const Text('Standart Kart', style: AppTypography.headline),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Varsayilan kart stili. Golge ve kenarlikli.',
@@ -494,7 +494,7 @@ class _CardsShowcase extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Dolgulu Kart', style: AppTypography.headline),
+                const Text('Dolgulu Kart', style: AppTypography.headline),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Arka plan renkli kart. Vurgu alanlari icin.',
@@ -516,7 +516,7 @@ class _CardsShowcase extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.touch_app, color: AppColors.primary),
@@ -526,7 +526,7 @@ class _CardsShowcase extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Tiklanabilir Kart', style: AppTypography.headline),
+                      const Text('Tiklanabilir Kart', style: AppTypography.headline),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         'Tiklayarak bir aksiyon tetikler',
@@ -555,7 +555,7 @@ class _MetricCardsShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
+        const Row(
           children: [
             Expanded(
               child: MetricCard(
@@ -567,7 +567,7 @@ class _MetricCardsShowcase extends StatelessWidget {
                 trendValue: '+12%',
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             Expanded(
               child: MetricCard(
                 title: 'Aktif Kullanici',
@@ -581,7 +581,7 @@ class _MetricCardsShowcase extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
+        const Row(
           children: [
             Expanded(
               child: MetricCard(
@@ -593,7 +593,7 @@ class _MetricCardsShowcase extends StatelessWidget {
                 trendValue: '-3%',
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             Expanded(
               child: MetricCard(
                 title: 'Uptime',
@@ -655,9 +655,9 @@ class _ChipsShowcaseState extends State<_ChipsShowcase> {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                AppChip(label: 'Flutter', color: Colors.blue),
-                AppChip(label: 'Dart', color: Colors.teal),
-                AppChip(label: 'Firebase', color: Colors.orange),
+                const AppChip(label: 'Flutter', color: Colors.blue),
+                const AppChip(label: 'Dart', color: Colors.teal),
+                const AppChip(label: 'Firebase', color: Colors.orange),
                 AppChip(
                   label: 'Silinebilir',
                   color: Colors.red,
@@ -672,7 +672,7 @@ class _ChipsShowcaseState extends State<_ChipsShowcase> {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
+            const Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
@@ -712,12 +712,12 @@ class _ChipsShowcaseState extends State<_ChipsShowcase> {
                   variant: AppChipVariant.filled,
                   color: AppColors.primary,
                 ),
-                AppChip(
+                const AppChip(
                   label: 'Populer',
                   variant: AppChipVariant.filled,
                   color: AppColors.error,
                 ),
-                AppChip(
+                const AppChip(
                   label: 'Onerilir',
                   variant: AppChipVariant.filled,
                   color: AppColors.success,
@@ -748,7 +748,7 @@ class _ChipsShowcaseState extends State<_ChipsShowcase> {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
+            const Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
@@ -783,7 +783,7 @@ class _BadgesShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
+            const Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
@@ -801,7 +801,7 @@ class _BadgesShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
+            const Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
@@ -841,20 +841,20 @@ class _ProgressShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            AppProgressBar(
+            const AppProgressBar(
               value: 0.75,
               label: 'Yukleme',
               showPercentage: true,
             ),
             const SizedBox(height: AppSpacing.md),
-            AppProgressBar(
+            const AppProgressBar(
               value: 0.45,
               label: 'Disk Kullanimi',
               showPercentage: true,
               color: AppColors.warning,
             ),
             const SizedBox(height: AppSpacing.md),
-            AppProgressBar(
+            const AppProgressBar(
               value: 0.92,
               label: 'Bellek',
               showPercentage: true,
@@ -868,7 +868,7 @@ class _ProgressShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 AppCircularProgress(
@@ -895,7 +895,7 @@ class _ProgressShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            AppSegmentedProgress(
+            const AppSegmentedProgress(
               height: 12,
               segments: [
                 AppProgressSegment(value: 0.4, color: AppColors.success),
@@ -905,12 +905,12 @@ class _ProgressShowcase extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
-            Row(
+            const Row(
               children: [
                 _LegendDot(color: AppColors.success, label: 'Basarili %40'),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 _LegendDot(color: AppColors.warning, label: 'Uyari %30'),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 _LegendDot(color: AppColors.error, label: 'Hata %20'),
               ],
             ),
@@ -921,10 +921,10 @@ class _ProgressShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            AppStepProgress(
+            const AppStepProgress(
               totalSteps: 4,
               currentStep: 3,
-              stepLabels: const ['Bilgi', 'Adres', 'Odeme', 'Onay'],
+              stepLabels: ['Bilgi', 'Adres', 'Odeme', 'Onay'],
             ),
           ],
         ),
@@ -981,18 +981,18 @@ class _AvatarShowcase extends StatelessWidget {
               fontWeight: FontWeight.w600,
             )),
             const SizedBox(height: AppSpacing.sm),
-            Row(
+            const Row(
               children: [
                 AppAvatar(
                   name: 'Ahmet Yilmaz',
                   size: AppAvatarSize.small,
                 ),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 AppAvatar(
                   name: 'Mehmet Demir',
                   size: AppAvatarSize.medium,
                 ),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 AppAvatar(
                   name: 'Ayse Kaya',
                   size: AppAvatarSize.large,
@@ -1007,18 +1007,18 @@ class _AvatarShowcase extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                AppAvatar(name: 'Ali Can'),
+                const AppAvatar(name: 'Ali Can'),
                 const SizedBox(width: AppSpacing.sm),
-                AppAvatar(name: 'Veli Oz'),
+                const AppAvatar(name: 'Veli Oz'),
                 const SizedBox(width: AppSpacing.sm),
-                AppAvatar(name: 'Fatma Su'),
+                const AppAvatar(name: 'Fatma Su'),
                 const SizedBox(width: AppSpacing.sm),
-                AppAvatar(name: 'Zeynep Ak'),
+                const AppAvatar(name: 'Zeynep Ak'),
                 const SizedBox(width: AppSpacing.sm),
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.systemGray5,
                     shape: BoxShape.circle,
                   ),
@@ -1053,7 +1053,7 @@ class _ListTileShowcase extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.person, color: Colors.blue),
@@ -1068,7 +1068,7 @@ class _ListTileShowcase extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.security, color: Colors.green),
@@ -1083,14 +1083,14 @@ class _ListTileShowcase extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.notifications, color: Colors.orange),
             ),
             title: 'Bildirimler',
             subtitle: 'Bildirim tercihlerinizi yonetin',
-            trailing: Row(
+            trailing: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppBadge(
@@ -1098,8 +1098,8 @@ class _ListTileShowcase extends StatelessWidget {
                   variant: AppBadgeVariant.error,
                   size: AppBadgeSize.small,
                 ),
-                const SizedBox(width: AppSpacing.xs),
-                const Icon(Icons.chevron_right),
+                SizedBox(width: AppSpacing.xs),
+                Icon(Icons.chevron_right),
               ],
             ),
             onTap: () {},
@@ -1109,7 +1109,7 @@ class _ListTileShowcase extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.1),
+                color: Colors.purple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.palette, color: Colors.purple),
@@ -1119,7 +1119,7 @@ class _ListTileShowcase extends StatelessWidget {
             trailing: Switch(
               value: true,
               onChanged: (v) {},
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
             ),
           ),
         ],
@@ -1228,27 +1228,27 @@ class _FeedbackShowcase extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 )),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Column(
                       children: [
-                        const AppLoadingIndicator(),
-                        const SizedBox(height: AppSpacing.xs),
+                        AppLoadingIndicator(),
+                        SizedBox(height: AppSpacing.xs),
                         Text('Varsayilan', style: AppTypography.caption2),
                       ],
                     ),
                     Column(
                       children: [
-                        const AppLoadingIndicator(size: AppLoadingSize.small),
-                        const SizedBox(height: AppSpacing.xs),
+                        AppLoadingIndicator(size: AppLoadingSize.small),
+                        SizedBox(height: AppSpacing.xs),
                         Text('Kucuk', style: AppTypography.caption2),
                       ],
                     ),
                     Column(
                       children: [
-                        const AppLoadingIndicator(size: AppLoadingSize.large),
-                        const SizedBox(height: AppSpacing.xs),
+                        AppLoadingIndicator(size: AppLoadingSize.large),
+                        SizedBox(height: AppSpacing.xs),
                         Text('Buyuk', style: AppTypography.caption2),
                       ],
                     ),
@@ -1374,25 +1374,25 @@ class _AlarmListsShowcase extends StatelessWidget {
 
     // Mock priority map
     final mockPriorities = <String, Priority>{
-      'critical': Priority(
+      'critical': const Priority(
         id: 'critical',
         name: 'Kritik',
         level: 1,
         color: '#FF3B30',
       ),
-      'high': Priority(
+      'high': const Priority(
         id: 'high',
         name: 'Yuksek',
         level: 2,
         color: '#FF9500',
       ),
-      'medium': Priority(
+      'medium': const Priority(
         id: 'medium',
         name: 'Orta',
         level: 3,
         color: '#FFCC00',
       ),
-      'low': Priority(
+      'low': const Priority(
         id: 'low',
         name: 'Dusuk',
         level: 4,
@@ -1467,21 +1467,21 @@ class _AlarmListsShowcase extends StatelessWidget {
           fontWeight: FontWeight.w600,
         )),
         const SizedBox(height: AppSpacing.sm),
-        Row(
+        const Row(
           children: [
             Expanded(
               child: AppCard(
                 child: ActiveAlarmList(
-                  alarms: const [],
+                  alarms: [],
                   emptyMessage: 'Aktif alarm yok',
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             Expanded(
               child: AppCard(
                 child: ResetAlarmList(
-                  alarms: const [],
+                  alarms: [],
                   emptyMessage: 'Reset alarm yok',
                 ),
               ),

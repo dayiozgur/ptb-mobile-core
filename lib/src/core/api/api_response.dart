@@ -50,7 +50,7 @@ class ApiResponse<T> {
 
   /// Data al (hata varsa exception fırlatır)
   T get dataOrThrow {
-    if (_isSuccess && _data != null) return _data!;
+    if (_isSuccess && _data != null) return _data;
     throw _error ?? const ApiError(message: 'Unknown error');
   }
 
@@ -60,7 +60,7 @@ class ApiResponse<T> {
     required R Function(ApiError error) failure,
   }) {
     if (_isSuccess && _data != null) {
-      return success(_data!);
+      return success(_data);
     }
     return failure(_error ?? const ApiError(message: 'Unknown error'));
   }
@@ -71,7 +71,7 @@ class ApiResponse<T> {
     R Function(ApiError error)? failure,
   }) {
     if (_isSuccess && _data != null) {
-      return success?.call(_data!);
+      return success?.call(_data);
     }
     return failure?.call(_error ?? const ApiError(message: 'Unknown error'));
   }
@@ -83,7 +83,7 @@ class ApiResponse<T> {
     required R Function() orElse,
   }) {
     if (_isSuccess && _data != null && success != null) {
-      return success(_data!);
+      return success(_data);
     }
     if (!_isSuccess && failure != null) {
       return failure(_error ?? const ApiError(message: 'Unknown error'));
@@ -94,7 +94,7 @@ class ApiResponse<T> {
   /// Map success data
   ApiResponse<R> map<R>(R Function(T data) transform) {
     if (_isSuccess && _data != null) {
-      return ApiResponse.success(transform(_data!));
+      return ApiResponse.success(transform(_data));
     }
     return ApiResponse.failure(
       _error ?? const ApiError(message: 'Unknown error'),
@@ -106,7 +106,7 @@ class ApiResponse<T> {
     Future<ApiResponse<R>> Function(T data) transform,
   ) async {
     if (_isSuccess && _data != null) {
-      return transform(_data!);
+      return transform(_data);
     }
     return ApiResponse.failure(
       _error ?? const ApiError(message: 'Unknown error'),
@@ -119,20 +119,20 @@ class ApiResponse<T> {
     R Function(T data) onSuccess,
   ) {
     if (_isSuccess && _data != null) {
-      return onSuccess(_data!);
+      return onSuccess(_data);
     }
     return onFailure(_error ?? const ApiError(message: 'Unknown error'));
   }
 
   /// Default değer ile data al
   T getOrElse(T defaultValue) {
-    if (_isSuccess && _data != null) return _data!;
+    if (_isSuccess && _data != null) return _data;
     return defaultValue;
   }
 
   /// Callback ile default değer
   T getOrElseGet(T Function() defaultValue) {
-    if (_isSuccess && _data != null) return _data!;
+    if (_isSuccess && _data != null) return _data;
     return defaultValue();
   }
 

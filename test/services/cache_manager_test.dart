@@ -88,7 +88,7 @@ void main() {
     test('set + getTyped works with model', () async {
       // API drift: `setTyped` was removed; store via `set(key, toJson())` and
       // read back with `getTyped`. `Tenant.slug`/`ownerId` were also removed.
-      final tenant = Tenant(
+      const tenant = Tenant(
         id: 'tenant-123',
         name: 'Test Tenant',
       );

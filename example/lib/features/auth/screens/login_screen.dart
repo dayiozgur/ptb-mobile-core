@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(
@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Title
-              Text(
+              const Text(
                 'Hoş Geldiniz',
                 style: AppTypography.largeTitle,
                 textAlign: TextAlign.center,

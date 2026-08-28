@@ -118,7 +118,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
             children: [
               Icon(Icons.data_object, size: 64, color: AppColors.tertiaryLabel(context)),
               const SizedBox(height: AppSpacing.md),
-              Text('Değişken Bulunamadı', style: AppTypography.headline),
+              const Text('Değişken Bulunamadı', style: AppTypography.headline),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Henüz tanımlanmış değişken yok',
@@ -139,7 +139,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
           children: [
             Icon(Icons.search_off, size: 64, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.md),
-            Text('Sonuç Bulunamadı', style: AppTypography.headline),
+            const Text('Sonuç Bulunamadı', style: AppTypography.headline),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Arama kriterlerinize uygun değişken yok',
@@ -178,7 +178,7 @@ class _VariablesScreenState extends State<VariablesScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Veri Tipi', style: AppTypography.subheadline),
+              const Text('Veri Tipi', style: AppTypography.subheadline),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
@@ -267,7 +267,7 @@ class _VariableCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _getTypeColor().withOpacity(0.1),
+                color: _getTypeColor().withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -465,7 +465,7 @@ class _VariableDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Variable info
-            AppSectionHeader(title: 'Değişken Bilgileri'),
+            const AppSectionHeader(title: 'Değişken Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -484,7 +484,7 @@ class _VariableDetailSheet extends StatelessWidget {
             // Min/Max değerler
             if (variable.minimum != null || variable.maximum != null || variable.minValue != null || variable.maxValue != null) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Değer Aralığı'),
+              const AppSectionHeader(title: 'Değer Aralığı'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -507,7 +507,7 @@ class _VariableDetailSheet extends StatelessWidget {
 
             if (variable.description != null && variable.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Açıklama'),
+              const AppSectionHeader(title: 'Açıklama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -574,7 +574,7 @@ class _LargeValueDisplay extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: (boolValue ? AppColors.success : AppColors.error).withOpacity(0.1),
+          color: (boolValue ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(

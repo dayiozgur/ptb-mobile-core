@@ -134,11 +134,11 @@ class AlarmMttrCard extends StatelessWidget {
 
     return LineChart(
       LineChartData(
-        gridData: FlGridData(show: false),
-        titlesData: FlTitlesData(show: false),
+        gridData: const FlGridData(show: false),
+        titlesData: const FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
-        clipData: FlClipData.all(),
-        lineTouchData: LineTouchData(enabled: false),
+        clipData: const FlClipData.all(),
+        lineTouchData: const LineTouchData(enabled: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -147,7 +147,7 @@ class AlarmMttrCard extends StatelessWidget {
             color: AppColors.primary,
             barWidth: 2,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(

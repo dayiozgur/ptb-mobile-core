@@ -658,9 +658,9 @@ class UnitService {
     try {
       final units = await getUnits(siteId);
 
-      int totalCount = units.length;
+      final int totalCount = units.length;
       double totalArea = 0;
-      Map<UnitCategory, int> categoryCount = {};
+      final Map<UnitCategory, int> categoryCount = {};
 
       for (final unit in units) {
         if (unit.areaSize != null) {

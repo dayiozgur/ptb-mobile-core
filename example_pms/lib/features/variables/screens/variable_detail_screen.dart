@@ -349,7 +349,7 @@ class _LargeValueDisplay extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: (boolValue ? AppColors.success : AppColors.error).withOpacity(0.1),
+          color: (boolValue ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(

@@ -31,12 +31,12 @@ void main() {
 
       testWidgets('disabled button does not respond to tap',
           (WidgetTester tester) async {
-        var tapped = false;
+        const tapped = false;
 
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppButton(
                 // API drift: AppButton no longer has an `enabled` flag; a null
                 // onPressed is the disabled state.
@@ -146,7 +146,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppTextField(
                 label: 'Helper Field',
                 helperText: 'Enter your email address',
@@ -163,7 +163,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppTextField(
                 label: 'Password',
                 obscureText: true,
@@ -187,7 +187,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppCard(
                 child: Text('Card Content'),
               ),
@@ -207,7 +207,7 @@ void main() {
             home: Scaffold(
               body: AppCard(
                 onTap: () => tapped = true,
-                child: Text('Tappable Card'),
+                child: const Text('Tappable Card'),
               ),
             ),
           ),
@@ -225,7 +225,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppEmptyState(
                 icon: Icons.inbox,
                 title: 'No Items',
@@ -273,7 +273,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppErrorView(
                 title: 'Error',
                 message: 'Something went wrong',
@@ -319,7 +319,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: AppLoadingIndicator(),
               ),
@@ -335,7 +335,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: AppLoadingIndicator(
                   message: 'Loading data...',
@@ -359,7 +359,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppBadge(
                 label: '5',
               ),
@@ -375,7 +375,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppBadge(
                 dot: true,
               ),
@@ -392,7 +392,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppBadge(
                 label: '150',
               ),
@@ -409,7 +409,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppChip(
                 label: 'Active',
               ),
@@ -425,7 +425,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: AppChip(
                 label: 'Tag',
                 icon: Icons.tag,
@@ -466,7 +466,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light,
-            home: Scaffold(
+            home: const Scaffold(
               body: Text('Light Theme'),
             ),
           ),
@@ -482,7 +482,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.dark,
-            home: Scaffold(
+            home: const Scaffold(
               body: Text('Dark Theme'),
             ),
           ),

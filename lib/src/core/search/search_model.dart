@@ -2,6 +2,7 @@
 ///
 /// Arama sorguları, sonuçları ve öneriler için
 /// veri modelleri.
+library;
 
 /// Arama varlık türü
 enum SearchEntityType {
@@ -246,7 +247,7 @@ class SearchResult {
   String get effectiveIconName => iconName ?? entityType.iconName;
 
   @override
-  String toString() => 'SearchResult($id, "${title}")';
+  String toString() => 'SearchResult($id, "$title")';
 }
 
 /// Arama yanıtı

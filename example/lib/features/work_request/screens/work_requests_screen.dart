@@ -343,7 +343,7 @@ class _WorkRequestsScreenState extends State<WorkRequestsScreen> {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.error,
-                      side: BorderSide(color: AppColors.error),
+                      side: const BorderSide(color: AppColors.error),
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                     ),
                     child: const Text('Filtreleri Sıfırla'),
@@ -442,7 +442,7 @@ class _WorkRequestsScreenState extends State<WorkRequestsScreen> {
                 child: Container(
                   width: 16,
                   height: 16,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
                   ),
@@ -684,12 +684,12 @@ class _WorkRequestCard extends StatelessWidget {
                             color: AppColors.error.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.warning_amber_rounded,
                                   size: 12, color: AppColors.error),
-                              const SizedBox(width: 2),
+                              SizedBox(width: 2),
                               Text(
                                 'Gecikmiş',
                                 style: TextStyle(
@@ -846,7 +846,7 @@ class _WorkRequestCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               color: AppColors.systemGray,
             ),

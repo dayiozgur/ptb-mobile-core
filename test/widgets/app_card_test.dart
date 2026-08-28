@@ -6,10 +6,10 @@ void main() {
   group('AppCard', () {
     testWidgets('renders child correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppCard(
-              child: const Text('Card Content'),
+              child: Text('Card Content'),
             ),
           ),
         ),
@@ -38,10 +38,10 @@ void main() {
 
     testWidgets('applies padding correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppCard(
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('Padded Content'),
               ),
@@ -55,21 +55,21 @@ void main() {
 
     testWidgets('different variants render correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Column(
               children: [
                 AppCard(
                   variant: AppCardVariant.elevated,
-                  child: const Text('Elevated'),
+                  child: Text('Elevated'),
                 ),
                 AppCard(
                   variant: AppCardVariant.outlined,
-                  child: const Text('Outlined'),
+                  child: Text('Outlined'),
                 ),
                 AppCard(
                   variant: AppCardVariant.filled,
-                  child: const Text('Filled'),
+                  child: Text('Filled'),
                 ),
               ],
             ),
@@ -86,7 +86,7 @@ void main() {
   group('MetricCard', () {
     testWidgets('renders title and value', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MetricCard(
               title: 'Total Users',
@@ -102,7 +102,7 @@ void main() {
 
     testWidgets('shows icon when provided', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MetricCard(
               title: 'Users',
@@ -118,7 +118,7 @@ void main() {
 
     testWidgets('shows trend indicator', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MetricCard(
               title: 'Revenue',
@@ -135,7 +135,7 @@ void main() {
 
     testWidgets('applies custom color', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MetricCard(
               title: 'Status',

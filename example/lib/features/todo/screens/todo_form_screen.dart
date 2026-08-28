@@ -460,11 +460,11 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                     ),
                     if (_dueDate != null)
                       IconButton(
-                        icon: Icon(Icons.clear, color: AppColors.systemGray),
+                        icon: const Icon(Icons.clear, color: AppColors.systemGray),
                         onPressed: () => setState(() => _dueDate = null),
                       )
                     else
-                      Icon(Icons.chevron_right, color: AppColors.systemGray),
+                      const Icon(Icons.chevron_right, color: AppColors.systemGray),
                   ],
                 ),
               ),
@@ -525,14 +525,14 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                     ),
                     if (_selectedAssignedTo != null)
                       IconButton(
-                        icon: Icon(Icons.clear, color: AppColors.systemGray),
+                        icon: const Icon(Icons.clear, color: AppColors.systemGray),
                         onPressed: () => setState(() {
                           _selectedAssignedTo = null;
                           _selectedAssignedToName = null;
                         }),
                       )
                     else
-                      Icon(Icons.chevron_right, color: AppColors.systemGray),
+                      const Icon(Icons.chevron_right, color: AppColors.systemGray),
                   ],
                 ),
               ),

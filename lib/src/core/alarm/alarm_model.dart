@@ -185,9 +185,7 @@ class Alarm {
       remoteAcknowledgeTime: json['remote_acknowledge_time'] != null
           ? DateTime.tryParse(json['remote_acknowledge_time'] as String)
           : null,
-      remoteAcknowledgeUser: json['remote_acknowledge_user'] != null
-          ? json['remote_acknowledge_user'].toString()
-          : null,
+      remoteAcknowledgeUser: json['remote_acknowledge_user']?.toString(),
       localDeleteTime: json['local_delete_time'] != null
           ? DateTime.tryParse(json['local_delete_time'] as String)
           : null,

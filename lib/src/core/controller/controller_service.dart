@@ -425,7 +425,7 @@ class ControllerService {
 
     try {
       // Primary query: tenant_id üzerinden
-      var response = await _supabase
+      final response = await _supabase
           .from('controllers')
           .select('id, is_enabled, is_canceled, active')
           .eq('tenant_id', _currentTenantId!);

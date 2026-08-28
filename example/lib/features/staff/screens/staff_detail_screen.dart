@@ -133,7 +133,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                   ),
                 )
               : _staff == null
-                  ? Center(
+                  ? const Center(
                       child: AppEmptyState(
                         icon: Icons.person_outline,
                         title: 'Personel Bulunamadı',
@@ -174,8 +174,8 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
             Center(
               child: TextButton.icon(
                 onPressed: _deleteStaff,
-                icon: Icon(Icons.delete_outline, color: AppColors.error),
-                label: Text(
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                label: const Text(
                   'Personeli Sil',
                   style: TextStyle(color: AppColors.error),
                 ),
@@ -411,7 +411,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                             color: AppColors.info.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.group, color: AppColors.info, size: 22),
+                          child: const Icon(Icons.group, color: AppColors.info, size: 22),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
@@ -483,13 +483,11 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color? valueColor;
 
   const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   @override
@@ -516,7 +514,7 @@ class _DetailRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: valueColor ?? AppColors.textPrimary(brightness),
+                color: AppColors.textPrimary(brightness),
               ),
               textAlign: TextAlign.end,
             ),

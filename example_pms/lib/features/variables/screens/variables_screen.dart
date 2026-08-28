@@ -181,7 +181,7 @@ class _VariableCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _getTypeColor().withOpacity(0.1),
+                color: _getTypeColor().withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

@@ -333,7 +333,7 @@ class _WorkRequestDetailScreenState extends State<WorkRequestDetailScreen> {
                   ),
                 )
               : _request == null
-                  ? Center(
+                  ? const Center(
                       child: AppEmptyState(
                         icon: Icons.assignment_outlined,
                         title: 'Talep Bulunamadı',
@@ -537,10 +537,10 @@ class _WorkRequestDetailScreenState extends State<WorkRequestDetailScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
-                    const SizedBox(width: AppSpacing.sm),
+                    SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         'Bu talep gecikmiş durumda!',
@@ -1047,7 +1047,7 @@ class _StatusActionTile extends StatelessWidget {
         status.label,
         style: const TextStyle(fontWeight: FontWeight.w500),
       ),
-      trailing: Icon(Icons.chevron_right, color: AppColors.systemGray),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.systemGray),
       onTap: onTap,
     );
   }
@@ -1090,7 +1090,7 @@ class _NoteItem extends StatelessWidget {
                     ),
                     Text(
                       note.createdAt != null
-                          ? '${note.createdAt!.day}/${note.createdAt!.month}/${note.createdAt!.year}'
+                          ? '${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}'
                           : '',
                       style: TextStyle(
                         fontSize: 11,

@@ -140,7 +140,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Card(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -180,7 +180,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       leading: CircleAvatar(
         backgroundColor: isSelected
             ? Theme.of(context).primaryColor
-            : Colors.grey.withOpacity(0.1),
+            : Colors.grey.withValues(alpha: 0.1),
         child: Text(
           _getFlagEmoji(locale),
           style: const TextStyle(fontSize: 20),

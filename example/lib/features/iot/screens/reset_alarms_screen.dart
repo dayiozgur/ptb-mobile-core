@@ -310,7 +310,7 @@ class _ResetAlarmsScreenState extends State<ResetAlarmsScreen> {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.error,
-                      side: BorderSide(color: AppColors.error),
+                      side: const BorderSide(color: AppColors.error),
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.sm,
                       ),
@@ -367,7 +367,7 @@ class _ResetAlarmsScreenState extends State<ResetAlarmsScreen> {
                 child: Container(
                   width: 16,
                   height: 16,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
                   ),
@@ -438,7 +438,7 @@ class _ResetAlarmsScreenState extends State<ResetAlarmsScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.restart_alt,
                           size: 16,
                           color: AppColors.success,
@@ -446,7 +446,7 @@ class _ResetAlarmsScreenState extends State<ResetAlarmsScreen> {
                         const SizedBox(width: AppSpacing.xs),
                         Text(
                           '${_filteredAlarms.length} reset alarm',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.success,
@@ -694,7 +694,7 @@ class _ResetAlarmCard extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.md),
                       // Reset
-                      Icon(
+                      const Icon(
                         Icons.restart_alt,
                         size: 14,
                         color: AppColors.success,
@@ -704,7 +704,7 @@ class _ResetAlarmCard extends StatelessWidget {
                         alarm.resetTime != null
                             ? _formatDateTime(alarm.resetTime!)
                             : '-',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.success,
                           fontWeight: FontWeight.w500,
@@ -743,7 +743,7 @@ class _ResetAlarmCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               color: AppColors.systemGray,
             ),

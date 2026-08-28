@@ -308,7 +308,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Connection Info Card
-            AppSectionHeader(title: 'Bağlantı Durumu'),
+            const AppSectionHeader(title: 'Bağlantı Durumu'),
             const SizedBox(height: AppSpacing.sm),
             _buildConnectionCard(),
 
@@ -525,7 +525,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   // ============================================================================
   Widget _buildVariablesTab() {
     if (_variables.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.data_object,
           title: 'Değişken Bulunamadı',
@@ -623,7 +623,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
   Widget _buildActiveAlarmsContent() {
     if (_activeAlarms.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.check_circle_outline,
           title: 'Aktif Alarm Yok',
@@ -661,7 +661,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
   Widget _buildAlarmHistoryContent() {
     if (_alarmHistory.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.history,
           title: 'Alarm Geçmişi Boş',
@@ -702,7 +702,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   // ============================================================================
   Widget _buildLogsTab() {
     if (_logs.isEmpty) {
-      return Center(
+      return const Center(
         child: AppEmptyState(
           icon: Icons.article_outlined,
           title: 'Log Bulunamadı',
@@ -742,7 +742,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Status & Type
-            AppSectionHeader(title: 'Durum & Tip'),
+            const AppSectionHeader(title: 'Durum & Tip'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -761,7 +761,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Connection Info
-            AppSectionHeader(title: 'Bağlantı Bilgileri'),
+            const AppSectionHeader(title: 'Bağlantı Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -779,7 +779,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Relations
-            AppSectionHeader(title: 'İlişkiler'),
+            const AppSectionHeader(title: 'İlişkiler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -802,7 +802,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             if (_provider!.description != null &&
                 _provider!.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Açıklama'),
+              const AppSectionHeader(title: 'Açıklama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -818,7 +818,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
             const SizedBox(height: AppSpacing.md),
 
             // Record Info
-            AppSectionHeader(title: 'Kayıt Bilgileri'),
+            const AppSectionHeader(title: 'Kayıt Bilgileri'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -899,7 +899,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
               },
             ),
             AppListTile(
-              leading: Icon(Icons.delete, color: AppColors.error),
+              leading: const Icon(Icons.delete, color: AppColors.error),
               title: 'Sil',
               onTap: () {
                 Navigator.pop(context);
@@ -1173,7 +1173,7 @@ class _VariableRow extends StatelessWidget {
           color: AppColors.info.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
+        child: const Icon(
           Icons.data_object,
           color: AppColors.info,
           size: 18,
@@ -1208,7 +1208,7 @@ class _VariableCard extends StatelessWidget {
                 color: AppColors.info.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.data_object,
                 color: AppColors.info,
                 size: 22,
@@ -1410,7 +1410,7 @@ class _ResetAlarmCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                      const Icon(Icons.check_circle, size: 14, color: AppColors.success),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(

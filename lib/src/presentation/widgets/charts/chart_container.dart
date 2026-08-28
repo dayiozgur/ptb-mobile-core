@@ -140,7 +140,7 @@ class ChartContainer extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline,
                 size: 32,
                 color: AppColors.error,
@@ -167,7 +167,7 @@ class ChartContainer extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.bar_chart_rounded,
                 size: 32,
                 color: AppColors.systemGray3,

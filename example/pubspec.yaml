@@ -33,6 +33,8 @@ dependencies:
   # Image Picker
   image_picker: ^1.0.7
 
+  supabase_flutter: any
+  fl_chart: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

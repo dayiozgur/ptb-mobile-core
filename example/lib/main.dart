@@ -141,7 +141,7 @@ class DemoHomeScreen extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text(
+                    const Text(
                       'Demo Modu',
                       style: AppTypography.title2,
                     ),
@@ -161,7 +161,7 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Buttons section
-            AppSectionHeader(title: 'Buttons'),
+            const AppSectionHeader(title: 'Buttons'),
             const SizedBox(height: AppSpacing.sm),
 
             AppButton(
@@ -203,7 +203,7 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Input section
-            AppSectionHeader(title: 'Inputs'),
+            const AppSectionHeader(title: 'Inputs'),
             const SizedBox(height: AppSpacing.sm),
 
             const AppTextField(
@@ -220,10 +220,10 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Cards section
-            AppSectionHeader(title: 'Cards'),
+            const AppSectionHeader(title: 'Cards'),
             const SizedBox(height: AppSpacing.sm),
 
-            Row(
+            const Row(
               children: [
                 Expanded(
                   child: MetricCard(
@@ -234,7 +234,7 @@ class DemoHomeScreen extends StatelessWidget {
                     trendValue: '+12%',
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: MetricCard(
                     title: 'Active',
@@ -249,25 +249,25 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // List section
-            AppSectionHeader(title: 'Lists'),
+            const AppSectionHeader(title: 'Lists'),
             const SizedBox(height: AppSpacing.sm),
 
             AppCard(
               child: Column(
                 children: [
                   AppListTile(
-                    leading: AppAvatar(name: 'John Doe'),
+                    leading: const AppAvatar(name: 'John Doe'),
                     title: 'John Doe',
                     subtitle: 'john@example.com',
-                    trailing: AppBadge(label: 'Admin'),
+                    trailing: const AppBadge(label: 'Admin'),
                     onTap: () {},
                   ),
                   const Divider(height: 1),
                   AppListTile(
-                    leading: AppAvatar(name: 'Jane Smith'),
+                    leading: const AppAvatar(name: 'Jane Smith'),
                     title: 'Jane Smith',
                     subtitle: 'jane@example.com',
-                    trailing: AppBadge(
+                    trailing: const AppBadge(
                       label: 'Member',
                       variant: AppBadgeVariant.secondary,
                     ),
@@ -275,7 +275,7 @@ class DemoHomeScreen extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   AppListTile(
-                    leading: AppAvatar(name: 'Bob Wilson'),
+                    leading: const AppAvatar(name: 'Bob Wilson'),
                     title: 'Bob Wilson',
                     subtitle: 'bob@example.com',
                     trailing: const Icon(Icons.chevron_right),
@@ -288,17 +288,17 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Feedback section
-            AppSectionHeader(title: 'Feedback'),
+            const AppSectionHeader(title: 'Feedback'),
             const SizedBox(height: AppSpacing.sm),
 
-            Row(
+            const Row(
               children: [
                 AppBadge(label: 'Success', variant: AppBadgeVariant.success),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs),
                 AppBadge(label: 'Warning', variant: AppBadgeVariant.warning),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs),
                 AppBadge(label: 'Error', variant: AppBadgeVariant.error),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs),
                 AppBadge(label: 'Info', variant: AppBadgeVariant.info),
               ],
             ),
@@ -343,10 +343,10 @@ class DemoHomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Progress section
-            AppSectionHeader(title: 'Progress'),
+            const AppSectionHeader(title: 'Progress'),
             const SizedBox(height: AppSpacing.sm),
 
-            AppProgressBar(value: 0.75, label: '75% Complete'),
+            const AppProgressBar(value: 0.75, label: '75% Complete'),
 
             const SizedBox(height: AppSpacing.md),
 

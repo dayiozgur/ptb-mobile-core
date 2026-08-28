@@ -85,7 +85,7 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
           children: [
             Icon(Icons.account_tree, size: 64, color: AppColors.tertiaryLabel(context)),
             const SizedBox(height: AppSpacing.md),
-            Text('Workflow Bulunamadı', style: AppTypography.headline),
+            const Text('Workflow Bulunamadı', style: AppTypography.headline),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Henüz tanımlanmış otomasyon senaryosu yok',
@@ -178,7 +178,7 @@ class _WorkflowCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(context).withOpacity(0.1),
+                    color: _getStatusColor(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -397,7 +397,7 @@ class _WorkflowDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Statistics
-            AppSectionHeader(title: 'İstatistikler'),
+            const AppSectionHeader(title: 'İstatistikler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -433,7 +433,7 @@ class _WorkflowDetailSheet extends StatelessWidget {
 
             if (workflow.cronExpression != null) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Zamanlama'),
+              const AppSectionHeader(title: 'Zamanlama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -458,7 +458,7 @@ class _WorkflowDetailSheet extends StatelessWidget {
 
             if (workflow.description != null && workflow.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: 'Açıklama'),
+              const AppSectionHeader(title: 'Açıklama'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -471,7 +471,7 @@ class _WorkflowDetailSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Metadata
-            AppSectionHeader(title: 'Bilgiler'),
+            const AppSectionHeader(title: 'Bilgiler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(

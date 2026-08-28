@@ -99,8 +99,8 @@ void main() {
   group('parse — geometri: aynı satırdaki ayrı tutar (en sağdaki)', () {
     test('anahtar solda, tutar sağda, aynı centerY', () {
       final r = ReceiptParser.parse([
-        OcrLine(text: 'GENEL TOPLAM', top: 200, bottom: 220, left: 10, right: 120),
-        OcrLine(text: '150,00', top: 201, bottom: 219, left: 300, right: 380),
+        const OcrLine(text: 'GENEL TOPLAM', top: 200, bottom: 220, left: 10, right: 120),
+        const OcrLine(text: '150,00', top: 201, bottom: 219, left: 300, right: 380),
       ]);
       expect(r.total, 150.0);
     });

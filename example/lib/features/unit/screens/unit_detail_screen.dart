@@ -156,7 +156,7 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Unit info
-            AppSectionHeader(title: 'Detaylar'),
+            const AppSectionHeader(title: 'Detaylar'),
             const SizedBox(height: AppSpacing.sm),
             _UnitInfoCard(unit: _unit!),
 
@@ -202,7 +202,7 @@ class _UnitHeaderCard extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: _getCategoryColor(unit.category ?? UnitCategory.custom).withOpacity(0.1),
+                color: _getCategoryColor(unit.category ?? UnitCategory.custom).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
@@ -461,7 +461,7 @@ class _ChildrenList extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(

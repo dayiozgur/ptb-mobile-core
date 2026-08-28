@@ -177,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Quick actions
-              AppSectionHeader(title: 'Hızlı İşlemler'),
+              const AppSectionHeader(title: 'Hızlı İşlemler'),
               const SizedBox(height: AppSpacing.sm),
               _QuickActions(
                 onNavigateOrganizations: () => context.go('/organizations'),
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Map Section
-              AppSectionHeader(title: 'Harita'),
+              const AppSectionHeader(title: 'Harita'),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 onTap: () => context.push('/map'),
@@ -200,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.teal.withOpacity(0.1),
+                          color: Colors.teal.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.map_rounded, color: Colors.teal),
@@ -210,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Site Haritasi',
                               style: AppTypography.headline,
                             ),
@@ -249,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Work Management Section
-              AppSectionHeader(
+              const AppSectionHeader(
                 title: 'İş Yönetimi',
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -258,14 +258,14 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // UI Component Showcase
-              AppSectionHeader(title: 'Geliştirici Araçları'),
+              const AppSectionHeader(title: 'Geliştirici Araçları'),
               const SizedBox(height: AppSpacing.sm),
               _DevToolsCard(),
 
               const SizedBox(height: AppSpacing.lg),
 
               // Hierarchy navigation
-              AppSectionHeader(title: 'Hiyerarşi'),
+              const AppSectionHeader(title: 'Hiyerarşi'),
               const SizedBox(height: AppSpacing.sm),
               _HierarchyCard(
                 tenant: tenant,
@@ -350,7 +350,7 @@ class _WelcomeCard extends StatelessWidget {
                         ),
                         if (tenant!.isTrial) ...[
                           const SizedBox(width: AppSpacing.xs),
-                          AppBadge(
+                          const AppBadge(
                             label: 'Deneme',
                             variant: AppBadgeVariant.warning,
                             size: AppBadgeSize.small,
@@ -651,7 +651,7 @@ class _QuickActionItem extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color),
@@ -755,8 +755,8 @@ class _HierarchyLevel extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.primary.withOpacity(0.1)
-                    : AppColors.tertiaryLabel(context).withOpacity(0.1),
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : AppColors.tertiaryLabel(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -817,8 +817,8 @@ class _HierarchyConnector extends StatelessWidget {
             width: 2,
             height: 16,
             color: isActive
-                ? AppColors.primary.withOpacity(0.3)
-                : AppColors.tertiaryLabel(context).withOpacity(0.2),
+                ? AppColors.primary.withValues(alpha: 0.3)
+                : AppColors.tertiaryLabel(context).withValues(alpha: 0.2),
           ),
         ],
       ),
@@ -895,7 +895,7 @@ class _IotQuickCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -929,7 +929,7 @@ class _RecentActivity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return AppCard(
+      return const AppCard(
         child: Padding(
           padding: AppSpacing.cardInsets,
           child: Center(
@@ -982,7 +982,7 @@ class _RecentActivity extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _getActionColor(activity.action).withOpacity(0.1),
+                    color: _getActionColor(activity.action).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -1060,7 +1060,7 @@ class _DevToolsCard extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.1),
+                color: Colors.deepPurple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.palette_outlined, color: Colors.deepPurple),
@@ -1075,7 +1075,7 @@ class _DevToolsCard extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
+                color: Colors.amber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.analytics_outlined, color: Colors.amber),
@@ -1177,7 +1177,7 @@ class _WorkManagementCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 28),

@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -478,7 +477,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: _getControllerStatusColor(controller).withOpacity(0.1),
+                          color: _getControllerStatusColor(controller).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(Icons.developer_board, color: _getControllerStatusColor(controller), size: 18),
@@ -518,7 +517,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.15),
+                color: _getStatusColor().withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(_getTypeIcon(), color: _getStatusColor(), size: 28),
@@ -606,7 +605,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
                     color: _getStatusColor(),
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: _getStatusColor().withOpacity(0.4), blurRadius: 4, spreadRadius: 1),
+                      BoxShadow(color: _getStatusColor().withValues(alpha: 0.4), blurRadius: 4, spreadRadius: 1),
                     ],
                   ),
                 ),
@@ -1293,7 +1292,7 @@ class _CountBadge extends StatelessWidget {
     final badgeColor = color ?? AppColors.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: badgeColor.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: badgeColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
       child: Text(count.toString(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: badgeColor)),
     );
   }
@@ -1375,7 +1374,7 @@ class _ControllerCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.1),
+                color: _getStatusColor().withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.developer_board, color: _getStatusColor(), size: 22),
@@ -1567,7 +1566,7 @@ class _ResetAlarmCard extends StatelessWidget {
                       if (priority != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: priorityColor.withOpacity(0.12), borderRadius: BorderRadius.circular(4)),
+                          decoration: BoxDecoration(color: priorityColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
                           child: Text(priority!.name ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
                         ),
                     ],

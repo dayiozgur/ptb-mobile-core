@@ -216,7 +216,7 @@ class _TodoDetailScreenState extends State<TodoDetailScreen> {
                   ),
                 )
               : _todo == null
-                  ? Center(
+                  ? const Center(
                       child: AppEmptyState(
                         icon: Icons.checklist_outlined,
                         title: 'Yapılacak Bulunamadı',
@@ -268,7 +268,7 @@ class _TodoDetailScreenState extends State<TodoDetailScreen> {
                       label: const Text('Yapılacağı Sil'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
-                        side: BorderSide(color: AppColors.error),
+                        side: const BorderSide(color: AppColors.error),
                         padding: const EdgeInsets.symmetric(
                             vertical: AppSpacing.sm),
                       ),
@@ -299,7 +299,7 @@ class _TodoDetailScreenState extends State<TodoDetailScreen> {
                       label: const Text('İptal Et'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.systemGray,
-                        side: BorderSide(color: AppColors.systemGray),
+                        side: const BorderSide(color: AppColors.systemGray),
                         padding: const EdgeInsets.symmetric(
                             vertical: AppSpacing.sm),
                       ),
@@ -426,11 +426,11 @@ class _TodoDetailScreenState extends State<TodoDetailScreen> {
                   border:
                       Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(Icons.warning_amber_rounded,
                         color: AppColors.error, size: 20),
-                    const SizedBox(width: AppSpacing.sm),
+                    SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         'Bu yapılacak gecikmiş durumda!',
@@ -659,8 +659,8 @@ class _ShareItem extends StatelessWidget {
                 Row(
                   children: [
                     if (share.canEdit)
-                      Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.xs),
+                      const Padding(
+                        padding: EdgeInsets.only(right: AppSpacing.xs),
                         child: Text(
                           'Düzenleyebilir',
                           style: TextStyle(
@@ -670,7 +670,7 @@ class _ShareItem extends StatelessWidget {
                         ),
                       ),
                     if (share.canDelete)
-                      Text(
+                      const Text(
                         'Silebilir',
                         style: TextStyle(
                           fontSize: 11,
@@ -690,14 +690,13 @@ class _ShareItem extends StatelessWidget {
               ],
             ),
           ),
-          if (share.sharedAt != null)
-            Text(
-              '${share.sharedAt!.day.toString().padLeft(2, '0')}/${share.sharedAt!.month.toString().padLeft(2, '0')}/${share.sharedAt!.year}',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary(brightness),
-              ),
+          Text(
+            '${share.sharedAt.day.toString().padLeft(2, '0')}/${share.sharedAt.month.toString().padLeft(2, '0')}/${share.sharedAt.year}',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary(brightness),
             ),
+          ),
         ],
       ),
     );

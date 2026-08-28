@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../../core/admin/admin_integration_service.dart';
 
 /// Admin — Entegrasyonlar görüntüleyici ekranı.
 ///

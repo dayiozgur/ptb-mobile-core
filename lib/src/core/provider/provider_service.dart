@@ -111,7 +111,7 @@ class DataProviderService {
     }
 
     try {
-      var query = _supabase
+      final query = _supabase
           .from('providers')
           .select()
           .eq('tenant_id', _currentTenantId!);

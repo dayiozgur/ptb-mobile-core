@@ -196,9 +196,9 @@ class AppBottomSheetHelper {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.systemGray6,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(AppSpacing.radiusLg),
                 ),
               ),

@@ -146,7 +146,7 @@ class AppListTile extends StatelessWidget {
                   // Chevron
                   if (showChevron) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    Icon(
+                    const Icon(
                       Icons.chevron_right,
                       size: 20,
                       color: AppColors.textTertiaryLight,

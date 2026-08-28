@@ -123,11 +123,11 @@ class AppChip extends StatelessWidget {
   Color _getBackgroundColor(Color chipColor, Brightness brightness) {
     switch (variant) {
       case AppChipVariant.filled:
-        return selected ? chipColor : chipColor.withOpacity(0.8);
+        return selected ? chipColor : chipColor.withValues(alpha: 0.8);
       case AppChipVariant.outlined:
-        return selected ? chipColor.withOpacity(0.1) : Colors.transparent;
+        return selected ? chipColor.withValues(alpha: 0.1) : Colors.transparent;
       case AppChipVariant.tonal:
-        return chipColor.withOpacity(selected ? 0.2 : 0.1);
+        return chipColor.withValues(alpha: selected ? 0.2 : 0.1);
     }
   }
 

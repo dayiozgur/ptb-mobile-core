@@ -77,10 +77,12 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
   }
 
   Future<void> _load({bool silent = false}) async {
-    if (!silent) setState(() {
+    if (!silent) {
+      setState(() {
       _loading = true;
       _error = null;
     });
+    }
     try {
       final d = await widget.load();
       if (mounted) {

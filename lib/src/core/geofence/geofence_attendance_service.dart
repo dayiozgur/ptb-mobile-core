@@ -267,7 +267,7 @@ class GeofenceAttendanceService {
     try {
       final staffId = await _ess.currentStaffId();
       if (staffId == null) {
-        return GeoPunchResult(ok: false, event: 'manual_in', raw: {'error': 'no_staff'});
+        return const GeoPunchResult(ok: false, event: 'manual_in', raw: {'error': 'no_staff'});
       }
       final today = _todayStr();
       final open = await _supabase
@@ -278,7 +278,7 @@ class GeofenceAttendanceService {
           .filter('exit_time', 'is', null)
           .limit(1);
       if ((open as List).isNotEmpty) {
-        return GeoPunchResult(ok: true, event: 'manual_in', raw: {'noop': true, 'reason': 'already_in'});
+        return const GeoPunchResult(ok: true, event: 'manual_in', raw: {'noop': true, 'reason': 'already_in'});
       }
       final uid = _supabase.auth.currentUser?.id;
       await _supabase.from('attendance_records').insert({
@@ -290,7 +290,7 @@ class GeofenceAttendanceService {
         'created_by': uid,
         'updated_by': uid,
       });
-      final r = GeoPunchResult(ok: true, event: 'manual_in', raw: const {});
+      const r = GeoPunchResult(ok: true, event: 'manual_in', raw: {});
       _notifyPunch('in');
       _punchController.add(r);
       return r;
@@ -304,7 +304,7 @@ class GeofenceAttendanceService {
     try {
       final staffId = await _ess.currentStaffId();
       if (staffId == null) {
-        return GeoPunchResult(ok: false, event: 'manual_out', raw: {'error': 'no_staff'});
+        return const GeoPunchResult(ok: false, event: 'manual_out', raw: {'error': 'no_staff'});
       }
       final today = _todayStr();
       final open = await _supabase
@@ -317,7 +317,7 @@ class GeofenceAttendanceService {
           .limit(1)
           .maybeSingle();
       if (open == null) {
-        return GeoPunchResult(ok: true, event: 'manual_out', raw: {'noop': true, 'reason': 'no_open_punch'});
+        return const GeoPunchResult(ok: true, event: 'manual_out', raw: {'noop': true, 'reason': 'no_open_punch'});
       }
       final uid = _supabase.auth.currentUser?.id;
       await _supabase.from('attendance_records').update({
@@ -325,7 +325,7 @@ class GeofenceAttendanceService {
         'updated_by': uid,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', open['id']);
-      final r = GeoPunchResult(ok: true, event: 'manual_out', raw: const {});
+      const r = GeoPunchResult(ok: true, event: 'manual_out', raw: {});
       _notifyPunch('out');
       _punchController.add(r);
       return r;

@@ -267,7 +267,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                     });
                     Navigator.pop(context);
                   },
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   contentPadding: EdgeInsets.zero,
                 ),
 
@@ -331,7 +331,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.error,
-                      side: BorderSide(color: AppColors.error),
+                      side: const BorderSide(color: AppColors.error),
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.sm,
                       ),
@@ -389,7 +389,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                 child: Container(
                   width: 16,
                   height: 16,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
                   ),
@@ -448,7 +448,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.warning_amber_rounded,
                           size: 16,
                           color: AppColors.error,
@@ -456,7 +456,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                         const SizedBox(width: AppSpacing.xs),
                         Text(
                           '${_filteredAlarms.length} aktif alarm',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.error,
@@ -613,7 +613,7 @@ class _AlarmCard extends StatelessWidget {
                   Row(
                     children: [
                       if (alarm.isAcknowledged) ...[
-                        Icon(
+                        const Icon(
                           Icons.check_circle,
                           size: 16,
                           color: AppColors.info,
@@ -754,7 +754,7 @@ class _AlarmCard extends StatelessWidget {
             ),
 
             const SizedBox(width: AppSpacing.sm),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               color: AppColors.systemGray,
             ),

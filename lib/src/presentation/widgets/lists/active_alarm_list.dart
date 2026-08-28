@@ -59,7 +59,7 @@ class ActiveAlarmList extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle_outline,
                 size: 32,
                 color: AppColors.success,
@@ -178,7 +178,7 @@ class _ActiveAlarmTile extends StatelessWidget {
                     children: [
                       // Onay durumu ikonu
                       if (showAcknowledgeStatus && alarm.isAcknowledged) ...[
-                        Icon(
+                        const Icon(
                           Icons.check_circle,
                           size: 14,
                           color: AppColors.info,
@@ -275,7 +275,7 @@ class _ActiveAlarmTile extends StatelessWidget {
 
             // Chevron
             const SizedBox(width: AppSpacing.xs),
-            Icon(
+            const Icon(
               Icons.chevron_right,
               size: 20,
               color: AppColors.systemGray,

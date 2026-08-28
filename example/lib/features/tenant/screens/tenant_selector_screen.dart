@@ -279,7 +279,7 @@ class _TenantCard extends StatelessWidget {
                       ),
                       if (tenant.isTrial) ...[
                         const SizedBox(width: AppSpacing.xs),
-                        AppBadge(
+                        const AppBadge(
                           label: 'Deneme',
                           variant: AppBadgeVariant.warning,
                           size: AppBadgeSize.small,

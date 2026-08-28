@@ -293,14 +293,14 @@ class SyncStatusIndicator extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.warning.withOpacity(0.1),
+          color: AppColors.warning.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isSyncing)
-              SizedBox(
+              const SizedBox(
                 width: 12,
                 height: 12,
                 child: CircularProgressIndicator(
@@ -309,7 +309,7 @@ class SyncStatusIndicator extends StatelessWidget {
                 ),
               )
             else
-              Icon(
+              const Icon(
                 Icons.cloud_upload_outlined,
                 size: 14,
                 color: AppColors.warning,

@@ -331,7 +331,7 @@ class _CalendarEventDetailScreenState extends State<CalendarEventDetailScreen> {
                   ),
                 )
               : _event == null
-                  ? Center(
+                  ? const Center(
                       child: AppEmptyState(
                         icon: Icons.event_outlined,
                         title: 'Etkinlik Bulunamadı',
@@ -560,7 +560,7 @@ class _CalendarEventDetailScreenState extends State<CalendarEventDetailScreen> {
                 value: event.durationFormatted,
               ),
             ] else
-              _DetailRow(
+              const _DetailRow(
                 icon: Icons.sunny,
                 label: 'Süre',
                 value: 'Tüm Gün',
@@ -811,7 +811,7 @@ class _StatusActionTile extends StatelessWidget {
         child: Icon(icon, color: color),
       ),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      trailing: Icon(Icons.chevron_right, color: AppColors.systemGray),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.systemGray),
       onTap: onTap,
     );
   }
@@ -880,7 +880,7 @@ class _AttendeeItem extends StatelessWidget {
                     ),
                     if (attendee.isRequired) ...[
                       const SizedBox(width: 4),
-                      Icon(Icons.star, size: 12, color: AppColors.warning),
+                      const Icon(Icons.star, size: 12, color: AppColors.warning),
                     ],
                   ],
                 ),
@@ -991,11 +991,11 @@ class _ReminderItem extends StatelessWidget {
                 color: AppColors.success.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check, size: 14, color: AppColors.success),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     'Gönderildi',
                     style: TextStyle(

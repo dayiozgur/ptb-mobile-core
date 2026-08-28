@@ -70,12 +70,12 @@ class ReportingService {
         _getPendingNotificationCount(tenantId),
       ]);
 
-      final organizationCount = results[0] as int;
-      final siteCount = results[1] as int;
-      final unitCount = results[2] as int;
-      final activeUserCount = results[3] as int;
-      final activityCount = results[4] as int;
-      final pendingNotificationCount = results[5] as int;
+      final organizationCount = results[0];
+      final siteCount = results[1];
+      final unitCount = results[2];
+      final activeUserCount = results[3];
+      final activityCount = results[4];
+      final pendingNotificationCount = results[5];
 
       // Trend verilerini hesapla
       final previousPeriod = period.getDateRange().previousPeriod;

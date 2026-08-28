@@ -499,7 +499,7 @@ class _WorkRequestFormScreenState extends State<WorkRequestFormScreen> {
                         ],
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.chevron_right,
                       color: AppColors.systemGray,
                     ),
@@ -553,7 +553,7 @@ class _WorkRequestFormScreenState extends State<WorkRequestFormScreen> {
                         ],
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.chevron_right,
                       color: AppColors.systemGray,
                     ),
@@ -620,11 +620,11 @@ class _WorkRequestFormScreenState extends State<WorkRequestFormScreen> {
                     ),
                     if (_expectedCompletionDate != null)
                       IconButton(
-                        icon: Icon(Icons.clear, color: AppColors.systemGray),
+                        icon: const Icon(Icons.clear, color: AppColors.systemGray),
                         onPressed: () => setState(() => _expectedCompletionDate = null),
                       )
                     else
-                      Icon(Icons.chevron_right, color: AppColors.systemGray),
+                      const Icon(Icons.chevron_right, color: AppColors.systemGray),
                   ],
                 ),
               ),

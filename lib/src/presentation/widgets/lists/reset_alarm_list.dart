@@ -56,7 +56,7 @@ class ResetAlarmList extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle_outline,
                 size: 32,
                 color: AppColors.systemGray3,
@@ -185,7 +185,7 @@ class _ResetAlarmTile extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xxs),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.restart_alt,
                         size: 13,
                         color: AppColors.success,

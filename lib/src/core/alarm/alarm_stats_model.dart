@@ -2,6 +2,7 @@
 ///
 /// Chart ve dashboard widget'ları için kullanılan veri yapıları.
 /// Aktif alarmlar: alarms tablosu, Resetli alarmlar: alarm_histories tablosu.
+library;
 
 /// Server-side KPI özeti (fn_pms_kpi_summary çıktısı)
 ///

@@ -141,7 +141,7 @@ class _HomeWidgetsSectionState extends State<HomeWidgetsSection> {
                   Icon(Icons.dashboard_customize_outlined,
                       color: AppColors.primary),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'Panonuza widget ekleyin (hava durumu, not…)',
                       style: AppTypography.subhead,

@@ -141,7 +141,7 @@ class MapContainer extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.error_outline,
                   size: 32,
                   color: AppColors.error,
@@ -171,7 +171,7 @@ class MapContainer extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.map_outlined,
                   size: 32,
                   color: AppColors.systemGray3,

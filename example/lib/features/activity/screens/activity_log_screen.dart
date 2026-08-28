@@ -316,7 +316,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _getActionColor(activity.action).withOpacity(0.1),
+                  color: _getActionColor(activity.action).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

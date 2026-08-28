@@ -193,7 +193,7 @@ class _LogLineChartState extends State<LogLineChart> {
               maxY: yMax,
               minX: 0,
               maxX: timeRange,
-              clipData: FlClipData.all(),
+              clipData: const FlClipData.all(),
               lineTouchData: LineTouchData(
                 enabled: widget.config.enableTouch,
                 touchSpotThreshold: 20, // Daha büyük touch alanı
@@ -362,10 +362,10 @@ class _LogLineChartState extends State<LogLineChart> {
                     },
                   ),
                 ),
-                topTitles: AxisTitles(
+                topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: AxisTitles(
+                rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),

@@ -111,8 +111,7 @@ class _OrganizationCard extends StatelessWidget {
             AppBadge(
               label: org.isRoot
                   ? essT('hr.organizations.root', 'Kök')
-                  : essT('hr.organizations.level', 'Seviye') +
-                      ' ${org.hierarchyLevel ?? '-'}',
+                  : '${essT('hr.organizations.level', 'Seviye')} ${org.hierarchyLevel ?? '-'}',
               variant:
                   org.isRoot ? AppBadgeVariant.primary : AppBadgeVariant.neutral,
               size: AppBadgeSize.small,

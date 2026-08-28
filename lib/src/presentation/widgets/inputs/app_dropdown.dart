@@ -117,7 +117,7 @@ class AppDropdown<T> extends StatelessWidget {
 
         // Dropdown
         DropdownButtonFormField<T>(
-          value: safeValue,
+          initialValue: safeValue,
           items: items.map((item) {
             return DropdownMenuItem<T>(
               value: item.value,

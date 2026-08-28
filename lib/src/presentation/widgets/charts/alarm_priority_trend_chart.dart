@@ -99,7 +99,7 @@ class AlarmPriorityTrendChart extends StatelessWidget {
         color: color,
         barWidth: 1.5,
         isStrokeCapRound: true,
-        dotData: FlDotData(show: false),
+        dotData: const FlDotData(show: false),
         belowBarData: BarAreaData(
           show: true,
           color: color.withValues(alpha: 0.4),
@@ -162,7 +162,7 @@ class AlarmPriorityTrendChart extends StatelessWidget {
               maxY: yMax,
               minX: 0,
               maxX: timeRange > 0 ? timeRange : 1,
-              clipData: FlClipData.all(),
+              clipData: const FlClipData.all(),
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchTooltipData: LineTouchTooltipData(
@@ -251,8 +251,8 @@ class AlarmPriorityTrendChart extends StatelessWidget {
                     },
                   ),
                 ),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: false),
               lineBarsData: lineBarDatas,

@@ -6,7 +6,7 @@ void main() {
   group('AppTextField', () {
     testWidgets('renders with label', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               label: 'Email',
@@ -20,7 +20,7 @@ void main() {
 
     testWidgets('shows placeholder text', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               placeholder: 'Enter your email',
@@ -51,7 +51,7 @@ void main() {
 
     testWidgets('shows prefix icon when provided', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               prefixIcon: Icons.email,
@@ -65,7 +65,7 @@ void main() {
 
     testWidgets('shows suffix icon when provided', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               suffixIcon: Icons.clear,
@@ -123,7 +123,7 @@ void main() {
 
     testWidgets('respects enabled property', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               enabled: false,
@@ -139,7 +139,7 @@ void main() {
 
     testWidgets('respects maxLines property', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               maxLines: 3,
@@ -154,7 +154,7 @@ void main() {
 
     testWidgets('applies text capitalization', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppTextField(
               textCapitalization: TextCapitalization.words,
@@ -171,7 +171,7 @@ void main() {
   group('AppPasswordField', () {
     testWidgets('renders with label', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppPasswordField(
               label: 'Password',
@@ -185,7 +185,7 @@ void main() {
 
     testWidgets('toggles password visibility', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppPasswordField(
               label: 'Password',

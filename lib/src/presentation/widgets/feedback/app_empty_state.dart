@@ -84,7 +84,7 @@ class AppEmptyState extends StatelessWidget {
                 width: compact ? 64 : 80,
                 height: compact ? 64 : 80,
                 decoration: BoxDecoration(
-                  color: (iconColor ?? AppColors.primary).withOpacity(0.1),
+                  color: (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -201,7 +201,7 @@ class AppNoSearchResultsState extends StatelessWidget {
       icon: Icons.search_off,
       title: loc.translate('empty.no_results_title'),
       message: query != null
-          ? loc.translate('empty.no_results_query', params: {'query': query!})
+          ? loc.translate('empty.no_results_query', params: {'query': query})
           : loc.translate('empty.no_search_match'),
       actionLabel: onClear != null ? loc.translate('empty.clear_search') : null,
       onAction: onClear,

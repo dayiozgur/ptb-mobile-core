@@ -202,7 +202,7 @@ class _AcceptInviteScreenState extends State<AcceptInviteScreen> {
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Icon(Icons.lock_outline, size: 40, color: AppColors.primary),

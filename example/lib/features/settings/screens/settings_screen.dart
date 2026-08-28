@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile section
-            AppSectionHeader(title: 'Profil'),
+            const AppSectionHeader(title: 'Profil'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               onTap: () => context.push('/profile'),
@@ -127,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Tenant section
-            AppSectionHeader(title: 'Tenant Yonetimi'),
+            const AppSectionHeader(title: 'Tenant Yonetimi'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -148,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.swap_horiz, color: AppColors.primary),
@@ -162,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
+                        color: Colors.purple.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.people, color: Colors.purple),
@@ -178,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Security section
-            AppSectionHeader(title: 'Guvenlik'),
+            const AppSectionHeader(title: 'Guvenlik'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -187,7 +187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.lock_outline, color: AppColors.primary),
@@ -209,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: Colors.green.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.fingerprint,
@@ -240,7 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.devices, color: Colors.orange),
@@ -261,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Preferences section
-            AppSectionHeader(title: 'Tercihler'),
+            const AppSectionHeader(title: 'Tercihler'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -270,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.withOpacity(0.1),
+                        color: Colors.indigo.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.palette, color: Colors.indigo),
@@ -285,7 +285,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.language, color: Colors.blue),
@@ -300,7 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child:
@@ -322,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Data section
-            AppSectionHeader(title: 'Veri Yonetimi'),
+            const AppSectionHeader(title: 'Veri Yonetimi'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -331,7 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.1),
+                        color: Colors.teal.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.cached, color: Colors.teal),
@@ -353,7 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.cyan.withOpacity(0.1),
+                        color: Colors.cyan.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.download, color: Colors.cyan),
@@ -375,7 +375,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // About section
-            AppSectionHeader(title: 'Hakkinda'),
+            const AppSectionHeader(title: 'Hakkinda'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -384,7 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.info_outline, color: AppColors.primary),
@@ -397,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.description_outlined,
@@ -412,7 +412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.privacy_tip_outlined,
@@ -427,7 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child:
@@ -444,7 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Developer Tools
-            AppSectionHeader(title: 'Gelistirici'),
+            const AppSectionHeader(title: 'Gelistirici'),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -453,7 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.deepPurple.withOpacity(0.1),
+                        color: Colors.deepPurple.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.palette_outlined,
@@ -571,7 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
@@ -652,7 +652,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         if (tenant.isTrial) ...[
                           const SizedBox(width: AppSpacing.xs),
-                          AppBadge(
+                          const AppBadge(
                             label: 'Deneme',
                             variant: AppBadgeVariant.warning,
                           ),
@@ -685,7 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       if (tenant.isTrial) ...[
                         const SizedBox(height: AppSpacing.xs),
-                        _InfoRow(
+                        const _InfoRow(
                           label: 'Durum',
                           value: 'Deneme Sürümü',
                           valueColor: AppColors.warning,
@@ -850,7 +850,7 @@ class _ThemeOption extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: (isSelected ? AppColors.primary : Colors.grey).withOpacity(0.1),
+          color: (isSelected ? AppColors.primary : Colors.grey).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
