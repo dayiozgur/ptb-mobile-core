@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -140,7 +142,12 @@ class _FullScreenChartViewState extends State<FullScreenChartView> {
 
           if (hasAnalog && hasDigital) {
             // Ikisi de var: analog %60, digital %40
-            final analogHeight = (totalHeight * 0.58).clamp(100.0, totalHeight - 80);
+            // Üst-sınır daima >= 100 (alt sınır): kısa alanda (totalHeight<180,
+            // landscape/split-view) totalHeight-80<100 iken ham clamp
+            // geçersiz-aralık ArgumentError fırlatırdı.
+            final analogHeight = (totalHeight * 0.58)
+                .clamp(100.0, math.max(100.0, totalHeight - 80))
+                .toDouble();
             const dividerHeight = 12.0;
             final digitalHeight = totalHeight - analogHeight - dividerHeight;
             final digitalRowCount = widget.digitalSeries.length.clamp(1, 4);

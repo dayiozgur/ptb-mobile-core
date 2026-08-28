@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/alarm/alarm_stats_model.dart';
@@ -85,7 +87,6 @@ class _HorizontalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fraction = maxCount > 0 ? site.totalCount / maxCount : 0.0;
     final activeFraction = maxCount > 0 ? site.activeCount / maxCount : 0.0;
     final resetFraction = maxCount > 0 ? site.resetCount / maxCount : 0.0;
 
@@ -132,7 +133,11 @@ class _HorizontalBar extends StatelessWidget {
                     if (site.resetCount > 0)
                       Container(
                         height: 18,
-                        width: resetWidth.clamp(2.0, totalWidth - activeWidth),
+                        // math.max ile üst-sınır daima >= 2.0 (alt sınır):
+                        // aktif baskın + dar ekranda (totalWidth-activeWidth<2)
+                        // ham clamp geçersiz-aralık ArgumentError fırlatırdı.
+                        width: resetWidth.clamp(
+                            2.0, math.max(2.0, totalWidth - activeWidth)),
                         decoration: BoxDecoration(
                           color: AppColors.success,
                           borderRadius: site.activeCount == 0
