@@ -27,6 +27,9 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
+  # Eski düz-metin Supabase oturumunun güvenli depoya göçü için
+  # (supabase_flutter'ın zaten geçişli bağımlılığı)
+  shared_preferences: ^2.5.4
 
   # Dependency Injection
   get_it: ^7.7.0

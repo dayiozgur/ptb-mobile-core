@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../helpers/secure_storage_channel_mock.dart';
+
 void main() {
   // API/behavior drift: CacheManager is now Hive-backed and requires an
   // explicit initialize() before use (it no longer lazily self-initializes).
@@ -21,6 +23,8 @@ void main() {
       const MethodChannel('plugins.flutter.io/path_provider'),
       (methodCall) async => tempDir.path,
     );
+    // Hive kutuları AES-256 şifreli: anahtar güvenli depodan okunur.
+    mockFlutterSecureStorageChannel();
     cacheManager = CacheManager();
     await cacheManager.initialize();
   });

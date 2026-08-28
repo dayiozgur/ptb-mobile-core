@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../storage/hive_encryption.dart';
 import '../utils/logger.dart';
 import 'connectivity_service.dart';
 
@@ -330,7 +331,9 @@ class OfflineSyncService {
     if (_isInitialized) return;
 
     try {
-      _box = await Hive.openBox<String>(_boxName);
+      // Kuyruk AES-256 şifreli açılır (anahtar Keychain/Keystore'da) —
+      // bekleyen yazımlar (PDKS punch, izin, yorum...) PII taşıyabilir.
+      _box = await HiveEncryption.openEncryptedBox<String>(_boxName);
 
       // Bağlantı değişikliklerini dinle
       _connectivitySubscription =

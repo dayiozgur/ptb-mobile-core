@@ -6,6 +6,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../helpers/secure_storage_channel_mock.dart';
+
 /// Mock classes for integration testing
 class MockSecureStorage extends Mock implements SecureStorage {}
 
@@ -95,6 +97,8 @@ void main() {
           const MethodChannel('plugins.flutter.io/path_provider'),
           (methodCall) async => tempDir.path,
         );
+        // Hive kutuları AES-256 şifreli: anahtar güvenli depodan okunur.
+        mockFlutterSecureStorageChannel();
         cache = CacheManager();
         await cache.initialize();
       });

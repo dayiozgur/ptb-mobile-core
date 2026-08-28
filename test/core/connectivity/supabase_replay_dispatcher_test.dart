@@ -19,7 +19,12 @@ void main() {
 
   setUp(() {
     h = SupabaseHarness();
-    dispatcher = SupabaseReplayDispatcher(h.client);
+    // Güvenlik allow-list'i: yalnız buradaki fn/tablolar replay edilebilir.
+    dispatcher = SupabaseReplayDispatcher(
+      h.client,
+      allowedRpcFunctions: {'fn_x', 'fn_ppm_log_work', 'fn_status_change', 'fn_approve'},
+      allowedTables: {'t', 'activity_logs', 'worklog_events'},
+    );
   });
 
   group('canDispatch', () {
@@ -135,6 +140,41 @@ void main() {
       );
       expect(await dispatcher.dispatch(op), isFalse);
       verifyNever(() => h.client.from(any()));
+    });
+  });
+
+  group('allow-list (güvenlik) → liste dışı işlem reddedilir', () {
+    test('allow-list dışı RPC → false, çağrı YAPILMAZ', () async {
+      final op = PendingOperation.rpc(
+        id: 'rpc-evil',
+        function: 'fn_injected_evil',
+        params: {'p': 1},
+        createdAt: createdAt,
+      );
+      expect(await dispatcher.dispatch(op), isFalse);
+      verifyNever(() => h.client.rpc<dynamic>(any(),
+          params: any(named: 'params')));
+    });
+
+    test('allow-list dışı tablo → false, insert YAPILMAZ', () async {
+      final op = PendingOperation.tableInsert(
+        id: 'ins-evil',
+        table: 'profiles',
+        row: const {'role': 'ROLE_ADMIN'},
+        createdAt: createdAt,
+      );
+      expect(await dispatcher.dispatch(op), isFalse);
+      verifyNever(() => h.client.from(any()));
+    });
+
+    test('varsayılan liste bilinen offline-write akışlarını içerir', () {
+      expect(SupabaseReplayDispatcher.defaultAllowedRpcFunctions,
+          contains('fn_ppm_log_work'));
+      expect(SupabaseReplayDispatcher.defaultAllowedTables,
+          contains('comments'));
+      // Keyfi hedefler varsayılanda YOK.
+      expect(SupabaseReplayDispatcher.defaultAllowedTables,
+          isNot(contains('profiles')));
     });
   });
 

@@ -34,6 +34,8 @@ export 'src/core/errors/exceptions.dart';
 
 // Core - Storage
 export 'src/core/storage/secure_storage.dart';
+export 'src/core/storage/supabase_secure_local_storage.dart';
+export 'src/core/storage/hive_encryption.dart';
 export 'src/core/storage/cache_manager.dart';
 export 'src/core/storage/file_storage_service.dart';
 

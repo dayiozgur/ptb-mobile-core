@@ -46,6 +46,7 @@ import '../site/site_service.dart';
 import '../storage/cache_manager.dart';
 import '../storage/file_storage_service.dart';
 import '../storage/secure_storage.dart';
+import '../storage/supabase_secure_local_storage.dart';
 import '../tenant/tenant_service.dart';
 import '../unit/unit_service.dart';
 import '../utils/logger.dart';
@@ -117,10 +118,19 @@ Future<void> setupServiceLocator({
   // EXTERNAL SERVICES
   // ============================================
 
-  // Supabase
+  // Supabase — oturum (access+refresh JWT) ve PKCE verifier güvenli depoda
+  // (iOS Keychain / Android Keystore); varsayılan düz-metin SharedPreferences
+  // deposu KULLANILMAZ. Eski düz-metin oturum ilk açılışta göç edilir.
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
+    authOptions: FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+      localStorage: SecureSessionLocalStorage(
+        migrationPersistSessionKey: defaultPersistSessionKeyForUrl(supabaseUrl),
+      ),
+      pkceAsyncStorage: SecurePkceAsyncStorage(),
+    ),
   );
   sl.registerSingleton<SupabaseClient>(Supabase.instance.client);
 

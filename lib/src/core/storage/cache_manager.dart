@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
+import 'hive_encryption.dart';
 
 /// Cache yönetim servisi
 ///
@@ -31,10 +32,12 @@ class CacheManager {
 
     try {
       await Hive.initFlutter();
-      _cacheBox = await Hive.openBox<String>(_cacheBoxName);
-      _metaBox = await Hive.openBox<int>(_metaBoxName);
+      // Kutular AES-256 şifreli açılır (anahtar Keychain/Keystore'da) —
+      // cache'te PII (konum/izin/bordro yanıtları) düz-metin durmasın.
+      _cacheBox = await HiveEncryption.openEncryptedBox<String>(_cacheBoxName);
+      _metaBox = await HiveEncryption.openEncryptedBox<int>(_metaBoxName);
       _isInitialized = true;
-      Logger.debug('CacheManager initialized');
+      Logger.debug('CacheManager initialized (encrypted)');
     } catch (e) {
       throw CacheException(
         message: 'Cache başlatılamadı',
