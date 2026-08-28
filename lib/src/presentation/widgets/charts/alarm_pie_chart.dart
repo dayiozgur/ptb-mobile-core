@@ -99,8 +99,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
                   centerSpaceRadius: widget.size * 0.3,
                   sections: _buildSections(brightness),
                 ),
-                swapAnimationDuration:
-                    const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 300),
               ),
               // Merkez: sayı
               Column(

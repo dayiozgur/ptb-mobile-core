@@ -192,7 +192,6 @@ Future<void> setupServiceLocator({
       supabase: sl<SupabaseClient>(),
       secureStorage: sl<SecureStorage>(),
       cacheManager: sl<CacheManager>(),
-      apiClient: sl<ApiClient>(),
     ),
   );
 

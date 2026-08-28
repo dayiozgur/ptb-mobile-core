@@ -445,7 +445,7 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
             ),
             Switch.adaptive(
               value: _isActive,
-              activeColor: AppColors.success,
+              activeThumbColor: AppColors.success,
               onChanged: (value) {
                 setState(() {
                   _isActive = value;

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../api/api_client.dart';
 import '../storage/cache_manager.dart';
 import '../storage/secure_storage.dart';
 import '../time/app_clock.dart';
@@ -38,7 +37,6 @@ class TenantService {
   final SupabaseClient _supabase;
   final SecureStorage _secureStorage;
   final CacheManager _cacheManager;
-  final ApiClient? _apiClient;
 
   // State
   Tenant? _currentTenant;
@@ -61,11 +59,9 @@ class TenantService {
     required SupabaseClient supabase,
     required SecureStorage secureStorage,
     required CacheManager cacheManager,
-    ApiClient? apiClient,
   })  : _supabase = supabase,
         _secureStorage = secureStorage,
-        _cacheManager = cacheManager,
-        _apiClient = apiClient;
+        _cacheManager = cacheManager;
 
   // ============================================
   // GETTERS

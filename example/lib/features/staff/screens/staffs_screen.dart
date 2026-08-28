@@ -66,7 +66,7 @@ class _StaffsScreenState extends State<StaffsScreen> {
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((s) {
         final name = (s.name ?? '').toLowerCase();
-        final fullName = (s.fullName ?? '').toLowerCase();
+        final fullName = s.fullName.toLowerCase();
         final email = (s.email ?? '').toLowerCase();
         final phone = (s.phone ?? '').toLowerCase();
         final code = (s.code ?? '').toLowerCase();
@@ -235,7 +235,7 @@ class _StaffCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  staff.initials ?? '?',
+                  staff.initials,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -256,7 +256,7 @@ class _StaffCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          staff.fullName ?? staff.name ?? '-',
+                          staff.fullName,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

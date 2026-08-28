@@ -15,7 +15,6 @@ class ReportsDashboardScreen extends StatefulWidget {
 class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   bool _isLoading = true;
   ReportPeriod _selectedPeriod = ReportPeriod.thisMonth;
-  DashboardSummary? _summary;
 
   // Stats
   int _organizationCount = 0;

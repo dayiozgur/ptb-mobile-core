@@ -31,7 +31,6 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
   // Filters
   int _selectedDays = 30;
   String? _selectedSiteId;
-  String? _selectedOrganizationId;
   String? _selectedPriorityId;
   String _searchQuery = '';
 
@@ -767,7 +766,6 @@ class _ActiveAlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     final priorityColor = _priorityColor;
 
     return AppCard(

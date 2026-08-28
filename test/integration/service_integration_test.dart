@@ -15,11 +15,9 @@ class MockCacheManager extends Mock implements CacheManager {}
 void main() {
   group('Service Integration Tests', () {
     late MockSecureStorage mockStorage;
-    late MockCacheManager mockCache;
 
     setUp(() {
       mockStorage = MockSecureStorage();
-      mockCache = MockCacheManager();
     });
 
     group('Localization + Theme Integration', () {

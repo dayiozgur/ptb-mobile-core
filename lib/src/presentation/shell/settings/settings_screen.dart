@@ -188,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                             setState(() => _biometricEnabled = value);
                           },
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         ),
                       );
                     },
@@ -256,7 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (value) {
                         setState(() => _notificationsEnabled = value);
                       },
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ),
                 ],

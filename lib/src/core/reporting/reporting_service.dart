@@ -702,7 +702,7 @@ class ReportingService {
       }
 
       final response = await query.count(CountOption.exact);
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get organization count', e);
       return 0;
@@ -725,7 +725,7 @@ class ReportingService {
       }
 
       final response = await query.count(CountOption.exact);
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get site count', e);
       return 0;
@@ -748,7 +748,7 @@ class ReportingService {
       }
 
       final response = await query.count(CountOption.exact);
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get unit count', e);
       return 0;
@@ -764,7 +764,7 @@ class ReportingService {
           .eq('status', 'active')
           .count(CountOption.exact);
 
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get active user count', e);
       return 0;
@@ -786,7 +786,7 @@ class ReportingService {
           .lt('created_at', range.end.toIso8601String())
           .count(CountOption.exact);
 
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get activity count', e);
       return 0;
@@ -806,7 +806,7 @@ class ReportingService {
           .eq('read', false)
           .count(CountOption.exact);
 
-      return response.count ?? 0;
+      return response.count;
     } catch (e) {
       Logger.error('Failed to get pending notification count', e);
       return 0;

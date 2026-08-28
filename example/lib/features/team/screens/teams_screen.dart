@@ -156,8 +156,6 @@ class _TeamsScreenState extends State<TeamsScreen> {
   }
 
   Widget _buildContent() {
-    final brightness = Theme.of(context).brightness;
-
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator.adaptive());
     }

@@ -1089,9 +1089,7 @@ class _NoteItem extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      note.createdAt != null
-                          ? '${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}'
-                          : '',
+                      '${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary(brightness),

@@ -72,7 +72,7 @@ extension ContextExtensions on BuildContext {
   bool get isLandscape => orientation == Orientation.landscape;
 
   /// Text scale factor
-  double get textScale => MediaQuery.textScaleFactorOf(this);
+  double get textScale => MediaQuery.textScalerOf(this).scale(1.0);
 
   /// Device pixel ratio
   double get devicePixelRatio => MediaQuery.devicePixelRatioOf(this);

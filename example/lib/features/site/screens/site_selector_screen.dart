@@ -301,7 +301,9 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
 
                       if (organizationId == null ||
                           tenantId == null ||
-                          userId == null) return;
+                          userId == null) {
+                        return;
+                      }
 
                       final name = nameController.text.trim();
                       final address = addressController.text.trim();

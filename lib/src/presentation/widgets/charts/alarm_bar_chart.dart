@@ -261,7 +261,7 @@ class _AlarmBarChartState extends State<AlarmBarChart> {
                 );
               }).toList(),
             ),
-            swapAnimationDuration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
           ),
         ),
 

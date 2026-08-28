@@ -265,7 +265,6 @@ class OfflineSyncService {
 
   static const String _boxName = 'ptb_pending_operations';
   static const int _maxRetries = 3;
-  static const Duration _retryDelay = Duration(seconds: 5);
 
   Box<String>? _box;
   bool _isInitialized = false;

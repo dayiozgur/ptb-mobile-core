@@ -227,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 }
                                 setState(() => _biometricEnabled = value);
                               },
-                              activeColor: AppColors.primary,
+                              activeThumbColor: AppColors.primary,
                             ),
                           ),
                           Divider(
@@ -312,7 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (value) {
                         setState(() => _notificationsEnabled = value);
                       },
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ),
                 ],
@@ -554,61 +554,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLanguageSelector() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => AppBottomSheet(
-        title: 'Dil Sec',
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ..._languages.map((lang) {
-              final isLast = lang == _languages.last;
-              return Column(
-                children: [
-                  AppListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          lang['flag'] as String,
-                          style: AppTypography.subheadline.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    title: lang['name'] as String,
-                    trailing: _selectedLanguage == lang['code']
-                        ? Icon(Icons.check, color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(
-                          () => _selectedLanguage = lang['code'] as String);
-                      Navigator.pop(context);
-                      AppSnackbar.showInfo(
-                        context,
-                        message:
-                            'Dil degisikligi uygulama yeniden baslatildiginda aktif olacak',
-                      );
-                    },
-                  ),
-                  if (!isLast)
-                    Divider(height: 1, color: AppColors.separator(context)),
-                ],
-              );
-            }),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showTenantSettingsSheet() {
     final tenant = tenantService.currentTenant;
@@ -739,9 +684,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}.${date.month}.${date.year}';
-  }
 
   void _showChangePasswordDialog() {
     final currentController = TextEditingController();

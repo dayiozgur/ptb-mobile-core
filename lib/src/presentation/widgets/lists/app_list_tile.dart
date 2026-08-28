@@ -241,7 +241,7 @@ class AppSwitchListTile extends StatelessWidget {
       trailing: Switch.adaptive(
         value: value,
         onChanged: enabled ? onChanged : null,
-        activeColor: AppColors.success,
+        activeThumbColor: AppColors.success,
       ),
       onTap: enabled ? () => onChanged?.call(!value) : null,
       showDivider: showDivider,

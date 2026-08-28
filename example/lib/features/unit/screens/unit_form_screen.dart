@@ -31,7 +31,6 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
   List<UnitType> _unitTypes = [];
   bool _isLoading = false;
   bool _isLoadingData = true;
-  Unit? _existingUnit;
 
   @override
   void initState() {
@@ -70,7 +69,6 @@ class _UnitFormScreenState extends State<UnitFormScreen> {
       if (widget.isEditing) {
         final unit = await unitService.getUnitById(widget.unitId!);
         if (unit != null) {
-          _existingUnit = unit;
           _nameController.text = unit.name;
           _codeController.text = unit.code ?? '';
           _descriptionController.text = unit.description ?? '';

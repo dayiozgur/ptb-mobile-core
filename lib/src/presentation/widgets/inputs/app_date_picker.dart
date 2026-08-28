@@ -463,7 +463,6 @@ class AppDateRangePicker extends StatelessWidget {
   }
 
   Future<void> _showPicker(BuildContext context) async {
-    final now = DateTime.now();
     final result = await showDateRangePicker(
       context: context,
       firstDate: minDate ?? DateTime(1900),

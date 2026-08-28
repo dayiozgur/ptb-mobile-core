@@ -305,7 +305,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                 Switch.adaptive(
                   value: _independent,
                   onChanged: (value) => setState(() => _independent = value),
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
               ],
             ),
@@ -350,7 +350,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                   Switch.adaptive(
                     value: _active,
                     onChanged: (value) => setState(() => _active = value),
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                   ),
                 ],
               ),

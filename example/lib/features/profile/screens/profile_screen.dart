@@ -105,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final bytes = await _selectedImage!.readAsBytes();
 
       // Upload to Supabase Storage
-      final path = await Supabase.instance.client.storage
+      await Supabase.instance.client.storage
           .from('avatars')
           .uploadBinary(
             fileName,
@@ -485,7 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onChanged: (value) {
                           setState(() => _emailNotifications = value);
                         },
-                        activeColor: AppColors.primary,
+                        activeThumbColor: AppColors.primary,
                       ),
                     ),
                     Divider(height: 1, color: AppColors.separator(context)),
@@ -505,7 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onChanged: (value) {
                           setState(() => _pushNotifications = value);
                         },
-                        activeColor: AppColors.primary,
+                        activeThumbColor: AppColors.primary,
                       ),
                     ),
                     Divider(height: 1, color: AppColors.separator(context)),
@@ -525,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onChanged: (value) {
                           setState(() => _smsNotifications = value);
                         },
-                        activeColor: AppColors.primary,
+                        activeThumbColor: AppColors.primary,
                       ),
                     ),
                   ],

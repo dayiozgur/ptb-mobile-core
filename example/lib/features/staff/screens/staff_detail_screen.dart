@@ -207,7 +207,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
               ),
               child: Center(
                 child: Text(
-                  staff.initials ?? '?',
+                  staff.initials,
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -224,7 +224,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    staff.fullName ?? staff.name ?? '-',
+                    staff.fullName,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,

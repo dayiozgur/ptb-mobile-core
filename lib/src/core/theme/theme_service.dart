@@ -77,8 +77,8 @@ class ThemeSettings {
 
   Map<String, dynamic> toJson() => {
         'mode': mode.value,
-        'custom_primary_color': customPrimaryColor?.value,
-        'custom_accent_color': customAccentColor?.value,
+        'custom_primary_color': customPrimaryColor?.toARGB32(),
+        'custom_accent_color': customAccentColor?.toARGB32(),
         'use_high_contrast': useHighContrast,
         'font_scale': fontScale,
       };

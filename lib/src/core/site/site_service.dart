@@ -37,7 +37,6 @@ class SiteService {
   final _sitesController = StreamController<List<Site>>.broadcast();
 
   // Cache keys
-  static const String _currentSiteKey = 'current_site_id';
   static const String _sitesCacheKey = 'organization_sites';
 
   // Table names

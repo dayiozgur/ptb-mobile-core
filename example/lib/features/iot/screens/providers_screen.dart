@@ -129,14 +129,6 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
     // Go to provider landing page
     context.go('/iot/providers/${provider.id}');
   }
-
-  void _showProviderDetailSheet(DataProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _ProviderDetailSheet(provider: provider),
-    );
-  }
 }
 
 class _ProviderCard extends StatelessWidget {

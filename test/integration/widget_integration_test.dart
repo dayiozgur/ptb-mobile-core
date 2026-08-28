@@ -472,7 +472,6 @@ void main() {
           ),
         );
 
-        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
         // Light theme should have light background
         expect(Theme.of(tester.element(find.byType(Scaffold))).brightness,
             Brightness.light);

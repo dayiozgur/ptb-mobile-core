@@ -120,7 +120,7 @@ class AuthInterceptor extends Interceptor {
   void _retryPendingRequests(String newToken) {
     for (final request in _pendingRequests) {
       request.headers['Authorization'] = 'Bearer $newToken';
-      Dio().fetch(request).catchError((_) {});
+      Dio().fetch(request).then((_) {}).catchError((_) {});
     }
     _pendingRequests.clear();
   }

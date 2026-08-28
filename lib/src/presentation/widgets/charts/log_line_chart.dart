@@ -151,7 +151,6 @@ class _LogLineChartState extends State<LogLineChart> {
     }
 
     final spots = entries.asMap().entries.map((e) {
-      final i = e.key;
       final entry = e.value;
       final x = (entry.dateTime.millisecondsSinceEpoch - firstTime).toDouble();
       return FlSpot(x, entry.value!);
