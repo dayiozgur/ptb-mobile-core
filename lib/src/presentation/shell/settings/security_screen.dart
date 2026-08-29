@@ -51,22 +51,35 @@ class _SecurityScreenState extends State<SecurityScreen> {
   /// Hata nesnesinden okunabilir mesaj (Supabase `AuthException.message`).
   String _msg(Object e) => e is AuthException ? e.message : e.toString();
 
+  /// i18n: anahtar seed edilmemişse (translate ham anahtarı döndürürse)
+  /// makul bir yedek metin göster.
+  String _t(String key, String fallback) {
+    final v = sl<LocalizationService>().translate(key);
+    return v == key ? fallback : v;
+  }
+
   /// E-posta 2FA EF hata kodunu (`Exception('CODE')`) okunabilir metne çevirir.
   String _emailErr(Object e) {
     final code = _msg(e).replaceFirst('Exception: ', '').trim();
     switch (code) {
       case 'RATE_LIMITED':
-        return 'Çok fazla deneme. Lütfen bir süre sonra tekrar deneyin.';
+        return _t('account.security.mfa.email_rate_limited',
+            'Çok fazla deneme. Lütfen bir süre sonra tekrar deneyin.');
       case 'TOO_SOON':
-        return 'Yeni kod istemek için lütfen biraz bekleyin.';
+        return _t('account.security.mfa.email_too_soon',
+            'Yeni kod istemek için lütfen biraz bekleyin.');
       case 'NO_EMAIL':
-        return 'Hesabınıza bağlı bir e-posta adresi yok.';
+        return _t('account.security.mfa.email_no_email',
+            'Hesabınıza bağlı bir e-posta adresi yok.');
       case 'INVALID_CODE':
-        return 'Girdiğiniz kod hatalı.';
+        return _t('account.security.mfa.email_invalid',
+            'Girdiğiniz kod hatalı.');
       case 'NO_CHALLENGE':
-        return 'Aktif bir kod bulunamadı. Lütfen yeni kod isteyin.';
+        return _t('account.security.mfa.email_no_challenge',
+            'Aktif bir kod bulunamadı. Lütfen yeni kod isteyin.');
       case 'TOO_MANY_ATTEMPTS':
-        return 'Çok fazla hatalı deneme. Lütfen yeni kod isteyin.';
+        return _t('account.security.mfa.email_too_many',
+            'Çok fazla hatalı deneme. Lütfen yeni kod isteyin.');
       default:
         return _msg(e);
     }
@@ -169,7 +182,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
       });
       AppSnackbar.showSuccess(
         context,
-        message: 'İki adımlı doğrulama etkinleştirildi.',
+        message: _t('account.security.mfa.totp_enabled_success',
+            'İki adımlı doğrulama etkinleştirildi.'),
       );
       await _loadFactors();
     } catch (e) {
@@ -183,19 +197,21 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('İki Adımlı Doğrulama'),
-        content: const Text(
-          'Bu doğrulama yöntemini kaldırmak istediğinize emin misiniz?',
+        title: Text(_t('account.security.mfa.remove_confirm_title',
+            'İki Adımlı Doğrulama')),
+        content: Text(
+          _t('account.security.mfa.remove_confirm_message',
+              'Bu doğrulama yöntemini kaldırmak istediğinize emin misiniz?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Vazgec'),
+            child: Text(_t('account.security.cancel', 'Vazgec')),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Kaldır'),
+            child: Text(_t('account.security.mfa.remove', 'Kaldır')),
           ),
         ],
       ),
@@ -207,7 +223,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
       await authService.unenrollFactor(factor.id);
       if (!mounted) return;
       setState(() => _removingId = null);
-      AppSnackbar.showSuccess(context, message: 'Doğrulama yöntemi kaldırıldı.');
+      AppSnackbar.showSuccess(context,
+          message: _t('account.security.mfa.removed_success',
+              'Doğrulama yöntemi kaldırıldı.'));
       await _loadFactors();
     } catch (e) {
       if (!mounted) return;
@@ -242,7 +260,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
       await authService.requestEmailCode();
       if (!mounted) return;
       setState(() => _emailBusy = false);
-      AppSnackbar.showSuccess(context, message: 'Yeni kod gönderildi.');
+      AppSnackbar.showSuccess(context,
+          message: _t('account.security.mfa.email_resent_success',
+              'Yeni kod gönderildi.'));
     } catch (e) {
       if (!mounted) return;
       setState(() => _emailBusy = false);
@@ -264,7 +284,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
       });
       AppSnackbar.showSuccess(
         context,
-        message: 'E-posta ile doğrulama etkinleştirildi.',
+        message: _t('account.security.mfa.email_enabled_success',
+            'E-posta ile doğrulama etkinleştirildi.'),
       );
       await _loadFactors();
     } catch (e) {
@@ -285,19 +306,22 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('E-posta ile Doğrulama'),
-        content: const Text(
-          'E-posta ile doğrulamayı kapatmak istediğinize emin misiniz?',
+        title: Text(_t('account.security.mfa.email_title',
+            'E-posta ile Doğrulama')),
+        content: Text(
+          _t('account.security.mfa.email_disable_confirm_message',
+              'E-posta ile doğrulamayı kapatmak istediğinize emin misiniz?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Vazgec'),
+            child: Text(_t('account.security.cancel', 'Vazgec')),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Kapat'),
+            child: Text(_t('account.security.mfa.email_disable_confirm_action',
+                'Kapat')),
           ),
         ],
       ),
@@ -309,7 +333,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
       await authService.unenrollEmail();
       if (!mounted) return;
       setState(() => _emailBusy = false);
-      AppSnackbar.showSuccess(context, message: 'E-posta ile doğrulama kapatıldı.');
+      AppSnackbar.showSuccess(context,
+          message: _t('account.security.mfa.email_disabled_success',
+              'E-posta ile doğrulama kapatıldı.'));
       await _loadFactors();
     } catch (e) {
       if (!mounted) return;
@@ -333,7 +359,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
         ),
         child: AppBottomSheet(
-          title: 'Şifre Değiştir',
+          title: _t('account.security.password.change', 'Şifre Değiştir'),
           child: Padding(
             padding: AppSpacing.screenPadding,
             child: Form(
@@ -344,25 +370,28 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 children: [
                   AppTextField(
                     controller: newController,
-                    label: 'Yeni Şifre',
+                    label: _t('account.security.password.new', 'Yeni Şifre'),
                     obscureText: true,
                     validator: Validators.password(),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppTextField(
                     controller: confirmController,
-                    label: 'Yeni Şifre (Tekrar)',
+                    label: _t('account.security.password.confirm',
+                        'Yeni Şifre (Tekrar)'),
                     obscureText: true,
                     validator: (value) {
                       if (value != newController.text) {
-                        return 'Şifreler eşleşmiyor.';
+                        return _t('account.security.password.mismatch',
+                            'Şifreler eşleşmiyor.');
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   AppButton(
-                    label: 'Şifreyi Güncelle',
+                    label: _t('account.security.password.update',
+                        'Şifreyi Güncelle'),
                     onPressed: () async {
                       if (!(formKey.currentState?.validate() ?? false)) return;
                       final result =
@@ -372,11 +401,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       result.when(
                         success: (_, __) => AppSnackbar.showSuccess(
                           context,
-                          message: 'Şifreniz güncellendi.',
+                          message: _t('account.security.password.updated_success',
+                              'Şifreniz güncellendi.'),
                         ),
                         failure: (error) => AppSnackbar.showError(
                           context,
-                          message: error?.message ?? 'Şifre güncellenemedi.',
+                          message: error?.message ??
+                              _t('account.security.password.update_failed',
+                                  'Şifre güncellenemedi.'),
                         ),
                       );
                     },
@@ -396,14 +428,16 @@ class _SecurityScreenState extends State<SecurityScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Güvenlik',
+      title: _t('account.security.title', 'Güvenlik'),
       showBackButton: true,
       child: SingleChildScrollView(
         padding: AppSpacing.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppSectionHeader(title: 'İki Adımlı Doğrulama (2FA)'),
+            AppSectionHeader(
+                title: _t('account.security.mfa.section_title',
+                    'İki Adımlı Doğrulama (2FA)')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -412,7 +446,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            const AppSectionHeader(title: 'E-posta ile Doğrulama'),
+            AppSectionHeader(
+                title: _t('account.security.mfa.email_title',
+                    'E-posta ile Doğrulama')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
@@ -421,7 +457,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            const AppSectionHeader(title: 'Şifre'),
+            AppSectionHeader(
+                title: _t('account.security.password.section_title', 'Şifre')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: AppListTile(
@@ -433,7 +470,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                   ),
                   child: Icon(Icons.lock_outline, color: AppColors.primary),
                 ),
-                title: 'Şifre Değiştir',
+                title: _t('account.security.password.change', 'Şifre Değiştir'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _showChangePasswordDialog,
               ),
@@ -462,7 +499,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           Text(_loadError!, style: AppTypography.subheadline),
           const SizedBox(height: AppSpacing.md),
           AppButton(
-            label: 'Tekrar Dene',
+            label: _t('account.security.retry', 'Tekrar Dene'),
             variant: AppButtonVariant.secondary,
             onPressed: _loadFactors,
           ),
@@ -481,14 +518,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Hesabınızı authenticator uygulamasıyla ekstra bir katmanla '
-            'koruyun. Girişte 6 haneli bir kod istenir.',
+            _t('account.security.mfa.totp_hint',
+                'Hesabınızı authenticator uygulamasıyla ekstra bir katmanla '
+                'koruyun. Girişte 6 haneli bir kod istenir.'),
             style: AppTypography.subheadline
                 .copyWith(color: AppColors.secondaryLabel(context)),
           ),
           const SizedBox(height: AppSpacing.md),
           AppButton(
-            label: 'Etkinleştir',
+            label: _t('account.security.mfa.totp_enable', 'Etkinleştir'),
             icon: Icons.shield_outlined,
             isLoading: _enrolling,
             onPressed: _busy ? null : _startEnroll,
@@ -521,11 +559,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 Text(
                   factor.friendlyName?.isNotEmpty == true
                       ? factor.friendlyName!
-                      : 'Authenticator',
+                      : _t('account.security.mfa.authenticator',
+                          'Authenticator'),
                   style: AppTypography.body,
                 ),
                 Text(
-                  'Etkin • ${factor.factorType.name.toUpperCase()}',
+                  '${_t('account.security.mfa.active', 'Etkin')} • '
+                  '${factor.factorType.name.toUpperCase()}',
                   style: AppTypography.footnote
                       .copyWith(color: AppColors.secondaryLabel(context)),
                 ),
@@ -542,7 +582,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Kaldır'),
+                : Text(_t('account.security.mfa.remove', 'Kaldır')),
           ),
         ],
       ),
@@ -571,9 +611,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('E-posta ile kod', style: AppTypography.body),
+                Text(_t('auth.mfa.enroll_choice_email', 'E-posta ile kod'),
+                    style: AppTypography.body),
                 Text(
-                  'Etkin',
+                  _t('account.security.mfa.active', 'Etkin'),
                   style: AppTypography.footnote
                       .copyWith(color: AppColors.secondaryLabel(context)),
                 ),
@@ -590,7 +631,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Kaldır'),
+                : Text(_t('account.security.mfa.remove', 'Kaldır')),
           ),
         ],
       );
@@ -602,15 +643,16 @@ class _SecurityScreenState extends State<SecurityScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Hesabınızın e-posta adresine 6 haneli bir kod gönderdik. '
-            'Etkinleştirmek için kodu girin.',
+            _t('account.security.mfa.email_sent_instructions',
+                'Hesabınızın e-posta adresine 6 haneli bir kod gönderdik. '
+                'Etkinleştirmek için kodu girin.'),
             style: AppTypography.subheadline
                 .copyWith(color: AppColors.secondaryLabel(context)),
           ),
           const SizedBox(height: AppSpacing.lg),
           AppTextField(
             controller: _emailCodeController,
-            label: 'Doğrulama kodu',
+            label: _t('auth.mfa.code_label', 'Doğrulama kodu'),
             placeholder: '000000',
             keyboardType: TextInputType.number,
             maxLength: 6,
@@ -622,7 +664,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           AppButton(
-            label: 'Doğrula',
+            label: _t('auth.mfa.verify', 'Doğrula'),
             isLoading: _emailBusy,
             onPressed:
                 (_emailBusy || _emailCodeController.text.trim().length != 6)
@@ -631,14 +673,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           AppButton(
-            label: 'Kodu yeniden gönder',
+            label: _t('account.security.mfa.email_resend',
+                'Kodu yeniden gönder'),
             variant: AppButtonVariant.secondary,
             onPressed: _emailBusy ? null : _resendEmailCode,
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: _emailBusy ? null : _cancelEmailEnroll,
-            child: const Text('Vazgec'),
+            child: Text(_t('account.security.cancel', 'Vazgec')),
           ),
         ],
       );
@@ -649,14 +692,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Girişte hesabınızın e-posta adresine gönderilen 6 haneli bir kodla '
-          'doğrulama yapın.',
+          _t('account.security.mfa.email_enable_hint',
+              'Girişte hesabınızın e-posta adresine gönderilen 6 haneli bir '
+              'kodla doğrulama yapın.'),
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),
         const SizedBox(height: AppSpacing.md),
         AppButton(
-          label: 'Etkinleştir',
+          label: _t('account.security.mfa.email_enable', 'Etkinleştir'),
           icon: Icons.mail_outline,
           isLoading: _emailBusy,
           onPressed: _emailBusy ? null : _startEmailEnroll,
@@ -674,8 +718,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Authenticator uygulamanızla QR kodu tarayın veya gizli anahtarı '
-          'elle ekleyin, ardından gösterilen 6 haneli kodu girin.',
+          _t('account.security.mfa.totp_enroll_instruction',
+              'Authenticator uygulamanızla QR kodu tarayın veya gizli anahtarı '
+              'elle ekleyin, ardından gösterilen 6 haneli kodu girin.'),
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),
@@ -703,7 +748,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         if (secret != null && secret.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Gizli anahtar',
+            _t('auth.mfa.secret_label', 'Gizli anahtar'),
             style: AppTypography.footnote
                 .copyWith(color: AppColors.secondaryLabel(context)),
           ),
@@ -727,7 +772,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         const SizedBox(height: AppSpacing.lg),
         AppTextField(
           controller: _codeController,
-          label: 'Doğrulama kodu',
+          label: _t('auth.mfa.code_label', 'Doğrulama kodu'),
           placeholder: '000000',
           keyboardType: TextInputType.number,
           maxLength: 6,
@@ -739,7 +784,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         AppButton(
-          label: 'Doğrula',
+          label: _t('auth.mfa.verify', 'Doğrula'),
           isLoading: _verifying,
           onPressed: (_busy || _codeController.text.trim().length != 6)
               ? null
@@ -747,7 +792,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         AppButton(
-          label: 'Vazgec',
+          label: _t('account.security.cancel', 'Vazgec'),
           variant: AppButtonVariant.secondary,
           onPressed: _verifying ? null : _cancelEnroll,
         ),
