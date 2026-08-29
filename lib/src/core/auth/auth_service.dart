@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../permission/permission_service.dart' show CoarseRoles;
 import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
 import 'auth_result.dart';
@@ -394,6 +395,76 @@ class AuthService {
     } catch (e) {
       Logger.error('MFA listFactors failed', e);
       rethrow;
+    }
+  }
+
+  // ── MFA POLICY ENFORCEMENT (web `MfaService` paritesi) ─────────────────────
+  //
+  // Web'in step-up guard'ıyla AYNI FAIL-OPEN sözleşmesi: aşağıdaki yardımcılar
+  // asla fırlatmaz ve herhangi bir belirsizlikte "engellenmesin" tarafına düşer.
+  // Yalnız `MfaGate` bunları kullanarak POZİTİF olarak (politika rol için MFA
+  // istiyor VE oturum aal1) doğrularsa kullanıcıyı step-up'a yönlendirir.
+
+  /// Oturumun güncel Authenticator Assurance Level'ını döndürür ('aal1'|'aal2').
+  /// FAIL-OPEN: herhangi bir hatada `null` döner (loglar) — çağıran taraf
+  /// null/bilinmeyen değeri "engelleme yok" olarak yorumlar.
+  Future<String?> getCurrentAal() async {
+    try {
+      // gotrue 2.18 `getAuthenticatorAssuranceLevel()` senkrondur (Future değil).
+      final response = _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      return response.currentLevel?.name; // 'aal1' | 'aal2' | null
+    } catch (e) {
+      Logger.warning('MFA getCurrentAal failed (fail-open): $e');
+      return null;
+    }
+  }
+
+  /// Tenant'ın MFA politikasını (`mfa_policy` satırı) döndürür.
+  /// Kolonlar: enforce_for ('off'|'optional'|'admins_only'|'all_members'),
+  /// allowed_factors, grace_period_days, recovery_email_required.
+  /// FAIL-OPEN: satır yoksa veya hata olursa `null` döner (politika = yok).
+  Future<Map<String, dynamic>?> getMfaPolicy(String tenantId) async {
+    try {
+      final row = await _supabase
+          .from('mfa_policy')
+          .select()
+          .eq('tenant_id', tenantId)
+          .maybeSingle();
+      return row;
+    } catch (e) {
+      Logger.warning('MFA getMfaPolicy failed (fail-open): $e');
+      return null;
+    }
+  }
+
+  /// Saf (yan-etkisiz) karar: bu politika, verilen coarse-rol için MFA gerektirir
+  /// mi? Web `MfaService.isMfaRequired` ile birebir:
+  ///   null/off/optional → false; all_members → true;
+  ///   admins_only → yalnız ROLE_ADMIN.
+  bool isMfaRequired(Map<String, dynamic>? policy, String? role) {
+    if (policy == null) return false;
+    final enforce = policy['enforce_for'] as String?;
+    switch (enforce) {
+      case 'all_members':
+        return true;
+      case 'admins_only':
+        return role == CoarseRoles.admin;
+      case 'off':
+      case 'optional':
+      default:
+        return false;
+    }
+  }
+
+  /// Kullanıcının doğrulanmış (verified) en az bir MFA faktörü var mı?
+  /// FAIL-OPEN: hata olursa `false` (faktör yok → enroll akışı).
+  Future<bool> hasVerifiedFactor() async {
+    try {
+      final factors = await _supabase.auth.mfa.listFactors();
+      return factors.all.any((f) => f.status == FactorStatus.verified);
+    } catch (e) {
+      Logger.warning('MFA hasVerifiedFactor failed (fail-open): $e');
+      return false;
     }
   }
 

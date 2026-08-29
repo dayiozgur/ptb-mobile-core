@@ -68,19 +68,31 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
+    // MFA step-up kapısı revision'ı → gerekince redirect'i yeniden çalıştır.
+    refreshListenable: MfaGate.instance.revision,
 
     // Redirect logic based on auth state
     redirect: (context, state) {
       final isAuthenticated = authService.isAuthenticated;
       final hasTenant = tenantService.hasTenant;
 
-      final isAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
-      final isTenantRoute = state.matchedLocation == '/tenant-select';
+      final loc = state.matchedLocation;
+      final isAuthRoute =
+          loc == '/login' || loc == '/register';
+      final isTenantRoute = loc == '/tenant-select';
 
       // Not authenticated -> go to login
       if (!isAuthenticated && !isAuthRoute) {
         return '/login';
+      }
+
+      // MFA politika zorlaması (web step-up guard paritesi). FAIL-OPEN:
+      // MfaGate yalnız POZİTİF (politika rol için MFA istiyor VE oturum aal1)
+      // doğrulandığında state != none olur → '/mfa-gate'.
+      if (isAuthenticated) {
+        final mfaRedirect = MfaGate.instance.redirectFor(loc);
+        if (mfaRedirect != null) return mfaRedirect;
+        if (loc.startsWith('/mfa-gate')) return null;
       }
 
       // Authenticated but no tenant selected -> go to tenant select
@@ -110,6 +122,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/mfa-gate',
+        name: 'mfa-gate',
+        builder: (context, state) => const MfaGateScreen(),
       ),
 
       // ==================

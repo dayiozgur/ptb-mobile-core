@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import '../alarm/alarm_service.dart';
 import '../auth/auth_service.dart';
+import '../auth/mfa_gate.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../controller/controller_service.dart';
@@ -393,6 +394,20 @@ class CoreInitializer {
             .selectOrganization(profile.organizationId!);
         if (orgOk) propagateOrganizationToServices(profile.organizationId!);
       }
+
+      // MFA politika zorlaması (web step-up guard paritesi). MfaGate.evaluate
+      // KENDİSİ fail-open'dır (asla fırlatmaz), ancak yine de temkinli olmak
+      // için sarılıdır: bir MFA değerlendirme hatası bu metodun sonucunu
+      // ASLA `false`'a çevirmemelidir (tenant/org zaten çözüldü).
+      try {
+        await MfaGate.instance.evaluate(
+          tenantId: profile.tenantId,
+          role: profile.coarseRole,
+        );
+      } catch (e) {
+        Logger.warning('MfaGate.evaluate threw (ignored, fail-open): $e');
+      }
+
       Logger.info('Session context resolved: tenant=${profile.tenantId}, '
           'org=${profile.organizationId}, role=${profile.coarseRole}');
       return true;

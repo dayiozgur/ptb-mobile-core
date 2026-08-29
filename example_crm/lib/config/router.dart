@@ -17,7 +17,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     debugLogDiagnostics: true,
-    refreshListenable: sessionCoarseRole,
+    refreshListenable: Listenable.merge([
+      sessionCoarseRole,
+      MfaGate.instance.revision,
+    ]),
     redirect: (context, state) {
       final isAuthenticated = authService.isAuthenticated;
       final loc = state.matchedLocation;
@@ -28,6 +31,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // 1) Kimlik doğrulama
       if (!isAuthenticated) return isAuthRoute ? null : '/login';
+
+      // 1b) MFA politika zorlaması (web step-up guard paritesi). FAIL-OPEN:
+      // MfaGate yalnız POZİTİF (politika rol için MFA istiyor VE oturum aal1)
+      // doğrulandığında state != none olur → '/mfa-gate'. Kapıdayken diğer
+      // guard'lar (customer→portal, tenant/org) bounce etmesin diye kısa-devre.
+      final mfaRedirect = MfaGate.instance.redirectFor(loc);
+      if (mfaRedirect != null) return mfaRedirect;
+      if (loc.startsWith('/mfa-gate')) return null;
 
       final role = sessionCoarseRole.value;
 
@@ -96,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/main',
         name: 'main',
         builder: (context, state) => const MainShellScreen(),
+      ),
+      GoRoute(
+        path: '/mfa-gate',
+        name: 'mfa-gate',
+        builder: (context, state) => const MfaGateScreen(),
       ),
       GoRoute(
         path: '/dashboard',

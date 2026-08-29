@@ -50,6 +50,7 @@ export 'src/core/api/interceptors/logger_interceptor.dart';
 export 'src/core/auth/auth_service.dart';
 export 'src/core/auth/auth_result.dart';
 export 'src/core/auth/biometric_auth.dart';
+export 'src/core/auth/mfa_gate.dart';
 
 // Core - User
 export 'src/core/user/user_profile.dart';
@@ -348,6 +349,7 @@ export 'src/presentation/shell/main_shell_screen.dart';
 export 'src/presentation/shell/coming_soon_screen.dart';
 export 'src/presentation/shell/portal_landing_screen.dart';
 export 'src/presentation/shell/auth/login_screen.dart';
+export 'src/presentation/shell/auth/mfa_gate_screen.dart';
 export 'src/presentation/shell/auth/accept_invite_screen.dart';
 export 'src/presentation/shell/auth/request_access_screen.dart';
 export 'src/presentation/shell/tenant/tenant_selector_screen.dart';

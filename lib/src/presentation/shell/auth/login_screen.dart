@@ -122,9 +122,22 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _resolveAndGo() async {
     final ok = await CoreInitializer.resolveSessionContext();
     if (!mounted) return;
+    // Tenant/org çözülemedi → tenant-seçim ekranı (fallback korunur).
+    if (!ok) {
+      context.go('/tenant-select');
+      return;
+    }
+    // MFA politika zorlaması: resolveSessionContext içinde MfaGate.evaluate
+    // çalıştı. Step-up gerekiyorsa (challenge/enroll) önce MFA kapısına git.
+    // FAIL-OPEN: kapı yalnız POZİTİF olarak gerekli+aal1 doğrulandığında
+    // none-dışıdır; belirsizlikte state=none kalır → doğrudan /main.
+    if (MfaGate.instance.state != MfaStepUp.none) {
+      context.go('/mfa-gate');
+      return;
+    }
     // '/main' = paylaşılan shell girişi (her app router'ında tanımlı). '/' rotası
     // yok → manuel-login sonrası GoException veriyordu; '/main' doğru hedef.
-    context.go(ok ? '/main' : '/tenant-select');
+    context.go('/main');
   }
 
   Future<void> _showEnableBiometricDialog() async {

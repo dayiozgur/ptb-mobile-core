@@ -29,7 +29,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     // Coarse-role çözülünce (shell menüyü yükledikten sonra) redirect'i
     // yeniden çalıştır → rol-bazlı gating uygulanır.
-    refreshListenable: sessionCoarseRole,
+    refreshListenable: Listenable.merge([
+      sessionCoarseRole,
+      MfaGate.instance.revision,
+    ]),
 
     // Redirect: auth → tenant/org kurulum → coarse-role erişim guard'ı.
     redirect: (context, state) {
@@ -50,6 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!isAuthenticated) {
         return isAuthRoute ? null : '/login';
       }
+
+      // 1b) MFA politika zorlaması (web step-up guard paritesi). FAIL-OPEN:
+      // MfaGate yalnız POZİTİF (politika rol için MFA istiyor VE oturum aal1)
+      // doğrulandığında state != none olur → '/mfa-gate'. Kapıdayken diğer
+      // guard'lar (customer→portal, tenant/org) bounce etmesin diye kısa-devre.
+      final mfaRedirect = MfaGate.instance.redirectFor(loc);
+      if (mfaRedirect != null) return mfaRedirect;
+      if (loc.startsWith('/mfa-gate')) return null;
 
       final role = sessionCoarseRole.value;
 
@@ -167,6 +178,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/main',
         name: 'main',
         builder: (context, state) => const MainShellScreen(),
+      ),
+      GoRoute(
+        path: '/mfa-gate',
+        name: 'mfa-gate',
+        builder: (context, state) => const MfaGateScreen(),
       ),
 
       // ==================
