@@ -31,7 +31,8 @@ select jsonb_pretty(jsonb_build_object(
           'keywords','languages','rbac_roles','rbac_user_roles','status_definitions',
           'entity_type_configs','form_submissions','form_templates','notifications',
           'sites','controllers','variables','device_models','alarms','alarm_histories',
-          'logs_rollup','energy_readings_rollup')
+          'logs_rollup','energy_readings_rollup',
+          'mfa_policy','mfa_email_factors')
       group by c.table_name)
     select jsonb_object_agg(table_name, cols) from rel),
 
@@ -44,7 +45,8 @@ select jsonb_pretty(jsonb_build_object(
       where n.nspname='public' and p.proname like 'fn_%'
         and (p.proname like 'fn_my_%' or p.proname like 'fn_pms_%' or p.proname like 'fn_energy_%'
              or p.proname like 'fn_coarse_%' or p.proname like 'fn_alarm_%' or p.proname like 'fn_controller_%'
-             or p.proname in ('fn_is_admin','fn_user_in_org','fn_profiles_with_coarse_role'))
+             or p.proname in ('fn_is_admin','fn_user_in_org','fn_profiles_with_coarse_role',
+                              'fn_is_email_mfa_satisfied','fn_mfa_email_unenroll'))
     ) sig ),
 
   'enums', (

@@ -1,3922 +1,4014 @@
 {
-  "rpcs": {
-    "fn_is_admin": {
-      "args": "",
-      "returns": "boolean"
+    "rpcs": {
+        "fn_is_admin": {
+            "args": "",
+            "returns": "boolean"
+        },
+        "fn_my_org_ids": {
+            "args": "",
+            "returns": "uuid[]"
+        },
+        "fn_my_role_ids": {
+            "args": "",
+            "returns": "uuid[]"
+        },
+        "fn_user_in_org": {
+            "args": "p_org_id uuid",
+            "returns": "boolean"
+        },
+        "fn_energy_rollup": {
+            "args": "p_tenant uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text DEFAULT 'day'::text",
+            "returns": "void"
+        },
+        "fn_coarse_role_of": {
+            "args": "p_profile uuid",
+            "returns": "text"
+        },
+        "fn_my_coarse_role": {
+            "args": "",
+            "returns": "text"
+        },
+        "fn_pms_sites_list": {
+            "args": "p_tenant_id uuid, p_city text DEFAULT NULL::text, p_query text DEFAULT NULL::text",
+            "returns": "jsonb"
+        },
+        "fn_coarse_roles_of": {
+            "args": "p_ids uuid[]",
+            "returns": "TABLE(profile_id uuid, role text)"
+        },
+        "fn_pms_alarm_reset": {
+            "args": "p_alarm_id uuid",
+            "returns": "jsonb"
+        },
+        "fn_pms_alarm_trend": {
+            "args": "p_tenant_id uuid, p_bucket text DEFAULT 'day'::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(period text, cnt bigint, critical bigint)"
+        },
+        "fn_pms_kpi_summary": {
+            "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(total_alarms bigint, active_alarms bigint, resolved_alarms bigint, avg_resolution_hours numeric, critical_count bigint, high_count bigint, medium_count bigint, low_count bigint, distinct_sites_affected bigint, distinct_controllers_affected bigint)"
+        },
+        "fn_energy_ap_notify": {
+            "args": "",
+            "returns": "trigger"
+        },
+        "fn_alarm_acknowledge": {
+            "args": "p_alarm_id uuid",
+            "returns": "boolean"
+        },
+        "fn_energy_ap_prepare": {
+            "args": "",
+            "returns": "trigger"
+        },
+        "fn_energy_rollup_run": {
+            "args": "p_tenant uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text DEFAULT 'day'::text",
+            "returns": "jsonb"
+        },
+        "fn_my_profile_bundle": {
+            "args": "",
+            "returns": "jsonb"
+        },
+        "fn_pms_active_alarms": {
+            "args": "p_limit integer DEFAULT 30",
+            "returns": "jsonb"
+        },
+        "fn_pms_alarm_inhibit": {
+            "args": "p_alarm_id uuid, p_inhibit boolean DEFAULT true",
+            "returns": "jsonb"
+        },
+        "fn_energy_rollup_cron": {
+            "args": "",
+            "returns": "integer"
+        },
+        "fn_mfa_email_unenroll": {
+            "args": "",
+            "returns": "void"
+        },
+        "fn_energy_data_quality": {
+            "args": "p_from date, p_to date, p_bucket text DEFAULT 'day'::text",
+            "returns": "TABLE(meter_id uuid, meter_label text, utility_type text, expected_buckets integer, present_buckets bigint, completeness_pct numeric, latest_reading timestamp with time zone, stale boolean)"
+        },
+        "fn_energy_load_profile": {
+            "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(dow integer, avg_consumption_kwh numeric, max_peak_demand_kw numeric, total_consumption_kwh numeric, day_count bigint)"
+        },
+        "fn_my_platform_catalog": {
+            "args": "",
+            "returns": "TABLE(platform_id uuid, code text, name text, description text, icon_url text, color text, price_monthly numeric, currency text, owned boolean, status text, is_trial boolean)"
+        },
+        "fn_pms_provider_health": {
+            "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(provider_id uuid, provider_name text, alarm_count bigint, critical_count bigint, last_alarm_at timestamp with time zone, health_score numeric)"
+        },
+        "fn_pms_hierarchy_health": {
+            "args": "p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "jsonb"
+        },
+        "fn_pms_measure_quantity": {
+            "args": "p_raw text",
+            "returns": "text"
+        },
+        "fn_pms_variable_circuit": {
+            "args": "p_name text",
+            "returns": "text"
+        },
+        "fn_alarm_escalation_tick": {
+            "args": "p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "integer"
+        },
+        "fn_energy_ap_on_decision": {
+            "args": "",
+            "returns": "trigger"
+        },
+        "fn_pms_alarm_acknowledge": {
+            "args": "p_alarm_id uuid",
+            "returns": "jsonb"
+        },
+        "fn_pms_controller_uptime": {
+            "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(controller_id uuid, controller_name text, site_name text, alarm_count bigint, total_alarm_minutes numeric, availability_pct numeric)"
+        },
+        "fn_pms_telemetry_summary": {
+            "args": "p_tenant_id uuid, p_variable text DEFAULT NULL::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "jsonb"
+        },
+        "fn_energy_avoided_savings": {
+            "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_report_from timestamp with time zone, p_report_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text",
+            "returns": "TABLE(period_day timestamp with time zone, driver_value numeric, predicted_kwh numeric, actual_kwh numeric, avoided_kwh numeric, cumulative_avoided numeric)"
+        },
+        "fn_energy_evaluate_alarms": {
+            "args": "p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "integer"
+        },
+        "fn_is_email_mfa_satisfied": {
+            "args": "",
+            "returns": "boolean"
+        },
+        "fn_pms_alarm_by_dimension": {
+            "args": "p_tenant_id uuid, p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(label text, cnt bigint, pct numeric)"
+        },
+        "fn_pms_count_by_dimension": {
+            "args": "p_tenant_id uuid, p_entity text, p_dimension text, p_value text DEFAULT NULL::text",
+            "returns": "jsonb"
+        },
+        "fn_energy_anomaly_scan_all": {
+            "args": "p_baseline_days integer DEFAULT 60, p_detect_days integer DEFAULT 3, p_min_baseline integer DEFAULT 14, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0, p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "jsonb"
+        },
+        "fn_pms_energy_by_dimension": {
+            "args": "p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_bucket text DEFAULT 'month'::text, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(label text, total_kwh numeric, total_cost numeric, pct numeric)"
+        },
+        "fn_pms_site_alarm_severity": {
+            "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(priority_name text, priority_color text, priority_level integer, active bigint, reset bigint)"
+        },
+        "fn_alarm_predict_recurrence": {
+            "args": "p_tenant uuid DEFAULT NULL::uuid, p_min_occurrences integer DEFAULT 5, p_max_cv numeric DEFAULT 1.0, p_limit integer DEFAULT 100",
+            "returns": "TABLE(id uuid, controller_id uuid, controller_name text, variable_id uuid, alarm_name text, priority_id uuid, occurrences integer, mean_interval_hours numeric, interval_cv numeric, last_start timestamp with time zone, predicted_alarm_time timestamp with time zone, prediction_confidence numeric, risk_level text, prediction_type text, predicted_duration_hours numeric, prevention_window_hours numeric, maintenance_recommendation jsonb, feature_importance jsonb)"
+        },
+        "fn_energy_anomaly_scan_self": {
+            "args": "",
+            "returns": "jsonb"
+        },
+        "fn_energy_apply_rollup_costs": {
+            "args": "p_updates jsonb",
+            "returns": "integer"
+        },
+        "fn_energy_consumption_rollup": {
+            "args": "p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_bucket text DEFAULT 'month'::text, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(bucket_start timestamp with time zone, utility_type text, total_kwh numeric, total_cost numeric, avg_peak_kw numeric, reading_count bigint)"
+        },
+        "fn_pms_alarm_dim_by_priority": {
+            "args": "p_tenant_id uuid, p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(dim_label text, priority_id uuid, priority_name text, priority_color text, priority_level integer, cnt bigint)"
+        },
+        "fn_pms_alarm_site_controller": {
+            "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(site_id uuid, site_name text, controller_id uuid, controller_name text, cnt bigint)"
+        },
+        "fn_pms_onboard_energy_meters": {
+            "args": "p_tenant uuid",
+            "returns": "jsonb"
+        },
+        "fn_profiles_with_coarse_role": {
+            "args": "p_roles text[]",
+            "returns": "TABLE(profile_id uuid)"
+        },
+        "fn_energy_baseline_regression": {
+            "args": "p_site_id uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text",
+            "returns": "TABLE(slope numeric, intercept numeric, r2 numeric, n integer, driver text)"
+        },
+        "fn_energy_load_profile_hourly": {
+            "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "TABLE(hod integer, avg_consumption_kwh numeric, max_peak_demand_kw numeric, total_consumption_kwh numeric, interval_count bigint)"
+        },
+        "fn_alarm_escalation_on_resolve": {
+            "args": "",
+            "returns": "trigger"
+        },
+        "fn_controller_logged_variables": {
+            "args": "p_controller_id uuid",
+            "returns": "TABLE(id uuid, name text, code text, description text, measure_unit text, data_type text)"
+        },
+        "fn_energy_consumption_forecast": {
+            "args": "p_site_id uuid, p_bucket text DEFAULT 'month'::text, p_horizon integer DEFAULT 6, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
+            "returns": "jsonb"
+        },
+        "fn_pms_provider_type_breakdown": {
+            "args": "p_tenant_id uuid, p_type text DEFAULT NULL::text",
+            "returns": "jsonb"
+        },
+        "fn_alarm_escalation_notify_step": {
+            "args": "p_state alarm_escalation_state, p_step alarm_escalation_steps",
+            "returns": "uuid"
+        },
+        "fn_energy_consumption_anomalies": {
+            "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_detect_from timestamp with time zone, p_detect_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0",
+            "returns": "TABLE(period_day timestamp with time zone, driver_value numeric, actual_kwh numeric, predicted_kwh numeric, residual_kwh numeric, deviation_pct numeric, z_score numeric, is_anomaly boolean)"
+        },
+        "fn_energy_import_daily_readings": {
+            "args": "p_site_id uuid, p_utility text, p_rows jsonb",
+            "returns": "jsonb"
+        },
+        "fn_pms_alarm_priority_breakdown": {
+            "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
+            "returns": "TABLE(priority_id uuid, priority_name text, priority_color text, priority_level integer, cnt bigint)"
+        },
+        "fn_pms_hierarchy_reconciliation": {
+            "args": "p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "jsonb"
+        },
+        "fn_energy_evaluate_anomaly_alarms": {
+            "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_detect_from timestamp with time zone, p_detect_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0, p_tenant uuid DEFAULT NULL::uuid",
+            "returns": "integer"
+        },
+        "fn_energy_baseline_regression_multi": {
+            "args": "p_site_id uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_drivers text[] DEFAULT ARRAY['peak_demand_kw'::text]",
+            "returns": "TABLE(intercept numeric, coef1 numeric, driver1 text, coef2 numeric, driver2 text, r2 numeric, adj_r2 numeric, cv_rmse numeric, n integer, n_drivers integer, validity text)"
+        },
+        "fn_pms_suggest_roles_for_controller": {
+            "args": "p_controller_id uuid",
+            "returns": "TABLE(variable_id uuid, variable_name text, measure_unit text, quantity text, circuit text, domain text, suggested_role text, confidence text)"
+        },
+        "fn_pms_controller_variables_reconciled": {
+            "args": "p_controller_id uuid",
+            "returns": "TABLE(variable_id uuid, name text, measure_unit text, quantity text, circuit text, status text, last_seen timestamp with time zone, log_count bigint)"
+        },
+        "fn_pms_controller_commands_stamp_requestor": {
+            "args": "",
+            "returns": "trigger"
+        }
     },
-    "fn_my_org_ids": {
-      "args": "",
-      "returns": "uuid[]"
+    "enums": {
+        "action": [
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "TRUNCATE",
+            "ERROR"
+        ],
+        "aal_level": [
+            "aal1",
+            "aal2",
+            "aal3"
+        ],
+        "buckettype": [
+            "STANDARD",
+            "ANALYTICS",
+            "VECTOR"
+        ],
+        "equality_op": [
+            "eq",
+            "neq",
+            "lt",
+            "lte",
+            "gt",
+            "gte",
+            "in",
+            "like",
+            "ilike",
+            "is",
+            "match",
+            "imatch",
+            "isdistinct"
+        ],
+        "factor_type": [
+            "totp",
+            "webauthn",
+            "phone"
+        ],
+        "mail_status": [
+            "pending",
+            "scheduled",
+            "processing",
+            "sent",
+            "delivered",
+            "failed",
+            "bounced",
+            "cancelled"
+        ],
+        "factor_status": [
+            "unverified",
+            "verified"
+        ],
+        "mail_priority": [
+            "low",
+            "normal",
+            "high",
+            "urgent"
+        ],
+        "request_status": [
+            "PENDING",
+            "SUCCESS",
+            "ERROR"
+        ],
+        "oauth_client_type": [
+            "public",
+            "confidential"
+        ],
+        "mail_provider_type": [
+            "exchange_365",
+            "smtp",
+            "resend",
+            "sendgrid",
+            "ses"
+        ],
+        "oauth_response_type": [
+            "code"
+        ],
+        "one_time_token_type": [
+            "confirmation_token",
+            "reauthentication_token",
+            "recovery_token",
+            "email_change_token_new",
+            "email_change_token_current",
+            "phone_change_token"
+        ],
+        "code_challenge_method": [
+            "s256",
+            "plain"
+        ],
+        "mail_webhook_event_type": [
+            "mail.queued",
+            "mail.sent",
+            "mail.delivered",
+            "mail.bounced",
+            "mail.failed",
+            "mail.opened",
+            "mail.clicked",
+            "mail.cancelled"
+        ],
+        "oauth_registration_type": [
+            "dynamic",
+            "manual"
+        ],
+        "oauth_authorization_status": [
+            "pending",
+            "approved",
+            "denied",
+            "expired"
+        ]
     },
-    "fn_my_role_ids": {
-      "args": "",
-      "returns": "uuid[]"
+    "checks": {
+        "tenants::tenants_status_check": "CHECK ((status = ANY (ARRAY['active'::text, 'suspended'::text, 'pending_deletion'::text, 'deleted'::text])))",
+        "variables::variable_status_check": "CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))",
+        "variables::variable_data_type_check": "CHECK (((data_type)::text = ANY (ARRAY[('number'::character varying)::text, ('string'::character varying)::text, ('boolean'::character varying)::text])))",
+        "variables::variable_variable_type_check": "CHECK (((variable_type)::text = ANY (ARRAY[('DIGITAL'::character varying)::text, ('ANALOG'::character varying)::text, ('INTEGER'::character varying)::text, ('ALARM'::character varying)::text, ('COMMAND'::character varying)::text, ('UNDEFINED'::character varying)::text])))",
+        "variables::variable_working_time_variable_type_check": "CHECK (((working_time_variable_type)::text = ANY (ARRAY[('COMPRESSOR_STATUS'::character varying)::text, ('DEFROST_STATUS'::character varying)::text, ('ACTIVE_ENERGY_VARIABLE'::character varying)::text, ('POWER_VARIABLE'::character varying)::text, ('RACK_COMPRESSOR_VARIABLE'::character varying)::text, ('RACK_DEFROST_VARIABLE'::character varying)::text])))"
     },
-    "fn_user_in_org": {
-      "args": "p_org_id uuid",
-      "returns": "boolean"
+    "schema": {
+        "sites": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "image_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "city",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "country",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "latitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "longitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "town",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "zoom",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "marker_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "site_group_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "friday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "friday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "general_close_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "general_open_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "working_time_active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "monday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "monday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "saturday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "saturday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "sunday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "sunday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "thursday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "thursday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "tuesday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "tuesday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "wednesday_end_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "wednesday_start_time",
+                "n": true,
+                "t": "time without time zone"
+            },
+            {
+                "c": "site_type_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "has_main_unit",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "gross_area_sqm",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "net_area_sqm",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "floor_count",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "year_built",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "operating_since",
+                "n": true,
+                "t": "date"
+            },
+            {
+                "c": "climate_zone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "energy_certificate_class",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "store_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "alarms": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "arrival_endtime",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "arrival_start_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "category",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "end_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "inhibit_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "inhibited",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_logic",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "last_update",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "local_acknowledge_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "local_acknowledge_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "local_delete_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "local_delete_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "remote_acknowledge_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "remote_acknowledge_user",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "reset_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "reset_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "start_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "status",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "controller_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "priority_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "realtime_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "txn_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "variable_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "site_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "contractor_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "provider_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "canceled_controller_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "staffs": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "user_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "contractor_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "rating_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "route_location_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "staff_type_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "sub_contractor_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "directions",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "email",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "fax",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "first_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "last_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "phone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "town",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "website",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "profile_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "city_id",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "country_id",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "manager_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "department_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "position_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "title",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "hire_date",
+                "n": true,
+                "t": "date"
+            },
+            {
+                "c": "exit_date",
+                "n": true,
+                "t": "date"
+            },
+            {
+                "c": "employment_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "contract_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "fte",
+                "n": false,
+                "t": "numeric"
+            },
+            {
+                "c": "tesvik_title",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "arge_start_date",
+                "n": true,
+                "t": "date"
+            },
+            {
+                "c": "is_arge_personnel",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "gross_salary",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "tc_kimlik_no",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "birth_date",
+                "n": true,
+                "t": "date"
+            },
+            {
+                "c": "gender",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "marital_status",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "iban",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "sgk_sicil_no",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "blood_type",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "emergency_contact_name",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "emergency_contact_phone",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "emergency_contact_relation",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "education_level",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "military_status",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "is_partner",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "insurance_type",
+                "n": false,
+                "t": "character varying"
+            }
+        ],
+        "tenants": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "client",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "city",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "country",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "latitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "longitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "town",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "zoom",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "time_zone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "onboarding_completed",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "onboarding_completed_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "onboarding_completed_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "contact_person",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "contact_email",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "contact_phone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "website",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "tax_number",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "registration_number",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "status",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "deletion_requested_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "deletion_requested_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "deletion_scheduled_for",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "deletion_reason",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "deleted_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            }
+        ],
+        "keywords": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "defaultvalue",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "key",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "longvalue",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "reference_entity",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "reference_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "shortvalue",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "language_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "profiles": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "username",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "full_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "first_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "last_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "avatar_url",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "email",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "phone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "bio",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "two_factor_enabled",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_by_role",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_default",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "last_login",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "type_attribute",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "preferred_language",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "site_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "languages": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "icon",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "locale",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "system_default",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "native_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_default",
+                "n": true,
+                "t": "boolean"
+            }
+        ],
+        "platforms": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "display_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "slug",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "icon_url",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "status",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "platform_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_core",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "display_order",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "metadata",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "app_base_url",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "price_monthly",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "currency",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "is_sellable",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "route_base",
+                "n": true,
+                "t": "text"
+            }
+        ],
+        "variables": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "a_value",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "address_input",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "address_output",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "b_value",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "bit_position",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "button_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "decimal",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "default_value",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "delay",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "delta",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "dimension",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "frequency",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "func_type_read",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "func_type_write",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "function_code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "grp_category",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "id_group",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "idhsvariable",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "image_off",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "image_on",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "insert_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "is_active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_cancelled",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "ishaccp",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_logged",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_logic",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_on_change",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "last_update",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "length",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "maximum",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "measure_unit",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "minimum",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "rack_compressor_name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "read_only",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "read_write",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "signed",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "to_display",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "unit",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "value",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "var_encoding",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "variable_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "working_time_variable_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "device_model_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "origin_priority_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "priority_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "data_type",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "min_value",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "max_value",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "status",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "time_series_enabled",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "is_system",
+                "n": false,
+                "t": "boolean"
+            }
+        ],
+        "mfa_policy": [
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "enforce_for",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "allowed_factors",
+                "n": false,
+                "t": "ARRAY"
+            },
+            {
+                "c": "grace_period_days",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "recovery_email_required",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "rbac_roles": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "code",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "level",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "icon",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_system",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_external",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "default_dashboard",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "default_route",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            }
+        ],
+        "controllers": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "background_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "cf_address",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "cf_code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "cf_description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "ftp_client_password",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "ftp_client_username",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "ftp_password",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "ftp_username",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "http_password",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "http_username",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "first_communication_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "first_connection_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "first_data_alignment_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "first_synchronization_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "global_index",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "has_alarm",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "id_group",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "image_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "insert_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "ip",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "ip_code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_canceled",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "is_enabled",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_logic",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "last_communication_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "last_connection_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "last_data_alignment_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "last_synchronization_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "last_update_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "life_test",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "line",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "line_address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "little_endian",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "city",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "country",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "latitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "longitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "town",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "zoom",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "mac",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "model_code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "peripheral",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "proxy_prefix",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "serial",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "area_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "brand_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "contractor_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "device_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "device_model_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "ftp_user_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "language_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "marker_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "protocol_type_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "provider_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "site_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "supervisor_type_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "unit_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "device_item_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "inventory_item_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "logs_rollup": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "site_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "variable_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "variable_name",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "unit",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "is_haccp",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "bucket",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "bucket_start",
+                "n": false,
+                "t": "date"
+            },
+            {
+                "c": "min_value",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "max_value",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "avg_value",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "sample_count",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "threshold_min",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "threshold_max",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "in_range_count",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            }
+        ],
+        "device_models": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "image_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "protocol",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "version",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "brand_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "device_type_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "language_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "is_system",
+                "n": false,
+                "t": "boolean"
+            }
+        ],
+        "notifications": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "acknowledged",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "acknowledged_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "date_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "entity_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "entity_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "meta",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "notification_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "priority",
+                "n": true,
+                "t": "smallint"
+            },
+            {
+                "c": "sent",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "title",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "acknowledged_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "platform_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "profile_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "read",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "sender_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "recipient_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "is_read",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "read_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "target_audience",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "expires_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "action_url",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "action_label",
+                "n": true,
+                "t": "text"
+            }
+        ],
+        "organizations": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "image_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "address",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "city",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "country",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "latitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "longitude",
+                "n": true,
+                "t": "double precision"
+            },
+            {
+                "c": "town",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "zoom",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "financial_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "marker_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "contact_person",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "contact_email",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "contact_phone",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "website",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "tax_number",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "registration_number",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "parent_organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "hierarchy_level",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "hierarchy_path",
+                "n": true,
+                "t": "character varying"
+            }
+        ],
+        "form_templates": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "code",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "category",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "entity_type",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "version",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "is_published",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "is_system",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "metadata",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "platform_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "alarm_histories": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "alarm_operation_method_to_actions",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "archive_group",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "arrival_end_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "arrival_start_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "category",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "delete_action_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "delete_action_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "end_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "inhibit_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "inhibited",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_archive",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "is_logic",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "last_update",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "local_acknowledge_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "local_acknowledge_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "remote_acknowledge_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "remote_acknowledge_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "reset_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "reset_user",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "start_time",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "txn_group_id",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "canceled_controller_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "controller_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "contractor_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "provider_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "realtime_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "site_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "txn_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "variable_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "priority_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "rbac_user_roles": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "profile_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "role_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "is_primary",
+                "n": true,
+                "t": "boolean"
+            },
+            {
+                "c": "assigned_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "assigned_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "granted_via",
+                "n": true,
+                "t": "text"
+            }
+        ],
+        "form_submissions": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "form_template_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "entity_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "entity_type",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "status",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "current_step",
+                "n": true,
+                "t": "integer"
+            },
+            {
+                "c": "submitted_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "submitted_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "reviewed_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "reviewed_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "review_notes",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "version",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "metadata",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "code",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "subject",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "priority",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "assigned_to",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "assigned_team_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "due_date",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "location_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "is_standalone",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "parent_entity_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "hierarchy_level",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "hierarchy_path",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "sprint_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "backlog_rank",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "story_points",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "search_text",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "platform_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "mfa_email_factors": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "user_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "email",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "verified_at",
+                "n": true,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            }
+        ],
+        "status_definitions": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "entity_type",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "code",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "color",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "icon",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "sort_order",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "is_initial",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "is_final",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "is_system",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "metadata",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "platform_id",
+                "n": true,
+                "t": "uuid"
+            }
+        ],
+        "entity_type_configs": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "code",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "name",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "description",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "code_prefix",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "icon",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "color",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "is_standalone",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "linked_table",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "default_form_template_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "show_in_menu",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "menu_order",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "menu_parent",
+                "n": true,
+                "t": "character varying"
+            },
+            {
+                "c": "enable_comments",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "enable_worklogs",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "enable_attachments",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "enable_approval",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "enable_sla",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "is_system",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_by",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "row_id",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "platform_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "allowed_parent_types",
+                "n": true,
+                "t": "jsonb"
+            },
+            {
+                "c": "enforce_schema",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "name_i18n",
+                "n": true,
+                "t": "jsonb"
+            }
+        ],
+        "platform_menu_items": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "platform_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "app_code",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "item_key",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "parent_item_key",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "title",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "icon",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "path",
+                "n": false,
+                "t": "text"
+            },
+            {
+                "c": "roles",
+                "n": true,
+                "t": "ARRAY"
+            },
+            {
+                "c": "permission",
+                "n": true,
+                "t": "ARRAY"
+            },
+            {
+                "c": "module",
+                "n": true,
+                "t": "text"
+            },
+            {
+                "c": "disabled",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "sort_order",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "active",
+                "n": false,
+                "t": "boolean"
+            },
+            {
+                "c": "created_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "updated_by",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "updated_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            }
+        ],
+        "energy_readings_rollup": [
+            {
+                "c": "id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "tenant_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "organization_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "meter_id",
+                "n": false,
+                "t": "uuid"
+            },
+            {
+                "c": "site_id",
+                "n": true,
+                "t": "uuid"
+            },
+            {
+                "c": "utility_type",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "bucket",
+                "n": false,
+                "t": "character varying"
+            },
+            {
+                "c": "bucket_start",
+                "n": false,
+                "t": "timestamp with time zone"
+            },
+            {
+                "c": "consumption_kwh",
+                "n": false,
+                "t": "numeric"
+            },
+            {
+                "c": "peak_demand_kw",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "reading_count",
+                "n": false,
+                "t": "integer"
+            },
+            {
+                "c": "cost",
+                "n": true,
+                "t": "numeric"
+            },
+            {
+                "c": "created_at",
+                "n": false,
+                "t": "timestamp with time zone"
+            }
+        ]
     },
-    "fn_energy_rollup": {
-      "args": "p_tenant uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text DEFAULT 'day'::text",
-      "returns": "void"
-    },
-    "fn_coarse_role_of": {
-      "args": "p_profile uuid",
-      "returns": "text"
-    },
-    "fn_my_coarse_role": {
-      "args": "",
-      "returns": "text"
-    },
-    "fn_pms_sites_list": {
-      "args": "p_tenant_id uuid, p_city text DEFAULT NULL::text, p_query text DEFAULT NULL::text",
-      "returns": "jsonb"
-    },
-    "fn_coarse_roles_of": {
-      "args": "p_ids uuid[]",
-      "returns": "TABLE(profile_id uuid, role text)"
-    },
-    "fn_pms_alarm_reset": {
-      "args": "p_alarm_id uuid",
-      "returns": "jsonb"
-    },
-    "fn_pms_alarm_trend": {
-      "args": "p_tenant_id uuid, p_bucket text DEFAULT 'day'::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(period text, cnt bigint, critical bigint)"
-    },
-    "fn_pms_kpi_summary": {
-      "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(total_alarms bigint, active_alarms bigint, resolved_alarms bigint, avg_resolution_hours numeric, critical_count bigint, high_count bigint, medium_count bigint, low_count bigint, distinct_sites_affected bigint, distinct_controllers_affected bigint)"
-    },
-    "fn_energy_ap_notify": {
-      "args": "",
-      "returns": "trigger"
-    },
-    "fn_alarm_acknowledge": {
-      "args": "p_alarm_id uuid",
-      "returns": "boolean"
-    },
-    "fn_energy_ap_prepare": {
-      "args": "",
-      "returns": "trigger"
-    },
-    "fn_energy_rollup_run": {
-      "args": "p_tenant uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text DEFAULT 'day'::text",
-      "returns": "jsonb"
-    },
-    "fn_my_profile_bundle": {
-      "args": "",
-      "returns": "jsonb"
-    },
-    "fn_pms_active_alarms": {
-      "args": "p_limit integer DEFAULT 30",
-      "returns": "jsonb"
-    },
-    "fn_pms_alarm_inhibit": {
-      "args": "p_alarm_id uuid, p_inhibit boolean DEFAULT true",
-      "returns": "jsonb"
-    },
-    "fn_energy_rollup_cron": {
-      "args": "",
-      "returns": "integer"
-    },
-    "fn_energy_data_quality": {
-      "args": "p_from date, p_to date, p_bucket text DEFAULT 'day'::text",
-      "returns": "TABLE(meter_id uuid, meter_label text, utility_type text, expected_buckets integer, present_buckets bigint, completeness_pct numeric, latest_reading timestamp with time zone, stale boolean)"
-    },
-    "fn_energy_load_profile": {
-      "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(dow integer, avg_consumption_kwh numeric, max_peak_demand_kw numeric, total_consumption_kwh numeric, day_count bigint)"
-    },
-    "fn_my_platform_catalog": {
-      "args": "",
-      "returns": "TABLE(platform_id uuid, code text, name text, description text, icon_url text, color text, price_monthly numeric, currency text, owned boolean, status text, is_trial boolean)"
-    },
-    "fn_pms_provider_health": {
-      "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(provider_id uuid, provider_name text, alarm_count bigint, critical_count bigint, last_alarm_at timestamp with time zone, health_score numeric)"
-    },
-    "fn_pms_hierarchy_health": {
-      "args": "p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "jsonb"
-    },
-    "fn_pms_measure_quantity": {
-      "args": "p_raw text",
-      "returns": "text"
-    },
-    "fn_pms_variable_circuit": {
-      "args": "p_name text",
-      "returns": "text"
-    },
-    "fn_alarm_escalation_tick": {
-      "args": "p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "integer"
-    },
-    "fn_energy_ap_on_decision": {
-      "args": "",
-      "returns": "trigger"
-    },
-    "fn_pms_alarm_acknowledge": {
-      "args": "p_alarm_id uuid",
-      "returns": "jsonb"
-    },
-    "fn_pms_controller_uptime": {
-      "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(controller_id uuid, controller_name text, site_name text, alarm_count bigint, total_alarm_minutes numeric, availability_pct numeric)"
-    },
-    "fn_pms_telemetry_summary": {
-      "args": "p_tenant_id uuid, p_variable text DEFAULT NULL::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "jsonb"
-    },
-    "fn_energy_avoided_savings": {
-      "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_report_from timestamp with time zone, p_report_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text",
-      "returns": "TABLE(period_day timestamp with time zone, driver_value numeric, predicted_kwh numeric, actual_kwh numeric, avoided_kwh numeric, cumulative_avoided numeric)"
-    },
-    "fn_energy_evaluate_alarms": {
-      "args": "p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "integer"
-    },
-    "fn_pms_alarm_by_dimension": {
-      "args": "p_tenant_id uuid, p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(label text, cnt bigint, pct numeric)"
-    },
-    "fn_pms_count_by_dimension": {
-      "args": "p_tenant_id uuid, p_entity text, p_dimension text, p_value text DEFAULT NULL::text",
-      "returns": "jsonb"
-    },
-    "fn_energy_anomaly_scan_all": {
-      "args": "p_baseline_days integer DEFAULT 60, p_detect_days integer DEFAULT 3, p_min_baseline integer DEFAULT 14, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0, p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "jsonb"
-    },
-    "fn_pms_energy_by_dimension": {
-      "args": "p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_bucket text DEFAULT 'month'::text, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(label text, total_kwh numeric, total_cost numeric, pct numeric)"
-    },
-    "fn_pms_site_alarm_severity": {
-      "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(priority_name text, priority_color text, priority_level integer, active bigint, reset bigint)"
-    },
-    "fn_alarm_predict_recurrence": {
-      "args": "p_tenant uuid DEFAULT NULL::uuid, p_min_occurrences integer DEFAULT 5, p_max_cv numeric DEFAULT 1.0, p_limit integer DEFAULT 100",
-      "returns": "TABLE(id uuid, controller_id uuid, controller_name text, variable_id uuid, alarm_name text, priority_id uuid, occurrences integer, mean_interval_hours numeric, interval_cv numeric, last_start timestamp with time zone, predicted_alarm_time timestamp with time zone, prediction_confidence numeric, risk_level text, prediction_type text, predicted_duration_hours numeric, prevention_window_hours numeric, maintenance_recommendation jsonb, feature_importance jsonb)"
-    },
-    "fn_energy_anomaly_scan_self": {
-      "args": "",
-      "returns": "jsonb"
-    },
-    "fn_energy_apply_rollup_costs": {
-      "args": "p_updates jsonb",
-      "returns": "integer"
-    },
-    "fn_energy_consumption_rollup": {
-      "args": "p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_bucket text DEFAULT 'month'::text, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(bucket_start timestamp with time zone, utility_type text, total_kwh numeric, total_cost numeric, avg_peak_kw numeric, reading_count bigint)"
-    },
-    "fn_pms_alarm_dim_by_priority": {
-      "args": "p_tenant_id uuid, p_dim text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(dim_label text, priority_id uuid, priority_name text, priority_color text, priority_level integer, cnt bigint)"
-    },
-    "fn_pms_alarm_site_controller": {
-      "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(site_id uuid, site_name text, controller_id uuid, controller_name text, cnt bigint)"
-    },
-    "fn_pms_onboard_energy_meters": {
-      "args": "p_tenant uuid",
-      "returns": "jsonb"
-    },
-    "fn_profiles_with_coarse_role": {
-      "args": "p_roles text[]",
-      "returns": "TABLE(profile_id uuid)"
-    },
-    "fn_energy_baseline_regression": {
-      "args": "p_site_id uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text",
-      "returns": "TABLE(slope numeric, intercept numeric, r2 numeric, n integer, driver text)"
-    },
-    "fn_energy_load_profile_hourly": {
-      "args": "p_site_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "TABLE(hod integer, avg_consumption_kwh numeric, max_peak_demand_kw numeric, total_consumption_kwh numeric, interval_count bigint)"
-    },
-    "fn_alarm_escalation_on_resolve": {
-      "args": "",
-      "returns": "trigger"
-    },
-    "fn_controller_logged_variables": {
-      "args": "p_controller_id uuid",
-      "returns": "TABLE(id uuid, name text, code text, description text, measure_unit text, data_type text)"
-    },
-    "fn_energy_consumption_forecast": {
-      "args": "p_site_id uuid, p_bucket text DEFAULT 'month'::text, p_horizon integer DEFAULT 6, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone",
-      "returns": "jsonb"
-    },
-    "fn_pms_provider_type_breakdown": {
-      "args": "p_tenant_id uuid, p_type text DEFAULT NULL::text",
-      "returns": "jsonb"
-    },
-    "fn_alarm_escalation_notify_step": {
-      "args": "p_state alarm_escalation_state, p_step alarm_escalation_steps",
-      "returns": "uuid"
-    },
-    "fn_energy_consumption_anomalies": {
-      "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_detect_from timestamp with time zone, p_detect_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0",
-      "returns": "TABLE(period_day timestamp with time zone, driver_value numeric, actual_kwh numeric, predicted_kwh numeric, residual_kwh numeric, deviation_pct numeric, z_score numeric, is_anomaly boolean)"
-    },
-    "fn_energy_import_daily_readings": {
-      "args": "p_site_id uuid, p_utility text, p_rows jsonb",
-      "returns": "jsonb"
-    },
-    "fn_pms_alarm_priority_breakdown": {
-      "args": "p_tenant_id uuid, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_organization_id uuid DEFAULT NULL::uuid",
-      "returns": "TABLE(priority_id uuid, priority_name text, priority_color text, priority_level integer, cnt bigint)"
-    },
-    "fn_pms_hierarchy_reconciliation": {
-      "args": "p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "jsonb"
-    },
-    "fn_energy_evaluate_anomaly_alarms": {
-      "args": "p_site_id uuid, p_baseline_from timestamp with time zone, p_baseline_to timestamp with time zone, p_detect_from timestamp with time zone, p_detect_to timestamp with time zone, p_driver text DEFAULT 'peak_demand_kw'::text, p_sigma numeric DEFAULT 2.0, p_tenant uuid DEFAULT NULL::uuid",
-      "returns": "integer"
-    },
-    "fn_energy_baseline_regression_multi": {
-      "args": "p_site_id uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_drivers text[] DEFAULT ARRAY['peak_demand_kw'::text]",
-      "returns": "TABLE(intercept numeric, coef1 numeric, driver1 text, coef2 numeric, driver2 text, r2 numeric, adj_r2 numeric, cv_rmse numeric, n integer, n_drivers integer, validity text)"
-    },
-    "fn_pms_suggest_roles_for_controller": {
-      "args": "p_controller_id uuid",
-      "returns": "TABLE(variable_id uuid, variable_name text, measure_unit text, quantity text, circuit text, domain text, suggested_role text, confidence text)"
-    },
-    "fn_pms_controller_variables_reconciled": {
-      "args": "p_controller_id uuid",
-      "returns": "TABLE(variable_id uuid, name text, measure_unit text, quantity text, circuit text, status text, last_seen timestamp with time zone, log_count bigint)"
-    },
-    "fn_pms_controller_commands_stamp_requestor": {
-      "args": "",
-      "returns": "trigger"
-    }
-  },
-  "enums": {
-    "action": [
-      "INSERT",
-      "UPDATE",
-      "DELETE",
-      "TRUNCATE",
-      "ERROR"
-    ],
-    "aal_level": [
-      "aal1",
-      "aal2",
-      "aal3"
-    ],
-    "buckettype": [
-      "STANDARD",
-      "ANALYTICS",
-      "VECTOR"
-    ],
-    "equality_op": [
-      "eq",
-      "neq",
-      "lt",
-      "lte",
-      "gt",
-      "gte",
-      "in",
-      "like",
-      "ilike",
-      "is",
-      "match",
-      "imatch",
-      "isdistinct"
-    ],
-    "factor_type": [
-      "totp",
-      "webauthn",
-      "phone"
-    ],
-    "mail_status": [
-      "pending",
-      "scheduled",
-      "processing",
-      "sent",
-      "delivered",
-      "failed",
-      "bounced",
-      "cancelled"
-    ],
-    "factor_status": [
-      "unverified",
-      "verified"
-    ],
-    "mail_priority": [
-      "low",
-      "normal",
-      "high",
-      "urgent"
-    ],
-    "request_status": [
-      "PENDING",
-      "SUCCESS",
-      "ERROR"
-    ],
-    "oauth_client_type": [
-      "public",
-      "confidential"
-    ],
-    "mail_provider_type": [
-      "exchange_365",
-      "smtp",
-      "resend",
-      "sendgrid",
-      "ses"
-    ],
-    "oauth_response_type": [
-      "code"
-    ],
-    "one_time_token_type": [
-      "confirmation_token",
-      "reauthentication_token",
-      "recovery_token",
-      "email_change_token_new",
-      "email_change_token_current",
-      "phone_change_token"
-    ],
-    "code_challenge_method": [
-      "s256",
-      "plain"
-    ],
-    "mail_webhook_event_type": [
-      "mail.queued",
-      "mail.sent",
-      "mail.delivered",
-      "mail.bounced",
-      "mail.failed",
-      "mail.opened",
-      "mail.clicked",
-      "mail.cancelled"
-    ],
-    "oauth_registration_type": [
-      "dynamic",
-      "manual"
-    ],
-    "oauth_authorization_status": [
-      "pending",
-      "approved",
-      "denied",
-      "expired"
-    ]
-  },
-  "checks": {
-    "tenants::tenants_status_check": "CHECK ((status = ANY (ARRAY['active'::text, 'suspended'::text, 'pending_deletion'::text, 'deleted'::text])))",
-    "variables::variable_status_check": "CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))",
-    "variables::variable_data_type_check": "CHECK (((data_type)::text = ANY (ARRAY[('number'::character varying)::text, ('string'::character varying)::text, ('boolean'::character varying)::text])))",
-    "variables::variable_variable_type_check": "CHECK (((variable_type)::text = ANY (ARRAY[('DIGITAL'::character varying)::text, ('ANALOG'::character varying)::text, ('INTEGER'::character varying)::text, ('ALARM'::character varying)::text, ('COMMAND'::character varying)::text, ('UNDEFINED'::character varying)::text])))",
-    "variables::variable_working_time_variable_type_check": "CHECK (((working_time_variable_type)::text = ANY (ARRAY[('COMPRESSOR_STATUS'::character varying)::text, ('DEFROST_STATUS'::character varying)::text, ('ACTIVE_ENERGY_VARIABLE'::character varying)::text, ('POWER_VARIABLE'::character varying)::text, ('RACK_COMPRESSOR_VARIABLE'::character varying)::text, ('RACK_DEFROST_VARIABLE'::character varying)::text])))"
-  },
-  "schema": {
-    "sites": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "image_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "city",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "country",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "latitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "longitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "town",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "zoom",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "marker_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "site_group_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "friday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "friday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "general_close_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "general_open_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "working_time_active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "monday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "monday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "saturday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "saturday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "sunday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "sunday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "thursday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "thursday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "tuesday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "tuesday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "wednesday_end_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "wednesday_start_time",
-        "n": true,
-        "t": "time without time zone"
-      },
-      {
-        "c": "site_type_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "has_main_unit",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "gross_area_sqm",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "net_area_sqm",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "floor_count",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "year_built",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "operating_since",
-        "n": true,
-        "t": "date"
-      },
-      {
-        "c": "climate_zone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "energy_certificate_class",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "store_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "alarms": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "arrival_endtime",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "arrival_start_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "category",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "end_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "inhibit_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "inhibited",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_logic",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "last_update",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "local_acknowledge_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "local_acknowledge_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "local_delete_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "local_delete_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "remote_acknowledge_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "remote_acknowledge_user",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "reset_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "reset_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "start_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "status",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "controller_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "priority_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "realtime_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "txn_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "variable_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "site_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "contractor_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "provider_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "canceled_controller_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "staffs": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "user_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "contractor_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "rating_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "route_location_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "staff_type_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "sub_contractor_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "directions",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "email",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "fax",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "first_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "last_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "phone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "town",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "website",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "profile_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "city_id",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "country_id",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "manager_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "department_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "position_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "title",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "hire_date",
-        "n": true,
-        "t": "date"
-      },
-      {
-        "c": "exit_date",
-        "n": true,
-        "t": "date"
-      },
-      {
-        "c": "employment_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "contract_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "fte",
-        "n": false,
-        "t": "numeric"
-      },
-      {
-        "c": "tesvik_title",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "arge_start_date",
-        "n": true,
-        "t": "date"
-      },
-      {
-        "c": "is_arge_personnel",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "gross_salary",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "tc_kimlik_no",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "birth_date",
-        "n": true,
-        "t": "date"
-      },
-      {
-        "c": "gender",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "marital_status",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "iban",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "sgk_sicil_no",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "blood_type",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "emergency_contact_name",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "emergency_contact_phone",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "emergency_contact_relation",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "education_level",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "military_status",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "is_partner",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "insurance_type",
-        "n": false,
-        "t": "character varying"
-      }
-    ],
-    "tenants": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "client",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "city",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "country",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "latitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "longitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "town",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "zoom",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "time_zone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "onboarding_completed",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "onboarding_completed_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "onboarding_completed_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "contact_person",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "contact_email",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "contact_phone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "website",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "tax_number",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "registration_number",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "status",
-        "n": false,
-        "t": "text"
-      },
-      {
-        "c": "deletion_requested_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "deletion_requested_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "deletion_scheduled_for",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "deletion_reason",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "deleted_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      }
-    ],
-    "keywords": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "defaultvalue",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "key",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "longvalue",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "reference_entity",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "reference_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "shortvalue",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "language_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "profiles": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "username",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "full_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "first_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "last_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "avatar_url",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "email",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "phone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "bio",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "two_factor_enabled",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_by_role",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_default",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "last_login",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "type_attribute",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "preferred_language",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "site_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "languages": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "icon",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "locale",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "system_default",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "native_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_default",
-        "n": true,
-        "t": "boolean"
-      }
-    ],
-    "platforms": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "display_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "slug",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "icon_url",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "status",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "platform_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_core",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "display_order",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "metadata",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "app_base_url",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "price_monthly",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "currency",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "is_sellable",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "route_base",
-        "n": true,
-        "t": "text"
-      }
-    ],
-    "variables": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "a_value",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "address_input",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "address_output",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "b_value",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "bit_position",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "button_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "decimal",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "default_value",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "delay",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "delta",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "dimension",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "frequency",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "func_type_read",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "func_type_write",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "function_code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "grp_category",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "id_group",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "idhsvariable",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "image_off",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "image_on",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "insert_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "is_active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_cancelled",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "ishaccp",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_logged",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_logic",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_on_change",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "last_update",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "length",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "maximum",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "measure_unit",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "minimum",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "rack_compressor_name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "read_only",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "read_write",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "signed",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "to_display",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "unit",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "value",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "var_encoding",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "variable_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "working_time_variable_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "device_model_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "origin_priority_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "priority_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "data_type",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "min_value",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "max_value",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "status",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "time_series_enabled",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "is_system",
-        "n": false,
-        "t": "boolean"
-      }
-    ],
-    "rbac_roles": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "code",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "level",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "icon",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_system",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_external",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "default_dashboard",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "default_route",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      }
-    ],
-    "controllers": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "background_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "cf_address",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "cf_code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "cf_description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "ftp_client_password",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "ftp_client_username",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "ftp_password",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "ftp_username",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "http_password",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "http_username",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "first_communication_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "first_connection_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "first_data_alignment_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "first_synchronization_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "global_index",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "has_alarm",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "id_group",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "image_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "insert_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "ip",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "ip_code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_canceled",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "is_enabled",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_logic",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "last_communication_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "last_connection_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "last_data_alignment_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "last_synchronization_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "last_update_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "life_test",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "line",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "line_address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "little_endian",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "city",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "country",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "latitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "longitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "town",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "zoom",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "mac",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "model_code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "peripheral",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "proxy_prefix",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "serial",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "area_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "brand_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "contractor_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "device_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "device_model_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "ftp_user_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "language_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "marker_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "protocol_type_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "provider_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "site_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "supervisor_type_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "unit_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "device_item_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "inventory_item_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "logs_rollup": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "site_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "variable_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "variable_name",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "unit",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "is_haccp",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "bucket",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "bucket_start",
-        "n": false,
-        "t": "date"
-      },
-      {
-        "c": "min_value",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "max_value",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "avg_value",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "sample_count",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "threshold_min",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "threshold_max",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "in_range_count",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      }
-    ],
-    "device_models": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "image_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "protocol",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "version",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "brand_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "device_type_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "language_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "is_system",
-        "n": false,
-        "t": "boolean"
-      }
-    ],
-    "notifications": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "acknowledged",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "acknowledged_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "date_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "entity_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "entity_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "meta",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "notification_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "priority",
-        "n": true,
-        "t": "smallint"
-      },
-      {
-        "c": "sent",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "title",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "acknowledged_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "platform_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "profile_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "read",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "sender_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "recipient_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "is_read",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "read_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "target_audience",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "expires_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "action_url",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "action_label",
-        "n": true,
-        "t": "text"
-      }
-    ],
-    "organizations": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "image_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "address",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "city",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "country",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "latitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "longitude",
-        "n": true,
-        "t": "double precision"
-      },
-      {
-        "c": "town",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "zoom",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "financial_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "marker_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "contact_person",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "contact_email",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "contact_phone",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "website",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "tax_number",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "registration_number",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "parent_organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "hierarchy_level",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "hierarchy_path",
-        "n": true,
-        "t": "character varying"
-      }
-    ],
-    "form_templates": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "code",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "category",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "entity_type",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "version",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "is_published",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "is_system",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "metadata",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "platform_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "alarm_histories": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "alarm_operation_method_to_actions",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "archive_group",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "arrival_end_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "arrival_start_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "category",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "delete_action_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "delete_action_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "end_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "inhibit_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "inhibited",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_archive",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "is_logic",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "last_update",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "local_acknowledge_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "local_acknowledge_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "remote_acknowledge_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "remote_acknowledge_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "reset_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "reset_user",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "start_time",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "txn_group_id",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "canceled_controller_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "controller_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "contractor_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "provider_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "realtime_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "site_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "txn_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "variable_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "priority_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "rbac_user_roles": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "profile_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "role_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "is_primary",
-        "n": true,
-        "t": "boolean"
-      },
-      {
-        "c": "assigned_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "assigned_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "granted_via",
-        "n": true,
-        "t": "text"
-      }
-    ],
-    "form_submissions": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "form_template_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "entity_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "entity_type",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "status",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "current_step",
-        "n": true,
-        "t": "integer"
-      },
-      {
-        "c": "submitted_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "submitted_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "reviewed_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "reviewed_at",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "review_notes",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "version",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "metadata",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "code",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "subject",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "priority",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "assigned_to",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "assigned_team_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "due_date",
-        "n": true,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "location_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "is_standalone",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "parent_entity_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "hierarchy_level",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "hierarchy_path",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "sprint_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "backlog_rank",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "story_points",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "search_text",
-        "n": true,
-        "t": "text"
-      }
-    ],
-    "status_definitions": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "entity_type",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "code",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "color",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "icon",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "sort_order",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "is_initial",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "is_final",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "is_system",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "metadata",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "platform_id",
-        "n": true,
-        "t": "uuid"
-      }
-    ],
-    "entity_type_configs": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "code",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "name",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "description",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "code_prefix",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "icon",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "color",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "is_standalone",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "linked_table",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "default_form_template_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "show_in_menu",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "menu_order",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "menu_parent",
-        "n": true,
-        "t": "character varying"
-      },
-      {
-        "c": "enable_comments",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "enable_worklogs",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "enable_attachments",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "enable_approval",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "enable_sla",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "is_system",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_by",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "row_id",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "platform_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "allowed_parent_types",
-        "n": true,
-        "t": "jsonb"
-      },
-      {
-        "c": "enforce_schema",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "name_i18n",
-        "n": true,
-        "t": "jsonb"
-      }
-    ],
-    "platform_menu_items": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "platform_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "app_code",
-        "n": false,
-        "t": "text"
-      },
-      {
-        "c": "item_key",
-        "n": false,
-        "t": "text"
-      },
-      {
-        "c": "parent_item_key",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "title",
-        "n": false,
-        "t": "text"
-      },
-      {
-        "c": "icon",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "path",
-        "n": false,
-        "t": "text"
-      },
-      {
-        "c": "roles",
-        "n": true,
-        "t": "ARRAY"
-      },
-      {
-        "c": "permission",
-        "n": true,
-        "t": "ARRAY"
-      },
-      {
-        "c": "module",
-        "n": true,
-        "t": "text"
-      },
-      {
-        "c": "disabled",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "sort_order",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "active",
-        "n": false,
-        "t": "boolean"
-      },
-      {
-        "c": "created_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "updated_by",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "updated_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      }
-    ],
-    "energy_readings_rollup": [
-      {
-        "c": "id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "tenant_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "organization_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "meter_id",
-        "n": false,
-        "t": "uuid"
-      },
-      {
-        "c": "site_id",
-        "n": true,
-        "t": "uuid"
-      },
-      {
-        "c": "utility_type",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "bucket",
-        "n": false,
-        "t": "character varying"
-      },
-      {
-        "c": "bucket_start",
-        "n": false,
-        "t": "timestamp with time zone"
-      },
-      {
-        "c": "consumption_kwh",
-        "n": false,
-        "t": "numeric"
-      },
-      {
-        "c": "peak_demand_kw",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "reading_count",
-        "n": false,
-        "t": "integer"
-      },
-      {
-        "c": "cost",
-        "n": true,
-        "t": "numeric"
-      },
-      {
-        "c": "created_at",
-        "n": false,
-        "t": "timestamp with time zone"
-      }
-    ]
-  },
-  "generated_note": "Regenerate with scripts/gen_backend_contract.sql after any web schema change"
+    "generated_note": "Regenerate with scripts/gen_backend_contract.sql after any web schema change"
 }
