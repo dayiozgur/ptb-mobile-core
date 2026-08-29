@@ -35,10 +35,42 @@ class _SecurityScreenState extends State<SecurityScreen> {
   bool _verifying = false;
   String? _removingId;
 
+  // ── E-posta 2FA (özel ikinci faktör — TOTP'den bağımsız) ───────────────────
+  /// Etkin bir e-posta faktörü var mı? (`mfa_email_factors`).
+  bool _emailEnabled = false;
+
+  /// Kod-giriş kutusu görünür mü? (Etkinleştir → kod istendi).
+  bool _emailEnrolling = false;
+
+  /// E-posta işlemi (iste/doğrula/kaldır) sürüyor mu?
+  bool _emailBusy = false;
+  final TextEditingController _emailCodeController = TextEditingController();
+
   bool get _busy => _enrolling || _verifying || _removingId != null;
 
   /// Hata nesnesinden okunabilir mesaj (Supabase `AuthException.message`).
   String _msg(Object e) => e is AuthException ? e.message : e.toString();
+
+  /// E-posta 2FA EF hata kodunu (`Exception('CODE')`) okunabilir metne çevirir.
+  String _emailErr(Object e) {
+    final code = _msg(e).replaceFirst('Exception: ', '').trim();
+    switch (code) {
+      case 'RATE_LIMITED':
+        return 'Çok fazla deneme. Lütfen bir süre sonra tekrar deneyin.';
+      case 'TOO_SOON':
+        return 'Yeni kod istemek için lütfen biraz bekleyin.';
+      case 'NO_EMAIL':
+        return 'Hesabınıza bağlı bir e-posta adresi yok.';
+      case 'INVALID_CODE':
+        return 'Girdiğiniz kod hatalı.';
+      case 'NO_CHALLENGE':
+        return 'Aktif bir kod bulunamadı. Lütfen yeni kod isteyin.';
+      case 'TOO_MANY_ATTEMPTS':
+        return 'Çok fazla hatalı deneme. Lütfen yeni kod isteyin.';
+      default:
+        return _msg(e);
+    }
+  }
 
   List<Factor> get _verifiedFactors =>
       _factors.where((f) => f.status == FactorStatus.verified).toList();
@@ -52,6 +84,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
   @override
   void dispose() {
     _codeController.dispose();
+    _emailCodeController.dispose();
     super.dispose();
   }
 
@@ -62,9 +95,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
     });
     try {
       final factors = await authService.listMfaFactors();
+      // E-posta faktörü durumu ayrı bir kaynaktır (mfa_email_factors) ve
+      // FAIL-OPEN'dır (hata → false); faktör listesini bloklamamalı.
+      final emailEnabled = await authService.emailFactorEnabled();
       if (!mounted) return;
       setState(() {
         _factors = factors;
+        _emailEnabled = emailEnabled;
         _loading = false;
       });
     } catch (e) {
@@ -179,6 +216,108 @@ class _SecurityScreenState extends State<SecurityScreen> {
     }
   }
 
+  // ── E-posta 2FA: etkinleştir / doğrula / kaldır ────────────────────────────
+
+  /// Etkinleştir → koda-hazır: hesap e-postasına kod gönder, kod kutusunu aç.
+  Future<void> _startEmailEnroll() async {
+    setState(() => _emailBusy = true);
+    try {
+      await authService.requestEmailCode();
+      if (!mounted) return;
+      setState(() {
+        _emailBusy = false;
+        _emailEnrolling = true;
+        _emailCodeController.clear();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showError(context, message: _emailErr(e));
+    }
+  }
+
+  Future<void> _resendEmailCode() async {
+    setState(() => _emailBusy = true);
+    try {
+      await authService.requestEmailCode();
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showSuccess(context, message: 'Yeni kod gönderildi.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showError(context, message: _emailErr(e));
+    }
+  }
+
+  /// Kodu doğrula → ilk başarılı doğrulama faktörü otomatik kaydeder.
+  Future<void> _verifyEmailEnroll() async {
+    final code = _emailCodeController.text.trim();
+    if (code.length != 6) return;
+    setState(() => _emailBusy = true);
+    try {
+      await authService.verifyEmailCode(code);
+      if (!mounted) return;
+      setState(() {
+        _emailBusy = false;
+        _emailEnrolling = false;
+      });
+      AppSnackbar.showSuccess(
+        context,
+        message: 'E-posta ile doğrulama etkinleştirildi.',
+      );
+      await _loadFactors();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showError(context, message: _emailErr(e));
+    }
+  }
+
+  void _cancelEmailEnroll() {
+    setState(() {
+      _emailEnrolling = false;
+      _emailCodeController.clear();
+    });
+  }
+
+  Future<void> _disableEmail() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('E-posta ile Doğrulama'),
+        content: const Text(
+          'E-posta ile doğrulamayı kapatmak istediğinize emin misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgec'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _emailBusy = true);
+    try {
+      await authService.unenrollEmail();
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showSuccess(context, message: 'E-posta ile doğrulama kapatıldı.');
+      await _loadFactors();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _emailBusy = false);
+      AppSnackbar.showError(context, message: _emailErr(e));
+    }
+  }
+
   // ── Parola değiştir ───────────────────────────────────────────────────────
 
   void _showChangePasswordDialog() {
@@ -270,6 +409,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: _build2faBody(context),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const AppSectionHeader(title: 'E-posta ile Doğrulama'),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: Padding(
+                padding: AppSpacing.cardInsets,
+                child: _buildEmailBody(context),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -398,6 +546,122 @@ class _SecurityScreenState extends State<SecurityScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// E-posta 2FA bölümü: etkinse durum + kaldır; kod-giriş açıksa doğrula;
+  /// aksi halde açıklama + etkinleştir.
+  Widget _buildEmailBody(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.md),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Etkin → durum satırı + Kaldır.
+    if (_emailEnabled) {
+      return Row(
+        children: [
+          const Icon(Icons.mark_email_read_outlined, color: Colors.green),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('E-posta ile kod', style: AppTypography.body),
+                Text(
+                  'Etkin',
+                  style: AppTypography.footnote
+                      .copyWith(color: AppColors.secondaryLabel(context)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          TextButton(
+            onPressed: _emailBusy ? null : _disableEmail,
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: _emailBusy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Kaldır'),
+          ),
+        ],
+      );
+    }
+
+    // Kod-giriş açık → doğrula + yeniden gönder + vazgeç.
+    if (_emailEnrolling) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Hesabınızın e-posta adresine 6 haneli bir kod gönderdik. '
+            'Etkinleştirmek için kodu girin.',
+            style: AppTypography.subheadline
+                .copyWith(color: AppColors.secondaryLabel(context)),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppTextField(
+            controller: _emailCodeController,
+            label: 'Doğrulama kodu',
+            placeholder: '000000',
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: 'Doğrula',
+            isLoading: _emailBusy,
+            onPressed:
+                (_emailBusy || _emailCodeController.text.trim().length != 6)
+                    ? null
+                    : _verifyEmailEnroll,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            label: 'Kodu yeniden gönder',
+            variant: AppButtonVariant.secondary,
+            onPressed: _emailBusy ? null : _resendEmailCode,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton(
+            onPressed: _emailBusy ? null : _cancelEmailEnroll,
+            child: const Text('Vazgec'),
+          ),
+        ],
+      );
+    }
+
+    // Kapalı → açıklama + Etkinleştir.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Girişte hesabınızın e-posta adresine gönderilen 6 haneli bir kodla '
+          'doğrulama yapın.',
+          style: AppTypography.subheadline
+              .copyWith(color: AppColors.secondaryLabel(context)),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: 'Etkinleştir',
+          icon: Icons.mail_outline,
+          isLoading: _emailBusy,
+          onPressed: _emailBusy ? null : _startEmailEnroll,
+        ),
+      ],
     );
   }
 

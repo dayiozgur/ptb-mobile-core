@@ -468,6 +468,123 @@ class AuthService {
     }
   }
 
+  // ── EMAIL-2FA (özel ikinci faktör — canlı EF/RPC arka ucu) ─────────────────
+  //
+  // TOTP (`supabase.auth.mfa.*`) gotrue-yönetimli faktör deposunu kullanırken,
+  // e-posta 2FA tamamen ÖZEL bir ikinci faktördür: kod üretimi/gönderimi Edge
+  // Function'larda, "tatmin edildi mi" kararı bir SECDEF RPC'de yaşar. "Tatmin"
+  // = `aal2 (native TOTP) VEYA bu oturum için geçerli bir e-posta-doğrulaması`.
+  //
+  // Arka uç sözleşmesi (CANLI — DEĞİŞTİRME):
+  //   - Kod iste  : EF `mfa-email-challenge` → {ok, challenge_id, expires_at}
+  //                 | {error: 'RATE_LIMITED'|'TOO_SOON'|'NO_EMAIL'}.
+  //   - Kod doğrula: EF `mfa-email-verify` (body {code}) → {ok:true}
+  //                 | {error:'INVALID_CODE'|'NO_CHALLENGE'|'TOO_MANY_ATTEMPTS'|…}.
+  //                 İlk başarılı doğrulama otomatik kaydeder (auto-enroll).
+  //   - Tatmin    : RPC `fn_is_email_mfa_satisfied` → bool.
+  //   - Etkin mi  : tablo `mfa_email_factors` (RLS read-own; active=true &&
+  //                 verified_at != null satırı).
+  //   - Kaldır    : RPC `fn_mfa_email_unenroll`.
+  //
+  // Ekranların gösterebilmesi için istek/doğrulama HATA fırlatır (TOTP
+  // sarmalayıcıları gibi); durum-sorgulayan yardımcılar FAIL-OPEN (false).
+
+  /// Bir EF `FunctionResponse` gövdesinden `{error: '<CODE>'}` alanını çıkarır.
+  /// gotrue EF'leri hata durumunda 200 gövdesinde `error` döndürebildiğinden
+  /// hem HTTP-durumuna hem gövdeye bakarız.
+  String? _emailMfaError(dynamic data) {
+    if (data is Map && data['error'] != null) {
+      return data['error'].toString();
+    }
+    return null;
+  }
+
+  /// E-posta 2FA kodu ister (EF `mfa-email-challenge`). Kullanıcının hesap
+  /// e-postasına 6-haneli kod gönderilir. Hata durumunda ekranın
+  /// gösterebilmesi için `error` kodunu içeren [Exception] fırlatır
+  /// ('RATE_LIMITED' | 'TOO_SOON' | 'NO_EMAIL' | …).
+  Future<void> requestEmailCode() async {
+    try {
+      final res = await _supabase.functions.invoke('mfa-email-challenge');
+      final err = _emailMfaError(res.data);
+      if (err != null) {
+        Logger.warning('Email-2FA challenge rejected: $err');
+        throw Exception(err);
+      }
+      Logger.info('Email-2FA challenge sent');
+    } catch (e) {
+      Logger.error('Email-2FA requestEmailCode failed', e);
+      rethrow;
+    }
+  }
+
+  /// E-posta 2FA kodunu doğrular (EF `mfa-email-verify`). Başarılıysa bu oturum
+  /// için e-posta doğrulaması "tatmin edilmiş" sayılır; ilk başarılı doğrulama
+  /// faktörü otomatik kaydeder. Hata durumunda `error` kodunu içeren
+  /// [Exception] fırlatır ('INVALID_CODE' | 'NO_CHALLENGE' |
+  /// 'TOO_MANY_ATTEMPTS' | …).
+  Future<void> verifyEmailCode(String code) async {
+    try {
+      final res = await _supabase.functions.invoke(
+        'mfa-email-verify',
+        body: {'code': code},
+      );
+      final err = _emailMfaError(res.data);
+      if (err != null) {
+        Logger.warning('Email-2FA verify rejected: $err');
+        throw Exception(err);
+      }
+      Logger.info('Email-2FA verified');
+    } catch (e) {
+      Logger.error('Email-2FA verifyEmailCode failed', e);
+      rethrow;
+    }
+  }
+
+  /// Bu oturum için e-posta 2FA "tatmin edilmiş" mi? (RPC
+  /// `fn_is_email_mfa_satisfied`). FAIL-OPEN: hata olursa `false` — çağıran
+  /// taraf bunu "henüz tatmin edilmedi" olarak yorumlar (step-up sürer;
+  /// kapının kendisi ayrıca fail-open'dır).
+  Future<bool> isEmailMfaSatisfied() async {
+    try {
+      final result = await _supabase.rpc('fn_is_email_mfa_satisfied');
+      return result == true;
+    } catch (e) {
+      Logger.warning('Email-2FA isEmailMfaSatisfied failed (fail-open): $e');
+      return false;
+    }
+  }
+
+  /// Kullanıcının etkin (kayıtlı) bir e-posta 2FA faktörü var mı?
+  /// `mfa_email_factors` satırı: active=true && verified_at != null.
+  /// FAIL-OPEN: hata olursa `false`.
+  Future<bool> emailFactorEnabled() async {
+    try {
+      final row = await _supabase
+          .from('mfa_email_factors')
+          .select('active, verified_at')
+          .eq('active', true)
+          .not('verified_at', 'is', null)
+          .maybeSingle();
+      return row != null;
+    } catch (e) {
+      Logger.warning('Email-2FA emailFactorEnabled failed (fail-open): $e');
+      return false;
+    }
+  }
+
+  /// E-posta 2FA faktörünü kaldırır (RPC `fn_mfa_email_unenroll`). Ekranın
+  /// gösterebilmesi için hata durumunda `rethrow` eder.
+  Future<void> unenrollEmail() async {
+    try {
+      await _supabase.rpc('fn_mfa_email_unenroll');
+      Logger.info('Email-2FA unenrolled');
+    } catch (e) {
+      Logger.error('Email-2FA unenrollEmail failed', e);
+      rethrow;
+    }
+  }
+
   // ============================================
   // OAUTH AUTH
   // ============================================

@@ -5,10 +5,13 @@ import '../di/service_locator.dart';
 import '../utils/logger.dart';
 
 /// Step-up durumu — router redirect'in (senkron) danışacağı tek gerçek kaynak.
-///  - [none]      : engelleme yok (izin ver).
-///  - [challenge] : verified TOTP faktörü var → 6-hane kod doğrulaması iste.
-///  - [enroll]    : politika MFA istiyor ama verified faktör yok → kayıt iste.
-enum MfaStepUp { none, challenge, enroll }
+///  - [none]           : engelleme yok (izin ver).
+///  - [challenge]      : verified TOTP faktörü var → 6-hane kod doğrulaması iste.
+///  - [emailChallenge] : etkin e-posta 2FA faktörü var (TOTP yok) → e-posta ile
+///    kod gönderilir → 6-hane kod doğrulaması iste.
+///  - [enroll]         : politika MFA istiyor ama hiç faktör yok → kayıt iste
+///    (TOTP-QR veya e-posta).
+enum MfaStepUp { none, challenge, emailChallenge, enroll }
 
 /// MFA politika zorlaması için SENKRON-okunabilir kapı (web `mfa-stepup.guard`
 /// mobil karşılığı). go_router `redirect` senkron olduğundan, asenkron
@@ -30,6 +33,11 @@ class MfaGate {
   /// [MfaStepUp.challenge] durumunda doğrulanacak verified TOTP faktör id'si.
   String? challengeFactorId;
 
+  /// Tenant politikası e-posta 2FA'ya izin veriyor mu? Enroll ekranı buna göre
+  /// "E-posta ile kod" seçeneğini gösterir. Politika `allowed_factors` belirtmezse
+  /// (null) izin verilmiş sayılır; aksi halde listede 'email' olmalıdır.
+  bool policyAllowsEmail = false;
+
   /// Her [evaluate]/[clear] çağrısında artar. App'ler bunu router'ın
   /// `refreshListenable`'ına merge ederek redirect'i yeniden tetikler.
   final ValueNotifier<int> revision = ValueNotifier<int>(0);
@@ -43,8 +51,10 @@ class MfaGate {
   ///   1. tenantId null → none.
   ///   2. policy = getMfaPolicy; !isMfaRequired(policy, role) → none.
   ///   3. aal = getCurrentAal(); aal != 'aal1' (aal2/bilinmeyen/null) → none.
-  ///   4. Gerekli + aal1: verified faktör varsa → challenge (verified totp id),
-  ///      yoksa → enroll.
+  ///   4. Gerekli + aal1: e-posta 2FA bu oturum için zaten tatmin edildiyse
+  ///      (isEmailMfaSatisfied) → none. Aksi halde: verified TOTP faktörü varsa
+  ///      → challenge (verified totp id); yoksa etkin e-posta faktörü varsa
+  ///      → emailChallenge; hiçbiri yoksa → enroll.
   Future<void> evaluate({
     required String? tenantId,
     required String? role,
@@ -62,6 +72,10 @@ class MfaGate {
         return;
       }
 
+      // Enroll ekranının e-posta seçeneğini gösterip göstermeyeceğini politika
+      // belirler. `allowed_factors` yoksa (null) izin verilmiş sayılır.
+      policyAllowsEmail = _policyAllowsEmail(policy);
+
       final aal = await auth.getCurrentAal();
       // Yalnız AÇIKÇA 'aal1' engeller; aal2/bilinmeyen/null → izin ver.
       if (aal != 'aal1') {
@@ -69,7 +83,16 @@ class MfaGate {
         return;
       }
 
-      // MFA gerekli ve oturum aal1: faktör var mı?
+      // MFA gerekli ve oturum aal1. Önce e-posta 2FA bu oturum için zaten
+      // tatmin edilmiş mi? (native TOTP aal2 VEYA bu oturum için geçerli
+      // e-posta-doğrulaması). Tatminse engelleme yok.
+      if (await auth.isEmailMfaSatisfied()) {
+        _set(MfaStepUp.none);
+        return;
+      }
+
+      // Doğrulanmamış: hangi ikinci faktörle step-up isteyelim?
+      // 1) verified TOTP → challenge (gotrue aal2'ye yükseltir).
       final hasVerified = await auth.hasVerifiedFactor();
       if (hasVerified) {
         final factors = await auth.listMfaFactors();
@@ -78,6 +101,14 @@ class MfaGate {
         return;
       }
 
+      // 2) TOTP yok ama etkin e-posta faktörü var → e-posta ile kod (ekran
+      //    açılışta otomatik gönderir).
+      if (await auth.emailFactorEnabled()) {
+        _set(MfaStepUp.emailChallenge);
+        return;
+      }
+
+      // 3) Hiç faktör yok → kayıt (ekran TOTP-QR veya e-posta seçtirir).
       _set(MfaStepUp.enroll);
     } catch (e) {
       // FAIL-OPEN: değerlendirme hiçbir koşulda kullanıcıyı kilitlemez.
@@ -90,6 +121,22 @@ class MfaGate {
     state = next;
     challengeFactorId = factorId;
     _bump();
+  }
+
+  /// Politikanın `allowed_factors`'ına bakarak e-posta faktörüne izin verilip
+  /// verilmediğini belirler. null/eksik → izin var; liste 'email' içermeli.
+  /// Tolerant: farklı şekilleri (List / virgüllü String) kabul eder.
+  bool _policyAllowsEmail(Map<String, dynamic>? policy) {
+    if (policy == null) return false;
+    final raw = policy['allowed_factors'];
+    if (raw == null) return true; // belirtilmemiş → izin var
+    if (raw is List) {
+      return raw.map((e) => e.toString().toLowerCase()).contains('email');
+    }
+    if (raw is String) {
+      return raw.toLowerCase().contains('email');
+    }
+    return false;
   }
 
   /// Senkron redirect kararı. Engelleme yoksa null; aksi halde '/mfa-gate'.

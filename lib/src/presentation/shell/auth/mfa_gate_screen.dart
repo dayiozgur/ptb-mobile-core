@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,10 +12,13 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 ///
 /// [MfaGate] login/cold-start'ta POZİTİF olarak (tenant politikası rol için MFA
 /// istiyor VE oturum aal1) doğruladığında router bu ekrana yönlendirir:
-///  - [MfaStepUp.challenge] : verified TOTP faktörü var → 6-hane kod → verify →
-///    oturum aal2'ye yükselir → `/main`.
-///  - [MfaStepUp.enroll]    : verified faktör yok → enroll (QR/secret) → verify →
-///    aal2 → `/main`.
+///  - [MfaStepUp.challenge]      : verified TOTP faktörü var → 6-hane kod →
+///    verify → oturum aal2'ye yükselir → `/main`.
+///  - [MfaStepUp.emailChallenge] : etkin e-posta 2FA faktörü var (TOTP yok) →
+///    açılışta e-posta ile kod gönderilir → 6-hane kod → verify → `/main`.
+///  - [MfaStepUp.enroll]         : hiç faktör yok → kayıt. Politika e-posta'ya
+///    izin veriyorsa TOTP-QR ile "E-posta ile kod" arasında seçtirilir; e-posta
+///    yolu ilk doğrulamada otomatik kaydolur. Aksi halde doğrudan TOTP-QR.
 ///
 /// Kullanıcı tamamlayamazsa "çıkış yap" kaçış yolu vardır (kilitlenmesin).
 class MfaGateScreen extends StatefulWidget {
@@ -23,22 +28,45 @@ class MfaGateScreen extends StatefulWidget {
   State<MfaGateScreen> createState() => _MfaGateScreenState();
 }
 
+/// Ekranın o an gösterdiği mod (gate durumundan + kullanıcı seçiminden türer).
+enum _ScreenMode {
+  /// Hazırlık (spinner).
+  loading,
+
+  /// Verified TOTP faktörüyle 6-hane doğrulama.
+  totpChallenge,
+
+  /// Yeni TOTP kaydı (QR/secret) + 6-hane doğrulama.
+  totpEnroll,
+
+  /// Kayıt yönteminin seçildiği ekran (TOTP-QR vs e-posta).
+  enrollChoice,
+
+  /// E-posta ile kod: hem `emailChallenge` hem seçilen e-posta-enroll için
+  /// (verifyEmailCode ilk doğrulamada otomatik kaydeder → tek akış).
+  email,
+}
+
 class _MfaGateScreenState extends State<MfaGateScreen> {
   final TextEditingController _codeController = TextEditingController();
 
-  bool _preparing = true;
+  _ScreenMode _mode = _ScreenMode.loading;
   bool _verifying = false;
+
+  /// E-posta kodu isteniyor/yeniden gönderiliyor.
+  bool _requestingCode = false;
   String? _error;
 
-  /// Kayıt (enroll) akışı gerektiğinde dolar; challenge modunda null kalır.
+  /// Yeniden-gönder geri sayımı (0 = hazır). Kısa bir istemci-tarafı bekleme,
+  /// arka ucun TOO_SOON/RATE_LIMITED hızını yansıtır.
+  int _resendCooldown = 0;
+  Timer? _cooldownTimer;
+
+  /// Kayıt (enroll) akışında dolar; challenge modunda null kalır.
   AuthMFAEnrollResponse? _enrollment;
 
-  /// Doğrulanacak faktör id'si — challenge'da mevcut verified faktör,
-  /// enroll'da yeni oluşturulan faktör.
+  /// TOTP doğrulanacak faktör id'si (challenge'da mevcut, enroll'da yeni).
   String? _factorId;
-
-  /// Bu ekran enroll akışı mı gösteriyor?
-  bool get _isEnroll => _enrollment != null;
 
   /// i18n: anahtar seed edilmemişse (translate ham anahtarı döndürürse)
   /// makul bir yedek metin göster.
@@ -49,6 +77,34 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
 
   String _msg(Object e) => e is AuthException ? e.message : e.toString();
 
+  /// E-posta 2FA EF hata kodunu (`Exception('CODE')`) okunabilir metne çevirir.
+  String _emailErrorText(Object e) {
+    final raw = _msg(e);
+    final code = raw.replaceFirst('Exception: ', '').trim();
+    switch (code) {
+      case 'RATE_LIMITED':
+        return _t('auth.mfa.email_error_rate_limited',
+            'Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar deneyin.');
+      case 'TOO_SOON':
+        return _t('auth.mfa.email_error_too_soon',
+            'Yeni kod istemek için lütfen biraz bekleyin.');
+      case 'NO_EMAIL':
+        return _t('auth.mfa.email_error_no_email',
+            'Hesabınıza bağlı bir e-posta adresi yok.');
+      case 'INVALID_CODE':
+        return _t('auth.mfa.email_error_invalid_code',
+            'Girdiğiniz kod hatalı.');
+      case 'NO_CHALLENGE':
+        return _t('auth.mfa.email_error_no_challenge',
+            'Aktif bir kod bulunamadı. Lütfen yeni kod isteyin.');
+      case 'TOO_MANY_ATTEMPTS':
+        return _t('auth.mfa.email_error_too_many_attempts',
+            'Çok fazla hatalı deneme. Lütfen yeni kod isteyin.');
+      default:
+        return raw;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,39 +113,53 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _codeController.dispose();
     super.dispose();
   }
 
-  /// Ekran moduna göre hazırlık: challenge → mevcut faktör id'sini al;
-  /// enroll → yeni bir TOTP faktörü kaydını başlat (QR/secret).
+  /// Gate durumuna göre başlangıç modunu belirler.
   Future<void> _prepare() async {
     final gate = MfaGate.instance;
-    // Kapı bir şekilde temizlendiyse (state=none) burada bulunmamalıyız →
-    // güvenli hedefe dön.
+    // Kapı temizlendiyse (state=none) burada bulunmamalıyız → güvenli hedef.
     if (gate.state == MfaStepUp.none) {
       if (mounted) context.go('/main');
       return;
     }
 
-    // Challenge: verified faktör id'si mevcut.
+    // Verified TOTP challenge: faktör id'si mevcut.
     if (gate.state == MfaStepUp.challenge &&
         gate.challengeFactorId != null &&
         gate.challengeFactorId!.isNotEmpty) {
       setState(() {
         _factorId = gate.challengeFactorId;
-        _preparing = false;
+        _mode = _ScreenMode.totpChallenge;
       });
       return;
     }
 
-    // Enroll (veya challenge id'si beklenmedik şekilde boş): yeni kayıt başlat.
-    await _startEnroll();
+    // E-posta challenge: açılışta otomatik kod gönder.
+    if (gate.state == MfaStepUp.emailChallenge) {
+      setState(() => _mode = _ScreenMode.email);
+      await _sendEmailCode(initial: true);
+      return;
+    }
+
+    // Enroll: politika e-posta'ya izin veriyorsa yöntem seçtir, aksi halde
+    // doğrudan TOTP-QR kaydı başlat.
+    if (gate.state == MfaStepUp.enroll && gate.policyAllowsEmail) {
+      setState(() => _mode = _ScreenMode.enrollChoice);
+      return;
+    }
+
+    await _startTotpEnroll();
   }
 
-  Future<void> _startEnroll() async {
+  // ── TOTP enroll ────────────────────────────────────────────────────────────
+
+  Future<void> _startTotpEnroll() async {
     setState(() {
-      _preparing = true;
+      _mode = _ScreenMode.loading;
       _error = null;
     });
     try {
@@ -110,18 +180,18 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
       setState(() {
         _enrollment = enrollment;
         _factorId = enrollment.id;
-        _preparing = false;
+        _mode = _ScreenMode.totpEnroll;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _preparing = false;
+        _mode = _ScreenMode.enrollChoice; // seçim ekranına geri düş (varsa)
         _error = _msg(e);
       });
     }
   }
 
-  Future<void> _verify() async {
+  Future<void> _verifyTotp() async {
     final factorId = _factorId;
     final code = _codeController.text.trim();
     if (factorId == null || code.length != 6) return;
@@ -145,7 +215,86 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
     }
   }
 
-  /// Kaçış yolu — tamamlayamayan kullanıcı kilitlenmesin.
+  // ── E-posta 2FA (challenge + enroll ortak akışı) ────────────────────────────
+
+  /// E-posta yöntemine geç ve ilk kodu gönder (enroll-choice → "E-posta ile kod").
+  Future<void> _chooseEmail() async {
+    setState(() {
+      _mode = _ScreenMode.email;
+      _codeController.clear();
+      _error = null;
+    });
+    await _sendEmailCode(initial: true);
+  }
+
+  /// E-posta kodu ister; [initial] değilse "yeniden gönder"dir (cooldown başlatır).
+  Future<void> _sendEmailCode({bool initial = false}) async {
+    if (_requestingCode) return;
+    setState(() {
+      _requestingCode = true;
+      if (!initial) _error = null;
+    });
+    try {
+      await authService.requestEmailCode();
+      if (!mounted) return;
+      setState(() => _requestingCode = false);
+      _startCooldown();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _requestingCode = false;
+        _error = _emailErrorText(e);
+      });
+      // TOO_SOON/RATE_LIMITED de olsa kullanıcı bir süre beklemeli.
+      _startCooldown();
+    }
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _resendCooldown = 30);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _resendCooldown -= 1;
+        if (_resendCooldown <= 0) {
+          _resendCooldown = 0;
+          t.cancel();
+        }
+      });
+    });
+  }
+
+  Future<void> _verifyEmail() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6) return;
+
+    setState(() {
+      _verifying = true;
+      _error = null;
+    });
+    try {
+      await authService.verifyEmailCode(code);
+      // Başarılı → bu oturum için e-posta 2FA tatmin edildi (ilk doğrulama
+      // faktörü otomatik kaydeder). Kapıyı temizle ve ana ekrana geç.
+      MfaGate.instance.clear();
+      if (!mounted) return;
+      context.go('/main');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _verifying = false;
+        _error = _emailErrorText(e);
+      });
+    }
+  }
+
+  // ── Kaçış yolu ──────────────────────────────────────────────────────────────
+
+  /// Tamamlayamayan kullanıcı kilitlenmesin.
   Future<void> _signOut() async {
     MfaGate.instance.clear();
     try {
@@ -153,6 +302,8 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
     } catch (_) {}
     if (mounted) context.go('/login');
   }
+
+  // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -194,20 +345,124 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_preparing) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: CircularProgressIndicator(),
-        ),
-      );
+    switch (_mode) {
+      case _ScreenMode.loading:
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      case _ScreenMode.enrollChoice:
+        return _buildEnrollChoice(context);
+      case _ScreenMode.email:
+        return _buildEmailBody(context);
+      case _ScreenMode.totpChallenge:
+      case _ScreenMode.totpEnroll:
+        return _buildTotpBody(context);
     }
+  }
 
+  /// Kayıt yöntemi seçimi (yalnız politika e-posta'ya izin verdiğinde).
+  Widget _buildEnrollChoice(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _isEnroll
+          _t('auth.mfa.enroll_choice_instruction',
+              'Bir doğrulama yöntemi seçin. Her girişte ikinci bir adım '
+              'istenecek.'),
+          style: AppTypography.subheadline
+              .copyWith(color: AppColors.secondaryLabel(context)),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _error!,
+            style: AppTypography.footnote.copyWith(color: AppColors.error),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: _t('auth.mfa.enroll_choice_totp', 'Authenticator uygulaması'),
+          icon: Icons.qr_code_2,
+          onPressed: _startTotpEnroll,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: _t('auth.mfa.enroll_choice_email', 'E-posta ile kod'),
+          icon: Icons.mail_outline,
+          variant: AppButtonVariant.secondary,
+          onPressed: _chooseEmail,
+        ),
+      ],
+    );
+  }
+
+  /// E-posta ile kod akışı (challenge + enroll ortak).
+  Widget _buildEmailBody(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _t('auth.mfa.email_instruction',
+              'Hesabınızın e-posta adresine 6 haneli bir kod gönderdik. '
+              'Devam etmek için kodu girin.'),
+          style: AppTypography.subheadline
+              .copyWith(color: AppColors.secondaryLabel(context)),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        AppTextField(
+          controller: _codeController,
+          label: _t('auth.mfa.code_label', 'Doğrulama kodu'),
+          placeholder: '000000',
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(6),
+          ],
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _error!,
+            style: AppTypography.footnote.copyWith(color: AppColors.error),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: _t('auth.mfa.verify', 'Doğrula'),
+          isLoading: _verifying,
+          onPressed: (_verifying || _codeController.text.trim().length != 6)
+              ? null
+              : _verifyEmail,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        TextButton(
+          onPressed: (_requestingCode || _resendCooldown > 0 || _verifying)
+              ? null
+              : () => _sendEmailCode(),
+          child: Text(
+            _resendCooldown > 0
+                ? _t('auth.mfa.email_resend_in', 'Yeniden gönder ({s} sn)')
+                    .replaceFirst('{s}', '$_resendCooldown')
+                : _t('auth.mfa.email_resend', 'Kodu yeniden gönder'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// TOTP akışı (challenge + enroll ortak — enroll'da QR/secret görselleri).
+  Widget _buildTotpBody(BuildContext context) {
+    final isEnroll = _mode == _ScreenMode.totpEnroll;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          isEnroll
               ? _t('auth.mfa.enroll_instruction',
                   'Bir authenticator uygulamasıyla QR kodu tarayın veya gizli '
                   'anahtarı elle ekleyin, ardından 6 haneli kodu girin.')
@@ -217,7 +472,7 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),
-        if (_isEnroll) ...[
+        if (isEnroll && _enrollment != null) ...[
           const SizedBox(height: AppSpacing.md),
           _buildEnrollVisuals(context, _enrollment!),
         ],
@@ -247,7 +502,7 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
           isLoading: _verifying,
           onPressed: (_verifying || _codeController.text.trim().length != 6)
               ? null
-              : _verify,
+              : _verifyTotp,
         ),
       ],
     );
