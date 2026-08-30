@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../crm_common.dart';
+import '../microsoft/ms_contact_actions.dart';
 import 'contacts_service.dart';
 
 /// Satır sonu hızlı-aksiyon (ara/mail): ikon + açılacak uri şeması.
@@ -66,6 +67,20 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     return AppScaffold(
       title: c?.displayName ?? crmT('crm.contact.title', 'Kişi'),
       onBack: () => Navigator.of(context).pop(),
+      actions: c == null
+          ? null
+          : [
+              IconButton(
+                icon: const Icon(Icons.cloud_outlined),
+                tooltip: 'Microsoft',
+                onPressed: () => showMsContactActions(
+                  context,
+                  contactId: widget.contactId,
+                  contactName: c.displayName,
+                  contactEmail: c.email,
+                ),
+              ),
+            ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _logActivity,
         icon: const Icon(Icons.add_comment_outlined),

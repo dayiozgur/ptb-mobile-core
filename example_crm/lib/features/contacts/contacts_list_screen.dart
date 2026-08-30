@@ -7,6 +7,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 import '../../crm_common.dart';
 import 'contact_detail_screen.dart';
 import 'contacts_service.dart';
+import '../microsoft/ms_people_import.dart';
 
 /// CRM **Kişiler** — ara / listele / hızlı-ekle. `public.contacts` (tenant-scoped).
 class ContactsListScreen extends StatefulWidget {
@@ -44,6 +45,17 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
     _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _suggestFromMicrosoft() async {
+    final existing = _contacts
+        .map((c) => c.email)
+        .where((e) => e != null && e.isNotEmpty)
+        .map((e) => e!)
+        .toSet();
+    final imported = await showMsPeopleImport(context,
+        contactsService: _svc, existingEmails: existing);
+    if (imported && mounted) _load(_searchCtrl.text);
   }
 
   Future<void> _load([String? query, bool silent = false]) async {
@@ -136,6 +148,11 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
       title: crmT('crm.contact.list_title', 'Kişiler'),
       onBack: () => context.pop(),
       actions: [
+        AppIconButton(
+          icon: Icons.person_search_outlined,
+          tooltip: 'Microsoft',
+          onPressed: _suggestFromMicrosoft,
+        ),
         AppIconButton(
           icon: _scanning ? Icons.hourglass_bottom : Icons.document_scanner_outlined,
           onPressed: _scanning ? null : _scanCard,

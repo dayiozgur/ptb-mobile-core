@@ -93,6 +93,7 @@ export 'src/core/ppm/worklog_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';
 export 'src/core/integration/microsoft_integration_service.dart';
+export 'src/core/integration/entity_file_link_service.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
 export 'src/presentation/shell/work/work_inbox_screen.dart';
 export 'src/presentation/shell/summary/summary_screen.dart';
