@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../activity/activity_service.dart';
 import '../api/api_client.dart';
+import '../integration/microsoft_integration_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
@@ -248,6 +249,11 @@ Future<void> setupServiceLocator({
       supabase: sl<SupabaseClient>(),
       cacheManager: sl<CacheManager>(),
     ),
+  );
+
+  // Microsoft integration (OAuth connect + graph-proxy) — reuses the web EFs.
+  sl.registerLazySingleton<MicrosoftIntegrationService>(
+    () => MicrosoftIntegrationService(supabase: sl<SupabaseClient>()),
   );
 
   // ============================================

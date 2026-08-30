@@ -141,6 +141,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: AppSpacing.lg),
 
+            // Integrations section — connect Microsoft (Outlook / Teams / OneDrive)
+            AppSectionHeader(
+                title: sl<LocalizationService>().translate('integrations.title')),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: AppListTile(
+                leading: const Icon(Icons.cloud_sync_outlined),
+                title: sl<LocalizationService>().translate('integrations.ms.title'),
+                subtitle: sl<LocalizationService>().translate('integrations.ms.subtitle'),
+                showChevron: true,
+                showDivider: false,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MicrosoftIntegrationScreen(),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
             // Security section
             const AppSectionHeader(title: 'Güvenlik'),
             const SizedBox(height: AppSpacing.sm),

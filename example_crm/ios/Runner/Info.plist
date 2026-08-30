@@ -61,5 +61,18 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.protoolbag.exampleCrm.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ptbcrm</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
