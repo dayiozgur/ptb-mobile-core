@@ -130,6 +130,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
       ),
+      // Proje oluşturma = Jira-tarzı sihirbaz (generic :type/create'DEN ÖNCE, daha özel).
+      GoRoute(
+        path: '/entities/project/create',
+        builder: (context, state) => const ProjectWizardScreen(),
+      ),
       // Entity engine (create ÖNCE :id)
       GoRoute(
         path: '/entities/:type/create',

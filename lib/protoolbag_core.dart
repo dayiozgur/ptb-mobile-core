@@ -399,6 +399,7 @@ export 'src/presentation/shell/entities/entity_list_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_extensions.dart';
 export 'src/presentation/shell/ppm/planner_link_card.dart';
+export 'src/presentation/shell/ppm/project_wizard_screen.dart';
 export 'src/presentation/shell/entities/entity_form_screen.dart';
 
 // Presentation - Widgets - Feedback

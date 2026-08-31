@@ -78,6 +78,27 @@ class PlannerLinkService {
         .toList();
   }
 
+  /// Auto-provision a brand-new standalone Planner plan owned by the caller. Standalone plans need a
+  /// "roster" container, a /beta Graph endpoint, so both calls go through graph-proxy with beta=true.
+  /// Returns the new plan, or null if creation isn't permitted (some tenants disable rosters).
+  Future<PlannerPlan?> createPlan(String title) async {
+    final roster = await _ms.graphCall('POST', '/planner/rosters',
+        body: {'@odata.type': '#microsoft.graph.plannerRoster'}, beta: true);
+    final rosterId = (roster != null && roster.ok && roster.data is Map) ? roster.data['id'] as String? : null;
+    if (rosterId == null) {
+      Logger.error('[planner] createPlan roster failed', roster?.data);
+      return null;
+    }
+    final plan = await _ms.graphCall('POST', '/planner/plans',
+        body: {'container': {'containerId': rosterId, 'type': 'roster'}, 'title': title}, beta: true);
+    final planId = (plan != null && plan.ok && plan.data is Map) ? plan.data['id'] as String? : null;
+    if (planId == null) {
+      Logger.error('[planner] createPlan plan failed', plan?.data);
+      return null;
+    }
+    return PlannerPlan(id: planId, title: (plan!.data['title'] ?? title) as String);
+  }
+
   /// The active Planner link for a project, or null.
   Future<PlannerLink?> getLink(String projectEntityId) async {
     try {

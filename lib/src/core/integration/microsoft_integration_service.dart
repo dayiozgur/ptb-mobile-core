@@ -108,12 +108,14 @@ class MicrosoftIntegrationService {
   }
 
   /// Proxy one Microsoft Graph call. [method] e.g. 'GET'/'POST'; [path] a
-  /// relative Graph path starting with '/'. Returns null on transport error.
+  /// relative Graph path starting with '/'. [beta] swaps the Graph API version to
+  /// /beta (endpoints not yet GA, e.g. Planner rosters). Returns null on transport error.
   Future<GraphResult?> graphCall(
     String method,
     String path, {
     Map<String, String>? query,
     dynamic body,
+    bool beta = false,
   }) async {
     try {
       final res = await _supabase.functions.invoke('graph-proxy', body: <String, dynamic>{
@@ -122,6 +124,7 @@ class MicrosoftIntegrationService {
         'path': path,
         if (query != null) 'query': query,
         if (body != null) 'body': body,
+        if (beta) 'beta': true,
       });
       final env = res.data;
       if (env is Map && env['status'] is int) {
