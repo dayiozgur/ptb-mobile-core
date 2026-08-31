@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:protoolbag_core/protoolbag_core.dart';
 
-import '../../crm_common.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/integration/entity_file_link_service.dart';
+import '../../../core/integration/microsoft_integration_service.dart';
+import '../../../core/localization/localization_service.dart';
+
+/// Çekirdek i18n yardımcısı — anahtar bulunamazsa Türkçe [fb] gösterilir.
+String _t(String k, String fb) {
+  final v = sl<LocalizationService>().translate(k);
+  return v == k ? fb : v;
+}
 
 /// OneDrive file picker (mobile) — browse the connected user's recent drive
 /// items (or search), pick one, and link it to a CRM entity via
@@ -86,7 +94,7 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
         _items = const [];
         _loading = false;
       });
-      _snack(crmT('crm.files.browse_failed', 'Dosyalar yüklenemedi. Lütfen tekrar deneyin.'), error: true);
+      _snack(_t('crm.files.browse_failed', 'Dosyalar yüklenemedi. Lütfen tekrar deneyin.'), error: true);
       return;
     }
     final value = (res.data['value'] as List?) ?? const [];
@@ -124,10 +132,10 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
     if (!mounted) return;
     setState(() => _adding = false);
     if (row != null) {
-      _snack(crmT('crm.files.attached', 'Dosya eklendi.'));
+      _snack(_t('crm.files.attached', 'Dosya eklendi.'));
       Navigator.pop(context);
     } else {
-      _snack(crmT('crm.files.browse_failed', 'Dosya eklenemedi.'), error: true);
+      _snack(_t('crm.files.browse_failed', 'Dosya eklenemedi.'), error: true);
     }
   }
 
@@ -155,19 +163,19 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
                 onSubmitted: (_) => _runSearch(),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: crmT('crm.files.search_files', 'Dosya ara…'),
+                  hintText: _t('crm.files.search_files', 'Dosya ara…'),
                   prefixIcon: const Icon(Icons.search),
                 ),
               ),
             ),
-            TextButton(onPressed: _runSearch, child: Text(crmT('crm.files.search', 'Ara'))),
+            TextButton(onPressed: _runSearch, child: Text(_t('crm.files.search', 'Ara'))),
           ]),
           const SizedBox(height: 8),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : (_items.isEmpty
-                    ? Center(child: Text(crmT('crm.files.no_files', 'Bu klasör boş.')))
+                    ? Center(child: Text(_t('crm.files.no_files', 'Bu klasör boş.')))
                     : ListView.separated(
                         itemCount: _items.length,
                         separatorBuilder: (_, __) => const Divider(height: 1),

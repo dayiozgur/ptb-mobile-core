@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../crm_common.dart';
 import '../contacts/contacts_service.dart' show CrmActivity;
-import '../microsoft/entity_files_card.dart';
 
 /// **CRM entity-detay domain aksiyonları** — generic `entity_detail`'e
 /// (çekirdek `EntityDetailExtensions` registry'si üzerinden) CRM'e özel
@@ -36,14 +35,13 @@ void registerCrmEntityActions() {
           onPressed: () => _completeActivity(ctx, e.id, reload),
         ),
       ]);
-  // Dosyalar (OneDrive/SharePoint) + Aktivite-feed bölümü — deal / lead / company detayında.
-  // registerSections tek-builder tutar (overwrite) → iki bölüm aynı builder'da.
+  // Aktivite-feed bölümü — deal / lead / company detayında.
+  // (Dosyalar kartı çekirdek `registerMicrosoftFilesSection()` ile '*' altında
+  // tüm entity tiplerine yayılır; burada yalnız CRM'e özel feed kalır.)
   for (final t in const ['deal', 'lead', 'company']) {
     EntityDetailExtensions.registerSections(
       t,
       (ctx, e, reload) => [
-        const SizedBox(height: AppSpacing.md),
-        EntityFilesCard(entityType: t, entityId: e.id),
         const SizedBox(height: AppSpacing.md),
         _ActivityFeedSection(entityId: e.id),
       ],

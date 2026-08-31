@@ -68,5 +68,6 @@ bool _registered = false;
 void registerPmsScreens() {
   if (_registered) return;
   ScreenResolver.addResolver(pmsResolve);
+  registerMicrosoftFilesSection(); // OneDrive/SharePoint dosya kartı (tüm tipler)
   _registered = true;
 }

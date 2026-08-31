@@ -398,6 +398,9 @@ export 'src/presentation/shell/language_picker.dart';
 export 'src/presentation/shell/entities/entity_list_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_extensions.dart';
+// Microsoft OneDrive/SharePoint "Files" section — spread to all entity types
+export 'src/presentation/shell/microsoft/entity_files_card.dart';
+export 'src/presentation/shell/microsoft/ms_onedrive_picker.dart';
 export 'src/presentation/shell/ppm/planner_link_card.dart';
 export 'src/presentation/shell/ppm/project_wizard_screen.dart';
 export 'src/presentation/shell/entities/entity_form_screen.dart';

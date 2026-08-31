@@ -62,5 +62,6 @@ void registerCrmScreens() {
   if (_done) return;
   ScreenResolver.addResolver(crmResolve);
   registerCrmEntityActions(); // entity_detail'e CRM aksiyon-çubuğu + feed
+  registerMicrosoftFilesSection(); // OneDrive/SharePoint dosya kartı (tüm tipler)
   _done = true;
 }

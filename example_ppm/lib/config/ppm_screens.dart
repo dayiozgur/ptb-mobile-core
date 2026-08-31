@@ -80,5 +80,6 @@ void registerPpmScreens() {
   if (_done) return;
   ScreenResolver.addResolver(ppmResolve);
   registerPpmEntityActions(); // entity_detail'e PPM efor-kaydı aksiyonu
+  registerMicrosoftFilesSection(); // OneDrive/SharePoint dosya kartı (tüm tipler)
   _done = true;
 }

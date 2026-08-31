@@ -3,7 +3,6 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../crm_common.dart';
 import '../microsoft/ms_contact_actions.dart';
-import '../microsoft/entity_files_card.dart';
 import 'contacts_service.dart';
 
 /// Satır sonu hızlı-aksiyon (ara/mail): ikon + açılacak uri şeması.
