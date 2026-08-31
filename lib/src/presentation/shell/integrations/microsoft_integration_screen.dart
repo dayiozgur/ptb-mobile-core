@@ -202,6 +202,20 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        AppSectionHeader(title: _t('integrations.ms.tools')),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: ListTile(
+            leading: const Icon(Icons.mail_outline),
+            title: Text(_t('crm.mailbox.title')),
+            subtitle: Text(_t('crm.mailbox.subtitle')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const MsMailboxScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         AppSectionHeader(title: _t('integrations.ms.sync_now')),
         const SizedBox(height: AppSpacing.sm),
         AppCard(

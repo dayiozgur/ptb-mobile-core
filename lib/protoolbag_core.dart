@@ -331,6 +331,7 @@ export 'src/core/account/models/invoice_summary.dart';
 export 'src/core/account/models/storage_quota.dart';
 export 'src/presentation/shell/account/account_hub_screen.dart';
 export 'src/presentation/shell/integrations/microsoft_integration_screen.dart';
+export 'src/presentation/shell/mailbox/ms_mailbox_screen.dart';
 export 'src/presentation/shell/account/credits_screen.dart';
 export 'src/presentation/shell/account/invoices_screen.dart';
 export 'src/presentation/shell/account/usage_screen.dart';
