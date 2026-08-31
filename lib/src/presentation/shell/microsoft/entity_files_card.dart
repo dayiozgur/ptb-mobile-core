@@ -29,10 +29,9 @@ void registerMicrosoftFilesSection() {
   EntityDetailExtensions.registerSections('*', (ctx, e, reload) {
     final t = e.entityType;
     if (t == null || t.isEmpty) return const <Widget>[];
-    return [
-      const SizedBox(height: AppSpacing.md),
-      EntityFilesCard(entityType: t, entityId: e.id),
-    ];
+    // The card owns its own top spacing and renders nothing until Microsoft is connected,
+    // so non-MS users get zero footprint on every entity detail.
+    return [EntityFilesCard(entityType: t, entityId: e.id)];
   });
 }
 
@@ -116,9 +115,13 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Padding(
-        padding: AppSpacing.cardInsets,
+    // Render nothing until the Microsoft account is connected — non-MS users see no card at all.
+    if (_loading || !_connected) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: AppCard(
+        child: Padding(
+          padding: AppSpacing.cardInsets,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -159,6 +162,7 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
               for (final f in _files) _fileRow(f),
           ],
         ),
+      ),
       ),
     );
   }
