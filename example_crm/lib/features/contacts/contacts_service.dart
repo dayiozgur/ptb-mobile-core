@@ -202,6 +202,34 @@ class ContactsService {
     }
   }
 
+  /// Mevcut bir kişiyi güncelle. Boş-string alanlar NULL'a çevrilir (temizleme).
+  /// `contacts` tablosunda `updated_by` yok → yalnız `updated_at` damgalanır.
+  Future<bool> update(
+    String id, {
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? phone,
+    String? title,
+    String? notes,
+  }) async {
+    String? norm(String? v) => (v == null || v.trim().isEmpty) ? null : v.trim();
+    final patch = <String, dynamic>{'updated_at': DateTime.now().toUtc().toIso8601String()};
+    if (firstName != null) patch['first_name'] = firstName.trim();
+    if (lastName != null) patch['last_name'] = norm(lastName);
+    if (email != null) patch['email'] = norm(email);
+    if (phone != null) patch['phone'] = norm(phone);
+    if (title != null) patch['title'] = norm(title);
+    if (notes != null) patch['notes'] = norm(notes);
+    try {
+      await _sb.from('contacts').update(patch).eq('id', id);
+      return true;
+    } catch (e) {
+      Logger.error('contact update hata', e);
+      return false;
+    }
+  }
+
   /// Kişiye bağlı aktivite feed'i (`fn_crm_activity_feed(p_entity_id)`).
   Future<List<CrmActivity>> activityFeed(String contactId) async {
     try {

@@ -59,6 +59,15 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (ok == true) _load();
   }
 
+  Future<void> _editContact(Contact c) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _EditContactSheet(contact: c, service: _svc),
+    );
+    if (ok == true) _load();
+  }
+
   String _time(DateTime? d) => d == null ? '' : AppClock.dateTime(d);
 
   @override
@@ -70,6 +79,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       actions: c == null
           ? null
           : [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: crmT('common.edit', 'Düzenle'),
+                onPressed: () => _editContact(c),
+              ),
               IconButton(
                 icon: const Icon(Icons.cloud_outlined),
                 tooltip: 'Microsoft',
@@ -410,6 +424,101 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
                 : Text(crmT('crm.common.save', 'Kaydet')),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Kişi düzenleme alt-sayfası — ad/soyad/e-posta/telefon/unvan/not güncelle.
+/// Firma serbest-metin (contacts'ta company_id FK var, serbest kolon yok) →
+/// mobil hızlı-düzenlemede firma alanı gösterilmez (create ile aynı sınır).
+class _EditContactSheet extends StatefulWidget {
+  final Contact contact;
+  final ContactsService service;
+  const _EditContactSheet({required this.contact, required this.service});
+
+  @override
+  State<_EditContactSheet> createState() => _EditContactSheetState();
+}
+
+class _EditContactSheetState extends State<_EditContactSheet> {
+  late final _first = TextEditingController(text: widget.contact.firstName);
+  late final _last = TextEditingController(text: widget.contact.lastName);
+  late final _email = TextEditingController(text: widget.contact.email ?? '');
+  late final _phone = TextEditingController(text: widget.contact.phone ?? '');
+  late final _title = TextEditingController(text: widget.contact.title ?? '');
+  late final _notes = TextEditingController(text: widget.contact.notes ?? '');
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _first.dispose();
+    _last.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _title.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_first.text.trim().isEmpty || _saving) return;
+    setState(() => _saving = true);
+    final ok = await widget.service.update(
+      widget.contact.id,
+      firstName: _first.text,
+      lastName: _last.text,
+      email: _email.text,
+      phone: _phone.text,
+      title: _title.text,
+      notes: _notes.text,
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? crmT('crm.contact.saved', 'Kişi güncellendi')
+          : crmT('crm.contact.save_failed', 'Güncelleme başarısız')),
+      backgroundColor: ok ? null : Colors.red.shade700,
+    ));
+    if (ok) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16, right: 16, top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(crmT('crm.contact.edit_title', 'Kişiyi düzenle'),
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(label: crmT('crm.contact.first_name', 'Ad'), controller: _first),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: crmT('crm.contact.last_name', 'Soyad'), controller: _last),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: crmT('crm.contact.email', 'E-posta'), controller: _email, keyboardType: TextInputType.emailAddress),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: crmT('crm.contact.phone', 'Telefon'), controller: _phone, keyboardType: TextInputType.phone),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: crmT('crm.contact.title_field', 'Unvan'), controller: _title),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: crmT('crm.contact.notes', 'Notlar'), controller: _notes, maxLines: 3),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: crmT('common.save', 'Kaydet'),
+              icon: Icons.check,
+              isLoading: _saving,
+              onPressed: _saving ? null : _save,
+            ),
+          ],
+        ),
       ),
     );
   }

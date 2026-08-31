@@ -172,7 +172,8 @@ class _MsActionsSheet extends StatelessWidget {
     });
     final chatId = (chat?.data is Map) ? (chat!.data['id'] as String?) : null;
     if (chatId == null) {
-      if (context.mounted) _snack(context, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'), error: true);
+      // Most common cause: the recipient is a shared mailbox / not Teams-licensed.
+      if (context.mounted) _snack(context, crmT('crm.teams.chat_no_teams', 'Bu kişiyle Teams sohbeti açılamadı (Teams hesabı olmayabilir).'), error: true);
       return;
     }
     final sent = await _svc.graphCall('POST', '/chats/$chatId/messages',
@@ -208,7 +209,7 @@ class _MsActionsSheet extends StatelessWidget {
     if (!context.mounted) return;
     _snack(context,
         (res != null && res.ok)
-            ? crmT('crm.outlook_reply.sent', 'E-posta gönderildi')
+            ? '${crmT('crm.outlook_reply.sent', 'E-posta gönderildi')}: $email'
             : crmT('crm.outlook_reply.failed', 'E-posta gönderilemedi'),
         error: !(res != null && res.ok));
   }

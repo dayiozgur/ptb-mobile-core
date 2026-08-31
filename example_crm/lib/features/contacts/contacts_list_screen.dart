@@ -8,6 +8,7 @@ import '../../crm_common.dart';
 import 'contact_detail_screen.dart';
 import 'contacts_service.dart';
 import '../microsoft/ms_people_import.dart';
+import '../microsoft/ms_calendar_screen.dart';
 
 /// CRM **Kişiler** — ara / listele / hızlı-ekle. `public.contacts` (tenant-scoped).
 class ContactsListScreen extends StatefulWidget {
@@ -148,6 +149,13 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
       title: crmT('crm.contact.list_title', 'Kişiler'),
       onBack: () => context.pop(),
       actions: [
+        AppIconButton(
+          icon: Icons.calendar_month_outlined,
+          tooltip: crmT('crm.mscal.title', 'Microsoft Takvimi'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const MsCalendarScreen()),
+          ),
+        ),
         AppIconButton(
           icon: Icons.person_search_outlined,
           tooltip: 'Microsoft',
