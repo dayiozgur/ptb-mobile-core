@@ -5,6 +5,7 @@ import '../activity/activity_service.dart';
 import '../api/api_client.dart';
 import '../integration/microsoft_integration_service.dart';
 import '../integration/entity_file_link_service.dart';
+import '../ppm/planner_link_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
@@ -258,6 +259,13 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<EntityFileLinkService>(
     () => EntityFileLinkService(supabase: sl<SupabaseClient>()),
+  );
+  // PPM ↔ Microsoft Planner link management (link CRUD + graph-proxy plan list + on-demand sync).
+  sl.registerLazySingleton<PlannerLinkService>(
+    () => PlannerLinkService(
+      supabase: sl<SupabaseClient>(),
+      ms: sl<MicrosoftIntegrationService>(),
+    ),
   );
 
   // ============================================

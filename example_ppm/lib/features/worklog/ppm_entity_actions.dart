@@ -20,6 +20,12 @@ void registerPpmEntityActions() {
       ],
     );
   }
+
+  // Proje detayı → Microsoft Planner bağlama/senkron kartı (web parite).
+  EntityDetailExtensions.registerSections(
+    'project',
+    (ctx, e, reload) => [PlannerLinkCard(projectEntityId: e.id)],
+  );
 }
 
 SupabaseClient get _sb => sl<SupabaseClient>();

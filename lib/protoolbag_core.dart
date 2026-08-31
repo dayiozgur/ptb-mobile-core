@@ -90,6 +90,7 @@ export 'src/core/time/app_clock.dart';
 export 'src/core/collaboration/comments_service.dart';
 export 'src/core/work/work_inbox_service.dart';
 export 'src/core/ppm/worklog_service.dart';
+export 'src/core/ppm/planner_link_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';
 export 'src/core/integration/microsoft_integration_service.dart';
@@ -397,6 +398,7 @@ export 'src/presentation/shell/language_picker.dart';
 export 'src/presentation/shell/entities/entity_list_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_extensions.dart';
+export 'src/presentation/shell/ppm/planner_link_card.dart';
 export 'src/presentation/shell/entities/entity_form_screen.dart';
 
 // Presentation - Widgets - Feedback
