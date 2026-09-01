@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
+import '../di/service_locator.dart';
 import '../utils/logger.dart';
 
 /// Bir iş öğesine (epic/story/task/sub_task = `form_submissions` satırı) ait
@@ -65,6 +68,11 @@ class WorklogService {
   /// [hours] `<= 0` ise RPC çağrılmaz, `false` döner (geçersiz efor). [note] boş
   /// ise gönderilmez; [remainingEstimate] null ise gönderilmez (RPC varsayılanı
   /// korunur).
+  ///
+  /// OFFLINE: bağlantı yoksa RPC kuyruğa alınır (`enqueueRpc` → replay sırasında
+  /// [SupabaseReplayDispatcher] `fn_ppm_log_work`'ü oynatır — bu RPC zaten
+  /// `defaultAllowedRpcFunctions` allow-list'inde) ve iyimser `true` döner
+  /// (worklog online olunca gerçekten yazılır). Online path DEĞİŞMEDİ.
   Future<bool> logWork({
     required String submissionId,
     required num hours,
@@ -72,18 +80,42 @@ class WorklogService {
     String? note,
   }) async {
     if (hours <= 0) return false;
+    final params = <String, dynamic>{
+      'p_submission_id': submissionId,
+      'p_hours_spent': hours,
+      if (remainingEstimate != null) 'p_remaining_estimate': remainingEstimate,
+      if (note != null && note.trim().isNotEmpty) 'p_note': note.trim(),
+    };
+
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final op = await sync.enqueueRpc(
+        function: 'fn_ppm_log_work',
+        params: params,
+        entityId: submissionId,
+      );
+      Logger.info('Offline: ppm logWork queued (${op.id}, $submissionId)');
+      return true;
+    }
+
     try {
-      await _supabase.rpc('fn_ppm_log_work', params: {
-        'p_submission_id': submissionId,
-        'p_hours_spent': hours,
-        if (remainingEstimate != null) 'p_remaining_estimate': remainingEstimate,
-        if (note != null && note.trim().isNotEmpty) 'p_note': note.trim(),
-      });
+      await _supabase.rpc('fn_ppm_log_work', params: params);
       return true;
     } catch (e) {
       Logger.error('ppm logWork ($submissionId) hata', e);
       return false;
     }
+  }
+
+  // Offline-queue erişimi (kayıtlı/başlatılmamışsa null → logWork doğrudan ağ
+  // path'ine düşer, davranış değişmez).
+  ConnectivityService? get _connectivityOrNull =>
+      sl.isRegistered<ConnectivityService>() ? sl<ConnectivityService>() : null;
+
+  OfflineSyncService? get _offlineSyncOrNull {
+    if (!sl.isRegistered<OfflineSyncService>()) return null;
+    final s = sl<OfflineSyncService>();
+    return s.isInitialized ? s : null;
   }
 
   /// Bir iş öğesinin efor kayıtları (yeniden eskiye). RLS tenant-scoped;

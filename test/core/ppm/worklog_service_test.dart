@@ -1,7 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../helpers/supabase_fakes.dart';
+
+class MockOfflineSyncService extends Mock implements OfflineSyncService {}
+
+class MockConnectivityService extends Mock implements ConnectivityService {}
 
 /// WorklogService — efor yaz (`fn_ppm_log_work`) + efor listele (`ppm_worklogs`).
 /// Ctor-inject (sl gerekmez). Hata → `false`/`[]` (UI'a fırlatmaz).
@@ -13,6 +19,8 @@ void main() {
     h = SupabaseHarness();
     service = WorklogService(supabase: h.client);
   });
+
+  tearDown(() => GetIt.instance.reset());
 
   group('logWork', () {
     test('geçerli efor → doğru payload ile RPC + true', () async {
@@ -63,6 +71,69 @@ void main() {
     test('RPC hatası → false (fırlatmaz)', () async {
       h.stubRpc('fn_ppm_log_work', error: Exception('boom'));
       expect(await service.logWork(submissionId: 's5', hours: 1), isFalse);
+    });
+
+    test('OFFLINE → RPC kuyruğa alınır (enqueueRpc), ağa gitmez, true', () async {
+      final sync = MockOfflineSyncService();
+      final conn = MockConnectivityService();
+      when(() => sync.isInitialized).thenReturn(true);
+      when(() => conn.isOffline).thenReturn(true);
+      when(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).thenAnswer((_) async => PendingOperation.rpc(
+            id: 'op-1',
+            function: 'fn_ppm_log_work',
+            params: const {},
+            createdAt: DateTime(2026),
+          ));
+      final sl = GetIt.instance;
+      sl.registerSingleton<OfflineSyncService>(sync);
+      sl.registerSingleton<ConnectivityService>(conn);
+      // RPC ağ yolu STUB'LANMADI → çağrılırsa test patlar (kuyruk yolu kanıtı).
+
+      final ok = await service.logWork(
+          submissionId: 's6', hours: 3, remainingEstimate: 2, note: 'x');
+
+      expect(ok, isTrue);
+      final captured = verify(() => sync.enqueueRpc(
+            function: captureAny(named: 'function'),
+            params: captureAny(named: 'params'),
+            entityId: captureAny(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).captured;
+      expect(captured[0], 'fn_ppm_log_work');
+      expect(captured[1], {
+        'p_submission_id': 's6',
+        'p_hours_spent': 3,
+        'p_remaining_estimate': 2,
+        'p_note': 'x',
+      });
+      expect(captured[2], 's6'); // entityId
+    });
+
+    test('ONLINE (offline servisi kayıtlı ama isOffline=false) → ağ yolu', () async {
+      final sync = MockOfflineSyncService();
+      final conn = MockConnectivityService();
+      when(() => sync.isInitialized).thenReturn(true);
+      when(() => conn.isOffline).thenReturn(false);
+      final sl = GetIt.instance;
+      sl.registerSingleton<OfflineSyncService>(sync);
+      sl.registerSingleton<ConnectivityService>(conn);
+      h.stubRpc('fn_ppm_log_work', result: null);
+
+      final ok = await service.logWork(submissionId: 's7', hours: 1);
+
+      expect(ok, isTrue);
+      expect(h.capturedRpcParams('fn_ppm_log_work')!['p_submission_id'], 's7');
+      verifyNever(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          ));
     });
   });
 

@@ -1,7 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../helpers/supabase_fakes.dart';
+
+class MockOfflineSyncService extends Mock implements OfflineSyncService {}
+
+class MockConnectivityService extends Mock implements ConnectivityService {}
 
 /// CrmActionsService — CRM aksiyon-çubuğu write-pariteleri:
 ///   • logActivity   → `fn_crm_log_activity`
@@ -18,6 +24,8 @@ void main() {
     h = SupabaseHarness();
     service = CrmActionsService(supabase: h.client);
   });
+
+  tearDown(() => GetIt.instance.reset());
 
   group('logActivity', () {
     test('tam payload → doğru params ile RPC + true', () async {
@@ -141,6 +149,95 @@ void main() {
     test('RPC hatası → false (fırlatmaz)', () async {
       h.stubRpc('fn_crm_complete_activity', error: Exception('boom'));
       expect(await service.completeActivity(activityId: 'a1'), isFalse);
+    });
+  });
+
+  group('offline kuyruk', () {
+    late MockOfflineSyncService sync;
+    late MockConnectivityService conn;
+
+    void registerOffline({required bool offline}) {
+      sync = MockOfflineSyncService();
+      conn = MockConnectivityService();
+      when(() => sync.isInitialized).thenReturn(true);
+      when(() => conn.isOffline).thenReturn(offline);
+      when(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).thenAnswer((inv) async => PendingOperation.rpc(
+            id: 'op-1',
+            function: inv.namedArguments[#function] as String,
+            params: const {},
+            createdAt: DateTime(2026),
+          ));
+      final sl = GetIt.instance;
+      sl.registerSingleton<OfflineSyncService>(sync);
+      sl.registerSingleton<ConnectivityService>(conn);
+    }
+
+    test('OFFLINE logActivity → enqueueRpc(fn_crm_log_activity), ağa gitmez, true',
+        () async {
+      registerOffline(offline: true);
+      // RPC ağ yolu STUB'LANMADI → çağrılırsa test patlar (kuyruk yolu kanıtı).
+
+      final ok = await service.logActivity(subject: 'Görüşme', relatedDealId: 'd1');
+
+      expect(ok, isTrue);
+      final c = verify(() => sync.enqueueRpc(
+            function: captureAny(named: 'function'),
+            params: captureAny(named: 'params'),
+            entityId: captureAny(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).captured;
+      expect(c[0], 'fn_crm_log_activity');
+      expect((c[1] as Map)['p_subject'], 'Görüşme');
+      expect(c[2], 'd1'); // entityId = deal
+    });
+
+    test('OFFLINE logNextStep → enqueueRpc(fn_crm_log_next_step) + true', () async {
+      registerOffline(offline: true);
+      final ok =
+          await service.logNextStep(dealId: 'd2', dueDate: DateTime(2026, 9, 3));
+      expect(ok, isTrue);
+      final c = verify(() => sync.enqueueRpc(
+            function: captureAny(named: 'function'),
+            params: captureAny(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).captured;
+      expect(c[0], 'fn_crm_log_next_step');
+      expect((c[1] as Map)['p_next_date'], '2026-09-03');
+    });
+
+    test('OFFLINE completeActivity → enqueueRpc(fn_crm_complete_activity) + true',
+        () async {
+      registerOffline(offline: true);
+      final ok = await service.completeActivity(activityId: 'a1');
+      expect(ok, isTrue);
+      verify(() => sync.enqueueRpc(
+            function: 'fn_crm_complete_activity',
+            params: any(named: 'params'),
+            entityId: 'a1',
+            idempotencyKey: any(named: 'idempotencyKey'),
+          )).called(1);
+    });
+
+    test('ONLINE (kayıtlı ama isOffline=false) → ağ yolu, kuyruk yok', () async {
+      registerOffline(offline: false);
+      h.stubRpc('fn_crm_log_activity', result: null);
+
+      final ok = await service.logActivity(subject: 'x', relatedDealId: 'd1');
+
+      expect(ok, isTrue);
+      expect(h.capturedRpcParams('fn_crm_log_activity')!['p_subject'], 'x');
+      verifyNever(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          ));
     });
   });
 }

@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../connectivity/connectivity_service.dart';
+import '../connectivity/offline_sync_service.dart';
+import '../di/service_locator.dart';
 import '../utils/logger.dart';
 
 /// **CRM aksiyon-çubuğu servisi** — web CRM entity-detay aksiyon-çubuğunun
@@ -47,8 +50,9 @@ class CrmActionsService {
   }) async {
     final s = subject.trim();
     if (s.isEmpty) return false;
-    try {
-      await _supabase.rpc('fn_crm_log_activity', params: {
+    return _rpcOrQueue(
+      'fn_crm_log_activity',
+      {
         'p_subject': s,
         'p_activity_type': activityType,
         if (_has(notes)) 'p_notes': notes!.trim(),
@@ -58,12 +62,10 @@ class CrmActionsService {
           'p_related_contact_name': relatedContactName!.trim(),
         if (_has(relatedDealId)) 'p_related_deal_id': relatedDealId!.trim(),
         if (_has(relatedDealName)) 'p_related_deal_name': relatedDealName!.trim(),
-      });
-      return true;
-    } catch (e) {
-      Logger.error('crm logActivity hata', e);
-      return false;
-    }
+      },
+      entityId: relatedDealId?.trim() ?? relatedContactId?.trim(),
+      errorContext: 'logActivity',
+    );
   }
 
   /// Bir deal için "sonraki adım" tarihi planla (`fn_crm_log_next_step`).
@@ -76,16 +78,12 @@ class CrmActionsService {
   }) async {
     final id = dealId.trim();
     if (id.isEmpty) return false;
-    try {
-      await _supabase.rpc('fn_crm_log_next_step', params: {
-        'p_deal_id': id,
-        'p_next_date': _dateOnly(dueDate),
-      });
-      return true;
-    } catch (e) {
-      Logger.error('crm logNextStep ($dealId) hata', e);
-      return false;
-    }
+    return _rpcOrQueue(
+      'fn_crm_log_next_step',
+      {'p_deal_id': id, 'p_next_date': _dateOnly(dueDate)},
+      entityId: id,
+      errorContext: 'logNextStep ($dealId)',
+    );
   }
 
   /// Bir aktiviteyi tamamlandı işaretle (`fn_crm_complete_activity`).
@@ -94,14 +92,48 @@ class CrmActionsService {
   Future<bool> completeActivity({required String activityId}) async {
     final id = activityId.trim();
     if (id.isEmpty) return false;
+    return _rpcOrQueue(
+      'fn_crm_complete_activity',
+      {'p_activity_id': id},
+      entityId: id,
+      errorContext: 'completeActivity ($activityId)',
+    );
+  }
+
+  /// Ortak yaz-yolu: OFFLINE ise RPC'yi kuyruğa alır (`enqueueRpc` → replay
+  /// sırasında [SupabaseReplayDispatcher] oynatır; üç CRM RPC'si de zaten
+  /// `defaultAllowedRpcFunctions` allow-list'inde) ve iyimser `true` döner.
+  /// ONLINE ise doğrudan `rpc` çağırır (önceki davranış — hata/`false`).
+  Future<bool> _rpcOrQueue(
+    String function,
+    Map<String, dynamic> params, {
+    String? entityId,
+    required String errorContext,
+  }) async {
+    final sync = _offlineSyncOrNull;
+    if (sync != null && (_connectivityOrNull?.isOffline ?? false)) {
+      final op = await sync.enqueueRpc(
+          function: function, params: params, entityId: entityId);
+      Logger.info('Offline: $function queued (${op.id})');
+      return true;
+    }
     try {
-      await _supabase
-          .rpc('fn_crm_complete_activity', params: {'p_activity_id': id});
+      await _supabase.rpc(function, params: params);
       return true;
     } catch (e) {
-      Logger.error('crm completeActivity ($activityId) hata', e);
+      Logger.error('crm $errorContext hata', e);
       return false;
     }
+  }
+
+  // Offline-queue erişimi (kayıtlı/başlatılmamışsa null → doğrudan ağ path'i).
+  ConnectivityService? get _connectivityOrNull =>
+      sl.isRegistered<ConnectivityService>() ? sl<ConnectivityService>() : null;
+
+  OfflineSyncService? get _offlineSyncOrNull {
+    if (!sl.isRegistered<OfflineSyncService>()) return null;
+    final s = sl<OfflineSyncService>();
+    return s.isInitialized ? s : null;
   }
 
   static bool _has(String? v) => v != null && v.trim().isNotEmpty;
