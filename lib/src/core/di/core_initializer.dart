@@ -15,6 +15,7 @@ import '../iot_log/iot_log_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
 import '../localization/localization_service.dart';
 import '../notification/notification_service.dart';
+import '../observability/error_reporting_service.dart';
 import '../organization/organization_service.dart';
 import '../provider/provider_service.dart';
 import '../push/push_notification_service.dart';
@@ -232,6 +233,17 @@ class CoreInitializer {
         apiBaseUrl: config.apiBaseUrl,
         enableLogging: config.enableLogging,
       );
+
+      // Step 2b: Crash/error reporting — global yakalayıcıları ERKEN kur
+      // (FlutterError.onError + PlatformDispatcher.onError), böylece init'in
+      // geri kalanındaki ilk hata bile yakalanır. Gözlemleyici: akışı
+      // değiştirmez, prod-dışında ağa göndermez. Kurulum ASLA fırlatmaz.
+      onProgress?.call('Error reporting');
+      try {
+        sl<ErrorReportingService>().installGlobalHandlers();
+      } catch (e) {
+        Logger.warning('Error reporting handlers install failed: $e');
+      }
 
       // Step 3: Cache Manager başlat
       onProgress?.call('Cache Manager');

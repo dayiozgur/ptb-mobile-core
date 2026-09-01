@@ -10,6 +10,7 @@ import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../invitation/invitation_service.dart';
 import '../collaboration/comments_service.dart';
+import '../observability/error_reporting_service.dart';
 import '../announcement/announcement_notifier.dart';
 import '../push/apns_registrar.dart';
 import '../announcement/announcement_service.dart';
@@ -701,6 +702,9 @@ Future<void> setupServiceLocator({
   );
   sl.registerLazySingleton<CommentsService>(
     () => CommentsService(supabase: sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<ErrorReportingService>(
+    () => ErrorReportingService(supabase: sl<SupabaseClient>()),
   );
   sl.registerLazySingleton<WorkInboxService>(
     () => WorkInboxService(supabase: sl<SupabaseClient>()),
