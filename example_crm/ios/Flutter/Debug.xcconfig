@@ -1,2 +1,7 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+
+// Apple-Silicon simulator fix: keep arm64 for the simulator (only exclude the
+// dead i386 slice). Overrides the stale EXCLUDED_ARCHS=...arm64 that Generated.xcconfig
+// still carries, which produced x86_64-only sim builds that will not run on arm64 sims.
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386

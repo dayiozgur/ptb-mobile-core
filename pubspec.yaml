@@ -37,6 +37,8 @@ dependencies:
 
   # Navigation
   go_router: ^14.2.0
+  # Deep / universal links (custom scheme + https app links)
+  app_links: ^6.3.2
 
   # Utilities
   intl: ^0.19.0

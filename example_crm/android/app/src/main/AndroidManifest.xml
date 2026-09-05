@@ -31,6 +31,16 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="ptbcrm"/>
             </intent-filter>
+            <!-- Universal (https) app links: https://app.crm.protoolbag.com/<path…>
+                 autoVerify requires /.well-known/assetlinks.json hosted on the
+                 domain (see docs; NOT shipped in-app). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="app.crm.protoolbag.com"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

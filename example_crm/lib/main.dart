@@ -14,6 +14,14 @@ import 'config/router.dart';
 /// menü + entity'ler bu platformdan yüklenir (WindowsOS: core + platform-app).
 const String kCrmPlatformId = 'f8a415b2-ba45-4246-98f5-b406b0c8b860';
 
+/// Bu app'in sahibi olduğu universal-link host'u (assetlinks / AASA bu host'ta
+/// barındırılır). `https://app.crm.protoolbag.com/<path…>` → uygulama-içi ekran.
+const String kCrmAppLinkHost = 'app.crm.protoolbag.com';
+
+/// Deep / universal link host servisi (STORY-0083). Uygulama ömrü boyunca tekil;
+/// `runApp` sonrası ilk frame'de [DeepLinkService.init] ile bağlanır.
+final DeepLinkService _deepLinks = DeepLinkService();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -64,6 +72,20 @@ void main() async {
   Logger.info('Session restored: ${result.sessionRestored}');
 
   runApp(const ProviderScope(child: CRMApp()));
+
+  // Deep / universal link köprüsünü ilk frame'den SONRA bağla (navigator hazır
+  // olsun). Host'umuz: https://app.crm.protoolbag.com/<path…>. Custom-scheme
+  // ptbcrm://oauth-callback → OAuth dönüşü (MS entegrasyon ekranı resume'da
+  // kendini tazeler; bu servis o app_links dinleyicisini SAĞLAR).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _deepLinks.init(
+      navigatorKey: rootNavigatorKey,
+      appHosts: const {kCrmAppLinkHost},
+      shellRoutes: _kShellRoutes,
+      onOAuthCallback: (uri) =>
+          Logger.info('OAuth callback received (screen self-refreshes): $uri'),
+    );
+  });
 }
 
 const Set<String> _kShellRoutes = {

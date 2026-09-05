@@ -32,6 +32,9 @@ export 'src/core/extensions/date_extensions.dart';
 export 'src/core/errors/failures.dart';
 export 'src/core/errors/exceptions.dart';
 
+// Core - Deep / universal links (STORY-0083)
+export 'src/core/deeplink/deep_link_service.dart';
+
 // Core - Storage
 export 'src/core/storage/secure_storage.dart';
 export 'src/core/storage/supabase_secure_local_storage.dart';
