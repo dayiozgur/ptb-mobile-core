@@ -33,7 +33,7 @@ esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="$REPO_ROOT/example_$APP"
-API_KEY_ID="79V5P3733J"
+API_KEY_ID="9M78BB6JK8"
 API_KEY_FILE="$REPO_ROOT/.secrets/AuthKey_${API_KEY_ID}.p8"
 
 [ -d "$APP_DIR" ] || { echo "error: $APP_DIR not found" >&2; exit 1; }

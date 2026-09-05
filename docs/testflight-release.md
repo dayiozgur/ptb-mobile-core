@@ -26,7 +26,7 @@ Sürüm: hepsi `1.0.0 (build 1)` — pubspec'ten (`FLUTTER_BUILD_NAME/NUMBER`).
 3. **Capabilities** (App ID başına, Developer portal → Identifiers): **Push Notifications** ve **Associated Domains** (yalnız CRM) etkin olmalı.
    - Push için: bir **APNs Auth Key** (.p8) oluştur (Keys → **+** → Apple Push Notifications service). Bu, cihaz push'unun çalışması için gerekli (upload için değil).
    - CRM associated-domains için: `https://app.crm.protoolbag.com/.well-known/apple-app-site-association` (AASA) dosyası host'ta yayında olmalı (deep-link doğrulaması — STORY-0083). *Bu senin/DNS tarafın.*
-4. **App Store Connect API issuer id'yi bul:** App Store Connect → Users and Access → **Integrations** → App Store Connect API → **Issuer ID**'yi kopyala. (API key `79V5P3733J` zaten `.secrets/AuthKey_79V5P3733J.p8` olarak repo'da, git'e dahil değil.)
+4. **App Store Connect API issuer id'yi bul:** App Store Connect → Users and Access → **Integrations** → App Store Connect API → **Issuer ID**'yi kopyala. (API key `9M78BB6JK8` zaten `.secrets/AuthKey_9M78BB6JK8.p8` olarak repo'da, git'e dahil değil.)
 
 ## Yükleme (senin makinende, giriş sonrası)
 
