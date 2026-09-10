@@ -79,7 +79,7 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('İşlem başarısız')));
+            SnackBar(content: Text(essT('hr.pdks.action_failed', 'İşlem başarısız'))));
       }
     } finally {
       if (mounted) setState(() => _punching = false);
