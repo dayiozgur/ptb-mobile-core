@@ -227,7 +227,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
 
   Widget _buildError() => Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -278,7 +278,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(p.displayName, style: AppTypography.title2),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       _headline(p),
                       style: AppTypography.subheadline.copyWith(
@@ -289,7 +289,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                     Row(
                       children: [
                         _roleChip(p),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         if ((p.tenantName ?? '').isNotEmpty)
                           Flexible(
                             child: Row(
@@ -297,7 +297,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                                 Icon(Icons.apartment_outlined,
                                     size: 14,
                                     color: AppColors.secondaryLabel(context)),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: AppSpacing.xs),
                                 Flexible(
                                   child: Text(
                                     p.tenantName!,
@@ -505,7 +505,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
           Text(label,
               style: AppTypography.subheadline
                   .copyWith(color: AppColors.secondaryLabel(context))),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               value,

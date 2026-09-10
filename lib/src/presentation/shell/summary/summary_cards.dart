@@ -140,7 +140,7 @@ class _KpiTile extends StatelessWidget {
             color: AppColors.primaryLabel(context),
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.xxs),
         Text(
           spec.label,
           style: AppTypography.caption1.copyWith(

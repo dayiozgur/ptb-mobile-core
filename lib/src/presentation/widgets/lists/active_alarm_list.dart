@@ -183,7 +183,7 @@ class _ActiveAlarmTile extends StatelessWidget {
                           size: 14,
                           color: AppColors.info,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xs),
                       ],
                       Expanded(
                         child: Text(
@@ -255,7 +255,7 @@ class _ActiveAlarmTile extends StatelessWidget {
                               size: 11,
                               color: priorityColor,
                             ),
-                            const SizedBox(width: 2),
+                            const SizedBox(width: AppSpacing.xxs),
                             Text(
                               alarm.durationFormatted,
                               style: TextStyle(

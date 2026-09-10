@@ -115,7 +115,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 keyboard: TextInputType.phone),
             _field(_bio, 'Hakkımda', Icons.notes_outlined,
                 maxLines: 4, hint: 'Kısa bir tanıtım (headline)'),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,
               child: FilledButton(

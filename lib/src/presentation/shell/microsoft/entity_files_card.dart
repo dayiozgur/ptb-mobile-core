@@ -172,7 +172,7 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
         child: Row(
           children: [
             Icon(_iconFor(f), size: 18, color: AppColors.primary),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: InkWell(
                 onTap: () => UrlActions.openUrl(f.webUrl),

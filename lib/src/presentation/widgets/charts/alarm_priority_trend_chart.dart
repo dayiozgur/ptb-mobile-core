@@ -138,7 +138,7 @@ class AlarmPriorityTrendChart extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     p?.label ?? 'Bilinmiyor',
                     style: TextStyle(

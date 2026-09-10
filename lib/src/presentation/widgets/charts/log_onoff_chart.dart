@@ -195,7 +195,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                       size: 16,
                       color: AppColors.textSecondary(brightness),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       sl<LocalizationService>().translate('chart.transition_count',
                           params: {'count': transitionCount}),
@@ -463,7 +463,7 @@ class _LogOnOffChartState extends State<LogOnOffChart> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       // Yüzde değerleri
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

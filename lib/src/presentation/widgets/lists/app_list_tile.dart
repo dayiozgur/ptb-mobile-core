@@ -120,7 +120,7 @@ class AppListTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (subtitle != null) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: AppSpacing.xxs),
                           Text(
                             subtitle!,
                             style: (dense

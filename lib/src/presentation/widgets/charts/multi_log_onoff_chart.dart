@@ -260,7 +260,7 @@ class MultiLogOnOffChart extends StatelessWidget {
                 height: 8,
                 decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '${s.variableName}: %${pct.toStringAsFixed(1)} ON',
                 style: TextStyle(

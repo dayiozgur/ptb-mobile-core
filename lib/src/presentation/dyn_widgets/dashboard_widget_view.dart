@@ -347,7 +347,7 @@ class _WeatherTileState extends State<WeatherTile> {
                     Text('${w.temperature.round()}°C',
                         style: AppTypography.withColor(AppTypography.title1,
                             AppColors.textPrimary(brightness))),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.xxs),
                     Text('${w.condition} · ${w.city}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

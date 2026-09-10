@@ -209,7 +209,7 @@ class _ResetAlarmTile extends StatelessWidget {
                           color:
                               AppColors.textSecondary(brightness),
                         ),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: AppSpacing.xxs),
                         Expanded(
                           child: Text(
                             alarm.resetUser!,

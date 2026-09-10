@@ -108,7 +108,7 @@ class _HorizontalBar extends StatelessWidget {
               maxLines: 1,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           // Bar
           Expanded(
             child: LayoutBuilder(
@@ -186,7 +186,7 @@ class _LegendDot extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xs),
         Text(
           label,
           style: TextStyle(

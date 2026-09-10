@@ -514,7 +514,7 @@ class _MinMaxBadge extends StatelessWidget {
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xs),
         Text(
           '$label: $formattedValue${unit ?? ''}',
           style: TextStyle(

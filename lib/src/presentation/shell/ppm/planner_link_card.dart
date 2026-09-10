@@ -161,7 +161,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
                 Text(_t('ppm.planner.title', 'Microsoft Planner'), style: AppTypography.subhead),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             if (_loading)
               const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: AppLoadingIndicator()))
             else if (!_connected)
@@ -189,7 +189,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<String>(
           initialValue: _selectedPlanId,
           isExpanded: true,
@@ -205,7 +205,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
           ],
           onChanged: _busy ? null : (v) => setState(() => _selectedPlanId = v),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<String>(
           initialValue: _bucketBy,
           isExpanded: true,
@@ -226,7 +226,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
           child: FilledButton.icon(
             onPressed: (_busy || _selectedPlanId == null) ? null : _doLink,
             icon: _busy
-                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(height: AppSpacing.md, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.link, size: 18),
             label: Text(_t('ppm.planner.link', 'Planı bağla')),
           ),
@@ -251,7 +251,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
             ),
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.xxs),
         Text(
           _lastSynced != null
               ? '${_t('ppm.planner.last_synced', 'Son senkron')}: ${_fmt(_lastSynced!)}'
@@ -259,7 +259,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
           style: AppTypography.caption1.copyWith(color: AppColors.tertiaryLabel(context)),
         ),
         if (_lastResult != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '${_lastResult!.pushed} ↑ · ${_lastResult!.pulled} ↓ · ${_lastResult!.errors} ✕',
             style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context)),
@@ -278,7 +278,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
             FilledButton.icon(
               onPressed: _busy ? null : _sync,
               icon: _busy
-                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(height: AppSpacing.md, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.sync, size: 18),
               label: Text(_busy
                   ? _t('ppm.planner.syncing', 'Senkronize ediliyor…')

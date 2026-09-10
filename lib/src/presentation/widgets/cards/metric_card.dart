@@ -181,7 +181,7 @@ class MetricCard extends StatelessWidget {
                   color: AppColors.textSecondary(brightness),
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: AppSpacing.xxs),
               Text(
                 value,
                 style: AppTypography.headline.copyWith(
@@ -239,7 +239,7 @@ class MetricCard extends StatelessWidget {
             size: 12,
             color: color,
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: AppSpacing.xxs),
           Text(
             trendValue!,
             style: AppTypography.caption2.copyWith(

@@ -299,7 +299,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Container(
-                  padding: const EdgeInsets.all(2),
+                  padding: const EdgeInsets.all(AppSpacing.xxs),
                   decoration: BoxDecoration(
                     color: brightness == Brightness.light ? AppColors.systemGray4 : AppColors.borderDark,
                     shape: BoxShape.circle,
@@ -362,7 +362,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                       size: 18,
                       color: AppColors.textSecondary(brightness),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(type.label),
                   ],
                 ),
@@ -622,7 +622,7 @@ class SearchButton extends StatelessWidget {
               size: 18,
               color: AppColors.textSecondary(brightness),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Text(
               placeholder,
               style: AppTypography.subhead.copyWith(

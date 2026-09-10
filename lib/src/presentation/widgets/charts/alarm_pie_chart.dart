@@ -159,7 +159,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
         color: AppColors.systemGray6,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -174,7 +174,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
               _touchedIndex = null;
             }),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           _ToggleButton(
             label: 'Reset',
             count: widget.distribution.resetCount,

@@ -216,7 +216,7 @@ class AppBottomSheetHelper {
                       textAlign: TextAlign.center,
                     ),
                   if (message != null) ...[
-                    if (title != null) const SizedBox(height: 4),
+                    if (title != null) const SizedBox(height: AppSpacing.xs),
                     Text(
                       message,
                       style: AppTypography.caption1.copyWith(

@@ -85,7 +85,7 @@ class AppSectionHeader extends StatelessWidget {
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xxs),
                   Text(
                     subtitle!,
                     style: AppTypography.footnote.copyWith(

@@ -99,7 +99,7 @@ class AlarmMttrCard extends StatelessWidget {
                         color: color,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.xxs),
                     Text(
                       mttrStr,
                       style: TextStyle(

@@ -158,7 +158,7 @@ class AppSegmentedControl extends StatelessWidget {
 
     return Container(
       margin: padding,
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(AppSpacing.xxs),
       decoration: BoxDecoration(
         color: brightness == Brightness.light
             ? AppColors.systemGray6
@@ -389,7 +389,7 @@ class _BottomNavItem extends StatelessWidget {
               ],
             ),
             if (showLabel) ...[
-              const SizedBox(height: 2),
+              const SizedBox(height: AppSpacing.xxs),
               Text(
                 item.label,
                 style: AppTypography.caption2.copyWith(

@@ -181,7 +181,7 @@ class _MultiLogLineChartState extends State<MultiLogLineChart> {
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       unit != null && unit.isNotEmpty
                           ? '${ps.series.variableName} ($unit)'

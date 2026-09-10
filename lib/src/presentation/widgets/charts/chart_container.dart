@@ -223,7 +223,7 @@ class ChartPeriodSelector extends StatelessWidget {
             : AppColors.surfaceElevatedDark,
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(AppSpacing.xxs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: options.map((days) {

@@ -299,7 +299,7 @@ class MapLegend extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(
                         item.label,
                         style: TextStyle(

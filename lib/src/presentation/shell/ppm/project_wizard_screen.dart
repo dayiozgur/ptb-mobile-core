@@ -185,7 +185,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
 
     return Row(children: [
       dot(0, _t('ppm.wizard.step_basics', 'Temel Bilgiler')),
-      const SizedBox(width: 8),
+      const SizedBox(width: AppSpacing.sm),
       dot(1, _t('ppm.wizard.step_planner', 'Planner')),
     ]);
   }
@@ -195,7 +195,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('${_t('ppm.wizard.name', 'Proje adı')} *', style: AppTypography.caption1),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         TextField(
           controller: _name,
           onChanged: (_) => setState(() {}),
@@ -206,7 +206,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(_t('ppm.wizard.description', 'Açıklama'), style: AppTypography.caption1),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         TextField(
           controller: _desc, maxLines: 2,
           decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
@@ -239,7 +239,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, color: AppColors.primary, size: 22),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(title, style: AppTypography.withWeight(AppTypography.body, FontWeight.w600)),
               Text(desc, style: AppTypography.caption2.copyWith(color: AppColors.secondaryLabel(context))),
             ],
@@ -334,7 +334,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
             FilledButton.icon(
               onPressed: (_busy || !_canCreate) ? null : _create,
               icon: _busy
-                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(height: AppSpacing.md, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.check, size: 18),
               label: Text(_busy ? _t('ppm.wizard.creating', 'Oluşturuluyor…') : _t('ppm.wizard.create', 'Projeyi oluştur')),
             ),

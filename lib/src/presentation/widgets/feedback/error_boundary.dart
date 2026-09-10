@@ -404,7 +404,7 @@ class SafeFutureBuilder<T> extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
                       _boundaryTr('error.occurred', 'Bir hata oluştu'),
                       style: const TextStyle(color: AppColors.error),
@@ -460,7 +460,7 @@ class SafeStreamBuilder<T> extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
                       _boundaryTr('error.occurred', 'Bir hata oluştu'),
                       style: const TextStyle(color: AppColors.error),

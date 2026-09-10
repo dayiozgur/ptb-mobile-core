@@ -109,7 +109,7 @@ class AlarmTopOffendersCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.xxs),
                     Text(
                       'Son: ${DateFormat('dd/MM HH:mm').format(alarm.lastOccurrence)}',
                       style: TextStyle(
