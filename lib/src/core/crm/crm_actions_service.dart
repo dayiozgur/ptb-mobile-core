@@ -120,6 +120,25 @@ class CrmActionsService {
     }
   }
 
+  /// Bir lead'i yeniden skorla (`fn_crm_score_lead(p_entity_id)`) — gece
+  /// `fn_crm_score_all` çalışmadan on-demand skor. Idempotent (yeniden-hesap),
+  /// o yüzden online doğrudan çağrılır. Sonuç TABLE(score, band, ...); ilk
+  /// satırın toplam skoru döner. Boş id / hata / sonuç-yok → `null`.
+  Future<int?> scoreLead({required String leadId}) async {
+    final id = leadId.trim();
+    if (id.isEmpty) return null;
+    try {
+      final res = await _supabase.rpc('fn_crm_score_lead', params: {'p_entity_id': id});
+      final list = (res as List?) ?? const [];
+      if (list.isEmpty) return null;
+      final s = Map<String, dynamic>.from(list.first as Map)['score'];
+      return s is int ? s : (s is num ? s.toInt() : null);
+    } catch (e) {
+      Logger.error('crm scoreLead ($leadId) hata', e);
+      return null;
+    }
+  }
+
   /// Ortak yaz-yolu: OFFLINE ise RPC'yi kuyruğa alır (`enqueueRpc` → replay
   /// sırasında [SupabaseReplayDispatcher] oynatır; üç CRM RPC'si de zaten
   /// `defaultAllowedRpcFunctions` allow-list'inde) ve iyimser `true` döner.

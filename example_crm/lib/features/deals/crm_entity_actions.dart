@@ -24,6 +24,10 @@ void registerCrmEntityActions() {
   // Lead: contact/deal'e dönüştür + aktivite-ekle
   EntityDetailExtensions.registerActions('lead', (ctx, e, reload) => [
         AppIconButton(
+          icon: Icons.speed_outlined,
+          onPressed: () => _rescoreLead(ctx, e.id, reload),
+        ),
+        AppIconButton(
           icon: Icons.swap_horiz,
           onPressed: () => _convertLead(ctx, e.id, reload),
         ),
@@ -116,6 +120,19 @@ Future<void> _convertLead(
           ? crmT('crm.lead.converted', 'Lead dönüştürüldü ✓')
           : crmT('crm.common.action_failed', 'İşlem başarısız'))));
   if (ok) await reload();
+}
+
+/// Lead'i on-demand yeniden skorla (`fn_crm_score_lead`); başarıda skoru toast'ta
+/// gösterir ve detayı tazeler (skor rozeti güncellenir).
+Future<void> _rescoreLead(
+    BuildContext ctx, String leadId, Future<void> Function() reload) async {
+  final score = await _actions.scoreLead(leadId: leadId);
+  if (!ctx.mounted) return;
+  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(score != null
+          ? '${crmT('crm.lead.scored', 'Lead skorlandı')}: $score'
+          : crmT('crm.common.action_failed', 'İşlem başarısız'))));
+  if (score != null) await reload();
 }
 
 Future<void> _completeActivity(

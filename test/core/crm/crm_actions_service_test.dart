@@ -173,6 +173,37 @@ void main() {
     });
   });
 
+  group('scoreLead', () {
+    test('geçerli → ilk satırın skoru + p_entity_id', () async {
+      h.stubRpc('fn_crm_score_lead', result: <Map<String, dynamic>>[
+        {'score': 42, 'band': 'hot'},
+        {'score': 42, 'points': 10},
+      ]);
+      final s = await service.scoreLead(leadId: '  l1  ');
+      expect(s, 42);
+      expect(h.capturedRpcParams('fn_crm_score_lead'), {'p_entity_id': 'l1'});
+    });
+
+    test('num skoru int\'e indirger', () async {
+      h.stubRpc('fn_crm_score_lead', result: <Map<String, dynamic>>[{'score': 42.0}]);
+      expect(await service.scoreLead(leadId: 'l1'), 42);
+    });
+
+    test('boş leadId → null (RPC çağrılmaz)', () async {
+      expect(await service.scoreLead(leadId: '  '), isNull);
+    });
+
+    test('boş sonuç → null', () async {
+      h.stubRpc('fn_crm_score_lead', result: <Map<String, dynamic>>[]);
+      expect(await service.scoreLead(leadId: 'l1'), isNull);
+    });
+
+    test('RPC hatası → null (fırlatmaz)', () async {
+      h.stubRpc('fn_crm_score_lead', error: Exception('boom'));
+      expect(await service.scoreLead(leadId: 'l1'), isNull);
+    });
+  });
+
   group('offline kuyruk', () {
     late MockOfflineSyncService sync;
     late MockConnectivityService conn;
