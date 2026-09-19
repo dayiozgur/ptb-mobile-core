@@ -3,7 +3,7 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../features/board/ppm_board_screen.dart';
 import '../features/dashboard/ppm_dashboard_screen.dart';
-import '../features/dashboard/ppm_sprint_screen.dart';
+import '../features/sprints/ppm_sprints_manage_screen.dart';
 import '../features/worklog/ppm_entity_actions.dart';
 import '../ppm_common.dart';
 
@@ -66,9 +66,14 @@ Widget? ppmResolve(MenuItem item) {
     // Proje seç → per-proje MS-Project tarzı özet (fn_ppm_project_overview).
     return const PpmBoardScreen(target: PpmScopeTarget.summary);
   }
-  if (p == '/projects/sprints' || p == '/ppm/sprints') {
-    // Aktif sprint burndown + ekip kapasitesi.
-    return const PpmSprintScreen();
+  if (p == '/projects/sprints' ||
+      p == '/ppm/sprints' ||
+      p == '/projects/sprint-manage' ||
+      p == '/ppm/sprint-manage') {
+    // Sprint yaşam-döngüsü yönetimi (başlat/tamamla) — web `/projects/sprints`
+    // (PtbSprintAdmin) ile aynı route hedefi. Aktif-sprint burndown/kapasite
+    // (`PpmSprintScreen`) buradan bir aksiyonla açılır.
+    return const PpmSprintsManageScreen();
   }
   return null;
 }
