@@ -94,6 +94,7 @@ export 'src/core/collaboration/comments_service.dart';
 export 'src/core/observability/error_reporting_service.dart';
 export 'src/core/work/work_inbox_service.dart';
 export 'src/core/ppm/worklog_service.dart';
+export 'src/core/ppm/sprint_service.dart';
 export 'src/core/ppm/planner_link_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';
