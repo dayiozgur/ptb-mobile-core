@@ -9,8 +9,9 @@ class MockOfflineSyncService extends Mock implements OfflineSyncService {}
 
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
-/// WorklogService — efor yaz (`fn_ppm_log_work`) + efor listele (`ppm_worklogs`).
-/// Ctor-inject (sl gerekmez). Hata → `false`/`[]` (UI'a fırlatmaz).
+/// WorklogService — efor yaz (`fn_ppm_log_work`) + efor listele (kanonik
+/// `worklogs`, web PPM ile paylaşımlı). Ctor-inject (sl gerekmez). Hata →
+/// `false`/`[]` (UI'a fırlatmaz). `worklogs.time_spent` DAKİKA → saate çevrilir.
 void main() {
   late SupabaseHarness h;
   late WorklogService service;
@@ -138,14 +139,16 @@ void main() {
   });
 
   group('listWorklogs', () {
-    test('satır → model eşleme (yeniden eskiye)', () async {
-      h.stubFrom('ppm_worklogs', result: <Map<String, dynamic>>[
+    test('kanonik worklogs satırı → model eşleme (dakika→saat)', () async {
+      // worklogs: entity_id=submission, time_spent DAKİKA (180=3sa),
+      // description=not. fromRow saate çevirir.
+      h.stubFrom('worklogs', result: <Map<String, dynamic>>[
         {
           'id': 'w1',
-          'submission_id': 's1',
-          'hours_spent': 3,
+          'entity_id': 's1',
+          'time_spent': 180,
           'remaining_estimate': 5.5,
-          'note': 'analiz',
+          'description': 'analiz',
           'created_by': 'u1',
           'created_at': '2026-08-25T09:00:00Z',
         },
@@ -157,20 +160,28 @@ void main() {
       final w = list.first;
       expect(w.id, 'w1');
       expect(w.submissionId, 's1');
-      expect(w.hoursSpent, 3.0); // int → double
+      expect(w.hoursSpent, 3.0); // 180 dk → 3.0 sa
       expect(w.remainingEstimate, 5.5);
       expect(w.note, 'analiz');
       expect(w.createdBy, 'u1');
       expect(w.createdAt, DateTime.parse('2026-08-25T09:00:00Z'));
     });
 
+    test('kesirli saat: 90 dk → 1.5 sa', () async {
+      h.stubFrom('worklogs', result: <Map<String, dynamic>>[
+        {'id': 'w3', 'entity_id': 's1', 'time_spent': 90},
+      ]);
+      final list = await service.listWorklogs('s1');
+      expect(list.first.hoursSpent, 1.5);
+    });
+
     test('boş sonuç → []', () async {
-      h.stubFrom('ppm_worklogs', result: <Map<String, dynamic>>[]);
+      h.stubFrom('worklogs', result: <Map<String, dynamic>>[]);
       expect(await service.listWorklogs('s1'), isEmpty);
     });
 
     test('hata → [] (fırlatmaz)', () async {
-      h.stubFrom('ppm_worklogs', error: Exception('x'));
+      h.stubFrom('worklogs', error: Exception('x'));
       expect(await service.listWorklogs('s1'), isEmpty);
     });
   });
