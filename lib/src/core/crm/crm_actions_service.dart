@@ -100,6 +100,26 @@ class CrmActionsService {
     );
   }
 
+  /// Bir web-lead'i contact/deal'e dönüştür (`fn_crm_convert_web_lead(p_id)`).
+  ///
+  /// [leadId] boşsa RPC çağrılmaz, `false` döner. **ONLINE-only, bilinçli:**
+  /// dönüşüm yeni kayıt (contact/deal) ÜRETİR; offline-kuyruk replay'i çift-
+  /// dönüşüm riski taşırdı ve RPC zaten `defaultAllowedRpcFunctions` allow-
+  /// list'inde DEĞİL. Offline'da `false` döner (UI "çevrimdışı" der). Hata →
+  /// `false` (UI'a ASLA fırlatmaz), diğer aksiyonlarla aynı sözleşme.
+  Future<bool> convertWebLead({required String leadId}) async {
+    final id = leadId.trim();
+    if (id.isEmpty) return false;
+    if (_connectivityOrNull?.isOffline ?? false) return false;
+    try {
+      await _supabase.rpc('fn_crm_convert_web_lead', params: {'p_id': id});
+      return true;
+    } catch (e) {
+      Logger.error('crm convertWebLead ($leadId) hata', e);
+      return false;
+    }
+  }
+
   /// Ortak yaz-yolu: OFFLINE ise RPC'yi kuyruğa alır (`enqueueRpc` → replay
   /// sırasında [SupabaseReplayDispatcher] oynatır; üç CRM RPC'si de zaten
   /// `defaultAllowedRpcFunctions` allow-list'inde) ve iyimser `true` döner.

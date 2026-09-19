@@ -21,8 +21,12 @@ void registerCrmEntityActions() {
           onPressed: () => _logActivity(ctx, dealId: e.id, reload: reload),
         ),
       ]);
-  // Lead: aktivite-ekle
+  // Lead: contact/deal'e dönüştür + aktivite-ekle
   EntityDetailExtensions.registerActions('lead', (ctx, e, reload) => [
+        AppIconButton(
+          icon: Icons.swap_horiz,
+          onPressed: () => _convertLead(ctx, e.id, reload),
+        ),
         AppIconButton(
           icon: Icons.add_comment_outlined,
           onPressed: () => _logActivity(ctx, dealId: e.id, reload: reload),
@@ -71,6 +75,36 @@ Future<void> _logNextStep(
       content: Text(ok
           ? crmT('crm.deal.next_step_saved', 'Sonraki adım kaydedildi ✓')
           : crmT('crm.common.save_failed', 'Kaydedilemedi'))));
+  if (ok) await reload();
+}
+
+/// Web-lead → contact/deal dönüşümü (`fn_crm_convert_web_lead`). Onay ister
+/// (geri-alınamaz kayıt üretir), online-only; başarıda listeyi tazeler.
+Future<void> _convertLead(
+    BuildContext ctx, String leadId, Future<void> Function() reload) async {
+  final confirm = await showDialog<bool>(
+    context: ctx,
+    builder: (dctx) => AlertDialog(
+      title: Text(crmT('crm.lead.convert', 'Lead\'i dönüştür')),
+      content: Text(crmT('crm.lead.convert_confirm',
+          'Bu lead bir kişi ve fırsata dönüştürülecek. Devam edilsin mi?')),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text(crmT('crm.common.cancel', 'Vazgeç'))),
+        TextButton(
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text(crmT('crm.lead.convert', 'Dönüştür'))),
+      ],
+    ),
+  );
+  if (confirm != true) return;
+  final ok = await _actions.convertWebLead(leadId: leadId);
+  if (!ctx.mounted) return;
+  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(ok
+          ? crmT('crm.lead.converted', 'Lead dönüştürüldü ✓')
+          : crmT('crm.common.action_failed', 'İşlem başarısız'))));
   if (ok) await reload();
 }
 

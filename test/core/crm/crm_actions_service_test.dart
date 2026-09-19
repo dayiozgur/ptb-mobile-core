@@ -152,6 +152,27 @@ void main() {
     });
   });
 
+  group('convertWebLead', () {
+    test('geçerli → p_id + true', () async {
+      h.stubRpc('fn_crm_convert_web_lead', result: null);
+
+      final ok = await service.convertWebLead(leadId: '  l1  ');
+
+      expect(ok, isTrue);
+      expect(h.capturedRpcParams('fn_crm_convert_web_lead'), {'p_id': 'l1'});
+    });
+
+    test('boş leadId → RPC çağrılmaz, false', () async {
+      h.stubRpc('fn_crm_convert_web_lead', result: null);
+      expect(await service.convertWebLead(leadId: '  '), isFalse);
+    });
+
+    test('RPC hatası → false (fırlatmaz)', () async {
+      h.stubRpc('fn_crm_convert_web_lead', error: Exception('boom'));
+      expect(await service.convertWebLead(leadId: 'l1'), isFalse);
+    });
+  });
+
   group('offline kuyruk', () {
     late MockOfflineSyncService sync;
     late MockConnectivityService conn;
@@ -232,6 +253,19 @@ void main() {
 
       expect(ok, isTrue);
       expect(h.capturedRpcParams('fn_crm_log_activity')!['p_subject'], 'x');
+      verifyNever(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          ));
+    });
+
+    test('OFFLINE convertWebLead → online-only: false, ne kuyruk ne ağ', () async {
+      registerOffline(offline: true);
+      // RPC ağ yolu STUB'LANMADI → çağrılırsa test patlar (kuyruğa da alınmamalı).
+      final ok = await service.convertWebLead(leadId: 'l1');
+      expect(ok, isFalse);
       verifyNever(() => sync.enqueueRpc(
             function: any(named: 'function'),
             params: any(named: 'params'),
