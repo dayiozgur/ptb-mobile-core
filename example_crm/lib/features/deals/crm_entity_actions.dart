@@ -42,7 +42,7 @@ void registerCrmEntityActions() {
   // Aktivite-feed bölümü — deal / lead / company detayında.
   // (Dosyalar kartı çekirdek `registerMicrosoftFilesSection()` ile '*' altında
   // tüm entity tiplerine yayılır; burada yalnız CRM'e özel feed kalır.)
-  for (final t in const ['deal', 'lead', 'company']) {
+  for (final t in const ['deal', 'company']) {
     EntityDetailExtensions.registerSections(
       t,
       (ctx, e, reload) => [
@@ -51,6 +51,16 @@ void registerCrmEntityActions() {
       ],
     );
   }
+  // Lead: skor rozeti (fn_crm_entity_score) + aktivite-feed.
+  EntityDetailExtensions.registerSections(
+    'lead',
+    (ctx, e, reload) => [
+      const SizedBox(height: AppSpacing.md),
+      _LeadScoreSection(entityId: e.id),
+      const SizedBox(height: AppSpacing.md),
+      _ActivityFeedSection(entityId: e.id),
+    ],
+  );
 }
 
 SupabaseClient get _sb => sl<SupabaseClient>();
@@ -229,6 +239,84 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
 }
 
 /// Entity'ye (deal/lead/company) bağlı aktivite feed'i (fn_crm_activity_feed).
+/// Lead SKOR rozeti — `fn_crm_entity_score('lead', id)` (skor + band).
+/// Skorlanmamış lead'de (satır yok / score null) sessizce gizlenir. Web CRM
+/// lead-scoring ile aynı kaynak (gece `fn_crm_score_all` besler).
+class _LeadScoreSection extends StatefulWidget {
+  final String entityId;
+  const _LeadScoreSection({required this.entityId});
+
+  @override
+  State<_LeadScoreSection> createState() => _LeadScoreSectionState();
+}
+
+class _LeadScoreSectionState extends State<_LeadScoreSection> {
+  late Future<Map<String, dynamic>?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<Map<String, dynamic>?> _load() async {
+    try {
+      final res = await _sb.rpc('fn_crm_entity_score',
+          params: {'p_entity_type': 'lead', 'p_submission_id': widget.entityId});
+      final list = (res as List?) ?? const [];
+      if (list.isEmpty) return null;
+      return Map<String, dynamic>.from(list.first as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _future,
+      builder: (context, snap) {
+        final row = snap.data;
+        if (snap.connectionState == ConnectionState.waiting || row == null) {
+          return const SizedBox.shrink();
+        }
+        final score = row['score'];
+        if (score == null) return const SizedBox.shrink();
+        final band = (row['band'] as String?)?.trim();
+        return AppCard(
+          child: Padding(
+            padding: AppSpacing.cardInsets,
+            child: Row(
+              children: [
+                Icon(Icons.speed_outlined, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(crmT('crm.lead.score', 'Lead skoru'),
+                    style: AppTypography.subhead),
+                const Spacer(),
+                if (band != null && band.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(band,
+                        style: AppTypography.caption1.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text('$score', style: AppTypography.headline),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ActivityFeedSection extends StatefulWidget {
   final String entityId;
   const _ActivityFeedSection({required this.entityId});
