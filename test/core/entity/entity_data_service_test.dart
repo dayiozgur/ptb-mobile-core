@@ -90,6 +90,52 @@ void main() {
     });
   });
 
+  group('updateStoryPoints (form_submissions targeted patch)', () {
+    test('geçerli → story_points + updated_by patch, is_standalone filtre, true',
+        () async {
+      h.stubFrom('form_submissions',
+          result: <Map<String, dynamic>>[{'id': 's1'}]);
+
+      final ok = await service.updateStoryPoints(entityId: '  s1  ', points: 5);
+
+      expect(ok, isTrue);
+      final calls = h.queryByTable['form_submissions']!.calls;
+      final upd = calls.firstWhere((i) => i.memberName == #update);
+      final payload = upd.positionalArguments.first as Map;
+      expect(payload['story_points'], 5);
+      expect(payload.containsKey('updated_by'), isTrue);
+      // id + is_standalone filtreleri
+      expect(calls.where((i) => i.memberName == #eq).length,
+          greaterThanOrEqualTo(2));
+    });
+
+    test('null points → puanı temizler (story_points: null)', () async {
+      h.stubFrom('form_submissions',
+          result: <Map<String, dynamic>>[{'id': 's1'}]);
+      final ok = await service.updateStoryPoints(entityId: 's1', points: null);
+      expect(ok, isTrue);
+      final upd = h.queryByTable['form_submissions']!.calls
+          .firstWhere((i) => i.memberName == #update);
+      final payload = upd.positionalArguments.first as Map;
+      expect(payload.containsKey('story_points'), isTrue);
+      expect(payload['story_points'], isNull);
+    });
+
+    test('boş entityId → yazma yok, false', () async {
+      expect(await service.updateStoryPoints(entityId: '  ', points: 3), isFalse);
+    });
+
+    test('etkilenen satır yok → false', () async {
+      h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
+      expect(await service.updateStoryPoints(entityId: 's1', points: 3), isFalse);
+    });
+
+    test('DB hatası → false (fırlatmaz)', () async {
+      h.stubFrom('form_submissions', error: Exception('db down'));
+      expect(await service.updateStoryPoints(entityId: 's1', points: 3), isFalse);
+    });
+  });
+
   group('loadBacklog (form_submissions read)', () {
     test('happy path: parses rows into GenericEntity list', () async {
       service.setTenant('tenant-1');

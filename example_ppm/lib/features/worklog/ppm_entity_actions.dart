@@ -8,11 +8,16 @@ import '../../ppm_common.dart';
 /// [EntityDetailExtensions] registry'si üzerinden PPM'e özel write-aksiyonu
 /// (efor/worklog kaydı) ekler. `registerPpmScreens()`'ten bir kez çağrılır.
 void registerPpmEntityActions() {
-  // İş öğeleri (epic/story/task/sub_task) → efor kaydet.
+  // İş öğeleri (epic/story/task/sub_task) → story-point hızlı-düzenle + efor kaydet.
   for (final t in const ['epic', 'story', 'task', 'sub_task']) {
     EntityDetailExtensions.registerActions(
       t,
       (ctx, e, reload) => [
+        AppIconButton(
+          icon: Icons.numbers,
+          onPressed: () =>
+              _editStoryPoints(ctx, e.id, e.storyPoints, reload),
+        ),
         AppIconButton(
           icon: Icons.timer_outlined,
           onPressed: () => _logWork(ctx, e.id, reload),
@@ -29,6 +34,56 @@ void registerPpmEntityActions() {
 }
 
 SupabaseClient get _sb => sl<SupabaseClient>();
+
+/// Story-point hızlı-düzenleme (web `patchField`/`patchStandaloneEntity` deseni:
+/// hedefli tek-alan update, diğer alanlar dokunulmaz). Sayı dialog'u (mevcut
+/// değerle ön-dolu; boş = puanı temizle) → `EntityDataService.updateStoryPoints`
+/// → başarıda detayı tazele.
+Future<void> _editStoryPoints(BuildContext ctx, String entityId, num? current,
+    Future<void> Function() reload) async {
+  final controller = TextEditingController(
+      text: current != null ? current.toStringAsFixed(0) : '');
+  final result = await showDialog<String?>(
+    context: ctx,
+    builder: (dctx) => AlertDialog(
+      title: Text(ppmT('ppm.story_points.edit', 'Story point')),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          hintText: ppmT('ppm.story_points.hint', 'Puan (boş = temizle)'),
+          isDense: true,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(dctx).pop(null),
+            child: Text(ppmT('ppm.common.cancel', 'Vazgeç'))),
+        TextButton(
+            onPressed: () => Navigator.of(dctx).pop(controller.text.trim()),
+            child: Text(ppmT('ppm.common.save', 'Kaydet'))),
+      ],
+    ),
+  );
+  if (result == null) return; // iptal (boş string = temizle, farklı)
+  final points = result.isEmpty ? null : int.tryParse(result);
+  if (result.isNotEmpty && (points == null || points < 0)) {
+    if (!ctx.mounted) return;
+    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(ppmT('ppm.story_points.invalid', 'Geçersiz puan'))));
+    return;
+  }
+  final ok =
+      await sl<EntityDataService>().updateStoryPoints(entityId: entityId, points: points);
+  if (!ctx.mounted) return;
+  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(ok
+          ? ppmT('ppm.story_points.saved', 'Story point güncellendi ✓')
+          : ppmT('ppm.common.action_failed', 'İşlem başarısız'))));
+  if (ok) await reload();
+}
 
 Future<void> _logWork(
     BuildContext ctx, String submissionId, Future<void> Function() reload) async {

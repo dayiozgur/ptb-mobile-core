@@ -535,6 +535,38 @@ class EntityDataService {
     }
   }
 
+  /// Bir standalone iş-öğesinin `story_points`'ini HEDEFLİ günceller — web
+  /// `PtbEntityService.patchStandaloneEntity` deseninin birebir aynısı:
+  /// `form_submissions` native kolonuna tekil `update`, diğer alanlara
+  /// DOKUNULMAZ (submitEntity-tam-değer alan-silme riski yok). RLS tenant +
+  /// sahiplik scope eder; `is_standalone=true` ile bağlı-tablo entity'lerini
+  /// dışlar. [points] null → puanı temizler. Hata / etkilenen-satır-yok →
+  /// `false` (fırlatmaz), mobil write-servis sözleşmesiyle aynı.
+  Future<bool> updateStoryPoints({
+    required String entityId,
+    required int? points,
+  }) async {
+    final id = entityId.trim();
+    if (id.isEmpty) return false;
+    try {
+      final rows = await _supabase
+          .from('form_submissions')
+          .update({
+            'story_points': points,
+            'updated_by': _supabase.auth.currentUser?.id,
+          })
+          .eq('id', id)
+          .eq('is_standalone', true)
+          .select('id');
+      final ok = rows.isNotEmpty;
+      if (!ok) Logger.error('updateStoryPoints: etkilenen satır yok ($id)');
+      return ok;
+    } catch (e) {
+      Logger.error('updateStoryPoints ($entityId) hata', e);
+      return false;
+    }
+  }
+
   // ============================================
   // BACKLOG (reorder / rank)
   // ============================================
