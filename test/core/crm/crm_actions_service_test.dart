@@ -204,6 +204,53 @@ void main() {
     });
   });
 
+  group('listSequences', () {
+    test('step_count>0 aktif diziler döner (step_count=0 süzülür)', () async {
+      h.stubRpc('fn_crm_sequences_list', result: <Map<String, dynamic>>[
+        {'id': 's1', 'name': 'Onboarding', 'description': 'd', 'active': true, 'step_count': 3, 'active_enrollments': 2},
+        {'id': 's2', 'name': 'Boş', 'step_count': 0, 'active_enrollments': 0},
+        {'id': '', 'name': 'idsiz', 'step_count': 5},
+      ]);
+      final list = await service.listSequences();
+      expect(list.length, 1);
+      expect(list.first.id, 's1');
+      expect(list.first.name, 'Onboarding');
+      expect(list.first.stepCount, 3);
+      expect(list.first.activeEnrollments, 2);
+    });
+
+    test('boş sonuç → []', () async {
+      h.stubRpc('fn_crm_sequences_list', result: <Map<String, dynamic>>[]);
+      expect(await service.listSequences(), isEmpty);
+    });
+
+    test('RPC hatası → [] (fırlatmaz)', () async {
+      h.stubRpc('fn_crm_sequences_list', error: Exception('boom'));
+      expect(await service.listSequences(), isEmpty);
+    });
+  });
+
+  group('enrollInSequence', () {
+    test('geçerli → p_sequence_id + p_contact_id + true', () async {
+      h.stubRpc('fn_crm_sequence_enroll', result: null);
+      final ok = await service.enrollInSequence(contactId: '  c1  ', sequenceId: '  q1  ');
+      expect(ok, isTrue);
+      expect(h.capturedRpcParams('fn_crm_sequence_enroll'),
+          {'p_sequence_id': 'q1', 'p_contact_id': 'c1'});
+    });
+
+    test('boş id → RPC çağrılmaz, false', () async {
+      h.stubRpc('fn_crm_sequence_enroll', result: null);
+      expect(await service.enrollInSequence(contactId: '  ', sequenceId: 'q1'), isFalse);
+      expect(await service.enrollInSequence(contactId: 'c1', sequenceId: ''), isFalse);
+    });
+
+    test('RPC hatası (ör. already-enrolled) → false (fırlatmaz)', () async {
+      h.stubRpc('fn_crm_sequence_enroll', error: Exception('already enrolled'));
+      expect(await service.enrollInSequence(contactId: 'c1', sequenceId: 'q1'), isFalse);
+    });
+  });
+
   group('offline kuyruk', () {
     late MockOfflineSyncService sync;
     late MockConnectivityService conn;
@@ -296,6 +343,19 @@ void main() {
       registerOffline(offline: true);
       // RPC ağ yolu STUB'LANMADI → çağrılırsa test patlar (kuyruğa da alınmamalı).
       final ok = await service.convertWebLead(leadId: 'l1');
+      expect(ok, isFalse);
+      verifyNever(() => sync.enqueueRpc(
+            function: any(named: 'function'),
+            params: any(named: 'params'),
+            entityId: any(named: 'entityId'),
+            idempotencyKey: any(named: 'idempotencyKey'),
+          ));
+    });
+
+    test('OFFLINE enrollInSequence → online-only: false, ne kuyruk ne ağ', () async {
+      registerOffline(offline: true);
+      // RPC ağ yolu STUB'LANMADI → çağrılırsa test patlar (çift-enroll koruması).
+      final ok = await service.enrollInSequence(contactId: 'c1', sequenceId: 'q1');
       expect(ok, isFalse);
       verifyNever(() => sync.enqueueRpc(
             function: any(named: 'function'),

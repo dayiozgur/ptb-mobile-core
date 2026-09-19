@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../crm_common.dart';
 import '../microsoft/ms_contact_actions.dart';
@@ -59,6 +60,19 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (ok == true) _load();
   }
 
+  /// Kişiyi bir CRM otomasyon-dizisine ekle (web `sequence.service` paritesi).
+  /// Aktif diziler `fn_crm_sequences_list`'ten; enroll `fn_crm_sequence_enroll`.
+  Future<void> _enrollSequence(Contact c) async {
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _EnrollSequenceSheet(
+        contactId: widget.contactId,
+        contactName: c.displayName,
+      ),
+    );
+  }
+
   Future<void> _editContact(Contact c) async {
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -83,6 +97,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: crmT('common.edit', 'Düzenle'),
                 onPressed: () => _editContact(c),
+              ),
+              IconButton(
+                icon: const Icon(Icons.alt_route_outlined),
+                tooltip: crmT('crm.sequence.enroll_tooltip', 'Diziye ekle'),
+                onPressed: () => _enrollSequence(c),
               ),
               IconButton(
                 icon: const Icon(Icons.cloud_outlined),
@@ -425,6 +444,118 @@ class _LogActivitySheetState extends State<_LogActivitySheet> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : Text(crmT('crm.common.save', 'Kaydet')),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Diziye ekle" alt-sayfası — aktif CRM dizilerini (`fn_crm_sequences_list`)
+/// listeler; bir diziye dokununca kişiyi enroll eder (`fn_crm_sequence_enroll`,
+/// ONLINE-only). Zaten-enrolled / adımsız-dizi gibi RPC hataları başarısız-toast
+/// olarak yüzeye çıkar (web `crm-sequences` paritesi).
+class _EnrollSequenceSheet extends StatefulWidget {
+  final String contactId;
+  final String? contactName;
+  const _EnrollSequenceSheet({required this.contactId, this.contactName});
+
+  @override
+  State<_EnrollSequenceSheet> createState() => _EnrollSequenceSheetState();
+}
+
+class _EnrollSequenceSheetState extends State<_EnrollSequenceSheet> {
+  CrmActionsService get _actions =>
+      CrmActionsService(supabase: sl<SupabaseClient>());
+
+  bool _loading = true;
+  bool _enrolling = false;
+  List<CrmSequence> _sequences = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final seqs = await _actions.listSequences();
+    if (mounted) {
+      setState(() {
+        _sequences = seqs;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _enroll(CrmSequence s) async {
+    if (_enrolling) return;
+    setState(() => _enrolling = true);
+    final ok = await _actions.enrollInSequence(
+      contactId: widget.contactId,
+      sequenceId: s.id,
+    );
+    if (!mounted) return;
+    setState(() => _enrolling = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? crmT('crm.sequence.enroll_ok', 'Diziye eklendi')
+          : crmT('crm.sequence.enroll_failed',
+              'Eklenemedi (zaten ekli olabilir)')),
+      backgroundColor: ok ? null : Colors.red.shade700,
+    ));
+    if (ok) Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md,
+          MediaQuery.of(context).viewInsets.bottom + AppSpacing.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(crmT('crm.sequence.enroll_title', 'Diziye ekle'),
+              style: AppTypography.headline),
+          if ((widget.contactName ?? '').isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(widget.contactName!,
+                style: AppTypography.footnote
+                    .copyWith(color: AppColors.secondaryLabel(context))),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: AppLoadingIndicator()),
+            )
+          else if (_sequences.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: AppEmptyState(
+                icon: Icons.alt_route_outlined,
+                title: crmT('crm.sequence.none', 'Aktif dizi yok'),
+              ),
+            )
+          else
+            ..._sequences.map((s) => Opacity(
+                  opacity: _enrolling ? 0.5 : 1,
+                  child: AppCard(
+                    child: ListTile(
+                      enabled: !_enrolling,
+                      title: Text(s.name, style: AppTypography.subhead),
+                      subtitle: Text(
+                        crmT('crm.sequence.meta', '{steps} adım · {active} aktif')
+                            .replaceFirst('{steps}', '${s.stepCount}')
+                            .replaceFirst('{active}', '${s.activeEnrollments}'),
+                        style: AppTypography.caption1.copyWith(
+                            color: AppColors.secondaryLabel(context)),
+                      ),
+                      trailing: const Icon(Icons.add_circle_outline),
+                      onTap: () => _enroll(s),
+                    ),
+                  ),
+                )),
         ],
       ),
     );

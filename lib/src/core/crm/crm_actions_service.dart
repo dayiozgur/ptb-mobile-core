@@ -5,6 +5,34 @@ import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
 import '../utils/logger.dart';
 
+/// Bir CRM otomasyon-dizisi (email/cadence) özeti — `fn_crm_sequences_list`
+/// satırı. Dizi-seçici (enroll) için hafif model.
+class CrmSequence {
+  final String id;
+  final String name;
+  final String? description;
+  final int stepCount;
+  final int activeEnrollments;
+
+  const CrmSequence({
+    required this.id,
+    required this.name,
+    this.description,
+    this.stepCount = 0,
+    this.activeEnrollments = 0,
+  });
+
+  /// SAF satır→model (ayrı test edilebilir). `fn_crm_sequences_list` kolonları:
+  /// `id, name, description, active, step_count, active_enrollments`.
+  static CrmSequence fromRow(Map<String, dynamic> r) => CrmSequence(
+        id: r['id']?.toString() ?? '',
+        name: (r['name'] as String?) ?? '',
+        description: r['description'] as String?,
+        stepCount: (r['step_count'] as num?)?.toInt() ?? 0,
+        activeEnrollments: (r['active_enrollments'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// **CRM aksiyon-çubuğu servisi** — web CRM entity-detay aksiyon-çubuğunun
 /// (aktivite-logla / sonraki-adım-planla / aktivite-tamamla) yazma-paritesini
 /// mobilde kurar. Üç CRM SECDEF RPC'si üzerinden çalışır; tenant + created_by
@@ -136,6 +164,46 @@ class CrmActionsService {
     } catch (e) {
       Logger.error('crm scoreLead ($leadId) hata', e);
       return null;
+    }
+  }
+
+  /// Aktif CRM dizilerini listele (`fn_crm_sequences_list`) — dizi-seçici için.
+  /// SECDEF + tenant-scoped. Yalnız enroll edilebilir (adım-içeren) diziler
+  /// gösterilsin diye `step_count > 0` süzülür. Hata/boş → `[]` (fırlatmaz).
+  Future<List<CrmSequence>> listSequences() async {
+    try {
+      final res = await _supabase.rpc('fn_crm_sequences_list');
+      final list = (res as List?) ?? const [];
+      return list
+          .map((e) => CrmSequence.fromRow(Map<String, dynamic>.from(e as Map)))
+          .where((s) => s.id.isNotEmpty && s.stepCount > 0)
+          .toList();
+    } catch (e) {
+      Logger.error('crm listSequences hata', e);
+      return [];
+    }
+  }
+
+  /// Bir kişiyi bir diziye ekle (`fn_crm_sequence_enroll(p_sequence_id,
+  /// p_contact_id)`). **ONLINE-only, bilinçli:** enroll yeni bir enrollment
+  /// satırı ÜRETİR → offline-replay çift-kayıt riski taşır (RPC zaten 'already
+  /// enrolled' fırlatır) ve `defaultAllowedRpcFunctions` allow-list'inde DEĞİL —
+  /// [convertWebLead] ile aynı sözleşme. Boş id / offline / hata → `false`.
+  Future<bool> enrollInSequence({
+    required String contactId,
+    required String sequenceId,
+  }) async {
+    final cid = contactId.trim();
+    final sid = sequenceId.trim();
+    if (cid.isEmpty || sid.isEmpty) return false;
+    if (_connectivityOrNull?.isOffline ?? false) return false;
+    try {
+      await _supabase.rpc('fn_crm_sequence_enroll',
+          params: {'p_sequence_id': sid, 'p_contact_id': cid});
+      return true;
+    } catch (e) {
+      Logger.error('crm enrollInSequence ($cid→$sid) hata', e);
+      return false;
     }
   }
 
