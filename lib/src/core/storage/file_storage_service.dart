@@ -707,7 +707,7 @@ class FileStorageService {
           );
       Logger.info('File uploaded: $bucket/$path');
 
-      return _registerOrCleanup(
+      return await _registerOrCleanup(
         bucket: bucket,
         path: path,
         fileName: name,
@@ -824,7 +824,7 @@ class FileStorageService {
           );
       Logger.info('File uploaded (bytes): $bucket/$path');
 
-      return _registerOrCleanup(
+      return await _registerOrCleanup(
         bucket: bucket,
         path: path,
         fileName: fileName,
@@ -1006,6 +1006,36 @@ class FileStorageService {
     } catch (e) {
       Logger.error('Failed to get signed URL: $e');
       return null;
+    }
+  }
+
+  /// İç depodaki (our-storage) bir entity'ye bağlı dosyaları listele —
+  /// `storage_objects` doğrudan sorgu (SELECT-RLS tenant-üyesine açık; web
+  /// `StorageService.list({entityType, entityId})` mobil paritesi). İki-kaynak
+  /// Files-card'ının iç-dosya kaynağı. Hata durumunda `[]` (MS kaynağını bloke etmez).
+  Future<List<InternalEntityFile>> listEntityFiles(String entityType, String entityId) async {
+    try {
+      final rows = await _supabase
+          .from(_registryTable)
+          .select('id, file_name, file_size, mime_type, bucket, storage_path, created_at')
+          .eq('entity_type', entityType)
+          .eq('entity_id', entityId)
+          .order('created_at', ascending: false);
+      return (rows as List).map((r) {
+        final m = r as Map<String, dynamic>;
+        return InternalEntityFile(
+          id: m['id']?.toString() ?? '',
+          name: (m['file_name'] as String?) ?? 'dosya',
+          size: (m['file_size'] as num?)?.toInt(),
+          mime: m['mime_type'] as String?,
+          bucket: (m['bucket'] as String?) ?? StorageBuckets.platformPrivate,
+          path: (m['storage_path'] as String?) ?? '',
+          createdAt: m['created_at'] != null ? DateTime.tryParse(m['created_at'].toString()) : null,
+        );
+      }).toList();
+    } catch (e) {
+      Logger.error('listEntityFiles failed: $e');
+      return const [];
     }
   }
 
@@ -1203,4 +1233,25 @@ class FileStorageService {
         .replaceAll(RegExp(r'\s+'), '_')
         .toLowerCase();
   }
+}
+
+/// İç depodaki (`storage_objects`) bir entity'ye bağlı tek dosya —
+/// iki-kaynak Files-card'ının "Depomuz" satırı. MS `EntityFileLink`'in paritesi.
+class InternalEntityFile {
+  final String id;
+  final String name;
+  final int? size;
+  final String? mime;
+  final String bucket;
+  final String path;
+  final DateTime? createdAt;
+  const InternalEntityFile({
+    required this.id,
+    required this.name,
+    this.size,
+    this.mime,
+    required this.bucket,
+    required this.path,
+    this.createdAt,
+  });
 }
