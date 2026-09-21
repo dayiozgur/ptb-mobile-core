@@ -22,6 +22,8 @@ SprintState _stateFromDb(Object? v) {
 /// yalnız yönetim ekranının ihtiyaç duyduğu alanlar.
 class Sprint {
   final String id;
+  /// Sahip proje (form_submissions id). Jira-style: sprint tam 1 projeye ait.
+  final String projectId;
   final String name;
   final String? goal;
   final SprintState state;
@@ -31,6 +33,7 @@ class Sprint {
 
   const Sprint({
     required this.id,
+    this.projectId = '',
     required this.name,
     this.goal,
     this.state = SprintState.unknown,
@@ -41,6 +44,7 @@ class Sprint {
 
   factory Sprint.fromJson(Map<String, dynamic> j) => Sprint(
         id: j['id'] as String,
+        projectId: (j['project_id'] as String?) ?? '',
         name: (j['name'] as String?) ?? '',
         goal: j['goal'] as String?,
         state: _stateFromDb(j['state']),
@@ -63,12 +67,16 @@ class SprintService {
 
   SprintService({required SupabaseClient supabase}) : _supabase = supabase;
 
-  /// Tenant'ın sprint'lerini `sort_order`'a göre listeler (RLS scope). Hata → [].
-  Future<List<Sprint>> listSprints() async {
+  /// Bir projenin sprint'lerini `sort_order`'a göre listeler (RLS + proje scope).
+  /// Jira-style: sprint tam 1 projeye ait, o yüzden [projectId] zorunlu. Hata → [].
+  Future<List<Sprint>> listSprints(String projectId) async {
+    final pid = projectId.trim();
+    if (pid.isEmpty) return const [];
     try {
       final rows = await _supabase
           .from('sprints')
-          .select('id, name, goal, start_date, end_date, state, entity_type, sort_order')
+          .select('id, project_id, name, goal, start_date, end_date, state, entity_type, sort_order')
+          .eq('project_id', pid)
           .order('sort_order', ascending: true);
       return (rows as List)
           .map((r) => Sprint.fromJson(Map<String, dynamic>.from(r as Map)))

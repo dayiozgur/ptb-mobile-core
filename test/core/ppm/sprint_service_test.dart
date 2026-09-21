@@ -18,25 +18,30 @@ void main() {
   });
 
   group('listSprints', () {
-    test('satırları Sprint listesine parse eder (state dahil)', () async {
+    test('satırları Sprint listesine parse eder (state + projectId dahil)', () async {
       h.stubFrom('sprints', result: <Map<String, dynamic>>[
-        {'id': 's1', 'name': 'Sprint 1', 'state': 'active', 'entity_type': 'ppm_task'},
-        {'id': 's2', 'name': 'Sprint 2', 'state': 'future'},
-        {'id': 's3', 'name': 'Sprint 3', 'state': 'closed'},
+        {'id': 's1', 'project_id': 'p1', 'name': 'Sprint 1', 'state': 'active', 'entity_type': 'ppm_task'},
+        {'id': 's2', 'project_id': 'p1', 'name': 'Sprint 2', 'state': 'future'},
+        {'id': 's3', 'project_id': 'p1', 'name': 'Sprint 3', 'state': 'closed'},
       ]);
 
-      final list = await service.listSprints();
+      final list = await service.listSprints('p1');
 
       expect(list.map((s) => s.id), ['s1', 's2', 's3']);
       expect(list[0].state, SprintState.active);
       expect(list[1].state, SprintState.future);
       expect(list[2].state, SprintState.closed);
       expect(list[0].entityType, 'ppm_task');
+      expect(list[0].projectId, 'p1');
+    });
+
+    test('boş projectId → sorgu yok, boş liste', () async {
+      expect(await service.listSprints('  '), isEmpty);
     });
 
     test('hata → boş liste (fırlatmaz)', () async {
       h.stubFrom('sprints', error: Exception('db down'));
-      expect(await service.listSprints(), isEmpty);
+      expect(await service.listSprints('p1'), isEmpty);
     });
   });
 

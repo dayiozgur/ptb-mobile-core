@@ -19,20 +19,66 @@ class PpmSprintsManageScreen extends StatefulWidget {
 }
 
 class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
-  late final SprintService _svc = SprintService(supabase: sl<SupabaseClient>());
-  bool _loading = true;
+  late final SupabaseClient _sb = sl<SupabaseClient>();
+  late final SprintService _svc = SprintService(supabase: _sb);
+  bool _loading = false;
+  bool _loadingProjects = true;
   List<Sprint> _sprints = const [];
+  List<AppDropdownItem<String>> _projectItems = const [];
+  String? _projectId;
   String? _busyId;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadProjects();
+  }
+
+  /// Jira-style: sprint tam 1 projeye ait → önce projeyi seç, sonra o projenin
+  /// sprint'lerini yükle. Projeler doğrudan RLS-scope'lu sorgulanır (proje kökü).
+  Future<void> _loadProjects() async {
+    setState(() => _loadingProjects = true);
+    try {
+      final rows = await _sb
+          .from('form_submissions')
+          .select('id, subject')
+          .inFilter('entity_type', ['project', 'arge_proje'])
+          .eq('active', true)
+          .order('subject', ascending: true);
+      final items = (rows as List)
+          .map((r) => AppDropdownItem<String>(
+                value: (r as Map)['id'] as String,
+                label: (r['subject'] as String?) ?? (r['id'] as String),
+              ))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _projectItems = items;
+        _loadingProjects = false;
+        // Tek proje varsa otomatik seç.
+        if (items.length == 1) _projectId = items.first.value;
+      });
+      if (_projectId != null) await _load();
+    } catch (e) {
+      Logger.error('loadProjects hata', e);
+      if (!mounted) return;
+      setState(() => _loadingProjects = false);
+    }
+  }
+
+  void _onProjectChanged(String? id) {
+    setState(() {
+      _projectId = id;
+      _sprints = const [];
+    });
+    if (id != null) _load();
   }
 
   Future<void> _load() async {
+    final pid = _projectId;
+    if (pid == null) return;
     setState(() => _loading = true);
-    final s = await _svc.listSprints();
+    final s = await _svc.listSprints(pid);
     if (!mounted) return;
     // active → future → closed sırası (yönetimde en alakalı en üstte).
     int rank(SprintState st) => switch (st) {
@@ -106,24 +152,53 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
         ),
         AppIconButton(icon: Icons.refresh, onPressed: _load),
       ],
-      child: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: _sprints.isEmpty
-                  ? ListView(children: [
-                      Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        child: Center(
-                            child: Text(ppmT(
-                                'ppm.sprint.empty', 'Sprint yok.'))),
-                      )
-                    ])
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      itemCount: _sprints.length,
-                      itemBuilder: (_, i) => _sprintCard(_sprints[i]),
-                    ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: AppDropdown<String>(
+              label: ppmT('ppm.sprint.project', 'Proje'),
+              placeholder: ppmT('ppm.sprint.select_project', 'Bir proje seçin…'),
+              prefixIcon: Icons.folder_outlined,
+              items: _projectItems,
+              value: _projectId,
+              onChanged: _onProjectChanged,
+            ),
+          ),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
+
+  Widget _body() {
+    if (_loadingProjects || _loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_projectId == null) {
+      return ListView(children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Center(
+              child: Text(ppmT('ppm.sprint.pick_project_hint',
+                  'Sprint\'leri görüntülemek için bir proje seçin.'))),
+        )
+      ]);
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: _sprints.isEmpty
+          ? ListView(children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Center(
+                    child: Text(ppmT('ppm.sprint.empty', 'Sprint yok.'))),
+              )
+            ])
+          : ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              itemCount: _sprints.length,
+              itemBuilder: (_, i) => _sprintCard(_sprints[i]),
             ),
     );
   }
