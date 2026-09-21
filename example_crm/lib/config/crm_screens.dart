@@ -6,6 +6,7 @@ import '../features/contacts/contacts_list_screen.dart';
 import '../features/dashboard/crm_dashboard_screen.dart';
 import '../features/deals/crm_entity_actions.dart';
 import '../features/forecast/crm_forecast_screen.dart';
+import '../features/duplicates/crm_duplicates_screen.dart';
 import '../crm_common.dart';
 
 /// CRM "Günlük İşlerim" kaynağı — `fn_crm_my_work` satırlarını generic
@@ -56,6 +57,10 @@ Widget? crmResolve(MenuItem item) {
   // burada yalnız mobil ekranı bu mevcut yola bağlarız (menü paylaşımlı — web kırılmaz).
   if (p == '/crm/forecast') {
     return const CrmForecastScreen();
+  }
+  // Yinelenen kayıtlar: web menü-item'ı `/crm/duplicates` ZATEN var (nav.crm_duplicates).
+  if (p == '/crm/duplicates') {
+    return const CrmDuplicatesScreen();
   }
   return null;
 }

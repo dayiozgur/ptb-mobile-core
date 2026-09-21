@@ -99,6 +99,7 @@ export 'src/core/ppm/planner_link_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';
 export 'src/core/crm/crm_forecast_service.dart';
+export 'src/core/crm/crm_duplicate_service.dart';
 export 'src/core/integration/microsoft_integration_service.dart';
 export 'src/core/integration/entity_file_link_service.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
