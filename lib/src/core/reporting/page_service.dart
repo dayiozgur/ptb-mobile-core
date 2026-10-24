@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../platform/builder_platform_filter.dart';
 
 import '../utils/logger.dart';
 import '../../presentation/page_viewer/models/page_template.dart';
@@ -34,8 +35,9 @@ class PageService {
           .eq('is_published', true);
 
       if (platformId != null && platformId.isNotEmpty) {
-        // O platforma ait ya da tüm platformlarda paylaşımlı (null) şablonlar.
-        query = query.or('platform_id.eq.$platformId,platform_id.is.null');
+        // O platforma ait, tüm platformlarda paylaşımlı ya da platform_ids
+        // listesinde bu platform olan şablonlar.
+        query = BuilderPlatformFilter.apply(query, platformId);
       }
 
       final row = await query.limit(1).maybeSingle();

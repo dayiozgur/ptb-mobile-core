@@ -213,6 +213,7 @@ export 'src/core/menu/bootstrap_icon_map.dart';
 // Core - Platform (M1 — platform switch)
 export 'src/core/platform/platform_catalog.dart';
 export 'src/core/platform/platform_context.dart';
+export 'src/core/platform/builder_platform_filter.dart';
 
 // Core - Entity Engine (low-code builder data layer)
 export 'src/core/entity/models/entity_type_config.dart';

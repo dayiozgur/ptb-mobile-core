@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../platform/builder_platform_filter.dart';
 
 import '../platform/platform_context.dart';
 import '../utils/logger.dart';
@@ -43,7 +44,8 @@ class ReportService {
 
       final platformId = _platformContext?.activePlatformId;
       if (platformId != null && platformId.isNotEmpty) {
-        query = query.eq('platform_id', platformId);
+        // Exclusive + tüm-platform + platform_ids listesi (web ile aynı).
+        query = BuilderPlatformFilter.apply(query, platformId);
       }
 
       final rows = await query.limit(1);

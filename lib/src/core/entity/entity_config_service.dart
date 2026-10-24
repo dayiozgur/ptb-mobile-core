@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../platform/builder_platform_filter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
@@ -51,7 +52,8 @@ class EntityConfigService {
           _supabase.from('entity_type_configs').select().eq('active', true);
 
       if (platformId != null) {
-        query = query.or('platform_id.eq.$platformId,platform_id.is.null');
+        // Bu platforma özel + tüm-platform + platform_ids listesinde olanlar.
+        query = BuilderPlatformFilter.apply(query, platformId);
       }
 
       final response = await query.order('menu_order', ascending: true);
