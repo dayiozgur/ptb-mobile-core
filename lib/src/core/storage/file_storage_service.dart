@@ -321,9 +321,12 @@ enum StorageCategory {
 /// `platform-public` (public), `platform-protected` + `platform-private`
 /// (ikisi de `public=false` → imzalı URL gerektirir).
 ///
-/// NOT: CANLI `storage.buckets` tablosunda legacy public bucket'lar (`avatars`,
+/// NOT: CANLI `storage.buckets` tablosunda legacy bucket'lar (`avatars`,
 /// `site-images`, …) hâlâ vardır ama web'in AKTİF yazım hedefi bu üçüdür; mobil
 /// de aynı hedeflere yazar ki dosyalar platformlar arası okunabilsin.
+/// `avatars` 2026-10-25'ten beri PRIVATE (CRA A-11): `getPublicUrl` ASLA
+/// kullanılmaz; eski bir değer gelirse [FileStorageService.getAvatarUrl]
+/// imzalı URL üretir.
 class StorageBuckets {
   /// Public CDN bucket — imzasız `getPublicUrl`.
   static const String platformPublic = 'platform-public';
@@ -336,10 +339,14 @@ class StorageBuckets {
   /// (`<PLATFORM>/<tenant>/<org>/<category>/…`), signed-URL ile okunur.
   static const String platformPrivate = 'platform-private';
 
+  /// Legacy avatar bucket — artık PRIVATE (yalnız eski değerleri okumak için).
+  static const String legacyAvatars = 'avatars';
+
   /// İmzalı URL gerektiren (private) bucket'lar — `getPublicUrl` bunlarda 403.
   static const Set<String> private = {
     platformProtected,
     platformPrivate,
+    legacyAvatars,
   };
 
   /// Bu bucket imzalı URL mi gerektiriyor?
@@ -932,11 +939,15 @@ class FileStorageService {
   // URLs
   // ============================================
 
-  /// Public URL al
+  /// Public URL al — YALNIZ public bucket'lar için. Private bucket'larda
+  /// (platform-protected/-private, legacy `avatars`) public URL 400/403 döner;
+  /// [getSignedUrl] / [getAvatarUrl] kullanın.
   String getPublicUrl({
     required String bucket,
     required String path,
   }) {
+    assert(!StorageBuckets.isPrivate(bucket),
+        'getPublicUrl on private bucket "$bucket" — use getSignedUrl');
     return _supabase.storage.from(bucket).getPublicUrl(path);
   }
 
@@ -958,6 +969,16 @@ class FileStorageService {
     Duration expiry = signedUrlExpiry,
   }) async {
     if (raw == null || raw.isEmpty) return null;
+    // Legacy `avatars` bucket artık PRIVATE → public URL 400/403 döner. Eski
+    // bir değer (public URL ya da `avatars/` yolu) gelirse imzalı URL üret.
+    final legacy = legacyAvatarPath(raw);
+    if (legacy != null) {
+      return getSignedUrl(
+        bucket: StorageBuckets.legacyAvatars,
+        path: legacy,
+        expiry: expiry,
+      );
+    }
     // Storage path değilse (tam URL ya da düz değer) olduğu gibi döndür — web
     // isStoragePath ile aynı: PLATFORM/(<tenant>/)?(protected|assets|private)/…
     if (!_isStoragePath(raw)) return raw;
@@ -977,6 +998,19 @@ class FileStorageService {
       _avatarUrlCache[raw] = (url: signed, at: DateTime.now());
     }
     return signed;
+  }
+
+  /// Legacy `avatars` bucket'ına işaret eden değerin bucket-içi yolu, değilse
+  /// null. Tanır: `…/storage/v1/object/public/avatars/<yol>` (ve `/sign/`),
+  /// `avatars/<yol>`.
+  static String? legacyAvatarPath(String raw) {
+    final m = RegExp(r'/storage/v1/object/(?:public|sign|authenticated)/avatars/([^?]+)')
+        .firstMatch(raw);
+    if (m != null) return Uri.decodeFull(m.group(1)!);
+    if (raw.startsWith('avatars/') && raw.length > 'avatars/'.length) {
+      return raw.substring('avatars/'.length);
+    }
+    return null;
   }
 
   /// Web `StorageService.isStoragePath` ile birebir: değer platform-protected
