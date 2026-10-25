@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
+import '../time/app_clock.dart';
 import '../utils/logger.dart';
 import 'models/admin_pdks_row.dart';
 import 'models/attendance_lock_row.dart';
@@ -182,7 +183,7 @@ class AdminAttendanceService {
       final tenantId = _tenantId;
       if (tenantId == null) return [];
 
-      final now = DateTime.now();
+      final now = AppClock.todayDate(); // tenant-yerel ay (cihaz değil)
       final f = from ?? DateTime(now.year, now.month, 1);
       final t = to ?? DateTime(now.year, now.month + 1, 0);
 
@@ -293,7 +294,7 @@ class AdminAttendanceService {
       if (tenantId == null) return [];
 
       // Görüntülenecek dönem aralığını üret (yeni → eski).
-      final now = DateTime.now();
+      final now = AppClock.todayDate(); // tenant-yerel dönem (cihaz değil)
       final periods = <DateTime>[];
       for (int i = 0; i < months; i++) {
         periods.add(DateTime(now.year, now.month - i, 1));
