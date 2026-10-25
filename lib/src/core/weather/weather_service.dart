@@ -126,7 +126,7 @@ class WeatherService {
         } catch (e) {
           Logger.warning('reverse-geocode başarısız: $e');
         }
-        return current(
+        return await current(
           lat: pos.latitude,
           lon: pos.longitude,
           city: city ?? fallbackCity,

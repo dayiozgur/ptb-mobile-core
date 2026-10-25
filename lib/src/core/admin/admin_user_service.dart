@@ -49,7 +49,7 @@ class AdminUserService {
           .map((r) => UserProfile.fromJson(r as Map<String, dynamic>))
           .toList();
 
-      return _enrichCoarseRoles(users);
+      return await _enrichCoarseRoles(users);
     } catch (e, st) {
       Logger.error('AdminUserService.listUsers failed', e, st);
       rethrow;
