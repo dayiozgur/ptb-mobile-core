@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../di/service_locator.dart';
+import '../entity/entity_data_service.dart';
+import '../entity/entity_status_labels.dart';
 import '../utils/logger.dart';
 
 /// "Bana atanan iş" listesindeki tek öğe — platform-nötr, generic.
@@ -59,10 +62,46 @@ class WorkInboxService {
           ? await _supabase.rpc(source.rpcName, params: source.params)
           : await _supabase.rpc(source.rpcName);
       final rows = (res as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      return rows.map(source.mapper).toList();
+      return await _withStatusNames(rows.map(source.mapper).toList());
     } catch (e) {
       Logger.error('WorkInbox load (${source.rpcName}) hata', e);
       return [];
     }
+  }
+
+  /// Ham durum KODU yerine görünen ad (status_definitions; sistem durumları
+  /// `status.<code>` ile çevrili). Tanım yoksa humanize — ham kod gösterilmez.
+  Future<List<WorkInboxItem>> _withStatusNames(List<WorkInboxItem> items) async {
+    final types = {
+      for (final it in items)
+        if (it.entityType != null && (it.status ?? '').isNotEmpty) it.entityType!
+    };
+    final labels = <String, Map<String, EntityStatusLabel>>{};
+    if (types.isNotEmpty && sl.isRegistered<EntityDataService>()) {
+      final svc = sl<EntityDataService>();
+      for (final t in types) {
+        try {
+          labels[t] = await svc.statusLabels(t);
+        } catch (_) {
+          labels[t] = const {};
+        }
+      }
+    }
+    return items.map((it) {
+      final s = it.status;
+      if (s == null || s.isEmpty) return it;
+      final name = EntityStatusLabels.nameOf(s, labels[it.entityType] ?? const {});
+      if (name == s) return it;
+      return WorkInboxItem(
+        id: it.id,
+        title: it.title,
+        subtitle: it.subtitle,
+        group: it.group,
+        status: name,
+        entityType: it.entityType,
+        dueDate: it.dueDate,
+        trailing: it.trailing,
+      );
+    }).toList();
   }
 }

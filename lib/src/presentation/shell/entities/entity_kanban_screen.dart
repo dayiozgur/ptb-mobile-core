@@ -142,9 +142,7 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
       return defsRaw
           .map((row) => _StatusColumn(
                 code: (row['code'] as String?) ?? '',
-                label: (row['name'] as String?) ??
-                    (row['code'] as String?) ??
-                    '',
+                label: EntityStatusLabels.rowName(row),
                 color: _parseHexColor(row['color'] as String?),
               ))
           .where((c) => c.code.isNotEmpty)
@@ -162,7 +160,7 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
           code: key,
           label: key == _noStatusKey
               ? sl<LocalizationService>().translate('common.no_records')
-              : status!,
+              : EntityStatusLabels.humanize(status!),
           color: null,
         ));
       }

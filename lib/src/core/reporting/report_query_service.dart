@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../di/service_locator.dart';
+import '../entity/entity_data_service.dart';
+import '../entity/entity_status_labels.dart';
 import '../utils/logger.dart';
 
 /// Report/Page dinamik widget'ları için tek veri yolu.
@@ -89,15 +92,80 @@ class ReportQueryService {
 
         // Başarılı zarf: satırlar body['data'] içinde.
         final rows = map['data'];
-        return _asRowList(rows);
+        return await _withStatusNames(dataSourceId, _asRowList(rows));
       }
 
       // Zarf yoksa body zaten satır listesi olabilir.
-      return _asRowList(body);
+      return await _withStatusNames(dataSourceId, _asRowList(body));
     } catch (e) {
       Logger.error('ReportQueryService.runWidget başarısız (ds=$dataSourceId)', e);
       rethrow;
     }
+  }
+
+  final Map<String, Future<String?>> _dsEntityType = {};
+
+  /// Entity veri kaynağı (`base_filters`: `entity_type = '<type>'`) ve bir
+  /// `status` boyut kolonu varsa satırlardaki durum KODLARINI görünen ada
+  /// çevirir (grafik lejantı / tablo hücresi `needs_service` yerine ad). Web
+  /// parity: status-value-labels.ts. Hata → satırlar aynen döner.
+  Future<List<Map<String, dynamic>>> _withStatusNames(
+    String dataSourceId,
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty || !rows.any((r) => r['status'] is String)) return rows;
+    if (!sl.isRegistered<EntityDataService>()) return rows;
+    try {
+      final et = await _dsEntityType.putIfAbsent(
+          dataSourceId, () => _loadEntityType(dataSourceId));
+      if (et == null) return rows;
+      final labels = await sl<EntityDataService>().statusLabels(et);
+      return EntityStatusLabels.relabelRows(rows, labels);
+    } catch (e) {
+      _dsEntityType.remove(dataSourceId);
+      Logger.warning('report-query status relabel atlandı (ds=$dataSourceId): $e');
+      return rows;
+    }
+  }
+
+  Future<String?> _loadEntityType(String dataSourceId) async {
+    final row = await _supabase
+        .from('dr_data_sources')
+        .select('base_filters, columns')
+        .eq('id', dataSourceId)
+        .maybeSingle();
+    if (row == null) return null;
+    return entityTypeOfDataSource(row['base_filters'], row['columns']);
+  }
+
+  /// `base_filters` içindeki `entity_type = '<type>'` (parametresiz) filtresi
+  /// ve `status` boyut kolonu varsa entity tipi; aksi halde null.
+  static String? entityTypeOfDataSource(dynamic baseFilters, dynamic columns) {
+    String? type;
+    if (baseFilters is List) {
+      for (final f in baseFilters) {
+        if (f is! Map) continue;
+        final op = (f['operator'] ?? 'eq').toString();
+        final v = f['value'];
+        if (f['field'] == 'entity_type' &&
+            op == 'eq' &&
+            (f['param'] == null || f['param'] == false || f['param'] == '') &&
+            v is String &&
+            v.trim().isNotEmpty &&
+            !v.startsWith(':')) {
+          type = v.trim();
+          break;
+        }
+      }
+    }
+    if (type == null) return null;
+    final hasStatus = columns is List &&
+        columns.any((c) =>
+            c is Map &&
+            c['code'] == 'status' &&
+            c['role'] != 'measure' &&
+            c['role'] != 'time');
+    return hasStatus ? type : null;
   }
 
   /// Gelen değeri `List<Map<String,dynamic>>` biçimine güvenli şekilde çevirir.

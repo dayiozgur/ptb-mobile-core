@@ -289,7 +289,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
                 if (isOutlook && (it.joinUrl ?? '').isNotEmpty)
                   const Icon(Icons.videocam_outlined, size: 18, color: Color(0xFF0F6CBD))
                 else if (it.status != null && it.status!.isNotEmpty)
-                  AppBadge(label: it.status!, variant: AppBadgeVariant.info, size: AppBadgeSize.small),
+                  EntityStatusBadge(entityType: it.tapType, status: it.status!, variant: AppBadgeVariant.info),
               ],
             ),
           ),
