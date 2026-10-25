@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../di/service_locator.dart';
 import '../entity/models/entity_type_config.dart';
 import '../localization/localization_service.dart';
+import '../platform/builder_platform_filter.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'menu_item.dart';
@@ -46,7 +47,8 @@ class MobileMenuService {
   Stream<List<MenuItem>> get menuStream => _menuController.stream;
 
   String _cacheKey(String platformId) => 'menu_flat_$platformId';
-  String _entityCacheKey(String platformId) => 'menu_entity_$platformId';
+  // v2: platform_ids-scoped rows included (stale v1 caches ignored).
+  String _entityCacheKey(String platformId) => 'menu_entity_v2_$platformId';
 
   /// Platform menüsünü yükle, role göre filtrele, ağaç kur.
   ///
@@ -93,9 +95,11 @@ class MobileMenuService {
   }
 
   /// `entity_type_configs` ham satırlarını getir — cache-first (30dk, menü ile
-  /// aynı TTL). STRICT `platform_id = platformId` (platform-bağımsız/null
-  /// satırlar HARİÇ) — böylece show_in_menu tipi olmayan platformlar (PMS)
-  /// etkilenmez; PHR kendi `hr_*` tiplerini alır.
+  /// aynı TTL). Yalnız platforma KAPSAMLI satırlar: `platform_id = X` ya da
+  /// `platform_ids ∋ X` (tüm-platform paylaşımlılar HARİÇ) — web entity menüsü
+  /// `platformScopedOnly` ile aynı. Böylece show_in_menu tipi olmayan
+  /// platformlar (PMS) etkilenmez; PHR kendi `hr_*` tiplerini ve
+  /// `platform_ids` ile paylaşılan Ar-Ge tiplerini (PHR+PMP) alır.
   Future<List<Map<String, dynamic>>> _loadEntityConfigRows(
     String platformId, {
     bool forceRefresh = false,
@@ -120,7 +124,7 @@ class MobileMenuService {
       final response = await _supabase
           .from(_entityTable)
           .select()
-          .eq('platform_id', platformId)
+          .or(BuilderPlatformFilter.scopedOnlyOrFilter(platformId))
           .eq('active', true)
           .eq('show_in_menu', true)
           .order('menu_order', ascending: true);
