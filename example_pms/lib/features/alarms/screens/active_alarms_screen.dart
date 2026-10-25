@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../alarm_actions_helper.dart';
+
 class ActiveAlarmsScreen extends StatefulWidget {
   const ActiveAlarmsScreen({super.key});
 
@@ -17,7 +19,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
 
   List<Alarm> _allAlarms = [];
   List<Alarm> _filteredAlarms = [];
-  Map<String, Priority> _priorityMap = {};
+  PriorityCatalog _catalog = PriorityCatalog.empty;
 
   String? _selectedPriorityId;
   String _searchQuery = '';
@@ -86,14 +88,9 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
       final priorities = results[0] as List<Priority>;
       final alarms = results[1] as List<Alarm>;
 
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
-
       if (mounted) {
         setState(() {
-          _priorityMap = pMap;
+          _catalog = PriorityCatalog(priorities);
           _allAlarms = alarms;
           _applyFilters();
           _isLoading = false;
@@ -114,7 +111,9 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
     var filtered = List<Alarm>.from(_allAlarms);
 
     if (_selectedPriorityId != null) {
-      filtered = filtered.where((a) => a.priorityId == _selectedPriorityId).toList();
+      filtered = filtered
+          .where((a) => _catalog.matches(a.priorityId, _selectedPriorityId!))
+          .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -128,26 +127,15 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
     }
 
     // Sort by start time descending
-    filtered.sort((a, b) =>
-        (b.startTime ?? DateTime(1970)).compareTo(a.startTime ?? DateTime(1970)));
+    filtered.sort((a, b) => (b.startTime ?? DateTime.utc(1970))
+        .compareTo(a.startTime ?? DateTime.utc(1970)));
 
     _filteredAlarms = filtered;
   }
 
-  Color _getPriorityColor(Alarm alarm) {
-    if (alarm.priorityId != null && _priorityMap.containsKey(alarm.priorityId)) {
-      final priority = _priorityMap[alarm.priorityId!]!;
-      if (priority.color != null) {
-        final hex = priority.color!.replaceFirst('#', '');
-        if (hex.length == 6) {
-          return Color(int.parse('FF$hex', radix: 16));
-        }
-      }
-      if (priority.isCritical) return AppColors.error;
-      if (priority.isHigh) return AppColors.warning;
-    }
-    return AppColors.error;
-  }
+  /// Renk YALNIZ `priorities.color` (vendor satırı platform satırına eşlenir);
+  /// çözülemeyen öncelik nötr gri — severity sabiti yok.
+  Color _getPriorityColor(Alarm alarm) => _catalog.colorOf(alarm.priorityId);
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +262,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final alarm = _filteredAlarms[index];
-        final priority = alarm.priorityId != null ? _priorityMap[alarm.priorityId!] : null;
+        final priority = _catalog.resolve(alarm.priorityId);
         final priorityColor = _getPriorityColor(alarm);
 
         return _AlarmCard(
@@ -291,93 +279,15 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
   // Alarm operatör aksiyonları (acknowledge / reset / inhibit)
   // ==========================================================================
 
+  /// Ortak akış (alarm_actions_helper): reset / inhibit ONAY diyaloğu ister,
+  /// sonuç SnackBar + liste tazeleme.
   void _openAlarmDetail(Alarm alarm, Priority? priority) {
-    final loc = sl<LocalizationService>();
-    ActiveAlarmDetailSheet.show(
+    showAlarmActions(
       context,
       alarm: alarm,
       priority: priority,
-      onAcknowledge: () => _handleAction(
-        action: () => alarmService.acknowledgeAlarm(alarm.id),
-        successKey: 'alarm.ack_success',
-      ),
-      onReset: () async {
-        final confirmed = await _confirm(
-          title: loc.translate('alarm.confirm_reset_title'),
-          message: loc.translate('alarm.confirm_reset_message'),
-        );
-        if (!confirmed) return;
-        await _handleAction(
-          action: () => alarmService.resetAlarm(alarm.id),
-          successKey: 'alarm.reset_success',
-        );
-      },
-      onInhibitToggle: () async {
-        final inhibited = alarm.inhibited == true;
-        final confirmed = await _confirm(
-          title: loc.translate(inhibited
-              ? 'alarm.confirm_uninhibit_title'
-              : 'alarm.confirm_inhibit_title'),
-          message: loc.translate(inhibited
-              ? 'alarm.confirm_uninhibit_message'
-              : 'alarm.confirm_inhibit_message'),
-        );
-        if (!confirmed) return;
-        await _handleAction(
-          action: () => alarmService.inhibitAlarm(alarm.id, inhibit: !inhibited),
-          successKey:
-              inhibited ? 'alarm.uninhibit_success' : 'alarm.inhibit_success',
-        );
-      },
+      onRefresh: _loadData,
     );
-  }
-
-  Future<bool> _confirm({
-    required String title,
-    required String message,
-  }) async {
-    final loc = sl<LocalizationService>();
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(loc.translate('common.cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(loc.translate('common.confirm')),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
-  /// Aksiyonu çalıştır: başarı/iş-reddi/hata → SnackBar + sheet kapat + refresh.
-  Future<void> _handleAction({
-    required Future<bool> Function() action,
-    required String successKey,
-  }) async {
-    final loc = sl<LocalizationService>();
-    String message;
-    try {
-      final ok = await action();
-      message = loc.translate(ok ? successKey : 'alarm.action_failed');
-    } catch (e) {
-      Logger.error('Alarm action failed', e);
-      message = loc.translate('alarm.action_error');
-    }
-
-    if (!mounted) return;
-    // Sheet'i kapat (en üstteki route = detay sheet).
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-    await _loadData();
   }
 
   void _showFilterSheet() {
@@ -408,8 +318,8 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
                       Navigator.pop(context);
                     },
                   ),
-                  ..._priorityMap.values.map((p) => FilterChip(
-                    label: Text(p.label),
+                  ..._catalog.platform.map((p) => FilterChip(
+                    label: Text(p.localizedLabel(sl<LocalizationService>().translate)),
                     selected: _selectedPriorityId == p.id,
                     onSelected: (_) {
                       setState(() {
@@ -552,7 +462,7 @@ class _AlarmCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            priority!.label,
+                            priority!.localizedLabel(sl<LocalizationService>().translate),
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor),
                           ),
                         ),
@@ -599,15 +509,13 @@ class _AlarmCard extends StatelessWidget {
     );
   }
 
+  /// Tenant saat dilimine göre (AppClock) — gün sınırı cihaz değil tenant.
   String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      return '${sl<LocalizationService>().translate('common.today')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
-      return '${sl<LocalizationService>().translate('common.yesterday')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    }
+    final loc = sl<LocalizationService>();
+    return AppClock.relativeDayTime(
+      dt,
+      today: loc.translate('common.today'),
+      yesterday: loc.translate('common.yesterday'),
+    );
   }
 }

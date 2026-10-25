@@ -39,7 +39,12 @@ class PMSApp extends ConsumerWidget {
                 slogan: Environment.slogan,
                 child: BiometricLockGate(
                   brandColor: Environment.brandColor,
-                  child: child ?? const SizedBox.shrink(),
+                  // Saha kullanımı: bağlantı koptuğunda üstte offline banner
+                  // (veriler bayat olabilir; aksiyonlar sunucuya ulaşmaz).
+                  child: OfflineIndicator(
+                    connectivityService: sl<ConnectivityService>(),
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             );

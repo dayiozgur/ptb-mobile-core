@@ -91,10 +91,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
       Logger.error('Failed to load priorities', e);
     }
 
-    final pMap = <String, Priority>{};
-    for (final p in priorities) {
-      pMap[p.id] = p;
-    }
+    // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+    final pMap = PriorityCatalog(priorities).resolvedMap();
 
     // Load active alarms
     List<Alarm> activeAlarms = [];
@@ -107,9 +105,11 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
     // Count alarms by priority
     final alarmCountByPriority = <String, int>{};
     for (final alarm in activeAlarms) {
-      if (alarm.priorityId != null && pMap.containsKey(alarm.priorityId)) {
-        alarmCountByPriority[alarm.priorityId!] =
-            (alarmCountByPriority[alarm.priorityId!] ?? 0) + 1;
+      // Ham priority_id (vendor satırı olabilir) → platform önceliği üzerinden say.
+      final resolvedId = pMap[alarm.priorityId]?.id;
+      if (resolvedId != null) {
+        alarmCountByPriority[resolvedId] =
+            (alarmCountByPriority[resolvedId] ?? 0) + 1;
       }
     }
 
@@ -125,7 +125,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
         _alarmCountByPriority = alarmCountByPriority;
         _recentAlarms = activeAlarms.take(5).toList();
         _priorityMap = pMap;
-        _priorities = priorities..sort((a, b) => (b.level ?? 0).compareTo(a.level ?? 0));
+        // Yalnız platform öncelikleri (vendor IS NULL AND active), web sırası.
+        _priorities = PriorityCatalog(priorities).platform;
         _isLoading = false;
       });
     }
@@ -405,7 +406,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          priority.label,
+                          priority.localizedLabel(sl<LocalizationService>().translate),
                           style: AppTypography.caption1.copyWith(
                             color: AppColors.secondaryLabel(context),
                           ),
@@ -519,7 +520,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
           final priority = alarm.priorityId != null
               ? _priorityMap[alarm.priorityId!]
               : null;
-          final priorityColor = priority?.displayColor ?? AppColors.error;
+          final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
           return Column(
             children: [
@@ -537,7 +538,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                 title: alarm.name ??
                     alarm.code ??
                     sl<LocalizationService>().translate('common.alarm'),
-                subtitle: priority?.label ?? alarm.durationFormatted,
+                subtitle: priority?.localizedLabel(sl<LocalizationService>().translate) ??
+                    alarm.durationFormatted,
                 trailing: Text(
                   alarm.durationFormatted,
                   style: AppTypography.caption2.copyWith(

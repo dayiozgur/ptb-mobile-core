@@ -57,10 +57,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
       final sitesFuture = orgId != null ? siteService.getSites(orgId) : Future.value(<Site>[]);
       final priorities = await prioritiesFuture;
       final sites = await sitesFuture;
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
+      // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+      final pMap = PriorityCatalog(priorities).resolvedMap();
       final siteNames = <String, String>{};
       for (final s in sites) {
         siteNames[s.id] = s.name;

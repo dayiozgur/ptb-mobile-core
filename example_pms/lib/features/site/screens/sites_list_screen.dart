@@ -31,6 +31,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
     try {
       final organizationId = organizationService.currentOrganizationId;
       if (organizationId == null) {
+        if (!mounted) return;
         setState(() {
           _error = sl<LocalizationService>().translate('org.not_selected');
           _isLoading = false;
@@ -39,6 +40,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
       }
 
       final sites = await siteService.getSites(organizationId);
+      if (!mounted) return;
 
       setState(() {
         _sites = sites;
@@ -48,6 +50,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
       _loadAlarmCounts(sites);
     } catch (e) {
       Logger.error('Failed to load sites', e);
+      if (!mounted) return;
       setState(() {
         _error = sl<LocalizationService>().translate('site.load_failed');
         _isLoading = false;
@@ -55,16 +58,25 @@ class _SitesListScreenState extends State<SitesListScreen> {
     }
   }
 
+  /// Site başı alarm sayıları — HEAD count sorguları, 4'lü gruplar halinde
+  /// paralel (önceden sıralı + tüm satırları indiriyordu). Tek setState / grup.
   Future<void> _loadAlarmCounts(List<Site> sites) async {
-    for (final site in sites) {
-      try {
-        final count = await alarmService.getResetAlarmCountBySite(site.id);
-        if (mounted && count > 0) {
-          setState(() {
-            _siteAlarmCounts[site.id] = count;
-          });
+    const batch = 4;
+    for (var i = 0; i < sites.length; i += batch) {
+      final chunk = sites.skip(i).take(batch).toList();
+      final counts = await Future.wait(chunk.map((site) async {
+        try {
+          return await alarmService.getResetAlarmCountBySite(site.id);
+        } catch (_) {
+          return 0; // rozet opsiyonel — liste yine gösterilir
         }
-      } catch (_) {}
+      }));
+      if (!mounted) return;
+      setState(() {
+        for (var j = 0; j < chunk.length; j++) {
+          if (counts[j] > 0) _siteAlarmCounts[chunk[j].id] = counts[j];
+        }
+      });
     }
   }
 
@@ -73,7 +85,8 @@ class _SitesListScreenState extends State<SitesListScreen> {
     final query = _searchQuery.toLowerCase();
     return _sites.where((site) {
       return site.name.toLowerCase().contains(query) ||
-          (site.address?.toLowerCase().contains(query) ?? false);
+          (site.code?.toLowerCase().contains(query) ?? false) ||
+          site.fullAddress.toLowerCase().contains(query);
     }).toList();
   }
 
@@ -96,26 +109,44 @@ class _SitesListScreenState extends State<SitesListScreen> {
     );
   }
 
+  /// Hata / boş durumda da aşağı çekip yenileme (saha: bağlantı dönünce).
+  Widget _scrollableState(Widget child) {
+    return RefreshIndicator(
+      onRefresh: _loadSites,
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(child: child),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent() {
     if (_isLoading) {
       return const AppListSkeleton();
     }
 
     if (_error != null) {
-      return AppErrorView(
+      return _scrollableState(AppErrorView(
         title: sl<LocalizationService>().translate('common.error'),
         message: _error!,
         actionLabel: sl<LocalizationService>().translate('common.retry'),
         onAction: _loadSites,
-      );
+      ));
     }
 
     if (_sites.isEmpty) {
-      return AppEmptyState(
+      return _scrollableState(AppEmptyState(
         icon: Icons.location_city_outlined,
         title: sl<LocalizationService>().translate('site.not_found_title'),
         message: sl<LocalizationService>().translate('site.none_in_org'),
-      );
+      ));
     }
 
     final filteredSites = _filteredSites;

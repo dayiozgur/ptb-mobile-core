@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+
+import '../../alarms/alarm_actions_helper.dart';
 
 class ControllerDetailScreen extends StatefulWidget {
   final String controllerId;
@@ -23,6 +24,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
   Controller? _controller;
   List<Variable> _variables = [];
   List<Alarm> _alarms = [];
+  bool _alarmsFailed = false;
+  Map<String, Priority> _priorityMap = {};
   List<IoTLog> _recentLogs = [];
 
   @override
@@ -49,22 +52,38 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
       // Load controller details
       final controller = await controllerService.getById(widget.controllerId);
 
-      // Load related variables (variables don't have controllerId directly,
-      // so we load all and can filter by context if needed)
+      // Değişkenler device_model şablonudur: controller'ın modeline ait set.
+      // (Önceden TÜM değişkenler (limit 1000) yükleniyordu → ilgisiz liste.)
       List<Variable> variables = [];
-      try {
-        variables = await variableService.getAll(forceRefresh: false);
-      } catch (e) {
-        Logger.error('Failed to load variables', e);
+      final deviceModelId = controller?.deviceModelId;
+      if (deviceModelId != null) {
+        try {
+          variables = await variableService.getByDeviceModel(deviceModelId);
+        } catch (e) {
+          Logger.error('Failed to load variables', e);
+        }
       }
 
-      // Load related alarms
+      // Bu controller'ın aktif alarmları — sunucu tarafı filtre. Hata "alarm
+      // yok" gibi GÖSTERİLMEZ (izleme uygulaması) → _alarmsFailed.
       List<Alarm> alarms = [];
+      var alarmsFailed = false;
       try {
-        alarms = await alarmService.getActiveAlarms();
-        alarms = alarms.where((a) => a.controllerId == widget.controllerId).toList();
+        alarms = await alarmService.getActiveAlarms(
+          controllerId: widget.controllerId,
+          includeVariable: true,
+        );
       } catch (e) {
+        alarmsFailed = true;
         Logger.error('Failed to load alarms', e);
+      }
+
+      Map<String, Priority> priorityMap = {};
+      try {
+        priorityMap =
+            PriorityCatalog(await priorityService.getAll()).resolvedMap();
+      } catch (e) {
+        Logger.error('Failed to load priorities', e);
       }
 
       // Load recent logs
@@ -85,6 +104,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
           _controller = controller;
           _variables = variables;
           _alarms = alarms;
+          _alarmsFailed = alarmsFailed;
+          _priorityMap = priorityMap;
           _recentLogs = logs;
           _isLoading = false;
         });
@@ -117,7 +138,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
 
     if (_errorMessage != null) {
@@ -139,7 +160,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
       );
     }
 
-    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+    final dateFormat = TenantDateFormat('dd.MM.yyyy HH:mm');
 
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -297,7 +318,29 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             // Active Alarms
             AppSectionHeader(title: sl<LocalizationService>().translate('controller.active_alarms_count', params: {'count': _alarms.length})),
             const SizedBox(height: AppSpacing.sm),
-            if (_alarms.isEmpty)
+            if (_alarmsFailed)
+              AppCard(
+                child: Padding(
+                  padding: AppSpacing.cardInsets,
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          sl<LocalizationService>().translate('alarm.load_error'),
+                          style: AppTypography.subheadline.copyWith(color: AppColors.error),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _loadData,
+                        child: Text(sl<LocalizationService>().translate('common.retry')),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_alarms.isEmpty)
               AppCard(
                 child: Padding(
                   padding: AppSpacing.cardInsets,
@@ -319,9 +362,19 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             else
               ...List.generate(_alarms.length, (index) {
                 final alarm = _alarms[index];
+                final priority = _priorityMap[alarm.priorityId];
+                final priorityColor = priority?.displayColor ?? AppColors.systemGray;
                 return Padding(
                   padding: EdgeInsets.only(bottom: index < _alarms.length - 1 ? AppSpacing.sm : 0),
                   child: AppCard(
+                    // Saha: alarma doğrudan müdahale (onay / reset / bastır; reset ve
+                    // bastırma onay diyaloğu ister).
+                    onTap: () => showAlarmActions(
+                      context,
+                      alarm: alarm,
+                      priority: priority,
+                      onRefresh: _loadData,
+                    ),
                     child: Padding(
                       padding: AppSpacing.cardInsets,
                       child: Row(
@@ -330,7 +383,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                             width: 4,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: AppColors.error,
+                              color: priorityColor,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -340,10 +393,18 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline),
-                                Text(alarm.durationFormatted, style: AppTypography.caption2.copyWith(color: AppColors.error)),
+                                Text(
+                                  [
+                                    if (priority != null)
+                                      priority.localizedLabel(sl<LocalizationService>().translate),
+                                    alarm.durationFormatted,
+                                  ].join(' · '),
+                                  style: AppTypography.caption2.copyWith(color: priorityColor),
+                                ),
                               ],
                             ),
                           ),
+                          Icon(Icons.chevron_right, color: AppColors.tertiaryLabel(context)),
                         ],
                       ),
                     ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class LogViewerScreen extends StatefulWidget {
@@ -219,7 +218,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
   Widget _buildContent() {
     final brightness = Theme.of(context).brightness;
-    final dateFormat = DateFormat('dd/MM HH:mm:ss');
+    final dateFormat = TenantDateFormat('dd/MM HH:mm:ss');
 
     if (_isLoading) {
       return const AppListSkeleton();
@@ -276,7 +275,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
 class _LogRow extends StatelessWidget {
   final IoTLog log;
-  final DateFormat dateFormat;
+  final TenantDateFormat dateFormat;
 
   const _LogRow({required this.log, required this.dateFormat});
 

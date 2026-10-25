@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 class VariableDetailScreen extends StatefulWidget {
@@ -133,7 +132,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
       );
     }
 
-    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+    final dateFormat = TenantDateFormat('dd.MM.yyyy HH:mm');
 
     return RefreshIndicator(
       onRefresh: _loadData,

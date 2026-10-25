@@ -99,10 +99,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
       // Load priorities
       final priorities = await priorityService.getAll(forceRefresh: true);
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
+      // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+      final pMap = PriorityCatalog(priorities).resolvedMap();
 
       // Load IoT data + KPI data in parallel
       final results = await Future.wait([
@@ -833,9 +831,8 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
+  /// Tenant saat dilimi (AppClock).
+  String _formatDate(DateTime date) => AppClock.dateTime(date);
 }
 
 // ============================================================================
@@ -927,7 +924,7 @@ class _AlarmRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.displayColor ?? AppColors.error;
+    final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
     return Padding(
       padding: AppSpacing.cardInsets,
@@ -948,7 +945,7 @@ class _AlarmRow extends StatelessWidget {
               ],
             ),
           ),
-          if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
+          if (priority != null) AppBadge(label: priority!.localizedLabel(sl<LocalizationService>().translate), variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
         ],
       ),
     );
@@ -988,7 +985,7 @@ class _ResetAlarmRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                priority!.name ?? '',
+                priority!.localizedLabel(sl<LocalizationService>().translate),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor),
               ),
             ),
@@ -1213,7 +1210,7 @@ class _ActiveAlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.displayColor ?? AppColors.error;
+    final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
     return AppCard(
       onTap: onTap,
@@ -1232,7 +1229,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                       Container(width: 8, height: 8, decoration: BoxDecoration(color: priorityColor, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                       Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.singular'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
-                      if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
+                      if (priority != null) AppBadge(label: priority!.localizedLabel(sl<LocalizationService>().translate), variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
                     ],
                   ),
                   if (alarm.effectiveDescription != null) ...[
@@ -1290,7 +1287,7 @@ class _ResetAlarmCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: priorityColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                          child: Text(priority!.name ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
+                          child: Text(priority!.localizedLabel(sl<LocalizationService>().translate), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
                         ),
                     ],
                   ),

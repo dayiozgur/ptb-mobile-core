@@ -1,6 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../alarms/alarm_actions_helper.dart';
@@ -111,10 +110,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
       // Load priorities
       final priorities = await priorityService.getAll(forceRefresh: true);
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
+      // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+      final pMap = PriorityCatalog(priorities).resolvedMap();
 
       // Load related data in parallel
       final results = await Future.wait([
@@ -761,7 +758,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   // Logs Tab
   Widget _buildLogsTab() {
     final brightness = Theme.of(context).brightness;
-    final dateFormat = DateFormat('dd/MM HH:mm:ss');
+    final dateFormat = TenantDateFormat('dd/MM HH:mm:ss');
 
     return DefaultTabController(
       length: 2,
@@ -803,7 +800,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     );
   }
 
-  Widget _buildLogListContent(Brightness brightness, DateFormat dateFormat) {
+  Widget _buildLogListContent(Brightness brightness, TenantDateFormat dateFormat) {
     return Column(
       children: [
         // Controller filter
@@ -1272,9 +1269,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
+  /// Tenant saat dilimi (AppClock).
+  String _formatDate(DateTime date) => AppClock.dateTime(date);
 }
 
 // ============================================================================
@@ -1457,7 +1453,7 @@ class _AlarmRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.displayColor ?? AppColors.error;
+    final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
     return Padding(
       padding: AppSpacing.cardInsets,
@@ -1474,7 +1470,7 @@ class _AlarmRow extends StatelessWidget {
               ],
             ),
           ),
-          if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
+          if (priority != null) AppBadge(label: priority!.localizedLabel(sl<LocalizationService>().translate), variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
         ],
       ),
     );
@@ -1490,7 +1486,7 @@ class _ActiveAlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityColor = priority?.displayColor ?? AppColors.error;
+    final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
     return AppCard(
       onTap: onTap,
@@ -1509,7 +1505,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                       Container(width: 8, height: 8, decoration: BoxDecoration(color: priorityColor, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                       Expanded(child: Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline, overflow: TextOverflow.ellipsis)),
-                      if (priority != null) AppBadge(label: priority!.name ?? '', variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
+                      if (priority != null) AppBadge(label: priority!.localizedLabel(sl<LocalizationService>().translate), variant: AppBadgeVariant.neutral, size: AppBadgeSize.small),
                     ],
                   ),
                   if (alarm.effectiveDescription != null) ...[
@@ -1567,7 +1563,7 @@ class _ResetAlarmCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: priorityColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                          child: Text(priority!.name ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
+                          child: Text(priority!.localizedLabel(sl<LocalizationService>().translate), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
                         ),
                     ],
                   ),
@@ -1596,7 +1592,7 @@ class _ResetAlarmCard extends StatelessWidget {
 
 class _LogRow extends StatelessWidget {
   final IoTLog log;
-  final DateFormat dateFormat;
+  final TenantDateFormat dateFormat;
 
   const _LogRow({required this.log, required this.dateFormat});
 

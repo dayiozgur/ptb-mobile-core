@@ -475,12 +475,8 @@ class _KpiScreenState extends State<KpiScreen> {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(local.day)}.${two(local.month)}.${local.year} '
-        '${two(local.hour)}:${two(local.minute)}';
-  }
+  /// Tenant saat dilimi (AppClock).
+  String _formatDate(DateTime date) => AppClock.dateTime(date);
 }
 
 class _PriorityRow {

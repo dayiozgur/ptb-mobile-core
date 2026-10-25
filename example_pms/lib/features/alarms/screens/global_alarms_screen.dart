@@ -67,10 +67,8 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
     try {
       // Load priorities
       final priorities = await priorityService.getAll(forceRefresh: true);
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
+      // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+      final pMap = PriorityCatalog(priorities).resolvedMap();
 
       // Load sites for filter
       List<Site> sites = [];
@@ -139,7 +137,9 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
     }
 
     if (_selectedPriorityId != null) {
-      alarms = alarms.where((a) => a.priorityId == _selectedPriorityId).toList();
+      alarms = alarms
+          .where((a) => _priorityMap[a.priorityId]?.id == _selectedPriorityId)
+          .toList();
     }
 
     return alarms;
@@ -162,7 +162,9 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
     }
 
     if (_selectedPriorityId != null) {
-      alarms = alarms.where((a) => a.priorityId == _selectedPriorityId).toList();
+      alarms = alarms
+          .where((a) => _priorityMap[a.priorityId]?.id == _selectedPriorityId)
+          .toList();
     }
 
     return alarms;
@@ -458,7 +460,8 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
             if (_selectedPriorityId != null) ...[
               const SizedBox(width: AppSpacing.xs),
               _FilterChip(
-                label: _priorityMap[_selectedPriorityId]?.name ?? sl<LocalizationService>().translate('alarm.priority_label'),
+                label: _priorityMap[_selectedPriorityId]?.localizedLabel(sl<LocalizationService>().translate) ??
+                    sl<LocalizationService>().translate('alarm.priority_label'),
                 icon: Icons.flag,
                 onRemove: () {
                   setState(() => _selectedPriorityId = null);
@@ -629,7 +632,7 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       isScrollControlled: true,
       builder: (context) => _FilterSheet(
         sites: _sites,
-        priorities: _priorityMap.values.toList(),
+        priorities: PriorityCatalog.distinctSorted(_priorityMap.values),
         selectedSiteId: _selectedSiteId,
         selectedPriorityId: _selectedPriorityId,
         selectedDays: _selectedDays,
@@ -822,7 +825,7 @@ class _ActiveAlarmCard extends StatelessWidget {
     if (priority != null) {
       return priority!.displayColor;
     }
-    return AppColors.error;
+    return AppColors.systemGray;
   }
 
   @override
@@ -859,7 +862,7 @@ class _ActiveAlarmCard extends StatelessWidget {
                       ),
                       if (priority != null)
                         AppBadge(
-                          label: priority!.name ?? '',
+                          label: priority!.localizedLabel(sl<LocalizationService>().translate),
                           variant: AppBadgeVariant.neutral,
                           size: AppBadgeSize.small,
                         ),
@@ -918,17 +921,7 @@ class _ResetAlarmCard extends StatelessWidget {
   });
 
   Color get _priorityColor {
-    if (priority?.color != null) {
-      final hex = priority!.color!.replaceFirst('#', '');
-      if (hex.length == 6) {
-        return Color(int.parse('FF$hex', radix: 16));
-      }
-    }
-    if (priority != null) {
-      if (priority!.isCritical) return AppColors.error;
-      if (priority!.isHigh) return AppColors.warning;
-    }
-    return AppColors.systemGray;
+    return priority?.displayColor ?? AppColors.systemGray;
   }
 
   @override
@@ -980,7 +973,7 @@ class _ResetAlarmCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            priority!.name ?? '',
+                            priority!.localizedLabel(sl<LocalizationService>().translate),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -1164,7 +1157,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 ...widget.priorities.map((priority) {
                   final isSelected = _selectedPriorityId == priority.id;
                   return ChoiceChip(
-                    label: Text(priority.name ?? ''),
+                    label: Text(priority.localizedLabel(sl<LocalizationService>().translate)),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {

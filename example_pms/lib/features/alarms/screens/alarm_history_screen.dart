@@ -51,10 +51,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
       final priorities = results[0] as List<Priority>;
       final alarms = results[1] as List<AlarmHistory>;
 
-      final pMap = <String, Priority>{};
-      for (final p in priorities) {
-        pMap[p.id] = p;
-      }
+      // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
+      final pMap = PriorityCatalog(priorities).resolvedMap();
 
       if (mounted) {
         setState(() {
@@ -79,7 +77,9 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     var filtered = List<AlarmHistory>.from(_allAlarms);
 
     if (_selectedPriorityId != null) {
-      filtered = filtered.where((a) => a.priorityId == _selectedPriorityId).toList();
+      filtered = filtered
+          .where((a) => _priorityMap[a.priorityId]?.id == _selectedPriorityId)
+          .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -104,20 +104,9 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     _loadData();
   }
 
-  Color _getPriorityColor(AlarmHistory alarm) {
-    if (alarm.priorityId != null && _priorityMap.containsKey(alarm.priorityId)) {
-      final priority = _priorityMap[alarm.priorityId!]!;
-      if (priority.color != null) {
-        final hex = priority.color!.replaceFirst('#', '');
-        if (hex.length == 6) {
-          return Color(int.parse('FF$hex', radix: 16));
-        }
-      }
-      if (priority.isCritical) return AppColors.error;
-      if (priority.isHigh) return AppColors.warning;
-    }
-    return AppColors.systemGray;
-  }
+  /// Renk YALNIZ `priorities.color` (vendor → platform eşlemesi resolvedMap'te).
+  Color _getPriorityColor(AlarmHistory alarm) =>
+      _priorityMap[alarm.priorityId]?.displayColor ?? AppColors.systemGray;
 
   @override
   Widget build(BuildContext context) {
@@ -295,8 +284,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
                       Navigator.pop(context);
                     },
                   ),
-                  ..._priorityMap.values.map((p) => FilterChip(
-                    label: Text(p.label),
+                  ...PriorityCatalog.distinctSorted(_priorityMap.values).map((p) => FilterChip(
+                    label: Text(p.localizedLabel(sl<LocalizationService>().translate)),
                     selected: _selectedPriorityId == p.id,
                     onSelected: (_) {
                       setState(() {
@@ -398,7 +387,7 @@ class _ResetAlarmCard extends StatelessWidget {
                             color: priorityColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(priority!.label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
+                          child: Text(priority!.localizedLabel(sl<LocalizationService>().translate), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
                         ),
                     ],
                   ),
@@ -431,17 +420,23 @@ class _ResetAlarmCard extends StatelessWidget {
     );
   }
 
+  /// Tenant saat dilimine göre (AppClock): bugün/dün + saat, <7 gün "n gün
+  /// önce", aksi halde kısa tarih-saat.
   String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      return '${sl<LocalizationService>().translate('common.today')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
-      return '${sl<LocalizationService>().translate('common.yesterday')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays < 7) {
-      return sl<LocalizationService>().translate('common.days_ago', params: {'days': diff.inDays});
-    } else {
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final loc = sl<LocalizationService>();
+    final rel = AppClock.relativeDayTime(
+      dt,
+      today: loc.translate('common.today'),
+      yesterday: loc.translate('common.yesterday'),
+    );
+    final d = AppClock.todayDate(dt);
+    final n = AppClock.todayDate();
+    final days = DateTime.utc(n.year, n.month, n.day)
+        .difference(DateTime.utc(d.year, d.month, d.day))
+        .inDays;
+    if (days >= 2 && days < 7) {
+      return loc.translate('common.days_ago', params: {'days': days});
     }
+    return rel;
   }
 }
