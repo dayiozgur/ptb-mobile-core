@@ -815,6 +815,18 @@ class AppLocalizations {
     'alarm.action_failed':
         'İşlem tamamlanamadı — alarm durumu değişmiş olabilir',
     'alarm.action_error': 'İşlem başarısız oldu. Lütfen tekrar deneyin.',
+    // PMS mobil parite: alarm öncelik etiketleri (alarm.priority.<code>) + zaman çizelgesi
+    'alarm.local_ack': 'Yerel Onay',
+    'alarm.remote_ack': 'Uzak Onay',
+    'alarm.ongoing': 'Devam Ediyor',
+    'alarm.still_active': 'Alarm hâlâ aktif',
+    'alarm.last_occurrence': 'Son',
+    'alarm.priority.critical': 'Kritik',
+    'alarm.priority.high': 'Yüksek',
+    'alarm.priority.medium': 'Orta',
+    'alarm.priority.low': 'Düşük',
+    'alarm.priority.technical': 'Teknik',
+    'alarm.priority.undefined': 'Tanımsız',
   };
 
   // ============================================
@@ -1608,6 +1620,18 @@ class AppLocalizations {
     'alarm.uninhibit_success': 'Alarm un-inhibited',
     'alarm.action_failed': 'Could not complete — the alarm may have changed',
     'alarm.action_error': 'Action failed. Please try again.',
+    // PMS mobil parite: alarm öncelik etiketleri (alarm.priority.<code>) + zaman çizelgesi
+    'alarm.local_ack': 'Local Acknowledge',
+    'alarm.remote_ack': 'Remote Acknowledge',
+    'alarm.ongoing': 'Ongoing',
+    'alarm.still_active': 'Alarm is still active',
+    'alarm.last_occurrence': 'Last',
+    'alarm.priority.critical': 'Critical',
+    'alarm.priority.high': 'High',
+    'alarm.priority.medium': 'Medium',
+    'alarm.priority.low': 'Low',
+    'alarm.priority.technical': 'Technical',
+    'alarm.priority.undefined': 'Undefined',
   };
 
   // ============================================
@@ -2404,5 +2428,17 @@ class AppLocalizations {
         'Konnte nicht abgeschlossen werden — der Alarm hat sich möglicherweise geändert',
     'alarm.action_error':
         'Aktion fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    // PMS mobil parite: alarm öncelik etiketleri (alarm.priority.<code>) + zaman çizelgesi
+    'alarm.local_ack': 'Lokale Bestätigung',
+    'alarm.remote_ack': 'Fernbestätigung',
+    'alarm.ongoing': 'Andauernd',
+    'alarm.still_active': 'Alarm ist noch aktiv',
+    'alarm.last_occurrence': 'Zuletzt',
+    'alarm.priority.critical': 'Kritisch',
+    'alarm.priority.high': 'Hoch',
+    'alarm.priority.medium': 'Mittel',
+    'alarm.priority.low': 'Niedrig',
+    'alarm.priority.technical': 'Technisch',
+    'alarm.priority.undefined': 'Undefiniert',
   };
 }

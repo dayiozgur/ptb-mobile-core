@@ -488,9 +488,11 @@ class AlarmService {
   /// getHistory() metodu ile tutarlı filtreler kullanır (tenant_id dahil).
   Future<int> getResetAlarmCountBySite(String siteId) async {
     try {
+      // HEAD + count=exact: satırları indirmeden sayar (önceki `.select('id')`
+      // tüm id'leri çekiyor ve PostgREST max-rows=1000'de yanlış sayıyordu).
       var query = _supabase
           .from('alarm_histories')
-          .select('id')
+          .count(CountOption.exact)
           .eq('site_id', siteId);
 
       // tenant_id filtresi - getHistory() ile tutarlı
@@ -498,8 +500,7 @@ class AlarmService {
         query = query.eq('tenant_id', _currentTenantId!);
       }
 
-      final response = await query;
-      return (response as List).length;
+      return await query;
     } catch (e, stackTrace) {
       // Drift-loud: sessizce 0 döndürme. Gerçek hata (imza/RLS/ağ) yüzeye
       // çıksın; çağıran (site listesi/harita) kendi try/catch'inde ele alır.
@@ -515,9 +516,11 @@ class AlarmService {
   /// getHistory() metodu ile tutarlı filtreler kullanır (tenant_id dahil).
   Future<int> getResetAlarmCountByProvider(String providerId) async {
     try {
+      // HEAD + count=exact: satırları indirmeden sayar (önceki `.select('id')`
+      // tüm id'leri çekiyor ve PostgREST max-rows=1000'de yanlış sayıyordu).
       var query = _supabase
           .from('alarm_histories')
-          .select('id')
+          .count(CountOption.exact)
           .eq('provider_id', providerId);
 
       // tenant_id filtresi - getHistory() ile tutarlı
@@ -525,8 +528,7 @@ class AlarmService {
         query = query.eq('tenant_id', _currentTenantId!);
       }
 
-      final response = await query;
-      return (response as List).length;
+      return await query;
     } catch (e, stackTrace) {
       // Drift-loud: sessizce 0 döndürme. Gerçek hata yüzeye çıksın.
       Logger.error(

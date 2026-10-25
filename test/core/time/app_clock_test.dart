@@ -81,4 +81,37 @@ void main() {
       expect(AppClock.isCalendarDate(DateTime.utc(2026, 10, 25)), isFalse);
     });
   });
+
+  group('AppClock göreli / saniyeli biçim (PMS)', () {
+    final now = DateTime.utc(2026, 1, 5, 21, 30); // İstanbul 06.01 00:30
+
+    test('relativeDayTime: gün sınırı tenant saat dilimine göre', () {
+      // 21:10 UTC = 06.01 00:10 İstanbul → "bugün"
+      expect(
+        AppClock.relativeDayTime(DateTime.utc(2026, 1, 5, 21, 10),
+            today: 'Bugün', yesterday: 'Dün', now: now),
+        'Bugün 00:10',
+      );
+      // 20:50 UTC = 05.01 23:50 İstanbul → "dün"
+      expect(
+        AppClock.relativeDayTime(DateTime.utc(2026, 1, 5, 20, 50),
+            today: 'Bugün', yesterday: 'Dün', now: now),
+        'Dün 23:50',
+      );
+      expect(
+        AppClock.relativeDayTime(DateTime.utc(2026, 1, 2, 9, 0),
+            today: 'Bugün', yesterday: 'Dün', now: now),
+        '02.01 12:00',
+      );
+    });
+
+    test('hms / dateTimeSeconds / format / TenantDateFormat', () {
+      final t = DateTime.utc(2026, 1, 5, 12, 30, 7);
+      expect(AppClock.hms(t), '15:30:07');
+      expect(AppClock.dateTimeSeconds(t), '05.01.2026 15:30:07');
+      expect(AppClock.format(t, 'dd/MM HH:mm:ss'), '05/01 15:30:07');
+      expect(const TenantDateFormat('dd.MM.yyyy HH:mm').format(t),
+          '05.01.2026 15:30');
+    });
+  });
 }

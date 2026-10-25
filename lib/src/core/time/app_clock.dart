@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -127,4 +128,57 @@ class AppClock {
     final t = isCalendarDate(dt) ? dt : toTenant(dt);
     return '${_trDays[t.weekday - 1]}, ${t.day} ${_trMonths[t.month - 1]}';
   }
+
+  /// Tenant-yerel saniyeli saat: `14:30:05`.
+  static String hms(DateTime dt) {
+    final t = toTenant(dt);
+    return '${_p2(t.hour)}:${_p2(t.minute)}:${_p2(t.second)}';
+  }
+
+  /// Tenant-yerel tarih + saniyeli saat: `05.01.2026 14:30:05`.
+  static String dateTimeSeconds(DateTime dt) => '${date(dt)} ${hms(dt)}';
+
+  /// Tenant-yerel kısa gün + saat: `05.01 14:30` (liste satırları).
+  static String shortDateTime(DateTime dt) {
+    final t = toTenant(dt);
+    return '${_p2(t.day)}.${_p2(t.month)} ${_p2(t.hour)}:${_p2(t.minute)}';
+  }
+
+  /// Tenant-yerel takvim gününe göre göreli damga: bugün → `[today] 14:30`,
+  /// dün → `[yesterday] 14:30`, aksi halde [shortDateTime]. Gün sınırı CİHAZ
+  /// değil tenant saat dilimine göre hesaplanır. [now] test içindir.
+  static String relativeDayTime(
+    DateTime dt, {
+    required String today,
+    required String yesterday,
+    DateTime? now,
+  }) {
+    final d = todayDate(dt);
+    final n = todayDate(now ?? DateTime.now().toUtc());
+    final days = DateTime.utc(n.year, n.month, n.day)
+        .difference(DateTime.utc(d.year, d.month, d.day))
+        .inDays;
+    if (days == 0) return '$today ${hm(dt)}';
+    if (days == 1) return '$yesterday ${hm(dt)}';
+    return shortDateTime(dt);
+  }
+
+  /// Tenant-yerel zamanı intl [pattern] ile biçimle (ör. `dd/MM HH:mm:ss`).
+  static String format(DateTime dt, String pattern) =>
+      DateFormat(pattern).format(_naive(toTenant(dt)));
+
+  /// TZDateTime'ı aynı duvar-saati değerleriyle düz DateTime'a çevirir
+  /// (intl DateFormat cihaz ofsetini uygulamasın).
+  static DateTime _naive(DateTime t) => DateTime(
+      t.year, t.month, t.day, t.hour, t.minute, t.second, t.millisecond);
+}
+
+/// `intl.DateFormat` benzeri, ÖNCE tenant saat dilimine çeviren biçimleyici —
+/// ekranlarda `DateFormat(...)` yerine (cihaz saat dilimi kullanılmasın).
+class TenantDateFormat {
+  const TenantDateFormat(this.pattern);
+
+  final String pattern;
+
+  String format(DateTime dt) => AppClock.format(dt, pattern);
 }
