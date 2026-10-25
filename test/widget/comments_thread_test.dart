@@ -68,12 +68,12 @@ void main() {
               id: '1',
               content: 'İlk yorum',
               authorName: 'Ayşe',
-              createdAt: DateTime(2026, 8, 28, 14, 29)),
+              createdAt: DateTime.utc(2026, 8, 28, 11, 29)), // 14:29 Europe/Istanbul
           EntityComment(
               id: '2',
               content: 'İkinci yorum',
               authorName: 'Mehmet',
-              createdAt: DateTime(2026, 8, 28, 9, 5)),
+              createdAt: DateTime.utc(2026, 8, 28, 6, 5)),
         ]);
 
     await tester.pumpWidget(host());
@@ -83,7 +83,7 @@ void main() {
     expect(find.text('İlk yorum'), findsOneWidget);
     expect(find.text('Mehmet'), findsOneWidget);
     expect(find.text('İkinci yorum'), findsOneWidget);
-    // _loc null → toTenant dt'yi aynen döndürür → yerel saat biçimi.
+    // Zone-explicit (UTC) fixture → tenant zone (fallback Europe/Istanbul) → 14:29 on any runner TZ.
     expect(find.text('28.08 14:29'), findsOneWidget);
     expect(find.text('2'), findsOneWidget); // başlık sayı-rozeti
   });
