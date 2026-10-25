@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import 'app_empty_state.dart';
 import 'app_error_view.dart';
 import 'app_loading_indicator.dart';
+
+String _t(String key) => sl.isRegistered<LocalizationService>()
+    ? sl<LocalizationService>().translate(key)
+    : key;
 
 /// [AsyncView]'i dışarıdan (ör. app-bar "yenile" aksiyonu) tazelemek için.
 class AsyncViewController {
@@ -33,11 +39,24 @@ class AsyncView<T> extends StatefulWidget {
   final String? emptyTitle;
   final IconData emptyIcon;
 
-  /// Hata metni (verilmezse [errorFallback]).
-  final String errorFallback;
+  /// Boş-durum mesajı (ör. "İlk kaydı oluşturun").
+  final String? emptyMessage;
+
+  /// Boş-durum aksiyonu ("İlk … oluştur" CTA — web empty-state parity).
+  /// [onEmptyAction] verilirse buton gösterilir.
+  final String? emptyActionLabel;
+  final VoidCallback? onEmptyAction;
+
+  /// Hata metni (verilmezse `common.load_error` çevirisi).
+  final String? errorFallback;
 
   /// Pull-to-refresh sarmalasın mı (builder'ın kaydırılabilir olması gerekir).
   final bool pullToRefresh;
+
+  /// Yüklenirken satır-iskeleti (skeleton) göster. Verilmezse
+  /// [pullToRefresh] ile aynı (tam ekran, kaydırılabilir liste bağlamı);
+  /// gömülü/kısa görünümlerde spinner kalır.
+  final bool? skeleton;
 
   final AsyncViewController? controller;
 
@@ -49,8 +68,12 @@ class AsyncView<T> extends StatefulWidget {
     this.emptyBuilder,
     this.emptyTitle,
     this.emptyIcon = Icons.inbox_outlined,
-    this.errorFallback = 'Veriler yüklenemedi',
+    this.emptyMessage,
+    this.emptyActionLabel,
+    this.onEmptyAction,
+    this.errorFallback,
     this.pullToRefresh = true,
+    this.skeleton,
     this.controller,
   });
 
@@ -103,10 +126,17 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: AppLoadingIndicator());
+    if (_loading) {
+      return (widget.skeleton ?? widget.pullToRefresh)
+          ? const AppListSkeleton()
+          : const Center(child: AppLoadingIndicator());
+    }
     if (_error != null) {
       return Center(
-        child: AppErrorView(message: widget.errorFallback, onRetry: _load),
+        child: AppErrorView(
+          message: widget.errorFallback ?? _t('common.load_error'),
+          onRetry: _load,
+        ),
       );
     }
     final data = _data as T;
@@ -117,7 +147,12 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
             Center(
               child: AppEmptyState(
                 icon: widget.emptyIcon,
-                title: widget.emptyTitle ?? 'Kayıt yok',
+                title: widget.emptyTitle ?? _t('common.no_records'),
+                message: widget.emptyMessage,
+                actionLabel: widget.onEmptyAction != null
+                    ? (widget.emptyActionLabel ?? _t('common.create'))
+                    : null,
+                onAction: widget.onEmptyAction,
               ),
             ))
         : widget.builder(context, data);

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
 import '../hr/hr_ess_service.dart';
+import '../localization/localization_service.dart';
 import '../map/map_models.dart';
 import '../map/map_service.dart';
 import '../notification/local_notification_service.dart';
@@ -34,7 +35,10 @@ class WorkGeofence {
 
   factory WorkGeofence.fromJson(Map<String, dynamic> j) => WorkGeofence(
         id: j['id']?.toString() ?? '',
-        name: j['name']?.toString() ?? 'İşyeri',
+        name: j['name']?.toString() ??
+            (sl.isRegistered<LocalizationService>()
+                ? sl<LocalizationService>().translate('geofence.default_name')
+                : 'geofence.default_name'),
         latitude: (j['latitude'] as num?)?.toDouble() ?? 0,
         longitude: (j['longitude'] as num?)?.toDouble() ?? 0,
         radiusM: (j['radius_m'] as num?)?.toDouble() ?? 150,
@@ -234,15 +238,16 @@ class GeofenceAttendanceService {
   /// Başarılı giriş/çıkışta cihaz (local) bildirimi göster.
   void _notifyPunch(String event, [String? place]) {
     final isIn = event.contains('in');
-    final now = DateTime.now();
-    final hh = now.hour.toString().padLeft(2, '0');
-    final mm = now.minute.toString().padLeft(2, '0');
+    final loc = sl<LocalizationService>();
+    // Saat tenant saat diliminde (kaydın work_date'i ile tutarlı).
+    final time = AppClock.hm(DateTime.now().toUtc());
     final body = place != null && place.isNotEmpty
-        ? '$place · $hh:$mm'
-        : 'Saat $hh:$mm';
+        ? '$place · $time'
+        : loc.translate('pdks.punch.at_time', params: {'time': time});
     try {
       sl<LocalNotificationService>().show(
-        title: isIn ? 'Giriş yapıldı ✓' : 'Çıkış yapıldı ✓',
+        title: loc.translate(
+            isIn ? 'pdks.punch.in_done' : 'pdks.punch.out_done'),
         body: body,
         id: isIn ? 1001 : 1002,
       );

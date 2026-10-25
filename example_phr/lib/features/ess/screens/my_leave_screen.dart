@@ -118,7 +118,7 @@ class _MyLeaveScreenState extends State<MyLeaveScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
     if (_errorMessage != null) {
       return Center(
@@ -148,6 +148,9 @@ class _MyLeaveScreenState extends State<MyLeaveScreen> {
       return _emptyScroll(
         icon: Icons.event_busy_outlined,
         title: essT('hr.leave.no_requests', 'İzin talebiniz yok'),
+        // İlk talep CTA'sı (web empty-state parity).
+        actionLabel: essT('hr.leave.create_first', 'İlk izin talebini oluştur'),
+        onAction: _openCreateForm,
       );
     }
     return ListView.separated(
@@ -158,14 +161,24 @@ class _MyLeaveScreenState extends State<MyLeaveScreen> {
     );
   }
 
-  Widget _emptyScroll({required IconData icon, required String title}) {
+  Widget _emptyScroll({
+    required IconData icon,
+    required String title,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(
-            child: AppEmptyState(icon: icon, title: title),
+            child: AppEmptyState(
+              icon: icon,
+              title: title,
+              actionLabel: actionLabel,
+              onAction: onAction,
+            ),
           ),
         ),
       ),

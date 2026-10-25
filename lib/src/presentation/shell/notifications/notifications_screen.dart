@@ -174,6 +174,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return Dismissible(
             key: ValueKey(notification.id),
             direction: DismissDirection.endToStart,
+            // Silmeden önce onay (web parity: yıkıcı aksiyonlar onaylı).
+            confirmDismiss: (_) => showDestructiveConfirm(
+              context,
+              message: sl<LocalizationService>()
+                  .translate('notification.delete_confirm'),
+              irreversible: false,
+            ),
             onDismissed: (_) => _handleDelete(notification),
             background: Container(
               alignment: Alignment.centerRight,
