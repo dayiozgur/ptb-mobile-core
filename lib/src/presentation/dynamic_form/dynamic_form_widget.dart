@@ -34,6 +34,10 @@ class DynamicFormWidget extends StatefulWidget {
   /// Submit butonu etiketi için i18n anahtarı (varsayılan `common.save`).
   final String submitLabelKey;
 
+  /// Kullanıcı ilk kez bir alanı değiştirdiğinde `true` ile çağrılır
+  /// (kaydedilmemiş-değişiklik uyarısı için; bkz. [UnsavedChangesGuard]).
+  final ValueChanged<bool>? onDirtyChanged;
+
   const DynamicFormWidget({
     super.key,
     required this.template,
@@ -42,6 +46,7 @@ class DynamicFormWidget extends StatefulWidget {
     this.submitting = false,
     this.onSubmit,
     this.submitLabelKey = 'common.save',
+    this.onDirtyChanged,
   });
 
   @override
@@ -140,7 +145,13 @@ class _DynamicFormWidgetState extends State<DynamicFormWidget> {
   // Alan değişimi
   // ---------------------------------------------------------------------------
 
+  bool _dirty = false;
+
   void _onFieldChanged(FormField field, dynamic value) {
+    if (!_dirty && _values[field.code] != value) {
+      _dirty = true;
+      widget.onDirtyChanged?.call(true);
+    }
     setState(() {
       _values[field.code] = value;
       // Değişen alanın hatasını temizle.

@@ -19,6 +19,14 @@ class BuilderPlatformFilter {
       'platform_id.eq.$platformId,'
       'and(platform_id.is.null,or(platform_ids.is.null,platform_ids.cs.{$platformId}))';
 
+  /// Yalnız BU platforma kapsamlı satırlar (tüm-platform paylaşımlıları
+  /// HARİÇ): `platform_id = X` veya `platform_id IS NULL AND platform_ids ∋ X`.
+  /// Web `PtbEntityMenuProvider` `platformScopedOnly` (applyPlatformFilter +
+  /// isPlatformScoped) ile birebir — PHR/PMS/CRM/PMP entity menüsü.
+  static String scopedOnlyOrFilter(String platformId) =>
+      'platform_id.eq.$platformId,'
+      'and(platform_id.is.null,platform_ids.cs.{$platformId})';
+
   /// [query]'ye platform filtresini uygular. Bilinmeyen platform (null/boş)
   /// → yalnız tüm-platform paylaşımlı satırlar
   /// (`platform_id IS NULL AND platform_ids IS NULL`).

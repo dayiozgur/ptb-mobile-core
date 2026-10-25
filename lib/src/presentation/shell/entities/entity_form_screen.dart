@@ -34,6 +34,7 @@ class EntityFormScreen extends StatefulWidget {
 class _EntityFormScreenState extends State<EntityFormScreen> {
   bool _isLoading = true;
   bool _submitting = false;
+  bool _dirty = false;
   String? _errorMessage;
 
   EntityTypeConfig? _config;
@@ -147,6 +148,7 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
       );
 
       if (!mounted) return;
+      setState(() => _dirty = false); // kaydedildi → çıkış uyarısı yok
       AppSnackbar.success(
         context,
         message: _t('entity.saved', 'Kayıt başarıyla kaydedildi'),
@@ -159,10 +161,15 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
     } catch (e) {
       Logger.error('Failed to submit entity (${widget.typeCode})', e);
       if (!mounted) return;
+      // DB trigger tg_enforce_create_quota (aktif satırları sayar:
+      // active IS DISTINCT FROM false) → 'quota_exceeded: …' (23514). Mobilde
+      // istemci-taraflı kota sayımı YOK; sunucu yetkili, burada dostça mesaj.
+      final quota = '$e'.contains('quota_exceeded');
       AppSnackbar.error(
         context,
-        message:
-            '${_t('entity.save_failed', 'Kayıt kaydedilemedi')}: $e',
+        message: quota
+            ? sl<LocalizationService>().translate('quota.exceeded')
+            : '${_t('entity.save_failed', 'Kayıt kaydedilemedi')}: $e',
       );
       setState(() => _submitting = false);
     }
@@ -182,16 +189,20 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: _title,
-      onBack: () => context.pop(),
-      child: _buildContent(),
+    // Kaydedilmemiş değişiklik varken geri/kaydırma-geri onay ister.
+    return UnsavedChangesGuard(
+      hasChanges: _dirty && !_submitting,
+      child: AppScaffold(
+        title: _title,
+        onBack: () => Navigator.of(context).maybePop(),
+        child: _buildContent(),
+      ),
     );
   }
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton(itemCount: 5, showTrailing: false);
     }
 
     if (_errorMessage != null) {
@@ -238,6 +249,9 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
             submitting: _submitting,
             submitLabelKey: 'common.save',
             onSubmit: _submit,
+            onDirtyChanged: (d) {
+              if (mounted && d != _dirty) setState(() => _dirty = d);
+            },
           ),
         ],
       ),

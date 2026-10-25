@@ -54,10 +54,20 @@ if [ -n "$BUILD_NUMBER" ]; then
   echo "▸ [$APP] build number → $BUILD_NUMBER"
 fi
 
-echo "▸ [$APP] flutter build ipa (release, ExportOptions.plist)"
+# CRA A-08: release builds are obfuscated; Dart symbols are split out so crash
+# stack traces can still be symbolicated (`flutter symbolize -i <trace> -d <file>.symbols`).
+# Keep SYMBOLS_DIR per release (archive it next to the IPA) — it is NOT committed
+# (build/ is git-ignored).
+APP_VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+SYMBOLS_DIR="$APP_DIR/build/debug-info/ios/${APP_VERSION}${BUILD_NUMBER:+-b$BUILD_NUMBER}"
+mkdir -p "$SYMBOLS_DIR"
+
+echo "▸ [$APP] flutter build ipa (release, obfuscated, ExportOptions.plist)"
 flutter build ipa --release \
+  --obfuscate --split-debug-info="$SYMBOLS_DIR" \
   --export-options-plist=ios/ExportOptions.plist \
   "${BUILD_ARG[@]}"
+echo "▸ [$APP] Dart symbols: $SYMBOLS_DIR (archive with this release)"
 
 IPA="$(ls -t "$APP_DIR"/build/ios/ipa/*.ipa 2>/dev/null | head -1)"
 [ -n "$IPA" ] || { echo "error: no IPA produced under build/ios/ipa" >&2; exit 1; }

@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../di/service_locator.dart';
+import '../platform/builder_platform_filter.dart';
+import '../platform/platform_context.dart';
 import '../utils/logger.dart';
 
 /// Sprint yaşam-döngüsü durumu (web `SprintState` ile birebir).
@@ -125,12 +128,19 @@ class SprintService {
 
       var finalCodes = <String>[];
       if (entityType != null && entityType.isNotEmpty) {
-        final defs = await _supabase
-            .from('status_definitions')
-            .select('code')
-            .eq('entity_type', entityType)
-            .eq('is_final', true)
-            .eq('active', true);
+        // Builder tablosu → platform kapsamı (web applyPlatformFilter ile aynı).
+        final pid = sl.isRegistered<PlatformContext>()
+            ? sl<PlatformContext>().activePlatformId
+            : null;
+        final defs = await BuilderPlatformFilter.apply(
+          _supabase
+              .from('status_definitions')
+              .select('code')
+              .eq('entity_type', entityType)
+              .eq('is_final', true)
+              .eq('active', true),
+          pid,
+        );
         finalCodes = (defs as List)
             .map((d) => (d as Map)['code'] as String)
             .toList();

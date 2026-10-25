@@ -4,6 +4,7 @@ import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
 import '../tenant/tenant_service.dart';
+import '../time/app_clock.dart';
 import '../utils/logger.dart';
 import 'models/attendance_record_row.dart';
 import 'models/employee_goal.dart';
@@ -390,7 +391,9 @@ class HrEssService {
     final tenantId = _tenant.currentTenantId;
     final uid = _supabase.auth.currentUser?.id;
     final now = DateTime.now();
-    final workDate = _fmtDate(now);
+    // İş günü TENANT saat diliminde (tenants.time_zone; fallback Europe/Istanbul)
+    // — cihaz saat dilimi değil. Sunucu fn_pdks_geo_punch ile aynı kural.
+    final workDate = AppClock.todayYmd(now.toUtc());
     final nowUtc = now.toUtc().toIso8601String();
 
     // OFFLINE: bağlantı yoksa GİRİŞ punch'ını kuyruğa al (client-timestamp =
@@ -418,12 +421,35 @@ class HrEssService {
       return 'queued_in';
     }
 
-    final existing = await _supabase
+    // Gün içinde birden çok döngü olabilir (geo punch) → en yeni kaydı al
+    // (maybeSingle çoklu satırda hata fırlatırdı).
+    var existing = await _supabase
         .from('attendance_records')
         .select('id, entry_time, exit_time')
         .eq('staff_id', staffId)
         .eq('work_date', workDate)
+        .order('entry_time', ascending: false)
+        .limit(1)
         .maybeSingle();
+
+    // Gece vardiyası: önceki tenant-gününden son 16 saatte başlamış açık
+    // kayıt varsa onu kapat (sunucu fn_pdks_geo_punch ile aynı kural).
+    if (existing == null) {
+      final yesterday =
+          AppClock.ymd(now.toUtc().subtract(const Duration(hours: 24)));
+      final prev = await _supabase
+          .from('attendance_records')
+          .select('id, entry_time, exit_time')
+          .eq('staff_id', staffId)
+          .eq('work_date', yesterday)
+          .filter('exit_time', 'is', null)
+          .gt('entry_time',
+              now.toUtc().subtract(const Duration(hours: 16)).toIso8601String())
+          .order('entry_time', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (prev != null) existing = prev;
+    }
 
     if (existing == null) {
       await _supabase.from('attendance_records').insert({

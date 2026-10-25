@@ -308,3 +308,37 @@ class AppListItemShimmer extends StatelessWidget {
     );
   }
 }
+
+/// Liste ekranları için yükleme iskeleti (skeleton) — spinner yerine satır
+/// şeklinde shimmer. `RefreshIndicator` içinde de çalışır (her zaman
+/// kaydırılabilir). Web parity: liste yüklenirken skeleton.
+class AppListSkeleton extends StatelessWidget {
+  /// Gösterilecek iskelet satır sayısı
+  final int itemCount;
+
+  /// Avatar göster
+  final bool showAvatar;
+
+  /// Trailing göster
+  final bool showTrailing;
+
+  const AppListSkeleton({
+    super.key,
+    this.itemCount = 6,
+    this.showAvatar = false,
+    this.showTrailing = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: AppSpacing.screenPadding,
+      itemCount: itemCount,
+      itemBuilder: (_, __) => AppListItemShimmer(
+        showAvatar: showAvatar,
+        showTrailing: showTrailing,
+      ),
+    );
+  }
+}

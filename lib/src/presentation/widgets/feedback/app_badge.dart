@@ -67,6 +67,10 @@ class AppBadge extends StatelessWidget {
   /// Sadece nokta göster
   final bool dot;
 
+  /// Özel arka plan rengi (ör. `status_definitions.color`). Verilirse
+  /// [variant] rengini geçersiz kılar; metin rengi kontrasta göre seçilir.
+  final Color? color;
+
   const AppBadge({
     super.key,
     this.label,
@@ -74,6 +78,7 @@ class AppBadge extends StatelessWidget {
     this.size = AppBadgeSize.medium,
     this.icon,
     this.dot = false,
+    this.color,
   });
 
   @override
@@ -192,6 +197,8 @@ class AppBadge extends StatelessWidget {
   }
 
   Color _getBackgroundColor() {
+    final c = color;
+    if (c != null) return c;
     switch (variant) {
       case AppBadgeVariant.primary:
         return AppColors.primary;
@@ -211,6 +218,8 @@ class AppBadge extends StatelessWidget {
   }
 
   Color _getTextColor() {
+    final c = color;
+    if (c != null && c.computeLuminance() > 0.6) return Colors.black87;
     return Colors.white;
   }
 }

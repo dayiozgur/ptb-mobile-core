@@ -24,7 +24,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
   @override
   void initState() {
     super.initState();
-    _date = DateTime.now();
+    _date = AppClock.todayDate(); // tenant-yerel bugün (cihaz değil)
     _load();
   }
 
@@ -174,7 +174,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
     if (_errorMessage != null) {
       return Center(

@@ -25,7 +25,7 @@ class _MyPdksScreenState extends State<MyPdksScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    final now = AppClock.todayDate(); // tenant-yerel bugün (cihaz değil)
     _from = DateTime(now.year, now.month, 1);
     _to = DateTime(now.year, now.month, now.day);
     _loadData();

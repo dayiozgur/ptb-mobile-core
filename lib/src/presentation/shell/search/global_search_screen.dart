@@ -36,15 +36,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   /// Debounce süresi (~300ms).
   static const Duration _debounceDelay = Duration(milliseconds: 300);
 
-  /// Kaynak tür → Türkçe etiket.
-  static const Map<String, String> _sourceLabels = {
-    'form': 'Kayıtlar',
-    'ticket': 'Talepler',
-    'site': 'Tesisler',
-    'controller': 'Kontrolörler',
-    'provider': 'Sağlayıcılar',
-    'contact': 'Kişiler',
-    'staff': 'Personel',
+  /// Bilinen kaynak türleri → `search.source.<tür>` çeviri anahtarı.
+  static const Set<String> _knownSources = {
+    'form', 'ticket', 'site', 'controller', 'provider', 'contact', 'staff',
   };
 
   @override
@@ -103,8 +97,15 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
   }
 
-  String _labelFor(String source) =>
-      _sourceLabels[source] ?? (source.isEmpty ? 'Diğer' : source);
+  String _labelFor(String source) {
+    final loc = sl<LocalizationService>();
+    if (_knownSources.contains(source)) {
+      return loc.translate('search.source.$source');
+    }
+    return source.isEmpty
+        ? loc.translate('search.source.other')
+        : EntityStatusLabels.humanize(source);
+  }
 
   void _onTapHit(GlobalSearchHit hit) {
     // Entity/form isabetleri → entity liste ekranı (v1: ilgili tipin listesi).

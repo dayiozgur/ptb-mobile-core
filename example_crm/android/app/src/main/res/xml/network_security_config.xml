@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CRA A-08: cleartext (HTTP) traffic is disabled for release/profile builds.
+  All backends (Supabase, Edge Functions, OneDrive/Graph, weather, tiles) are HTTPS.
+  Only the system trust store is used (no user-added CAs).
+  Debug builds override this file (src/debug/res/xml) to allow local dev hosts.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

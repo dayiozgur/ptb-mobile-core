@@ -3,9 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
+import '../localization/localization_service.dart';
+import '../platform/builder_platform_filter.dart';
 import '../platform/platform_context.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import 'entity_status_labels.dart';
 import 'models/entity_type_config.dart';
 import 'models/generic_entity.dart';
 
@@ -450,18 +453,24 @@ class EntityDataService {
   ///
   /// Hata durumunda boş liste döner (kanban distinct-status fallback'ine
   /// düşebilsin diye ASLA fırlatmaz).
+  ///
+  /// Platform kapsamı (web `applyPlatformFilter` ile birebir): bu platforma
+  /// özel + tüm-platform + `platform_ids` listesinde bu platform olan satırlar.
+  /// Sistem satırlarının (`is_system`) adı `status.<code>` anahtarıyla
+  /// çevrilir (anahtar yoksa DB adı kalır) — web PtbStatusService I18N-01.
   Future<List<Map<String, dynamic>>> loadStatusDefinitions(
     String entityType,
   ) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('status_definitions')
           .select(
             'id, code, name, color, icon, is_initial, is_final, sort_order, is_system',
           )
           .eq('entity_type', entityType)
-          .eq('active', true)
-          .order('sort_order', ascending: true);
+          .eq('active', true);
+      query = BuilderPlatformFilter.apply(query, _activePlatformId);
+      final response = await query.order('sort_order', ascending: true);
 
       final rows = (response as List).cast<Map<String, dynamic>>();
 
@@ -476,7 +485,7 @@ class EntityDataService {
         }
       }
 
-      final result = byCode.values.toList()
+      final result = byCode.values.map(_translateSystemStatus).toList()
         ..sort((a, b) => ((a['sort_order'] as num?) ?? 0)
             .compareTo((b['sort_order'] as num?) ?? 0));
 
@@ -489,6 +498,40 @@ class EntityDataService {
       return [];
     }
   }
+
+  /// Sistem durumunun adını `status.<code>` çevirisiyle değiştir (varsa).
+  Map<String, dynamic> _translateSystemStatus(Map<String, dynamic> row) {
+    if (row['is_system'] != true) return row;
+    final code = row['code'] as String?;
+    if (code == null || !sl.isRegistered<LocalizationService>()) return row;
+    final key = 'status.$code';
+    final label = sl<LocalizationService>().translate(key);
+    if (label.isEmpty || label == key) return row;
+    return {...row, 'name': label};
+  }
+
+  final Map<String, Future<Map<String, EntityStatusLabel>>> _statusLabelMemo =
+      {};
+
+  /// code → ad + renk (status_definitions) — liste/detay/grafiklerde ham kod
+  /// yerine görünen ad için. Platform + entity tipi başına memoize edilir;
+  /// hata/boş sonuç önbelleğe alınmaz. [clearStatusLabels] ile sıfırlanır
+  /// (dil değişimi, durum yönetimi düzenlemesi).
+  Future<Map<String, EntityStatusLabel>> statusLabels(String entityType) {
+    final key = '${_activePlatformId ?? 'null'}:$entityType';
+    final pending = _statusLabelMemo[key];
+    if (pending != null) return pending;
+    final f = loadStatusDefinitions(entityType).then((rows) {
+      final labels = EntityStatusLabels.fromDefinitions(rows);
+      if (labels.isEmpty) _statusLabelMemo.remove(key);
+      return labels;
+    });
+    _statusLabelMemo[key] = f;
+    return f;
+  }
+
+  /// Memoize edilmiş durum etiketlerini temizle.
+  void clearStatusLabels() => _statusLabelMemo.clear();
 
   /// Bir entity kaydının durumunu `status-transition` Edge Function üzerinden
   /// güncelle (Kanban sürükle-bırak). Web `PtbStatusService.executeTransition`
