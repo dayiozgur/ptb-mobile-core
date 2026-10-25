@@ -53,3 +53,22 @@ Yükleme sonrası App Store Connect → TestFlight'ta işlenmesi ~5–15 dk. İ�
 - `example_pms` display adı "Protoolbag Pms" → "Protoolbag PMS" (kozmetik).
 - fastlane (`pilot`) ile daha zengin metadata/otomasyon (şu an altool yeterli).
 - Push'un uçtan uca doğrulanması: APNs key + App ID capability + cihaz token → `push_notification_service.dart`.
+
+## Release build hardening (CRA A-08)
+
+Tüm mağaza/TestFlight build'leri **obfuscated** ve Dart sembolleri ayrılmış olarak üretilir:
+
+| Platform | Komut | Semboller |
+|---|---|---|
+| iOS | `./scripts/build-testflight.sh <app> <ISSUER_ID> [build]` (`flutter build ipa --release --obfuscate --split-debug-info=…`) | `example_<app>/build/debug-info/ios/<version>[-b<build>]/` |
+| Android | `./scripts/build-release-android.sh <app> [build]` (`flutter build appbundle --release --obfuscate --split-debug-info=…`) | `example_<app>/build/debug-info/android/<version>[-b<build>]/` |
+
+- Sembol klasörünü **her sürümle birlikte arşivle** (git'e girmez; `build/` ignore). Crash stack-trace çözümü:
+  `flutter symbolize -i <trace.txt> -d <symbols-dir>/app.<arch>.symbols`.
+- Elle build alınacaksa da bayraklar zorunlu: `--release --obfuscate --split-debug-info=<dir>`.
+- Ağ: Android `network_security_config` cleartext'i kapatır (debug override yalnız localhost/10.0.2.2); iOS ATS
+  `NSAllowsArbitraryLoads=false`.
+- Minimum sürüm: `AppVersionGate` `platform_app_configs.min_mobile_app_version` değerini okur (kolon eklenince aktif;
+  bkz. `lib/src/core/config/app_version_gate.dart`).
+- Android release imzası henüz debug anahtarıyla (Gradle şablonu) — mağaza yüklemesi öncesi gerçek upload key
+  (`key.properties`, git-ignored) yapılandırılmalı.
