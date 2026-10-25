@@ -221,6 +221,7 @@ export 'src/core/entity/models/generic_entity.dart';
 export 'src/core/entity/entity_config_service.dart';
 export 'src/core/entity/entity_data_service.dart';
 export 'src/core/entity/entity_status_labels.dart';
+export 'src/core/config/app_version_gate.dart';
 
 // Core - Dynamic Form Engine (low-code builder data layer)
 export 'src/core/form/models/form_field.dart';

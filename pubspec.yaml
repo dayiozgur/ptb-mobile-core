@@ -79,6 +79,9 @@ dependencies:
   # Duyuru zengin-HTML içeriği render (web rich-editor HTML üretir)
   flutter_widget_from_html_core: ^0.15.2
   connectivity_plus: ^7.3.1
+  # Installed app version for the minimum-supported-version gate (CRA A-08).
+  # Already a transitive dependency (same resolved version).
+  package_info_plus: ^9.0.1
   image_cropper: ^12.2.1
 
 dev_dependencies:

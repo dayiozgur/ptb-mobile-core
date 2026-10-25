@@ -734,6 +734,9 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Silmek istediğinize emin misiniz?',
     'confirm.discard': 'Değişiklikleri iptal etmek istediğinize emin misiniz?',
+    'app.update_required.title': 'Güncelleme gerekli',
+    'app.update_required.message': 'Bu sürüm ({current}) artık desteklenmiyor. Devam etmek için uygulamayı en az {minimum} sürümüne güncelleyin.',
+    'app.update_required.action': 'Uygulamayı güncelle',
     'integrations.title': 'Entegrasyonlar',
     'integrations.ms.title': 'Microsoft 365',
     'integrations.ms.subtitle': 'Outlook, OneDrive ve SharePoint bağlantısı',
@@ -1525,6 +1528,9 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Are you sure you want to delete?',
     'confirm.discard': 'Are you sure you want to discard changes?',
+    'app.update_required.title': 'Update required',
+    'app.update_required.message': 'This version ({current}) is no longer supported. Please update the app to version {minimum} or later to continue.',
+    'app.update_required.action': 'Update the app',
     'integrations.title': 'Integrations',
     'integrations.ms.title': 'Microsoft 365',
     'integrations.ms.subtitle': 'Connect Outlook, OneDrive and SharePoint',
@@ -2316,6 +2322,9 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Möchten Sie wirklich löschen?',
     'confirm.discard': 'Möchten Sie die Änderungen wirklich verwerfen?',
+    'app.update_required.title': 'Update erforderlich',
+    'app.update_required.message': 'Diese Version ({current}) wird nicht mehr unterstützt. Bitte aktualisieren Sie die App auf Version {minimum} oder neuer.',
+    'app.update_required.action': 'App aktualisieren',
     'integrations.title': 'Integrationen',
     'integrations.ms.title': 'Microsoft 365',
     'integrations.ms.subtitle': 'Outlook, OneDrive und SharePoint verbinden',
