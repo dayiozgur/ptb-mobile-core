@@ -181,10 +181,8 @@ class _PpmBoardScreenState extends State<PpmBoardScreen> {
                     ),
                   ),
                   if (p.status != null && p.status!.isNotEmpty)
-                    AppBadge(
-                        label: p.status!,
-                        variant: AppBadgeVariant.neutral,
-                        size: AppBadgeSize.small),
+                    EntityStatusBadge(
+                        entityType: p.entityType, status: p.status!),
                   const SizedBox(width: 6),
                   const Icon(Icons.chevron_right, size: 18),
                 ],

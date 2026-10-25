@@ -29,6 +29,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
   EntityTypeConfig? _config;
   GenericEntity? _entity;
   FormTemplate? _template;
+  Map<String, EntityStatusLabel> _statusLabels = const {};
 
   @override
   void initState() {
@@ -67,14 +68,19 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
         dataService.setTenant(tenantId);
       }
 
+      final labelsF = dataService
+          .statusLabels(config.code)
+          .catchError((_) => const <String, EntityStatusLabel>{});
       final entity = await dataService.getEntity(config, widget.id);
       final template = await _resolveTemplate(config, entity);
+      final labels = await labelsF;
 
       if (mounted) {
         setState(() {
           _config = config;
           _entity = entity;
           _template = template;
+          _statusLabels = labels;
           _isLoading = false;
         });
       }
@@ -261,9 +267,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                       : Icons.radio_button_unchecked,
                   color: AppColors.primary,
                 ),
-                title: Text((d['name'] as String?) ??
-                    (d['code'] as String?) ??
-                    '—'),
+                title: Text(EntityStatusLabels.rowName(d)),
                 onTap: () => Navigator.of(ctx).pop(d['code'] as String?),
               ),
           ],
@@ -310,8 +314,9 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
                 if (status != null && status.isNotEmpty) ...[
                   const SizedBox(width: AppSpacing.sm),
                   AppBadge(
-                    label: status,
+                    label: EntityStatusLabels.nameOf(status, _statusLabels),
                     variant: _statusVariant(status),
+                    color: _statusLabels[status]?.color,
                     size: AppBadgeSize.small,
                   ),
                 ],

@@ -220,6 +220,8 @@ export 'src/core/entity/models/entity_type_config.dart';
 export 'src/core/entity/models/generic_entity.dart';
 export 'src/core/entity/entity_config_service.dart';
 export 'src/core/entity/entity_data_service.dart';
+export 'src/core/entity/entity_status_labels.dart';
+export 'src/core/config/app_version_gate.dart';
 
 // Core - Dynamic Form Engine (low-code builder data layer)
 export 'src/core/form/models/form_field.dart';
@@ -417,8 +419,10 @@ export 'src/presentation/shell/entities/entity_form_screen.dart';
 export 'src/presentation/widgets/feedback/app_loading_indicator.dart';
 export 'src/presentation/widgets/feedback/app_error_view.dart';
 export 'src/presentation/widgets/feedback/app_empty_state.dart';
+export 'src/presentation/widgets/feedback/app_confirm_dialog.dart';
 export 'src/presentation/widgets/feedback/async_view.dart';
 export 'src/presentation/widgets/feedback/app_badge.dart';
+export 'src/presentation/widgets/feedback/entity_status_badge.dart';
 export 'src/presentation/widgets/feedback/app_snackbar.dart';
 export 'src/presentation/widgets/feedback/notification_badge.dart';
 export 'src/presentation/widgets/feedback/offline_indicator.dart';

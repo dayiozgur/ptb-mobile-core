@@ -16,6 +16,14 @@ void main() {
       );
     });
 
+    test('scopedOnlyOrFilter excludes shared-with-all rows (entity menu)', () {
+      expect(
+        BuilderPlatformFilter.scopedOnlyOrFilter(pid),
+        'platform_id.eq.$pid,'
+        'and(platform_id.is.null,platform_ids.cs.{$pid})',
+      );
+    });
+
     test('known platform → single or() with exclusive/all/listed branches', () {
       final q = FakeFilterBuilder<dynamic>();
       BuilderPlatformFilter.apply(q, pid);

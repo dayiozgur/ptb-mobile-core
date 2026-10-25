@@ -25,6 +25,18 @@ class _KvkkScreenState extends State<KvkkScreen> {
   final _ctrl = AsyncViewController();
 
   Future<void> _setConsent(KvkkConsentRow row, bool granted) async {
+    // Rıza geri alma yıkıcıdır (ilgili işleme durur) → onay iste.
+    if (!granted) {
+      final confirmed = await showDestructiveConfirm(
+        context,
+        title: essT('kvkk.revoke_confirm_title', 'Rızayı geri al'),
+        message: essT('kvkk.revoke_confirm',
+            'Bu rızayı geri almak istediğinize emin misiniz?'),
+        confirmLabel: essT('kvkk.revoke', 'Geri Al'),
+        irreversible: false,
+      );
+      if (!confirmed || !mounted) return;
+    }
     final ok = await hrDocumentsService.setConsent(
         consentTypeId: row.type.id, granted: granted);
     if (!mounted) return;

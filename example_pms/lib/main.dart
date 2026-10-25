@@ -52,6 +52,19 @@ void main() async {
   // DB-driven markalama: PMS platform tabanını yükle ve temaya uygula.
   // (Tenant override login sonrası tenant bilindiğinde yeniden yüklenebilir:
   //  sl<BrandingService>().load(pmsPlatformId, tenantId: <tenant>).)
+
+  // CRA A-08: minimum desteklenen sürüm (platform_app_configs.min_mobile_app_version;
+  // kolon yoksa no-op, hata olursa fail-open).
+  final versionGate = await AppVersionGate.check(supabase, MobileMenuService.pmsPlatformId);
+  if (versionGate.status.updateRequired) {
+    final url = versionGate.storeUrl;
+    runApp(AppUpdateRequiredApp(
+      status: versionGate.status,
+      onUpdate: url == null ? null : () => UrlActions.openUrl(url),
+    ));
+    return;
+  }
+
   await sl<BrandingService>().load(MobileMenuService.pmsPlatformId);
   final branding = sl<BrandingService>().current;
   if (branding != null) {

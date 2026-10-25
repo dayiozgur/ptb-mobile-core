@@ -94,7 +94,7 @@ class _AdminPdksShiftsScreenState extends State<AdminPdksShiftsScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
     if (_errorMessage != null) {
       return Center(

@@ -11,6 +11,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/url_actions.dart';
 import '../../widgets/buttons/app_icon_button.dart';
 import '../../widgets/cards/app_card.dart';
+import '../../widgets/feedback/app_confirm_dialog.dart';
 import '../entities/entity_detail_extensions.dart';
 import 'ms_onedrive_picker.dart';
 
@@ -94,6 +95,13 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
   }
 
   Future<void> _remove(EntityFileLink f) async {
+    final confirmed = await showDestructiveConfirm(
+      context,
+      message: sl<LocalizationService>().translate('files.remove_confirm'),
+      confirmLabel: sl<LocalizationService>().translate('common.remove'),
+      irreversible: false,
+    );
+    if (!confirmed) return;
     final ok = await _links.remove(f.id);
     if (ok) {
       await _load();

@@ -222,7 +222,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     final dateFormat = DateFormat('dd/MM HH:mm:ss');
 
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
 
     if (_errorMessage != null) {

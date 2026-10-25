@@ -82,7 +82,7 @@ class ProfileService {
             .rpc('fn_my_profile_bundle')
             .timeout(const Duration(seconds: 6));
 
-        if (response == null) return getProfile(userId, forceRefresh: forceRefresh);
+        if (response == null) return await getProfile(userId, forceRefresh: forceRefresh);
 
         // RPC jsonb tek obje döner
         final map = response is Map
@@ -91,7 +91,7 @@ class ProfileService {
                 ? Map<String, dynamic>.from(response.first as Map)
                 : null);
 
-        if (map == null) return getProfile(userId, forceRefresh: forceRefresh);
+        if (map == null) return await getProfile(userId, forceRefresh: forceRefresh);
 
         final profile = UserProfile.fromBundle(map);
         await _cacheManager.set(cacheKey, map, ttl: _cacheTtl);

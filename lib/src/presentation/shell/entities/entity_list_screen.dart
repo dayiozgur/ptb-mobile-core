@@ -26,6 +26,7 @@ class _EntityListScreenState extends State<EntityListScreen> {
 
   EntityTypeConfig? _config;
   List<GenericEntity> _entities = [];
+  Map<String, EntityStatusLabel> _statusLabels = const {};
   String _search = '';
 
   final _rt = RealtimeRefresher();
@@ -76,15 +77,22 @@ class _EntityListScreenState extends State<EntityListScreen> {
         dataService.setTenant(tenantId);
       }
 
+      // Durum adları + renkleri (status_definitions) — ham kod gösterilmez.
+      // Hata durumunda boş harita → humanize fallback (liste yine açılır).
+      final labelsF = dataService
+          .statusLabels(config.code)
+          .catchError((_) => const <String, EntityStatusLabel>{});
       final entities = await dataService.listEntities(
         config,
         search: _search.trim().isEmpty ? null : _search.trim(),
       );
+      final labels = await labelsF;
 
       if (mounted) {
         setState(() {
           _config = config;
           _entities = entities;
+          _statusLabels = labels;
           _isLoading = false;
         });
       }
@@ -178,7 +186,7 @@ class _EntityListScreenState extends State<EntityListScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
 
     if (_errorMessage != null) {
@@ -197,14 +205,22 @@ class _EntityListScreenState extends State<EntityListScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(
-              child: AppEmptyState(
-                icon: Icons.inbox_outlined,
-                title: sl<LocalizationService>().translate('common.no_records'),
-                message: _search.trim().isNotEmpty
-                    ? sl<LocalizationService>()
-                        .translate('common.no_results_found')
-                    : null,
-              ),
+              child: _search.trim().isNotEmpty || _config == null
+                  ? AppEmptyState(
+                      icon: Icons.inbox_outlined,
+                      title: sl<LocalizationService>()
+                          .translate('common.no_records'),
+                      message: _search.trim().isNotEmpty
+                          ? sl<LocalizationService>()
+                              .translate('common.no_results_found')
+                          : null,
+                    )
+                  // İlk kayıt CTA'sı (web empty-state parity).
+                  : AppNoItemsState(
+                      itemName: _title,
+                      onAction: () =>
+                          context.push('/entities/${widget.typeCode}/create'),
+                    ),
             ),
           ),
         ),
@@ -219,6 +235,7 @@ class _EntityListScreenState extends State<EntityListScreen> {
         final entity = _entities[index];
         return _EntityCard(
           entity: entity,
+          statusLabels: _statusLabels,
           onTap: () => context.push(
             '/entities/${widget.typeCode}/${entity.id}',
           ),
@@ -230,10 +247,12 @@ class _EntityListScreenState extends State<EntityListScreen> {
 
 class _EntityCard extends StatelessWidget {
   final GenericEntity entity;
+  final Map<String, EntityStatusLabel> statusLabels;
   final VoidCallback onTap;
 
   const _EntityCard({
     required this.entity,
+    required this.statusLabels,
     required this.onTap,
   });
 
@@ -267,8 +286,9 @@ class _EntityCard extends StatelessWidget {
                       if (status != null && status.isNotEmpty) ...[
                         const SizedBox(width: AppSpacing.sm),
                         AppBadge(
-                          label: status,
+                          label: EntityStatusLabels.nameOf(status, statusLabels),
                           variant: _statusVariant(status),
+                          color: statusLabels[status]?.color,
                           size: AppBadgeSize.small,
                         ),
                       ],

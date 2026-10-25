@@ -60,6 +60,25 @@ class AppClock {
     return tz.TZDateTime.from(utc, loc);
   }
 
+  /// Tenant-yerel takvim günü `yyyy-MM-dd` (DST-doğru). PDKS `work_date` gibi
+  /// iş-günü anahtarları cihaz saat dilimine göre DEĞİL, tenant'ın saat dilimine
+  /// göre hesaplanmalı — sunucu `fn_pdks_geo_punch` da `now() AT TIME ZONE
+  /// tenants.time_zone` kullanır (fallback Europe/Istanbul).
+  static String ymd(DateTime dt) {
+    final t = toTenant(dt);
+    return '${t.year.toString().padLeft(4, '0')}-${_p2(t.month)}-${_p2(t.day)}';
+  }
+
+  /// Bugünün tenant-yerel tarihi (`yyyy-MM-dd`). [now] test içindir.
+  static String todayYmd([DateTime? now]) => ymd(now ?? DateTime.now().toUtc());
+
+  /// Tenant-yerel bugünün takvim günü — saatsiz, `DateTime(y, m, d)` (ay/aralık
+  /// hesapları için; cihaz-yerel `DateTime.now()` gece yarısı civarında kayar).
+  static DateTime todayDate([DateTime? now]) {
+    final t = toTenant(now ?? DateTime.now().toUtc());
+    return DateTime(t.year, t.month, t.day);
+  }
+
   // ---------------------------------------------------------------------------
   // Formatlama — hepsi ÖNCE tenant-yerele çevirir. Önceden ~10 ekranda elle
   // padLeft ile tekrarlanıyordu; tek kaynak (tenant-tz garantili).
@@ -75,9 +94,22 @@ class AppClock {
 
   static String _p2(int n) => n.toString().padLeft(2, '0');
 
-  /// Tenant-yerel tarih: `05.01.2026`.
+  /// `yyyy-MM-dd` gibi saatsiz bir takvim günü mü? (`DateTime.parse('2026-10-25')`
+  /// yerel gece yarısı üretir.) Takvim günleri saat dilimine çevrilmemeli —
+  /// çevrilirse cihaz ile tenant arasındaki ofset kadar bir gün kayabilir.
+  /// Sunucu zaman damgaları (`timestamptz`) UTC olarak parse edilir → false.
+  static bool isCalendarDate(DateTime dt) =>
+      !dt.isUtc &&
+      dt.hour == 0 &&
+      dt.minute == 0 &&
+      dt.second == 0 &&
+      dt.millisecond == 0 &&
+      dt.microsecond == 0;
+
+  /// Tenant-yerel tarih: `05.01.2026`. Takvim günleri ([isCalendarDate])
+  /// olduğu gibi gösterilir.
   static String date(DateTime dt) {
-    final t = toTenant(dt);
+    final t = isCalendarDate(dt) ? dt : toTenant(dt);
     return '${_p2(t.day)}.${_p2(t.month)}.${t.year}';
   }
 
@@ -92,7 +124,7 @@ class AppClock {
 
   /// Kısa gün etiketi (tr): `Pzt, 5 Oca`.
   static String dayLabel(DateTime dt) {
-    final t = toTenant(dt);
+    final t = isCalendarDate(dt) ? dt : toTenant(dt);
     return '${_trDays[t.weekday - 1]}, ${t.day} ${_trMonths[t.month - 1]}';
   }
 }

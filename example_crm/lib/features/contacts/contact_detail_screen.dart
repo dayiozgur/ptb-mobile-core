@@ -330,10 +330,11 @@ class _AccountDealsCardState extends State<_AccountDealsCard> {
           ),
           if ((d['status']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(width: 6),
-            AppBadge(
-                label: d['status'].toString(),
-                variant: AppBadgeVariant.info,
-                size: AppBadgeSize.small),
+            // fn_crm_account_360 → deal kayıtları (entity_type='deal').
+            EntityStatusBadge(
+                entityType: 'deal',
+                status: d['status'].toString(),
+                variant: AppBadgeVariant.info),
           ],
           if (amtStr.isNotEmpty) ...[
             const SizedBox(width: 8),

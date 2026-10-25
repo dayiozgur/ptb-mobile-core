@@ -38,7 +38,10 @@ String essMoney(num value) => '₺${_moneyFmt.format(value)}';
 /// Kısa tarih — `gg.aa.yyyy`.
 String essDate(DateTime? d) {
   if (d == null) return '-';
-  final t = AppClock.toTenant(d); // UTC → tenant saat dilimi
+  // Takvim günü (`work_date`, izin başlangıç/bitiş — `yyyy-MM-dd` → yerel gece
+  // yarısı) saat dilimine ÇEVRİLMEZ; aksi halde cihaz/tenant ofset farkında bir
+  // gün kayar. Yalnız gerçek zaman damgaları (UTC) tenant'a çevrilir.
+  final t = AppClock.isCalendarDate(d) ? d : AppClock.toTenant(d);
   final dd = t.day.toString().padLeft(2, '0');
   final mm = t.month.toString().padLeft(2, '0');
   return '$dd.$mm.${t.year}';

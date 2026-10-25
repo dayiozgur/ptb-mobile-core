@@ -31,7 +31,8 @@ void main() {
     expect(items.length, 2);
     expect(items.first.id, '1');
     expect(items.first.title, 'A');
-    expect(items.first.status, 'open');
+    // Ham durum kodu UI'a gitmez: tanım yoksa humanize edilir ('open' → 'Open').
+    expect(items.first.status, 'Open');
     expect(items[1].title, 'B');
     expect(h.capturedRpcParams('fn_wi'), {'p': 1});
   });

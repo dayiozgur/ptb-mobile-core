@@ -38,10 +38,23 @@ class _MyLeaveFormScreenState extends State<MyLeaveFormScreen> {
   void initState() {
     super.initState();
     _loadTypes();
+    // Not alanı değişince kaydedilmemiş-değişiklik durumunu yenile.
+    _noteController.addListener(_onNoteChanged);
   }
+
+  bool _noteDirty = false;
+  void _onNoteChanged() {
+    final d = _noteController.text.trim().isNotEmpty;
+    if (d != _noteDirty && mounted) setState(() => _noteDirty = d);
+  }
+
+  /// Kullanıcı girdi yaptı mı (gönderilmeden çıkışta onay için).
+  bool get _hasChanges =>
+      !_submitting && (_startDate != null || _endDate != null || _noteDirty);
 
   @override
   void dispose() {
+    _noteController.removeListener(_onNoteChanged);
     _noteController.dispose();
     super.dispose();
   }
@@ -50,10 +63,8 @@ class _MyLeaveFormScreenState extends State<MyLeaveFormScreen> {
     // Önce leave_types tablosu (RLS kapsamlı); başarısız olursa bakiyeden türet.
     List<_LeaveTypeOption> options = [];
     try {
-      final rows = await supabase
-          .from('leave_types')
-          .select('id, name')
-          .order('name');
+      final rows =
+          await supabase.from('leave_types').select('id, name').order('name');
       options = (rows as List)
           .cast<Map<String, dynamic>>()
           .where((r) => r['id'] != null)
@@ -156,75 +167,78 @@ class _MyLeaveFormScreenState extends State<MyLeaveFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: essT('hr.leave.new_request', 'Yeni izin talebi'),
-      onBack: () => Navigator.of(context).pop(false),
-      child: _loadingTypes
-          ? const Center(child: AppLoadingIndicator())
-          : SingleChildScrollView(
-              padding: AppSpacing.screenPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppDropdown<String>(
-                    label: essT('hr.leave.leave_type', 'İzin türü'),
-                    placeholder: essT('common.select', 'Seçiniz'),
-                    prefixIcon: Icons.category_outlined,
-                    value: _leaveTypeId,
-                    items: _types
-                        .map((t) =>
-                            AppDropdownItem(value: t.id, label: t.name))
-                        .toList(),
-                    onChanged: (v) => setState(() => _leaveTypeId = v),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppDatePicker(
-                    label: essT('hr.leave.start_date', 'Başlangıç tarihi'),
-                    prefixIcon: Icons.event,
-                    value: _startDate,
-                    onChanged: (d) => setState(() {
-                      _startDate = d;
-                      if (_endDate != null &&
-                          d != null &&
-                          _endDate!.isBefore(d)) {
-                        _endDate = d;
-                      }
-                    }),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppDatePicker(
-                    label: essT('hr.leave.end_date', 'Bitiş tarihi'),
-                    prefixIcon: Icons.event_available,
-                    value: _endDate,
-                    minDate: _startDate,
-                    onChanged: (d) => setState(() => _endDate = d),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: essT('hr.leave.note', 'Not (isteğe bağlı)'),
-                    placeholder:
-                        essT('hr.leave.note_hint', 'Açıklama ekleyin'),
-                    controller: _noteController,
-                    maxLines: 3,
-                  ),
-                  if (_isValid) ...[
+    return UnsavedChangesGuard(
+      hasChanges: _hasChanges,
+      child: AppScaffold(
+        title: essT('hr.leave.new_request', 'Yeni izin talebi'),
+        onBack: () => Navigator.of(context).maybePop(false),
+        child: _loadingTypes
+            ? const Center(child: AppLoadingIndicator())
+            : SingleChildScrollView(
+                padding: AppSpacing.screenPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppDropdown<String>(
+                      label: essT('hr.leave.leave_type', 'İzin türü'),
+                      placeholder: essT('common.select', 'Seçiniz'),
+                      prefixIcon: Icons.category_outlined,
+                      value: _leaveTypeId,
+                      items: _types
+                          .map((t) =>
+                              AppDropdownItem(value: t.id, label: t.name))
+                          .toList(),
+                      onChanged: (v) => setState(() => _leaveTypeId = v),
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    Text(
-                      '${essT('hr.leave.total_days', 'Toplam')}: ${_dayCount()} ${essT('hr.leave.days', 'gün')}',
-                      style: AppTypography.footnote
-                          .copyWith(color: AppColors.secondaryLabel(context)),
+                    AppDatePicker(
+                      label: essT('hr.leave.start_date', 'Başlangıç tarihi'),
+                      prefixIcon: Icons.event,
+                      value: _startDate,
+                      onChanged: (d) => setState(() {
+                        _startDate = d;
+                        if (_endDate != null &&
+                            d != null &&
+                            _endDate!.isBefore(d)) {
+                          _endDate = d;
+                        }
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppDatePicker(
+                      label: essT('hr.leave.end_date', 'Bitiş tarihi'),
+                      prefixIcon: Icons.event_available,
+                      value: _endDate,
+                      minDate: _startDate,
+                      onChanged: (d) => setState(() => _endDate = d),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppTextField(
+                      label: essT('hr.leave.note', 'Not (isteğe bağlı)'),
+                      placeholder:
+                          essT('hr.leave.note_hint', 'Açıklama ekleyin'),
+                      controller: _noteController,
+                      maxLines: 3,
+                    ),
+                    if (_isValid) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        '${essT('hr.leave.total_days', 'Toplam')}: ${_dayCount()} ${essT('hr.leave.days', 'gün')}',
+                        style: AppTypography.footnote
+                            .copyWith(color: AppColors.secondaryLabel(context)),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.xl),
+                    AppButton(
+                      label: essT('common.submit', 'Gönder'),
+                      icon: Icons.check,
+                      isLoading: _submitting,
+                      onPressed: _isValid ? _submit : null,
                     ),
                   ],
-                  const SizedBox(height: AppSpacing.xl),
-                  AppButton(
-                    label: essT('common.submit', 'Gönder'),
-                    icon: Icons.check,
-                    isLoading: _submitting,
-                    onPressed: _isValid ? _submit : null,
-                  ),
-                ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }

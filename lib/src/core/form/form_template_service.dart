@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../di/service_locator.dart';
+import '../platform/builder_platform_filter.dart';
+import '../platform/platform_context.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
 import 'models/form_template.dart';
@@ -72,7 +75,13 @@ class FormTemplateService {
     String? code,
     bool forceRefresh = false,
   }) async {
-    final cacheKey = 'form_template_entity_${entityType}_${code ?? 'any'}';
+    // Platform anahtarın parçası: aynı entity tipi platforma göre farklı
+    // şablona çözülebilir (platform_id / platform_ids). Web PtbFormService.
+    final pid = sl.isRegistered<PlatformContext>()
+        ? sl<PlatformContext>().activePlatformId
+        : null;
+    final cacheKey =
+        'form_template_entity_${pid ?? 'null'}_${entityType}_${code ?? 'any'}';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<Map<String, dynamic>>(cacheKey);
@@ -91,11 +100,13 @@ class FormTemplateService {
           .from('form_templates')
           .select(_treeSelect)
           .eq('entity_type', entityType)
-          .eq('is_published', true);
+          .eq('is_published', true)
+          .eq('active', true);
 
       if (code != null) {
         query = query.eq('code', code);
       }
+      query = BuilderPlatformFilter.apply(query, pid);
 
       final response =
           await query.order('version', ascending: false).limit(1);

@@ -60,6 +60,19 @@ void main() async {
   registerCrmScreens();
 
   // DB-driven markalama: CRM platform tabanını yükle ve temaya uygula.
+
+  // CRA A-08: minimum desteklenen sürüm (platform_app_configs.min_mobile_app_version;
+  // kolon yoksa no-op, hata olursa fail-open).
+  final versionGate = await AppVersionGate.check(supabase, kCrmPlatformId);
+  if (versionGate.status.updateRequired) {
+    final url = versionGate.storeUrl;
+    runApp(AppUpdateRequiredApp(
+      status: versionGate.status,
+      onUpdate: url == null ? null : () => UrlActions.openUrl(url),
+    ));
+    return;
+  }
+
   await sl<BrandingService>().load(kCrmPlatformId);
   final branding = sl<BrandingService>().current;
   if (branding != null) {

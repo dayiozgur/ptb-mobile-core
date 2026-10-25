@@ -441,7 +441,7 @@ class ReportingService {
       }
 
       // Fallback: Manuel hesaplama
-      return _calculateTimeSeries(tenantId, range);
+      return await _calculateTimeSeries(tenantId, range);
     } catch (e) {
       // RPC yoksa manuel hesapla
       return _calculateTimeSeries(tenantId, range);

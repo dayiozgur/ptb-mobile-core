@@ -1,38 +1,68 @@
 name: Mobile CI
 
-# protoolbag_core + example_pms + example_phr için analyze + test + build-check.
+# protoolbag_core + example apps (pms/phr/crm/ppm): analyze + test + build-check.
 # Faz-4: mobil CI/CD. iOS imzalı-build harici-config gerektirir (APNs/provisioning);
 # burada imzasız derleme-doğrulaması yapılır.
+#
+# Testler BLOKLAYICIDIR (önceden `flutter test || echo` başarısızlığı yutuyordu).
+# Bir test geçici olarak karantinaya alınacaksa: `skip: '<neden> — issue #<no>'`
+# ile işaretle (sessizce silme / CI'da yutma YOK).
 
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main, 'feat/**', 'cloud/**']
   pull_request:
     branches: [main]
 
 jobs:
   analyze-test:
-    name: Analyze + Test (kernel)
+    name: Analyze + Test (core + apps)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Placeholder .env (asset bundling — gerçek secret gerekmez)
+        run: |
+          for app in example_pms example_phr example_crm example_ppm; do
+            cat > "$app/.env" <<'ENV'
+          SUPABASE_URL=https://placeholder.supabase.co
+          SUPABASE_ANON_KEY=placeholder-anon-key
+          API_BASE_URL=https://placeholder.example.com
+          APP_NAME=CI
+          DEBUG_MODE=false
+          ENV
+          done
       - name: Pub get (core + apps)
         run: |
           flutter pub get
-          (cd example_pms && flutter pub get)
-          (cd example_phr && flutter pub get)
+          for app in example_pms example_phr example_crm example_ppm; do
+            (cd "$app" && flutter pub get)
+          done
       - name: Analyze (0 hata gate)
         run: |
           # Sadece HATA seviyesi gate'lenir; pre-existing info/warning'ler tolere edilir.
-          flutter analyze lib/src example_pms/lib example_phr/lib 2>&1 | tee analyze.log
+          set -o pipefail
+          flutter analyze --no-fatal-infos --no-fatal-warnings \
+            lib/src example_pms/lib example_phr/lib example_crm/lib example_ppm/lib 2>&1 | tee analyze.log
           if grep -qE " error •" analyze.log; then
             echo "::error::flutter analyze HATA içeriyor"; exit 1
           fi
-      - name: Kernel testleri
-        run: flutter test || echo "::warning::kernel testleri başarısız/eksik"
+      - name: Core testleri (bloklayıcı)
+        run: flutter test
+      - name: Uygulama testleri (bloklayıcı)
+        run: |
+          set -e
+          for app in example_pms example_phr example_crm example_ppm; do
+            if [ -d "$app/test" ]; then
+              echo "::group::$app"
+              (cd "$app" && flutter test)
+              echo "::endgroup::"
+            else
+              echo "$app: test/ yok — atlandı"
+            fi
+          done
 
   build-android:
     name: Build check (Android, imzasız)

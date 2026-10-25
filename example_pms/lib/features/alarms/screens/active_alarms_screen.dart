@@ -239,7 +239,7 @@ class _ActiveAlarmsScreenState extends State<ActiveAlarmsScreen> {
 
   Widget _buildContent(Brightness brightness) {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
 
     if (_errorMessage != null) {

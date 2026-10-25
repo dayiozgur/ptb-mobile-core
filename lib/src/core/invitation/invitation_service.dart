@@ -240,7 +240,7 @@ class InvitationService {
           .order('created_at', ascending: false)
           .limit(limit);
 
-      return _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
+      return await _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
     } catch (e) {
       Logger.error('Failed to get tenant invitations', e);
       return [];
@@ -311,7 +311,7 @@ class InvitationService {
           .not('invitation_token', 'is', null)
           .order('created_at', ascending: false);
 
-      return _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
+      return await _mapRowsWithProfiles(List<Map<String, dynamic>>.from(rows));
     } catch (e) {
       Logger.error('Failed to get pending invitations for email', e);
       return [];

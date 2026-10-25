@@ -99,7 +99,7 @@ class _MyOnboardingScreenState extends State<MyOnboardingScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
+      return const AppListSkeleton();
     }
     if (_errorMessage != null) {
       return Center(
