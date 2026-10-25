@@ -9,6 +9,7 @@ import '../map/map_models.dart';
 import '../map/map_service.dart';
 import '../notification/local_notification_service.dart';
 import '../tenant/tenant_service.dart';
+import '../time/app_clock.dart';
 import '../utils/logger.dart';
 
 /// Bir işletmenin geofence tanımı (`work_geofences`).
@@ -269,15 +270,9 @@ class GeofenceAttendanceService {
       if (staffId == null) {
         return const GeoPunchResult(ok: false, event: 'manual_in', raw: {'error': 'no_staff'});
       }
-      final today = _todayStr();
-      final open = await _supabase
-          .from('attendance_records')
-          .select('id')
-          .eq('staff_id', staffId)
-          .eq('work_date', today)
-          .filter('exit_time', 'is', null)
-          .limit(1);
-      if ((open as List).isNotEmpty) {
+      final today = AppClock.todayYmd();
+      final open = await _findOpenPunch(staffId);
+      if (open != null) {
         return const GeoPunchResult(ok: true, event: 'manual_in', raw: {'noop': true, 'reason': 'already_in'});
       }
       final uid = _supabase.auth.currentUser?.id;
@@ -306,16 +301,7 @@ class GeofenceAttendanceService {
       if (staffId == null) {
         return const GeoPunchResult(ok: false, event: 'manual_out', raw: {'error': 'no_staff'});
       }
-      final today = _todayStr();
-      final open = await _supabase
-          .from('attendance_records')
-          .select('id')
-          .eq('staff_id', staffId)
-          .eq('work_date', today)
-          .filter('exit_time', 'is', null)
-          .order('entry_time', ascending: false)
-          .limit(1)
-          .maybeSingle();
+      final open = await _findOpenPunch(staffId);
       if (open == null) {
         return const GeoPunchResult(ok: true, event: 'manual_out', raw: {'noop': true, 'reason': 'no_open_punch'});
       }
@@ -335,11 +321,31 @@ class GeofenceAttendanceService {
     }
   }
 
-  String _todayStr() {
-    final d = DateTime.now();
-    return '${d.year.toString().padLeft(4, '0')}-'
-        '${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
+  /// Açık (çıkışsız) punch — `fn_pdks_geo_punch` ile aynı kural: tenant-yerel
+  /// bugünün açık kaydı ya da önceki tenant-gününden son 16 saat içinde
+  /// başlamış açık kayıt (gece vardiyası gece yarısını geçince çıkış
+  /// yapılabilsin). `work_date` TENANT saat dilimine göredir (cihaza göre değil).
+  Future<Map<String, dynamic>?> _findOpenPunch(String staffId) async {
+    final nowUtc = DateTime.now().toUtc();
+    final today = AppClock.todayYmd(nowUtc);
+    final yesterday =
+        AppClock.ymd(nowUtc.subtract(const Duration(hours: 24)));
+    final since = nowUtc.subtract(const Duration(hours: 16));
+    final rows = await _supabase
+        .from('attendance_records')
+        .select('id, work_date, entry_time')
+        .eq('staff_id', staffId)
+        .inFilter('work_date', [today, yesterday])
+        .filter('exit_time', 'is', null)
+        .order('entry_time', ascending: false)
+        .limit(5);
+    for (final r in (rows as List)) {
+      final m = Map<String, dynamic>.from(r as Map);
+      if (m['work_date']?.toString() == today) return m;
+      final e = DateTime.tryParse(m['entry_time']?.toString() ?? '');
+      if (e != null && e.toUtc().isAfter(since)) return m;
+    }
+    return null;
   }
 
   void dispose() {

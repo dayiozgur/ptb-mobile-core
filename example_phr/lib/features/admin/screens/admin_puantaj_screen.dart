@@ -25,7 +25,7 @@ class _AdminPuantajScreenState extends State<AdminPuantajScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    final now = AppClock.todayDate(); // tenant-yerel bugün (cihaz değil)
     _year = now.year;
     _month = now.month;
     _load();

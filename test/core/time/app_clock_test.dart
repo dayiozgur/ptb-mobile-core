@@ -38,4 +38,47 @@ void main() {
       expect(t.hour, 13); // yaz da +3 (Türkiye DST yok)
     });
   });
+
+  group('AppClock tenant iş günü (PDKS work_date)', () {
+    test('todayYmd: İstanbul gece yarısı sonrası yeni gün (UTC hâlâ dün)', () {
+      // 2026-10-24 21:30 UTC → 25.10 00:30 İstanbul
+      expect(AppClock.todayYmd(DateTime.utc(2026, 10, 24, 21, 30)), '2026-10-25');
+    });
+
+    test('todayYmd: Berlin DST (CEST, UTC+2) — 22:30 UTC = ertesi gün', () {
+      AppClock.setZone('Europe/Berlin');
+      expect(AppClock.todayYmd(DateTime.utc(2026, 10, 24, 22, 30)), '2026-10-25');
+    });
+
+    test('todayYmd: Berlin kış (CET, UTC+1) — 22:30 UTC = aynı gün', () {
+      AppClock.setZone('Europe/Berlin');
+      expect(AppClock.todayYmd(DateTime.utc(2026, 11, 2, 22, 30)), '2026-11-02');
+    });
+
+    test('todayYmd: New York DST geçişi (2026-11-01 05:30 UTC = 00:30 EST)', () {
+      AppClock.setZone('America/New_York');
+      expect(AppClock.todayYmd(DateTime.utc(2026, 11, 1, 3, 30)), '2026-10-31');
+      expect(AppClock.todayYmd(DateTime.utc(2026, 11, 1, 5, 30)), '2026-11-01');
+    });
+
+    test('setZone geçersiz ad → Europe/Istanbul fallback', () {
+      AppClock.setZone('Not/AZone');
+      expect(AppClock.zoneName, 'Europe/Istanbul');
+      AppClock.setZone(null);
+      expect(AppClock.zoneName, 'Europe/Istanbul');
+    });
+
+    test('todayDate: saatsiz tenant-yerel gün', () {
+      final d = AppClock.todayDate(DateTime.utc(2026, 10, 24, 21, 30));
+      expect([d.year, d.month, d.day, d.hour], [2026, 10, 25, 0]);
+    });
+
+    test('takvim günü (yyyy-MM-dd) saat dilimine çevrilmez', () {
+      AppClock.setZone('America/New_York');
+      final d = DateTime.parse('2026-10-25'); // yerel gece yarısı
+      expect(AppClock.isCalendarDate(d), isTrue);
+      expect(AppClock.date(d), '25.10.2026');
+      expect(AppClock.isCalendarDate(DateTime.utc(2026, 10, 25)), isFalse);
+    });
+  });
 }

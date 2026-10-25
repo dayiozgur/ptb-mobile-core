@@ -24,7 +24,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
   @override
   void initState() {
     super.initState();
-    _date = DateTime.now();
+    _date = AppClock.todayDate(); // tenant-yerel bugün (cihaz değil)
     _load();
   }
 
