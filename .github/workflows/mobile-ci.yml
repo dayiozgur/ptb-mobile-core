@@ -50,8 +50,14 @@ jobs:
             echo "::error::flutter analyze HATA içeriyor"; exit 1
           fi
       - name: Core testleri (bloklayıcı)
+        env:
+          TZ: UTC # fikstürler DateTime.utc — cihaz-tz bağımsızlığı açık olsun
         run: flutter test
       - name: Uygulama testleri (bloklayıcı)
+        env:
+          TZ: UTC
+        # example_pms/test (aktif alarm, aksiyon onayı, site listesi, controller detay)
+        # dahil — test/ klasörü olan her uygulama koşulur.
         run: |
           set -e
           for app in example_pms example_phr example_crm example_ppm; do
