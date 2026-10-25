@@ -734,6 +734,7 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Silmek istediğinize emin misiniz?',
     'confirm.discard': 'Değişiklikleri iptal etmek istediğinize emin misiniz?',
+    'quota.exceeded': 'Planınızın bu kayıt türü için limitine ulaşıldı. Yeni kayıt için pasif kayıtları kaldırın ya da planınızı yükseltin.',
     'hr.leave.create_first': 'İlk izin talebini oluştur',
     'profile.username': 'Kullanıcı adı',
     'profile.bio': 'Hakkımda',
@@ -1513,6 +1514,7 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Are you sure you want to delete?',
     'confirm.discard': 'Are you sure you want to discard changes?',
+    'quota.exceeded': 'Your plan\'s limit for this record type has been reached. Deactivate unused records or upgrade your plan to add more.',
     'hr.leave.create_first': 'Create your first leave request',
     'profile.username': 'Username',
     'profile.bio': 'About me',
@@ -2292,6 +2294,7 @@ class AppLocalizations {
     // Confirmation
     'confirm.delete': 'Möchten Sie wirklich löschen?',
     'confirm.discard': 'Möchten Sie die Änderungen wirklich verwerfen?',
+    'quota.exceeded': 'Das Limit Ihres Tarifs für diesen Datensatztyp ist erreicht. Deaktivieren Sie ungenutzte Datensätze oder upgraden Sie Ihren Tarif.',
     'hr.leave.create_first': 'Ersten Urlaubsantrag erstellen',
     'profile.username': 'Benutzername',
     'profile.bio': 'Über mich',

@@ -161,10 +161,15 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
     } catch (e) {
       Logger.error('Failed to submit entity (${widget.typeCode})', e);
       if (!mounted) return;
+      // DB trigger tg_enforce_create_quota (aktif satırları sayar:
+      // active IS DISTINCT FROM false) → 'quota_exceeded: …' (23514). Mobilde
+      // istemci-taraflı kota sayımı YOK; sunucu yetkili, burada dostça mesaj.
+      final quota = '$e'.contains('quota_exceeded');
       AppSnackbar.error(
         context,
-        message:
-            '${_t('entity.save_failed', 'Kayıt kaydedilemedi')}: $e',
+        message: quota
+            ? sl<LocalizationService>().translate('quota.exceeded')
+            : '${_t('entity.save_failed', 'Kayıt kaydedilemedi')}: $e',
       );
       setState(() => _submitting = false);
     }
