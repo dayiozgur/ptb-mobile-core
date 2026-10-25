@@ -6,6 +6,8 @@ import '../../../core/alarm/alarm_stats_model.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 
 /// Alarm bar chart widget
 ///
@@ -276,7 +278,7 @@ class _AlarmBarChartState extends State<AlarmBarChart> {
               children: priorityIds.asMap().entries.map((e) {
                 final pid = e.value;
                 final priority = widget.priorities?[pid];
-                final label = priority?.label ?? pid;
+                final label = priority?.localizedLabel(sl<LocalizationService>().translate) ?? pid;
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

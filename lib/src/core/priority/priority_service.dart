@@ -37,7 +37,8 @@ class PriorityService {
 
   /// Tüm öncelikleri getir
   Future<List<Priority>> getAll({bool forceRefresh = false}) async {
-    const cacheKey = 'priorities_all';
+    // v2: vendor / vendor_level / priority_class / explicitly_active alanları.
+    const cacheKey = 'priorities_all_v2';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);

@@ -244,7 +244,7 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
       // Aktif alarmlar priority bazında
       for (final entry in dist.activeByPriority.entries) {
         final priority = widget.priorities![entry.key];
-        final color = priority?.displayColor ?? AppColors.error;
+        final color = priority?.displayColor ?? AppColors.systemGray;
         addSection(entry.value, color);
       }
       // Reset alarmlar (gri tonlarında)
@@ -276,7 +276,8 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
         for (final entry in byPriority.entries) {
           final priority = widget.priorities![entry.key];
           final color = priority?.displayColor ?? AppColors.systemGray;
-          final label = priority?.label ?? 'Bilinmeyen';
+          final label = priority?.localizedLabel(sl<LocalizationService>().translate) ??
+            sl<LocalizationService>().translate('alarm.priority.undefined');
           items.add(_LegendItem(
             color: color,
             label: label,
@@ -304,8 +305,9 @@ class _AlarmPieChartState extends State<AlarmPieChart> {
       // Aktif alarmlar priority bazında
       for (final entry in dist.activeByPriority.entries) {
         final priority = widget.priorities![entry.key];
-        final color = priority?.displayColor ?? AppColors.error;
-        final label = priority?.label ?? 'Bilinmeyen';
+        final color = priority?.displayColor ?? AppColors.systemGray;
+        final label = priority?.localizedLabel(sl<LocalizationService>().translate) ??
+            sl<LocalizationService>().translate('alarm.priority.undefined');
         items.add(_LegendItem(
           color: color,
           label: label,

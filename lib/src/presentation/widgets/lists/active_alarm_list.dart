@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/alarm/alarm_model.dart';
 import '../../../core/di/service_locator.dart';
@@ -7,6 +6,7 @@ import '../../../core/localization/localization_service.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/time/app_clock.dart';
 
 /// Aktif alarm listesi widget'ı
 ///
@@ -38,7 +38,7 @@ class ActiveAlarmList extends StatelessWidget {
         return priority.displayColor;
       }
     }
-    return AppColors.error;
+    return AppColors.systemGray;
   }
 
   @override
@@ -66,7 +66,8 @@ class ActiveAlarmList extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                emptyMessage ?? 'Aktif alarm yok',
+                emptyMessage ??
+                    sl<LocalizationService>().translate('alarm.no_active'),
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary(brightness),
@@ -93,7 +94,8 @@ class ActiveAlarmList extends StatelessWidget {
           alarm: alarm,
           priorityColor: _priorityColor(alarm),
           priorityName: (alarm.priorityId != null && priorities != null)
-              ? priorities![alarm.priorityId!]?.label
+              ? priorities![alarm.priorityId!]
+                  ?.localizedLabel(sl<LocalizationService>().translate)
               : null,
           brightness: brightness,
           showAcknowledgeStatus: showAcknowledgeStatus,
@@ -123,7 +125,6 @@ class _ActiveAlarmTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yy HH:mm');
 
     return InkWell(
       onTap: onTap,
@@ -229,7 +230,7 @@ class _ActiveAlarmTile extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         alarm.startTime != null
-                            ? dateFormat.format(alarm.startTime!)
+                            ? AppClock.dateTime(alarm.startTime!)
                             : '-',
                         style: TextStyle(
                           fontSize: 12,
@@ -463,11 +464,11 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
     final loc = sl<LocalizationService>();
     final alarm = widget.alarm;
 
-    final priorityColor = widget.priority?.displayColor ?? AppColors.error;
+    final priorityColor =
+        widget.priority?.displayColor ?? AppColors.systemGray;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
@@ -534,7 +535,7 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
 
                 // Başlık
                 Text(
-                  alarm.name ?? 'Alarm',
+                  alarm.name ?? loc.translate('alarm.default_name'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -544,7 +545,7 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
                 if (alarm.code != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Kod: ${alarm.code}',
+                    '${loc.translate('common.code')}: ${alarm.code}',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary(brightness),
@@ -581,7 +582,7 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
                     if (widget.priority != null) ...[
                       const SizedBox(width: AppSpacing.sm),
                       _StatusBadge(
-                        label: widget.priority!.label,
+                        label: widget.priority!.localizedLabel(loc.translate),
                         color: priorityColor,
                       ),
                     ],
@@ -617,7 +618,7 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
                   color: AppColors.error,
                   label: loc.translate('common.start'),
                   value: alarm.startTime != null
-                      ? dateFormat.format(alarm.startTime!)
+                      ? AppClock.dateTimeSeconds(alarm.startTime!)
                       : '-',
                   brightness: brightness,
                 ),
@@ -626,16 +627,16 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
                     icon: Icons.directions_run,
                     color: AppColors.warning,
                     label: loc.translate('alarm.arrival'),
-                    value: dateFormat.format(alarm.arrivalStartTime!),
+                    value: AppClock.dateTimeSeconds(alarm.arrivalStartTime!),
                     brightness: brightness,
                   ),
                 if (alarm.localAcknowledgeTime != null)
                   _TimelineRow(
                     icon: Icons.check,
                     color: AppColors.info,
-                    label: 'Yerel Onay',
+                    label: loc.translate('alarm.local_ack'),
                     value:
-                        '${dateFormat.format(alarm.localAcknowledgeTime!)}'
+                        '${AppClock.dateTimeSeconds(alarm.localAcknowledgeTime!)}'
                         '${alarm.localAcknowledgeUser != null ? ' (${alarm.localAcknowledgeUser})' : ''}',
                     brightness: brightness,
                   ),
@@ -643,17 +644,17 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
                   _TimelineRow(
                     icon: Icons.check_circle,
                     color: AppColors.info,
-                    label: 'Uzak Onay',
+                    label: loc.translate('alarm.remote_ack'),
                     value:
-                        '${dateFormat.format(alarm.remoteAcknowledgeTime!)}'
+                        '${AppClock.dateTimeSeconds(alarm.remoteAcknowledgeTime!)}'
                         '${alarm.remoteAcknowledgeUser != null ? ' (${alarm.remoteAcknowledgeUser})' : ''}',
                     brightness: brightness,
                   ),
                 _TimelineRow(
                   icon: Icons.timer,
                   color: AppColors.systemGray,
-                  label: 'Devam Ediyor',
-                  value: 'Alarm hala aktif',
+                  label: loc.translate('alarm.ongoing'),
+                  value: loc.translate('alarm.still_active'),
                   brightness: brightness,
                   isLast: true,
                 ),

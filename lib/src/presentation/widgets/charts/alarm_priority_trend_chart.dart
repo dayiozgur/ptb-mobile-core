@@ -6,6 +6,8 @@ import '../../../core/alarm/alarm_stats_model.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 
 /// Alarm priority trend chart (stacked area)
 ///
@@ -140,7 +142,8 @@ class AlarmPriorityTrendChart extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
-                    p?.label ?? 'Bilinmiyor',
+                    p?.localizedLabel(sl<LocalizationService>().translate) ??
+                        sl<LocalizationService>().translate('alarm.priority.undefined'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,

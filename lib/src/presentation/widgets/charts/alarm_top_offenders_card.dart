@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/alarm/alarm_stats_model.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
+import '../../../core/time/app_clock.dart';
 
 /// En sik tekrarlayan alarmlar listesi (Top N)
 ///
@@ -111,7 +113,7 @@ class AlarmTopOffendersCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      'Son: ${DateFormat('dd/MM HH:mm').format(alarm.lastOccurrence)}',
+                      '${sl<LocalizationService>().translate('alarm.last_occurrence')}: ${AppClock.shortDateTime(alarm.lastOccurrence)}',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary(brightness),

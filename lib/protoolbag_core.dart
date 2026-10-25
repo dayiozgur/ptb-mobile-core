@@ -167,6 +167,7 @@ export 'src/core/workflow/workflow_model.dart';
 export 'src/core/workflow/workflow_service.dart';
 
 // Core - Priority (Alarm Priorities)
+export 'src/core/priority/priority_catalog.dart';
 export 'src/core/priority/priority_model.dart';
 export 'src/core/priority/priority_service.dart';
 

@@ -5,6 +5,8 @@ import '../../../core/alarm/alarm_stats_model.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 
 /// MTTR (Mean Time To Resolve) istatistik kartı
 ///
@@ -78,7 +80,8 @@ class AlarmMttrCard extends StatelessWidget {
             children: stats.mttrByPriority.entries.map((entry) {
               final priority = priorities?[entry.key];
               final color = priority?.displayColor ?? AppColors.systemGray;
-              final label = priority?.label ?? 'Bilinmiyor';
+              final label = priority?.localizedLabel(sl<LocalizationService>().translate) ??
+                  sl<LocalizationService>().translate('alarm.priority.undefined');
               final mttrStr = AlarmMttrStats.formatDuration(entry.value);
 
               return Container(

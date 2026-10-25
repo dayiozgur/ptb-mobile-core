@@ -14,6 +14,20 @@ class Priority {
   final String? color;
   final int? level;
   final bool active;
+
+  /// Üretici (vendor) satırı mı? `null` = platform önceliği (critical/high/…);
+  /// `'carel'` vb. = içe aktarıcıların değişkenlere damgaladığı üretici satırı.
+  final String? vendor;
+
+  /// Üretici alarm seviyesi — platform satırına `level` ile eşlenir.
+  final int? vendorLevel;
+
+  /// `severity` | `technical` (DB `priority_class`).
+  final String? priorityClass;
+
+  /// DB `active` kolonu AÇIKÇA `true` mu? (`active` NULL'ı true sayar; web
+  /// platform kataloğu yalnız `active = true` satırları sunar.)
+  final bool explicitlyActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -25,12 +39,31 @@ class Priority {
     this.color,
     this.level,
     this.active = true,
+    this.vendor,
+    this.vendorLevel,
+    this.priorityClass,
+    this.explicitlyActive = false,
     this.createdAt,
     this.updatedAt,
   });
 
-  /// Öncelik seviyesi etiketi
+  /// Ham (çevrilmemiş) etiket — DB `name`, yoksa `code`. Ekranda
+  /// [localizedLabel] kullanın (web ile aynı `alarm.priority.<code>` anahtarı).
   String get label => name ?? code ?? 'Bilinmiyor';
+
+  /// i18n anahtarı: `alarm.priority.<code>` (küçük harf); kodsuz → `undefined`.
+  String get labelKey => priorityLabelKey(code);
+
+  /// `alarm.priority.<code>` çevirisi; anahtar çevrilmemişse satırın adı.
+  String localizedLabel(String Function(String key) translate) {
+    final key = labelKey;
+    final t = translate(key);
+    if (t != key && t.isNotEmpty) return t;
+    return name ?? code ?? t;
+  }
+
+  /// Teknik sınıf mı? (`priority_class = 'technical'`)
+  bool get isTechnical => priorityClass == 'technical';
 
   /// Yüksek öncelikli mi?
   /// DB level sıralaması: 0=Technical, 1=Very High, 2=High, 3=Medium, 4=Low
@@ -40,15 +73,9 @@ class Priority {
   /// Kritik mi? (Very High veya Technical)
   bool get isCritical => level != null && level! <= 1;
 
-  /// Renk değeri olarak Color objesi döner
-  ///
-  /// HEX formatındaki color string'ini (#RRGGBB veya RRGGBB) Flutter Color'a çevirir.
-  /// Color değeri yoksa level'a göre fallback renk döner:
-  /// DB level sıralaması: 0=Technical, 1=Very High, 2=High, 3=Medium, 4=Low
-  /// - level <= 1 (Very High/Technical): AppColors.error
-  /// - level == 2 (High): AppColors.warning
-  /// - level == 3 (Medium): AppColors.info
-  /// - level >= 4 (Low): AppColors.success
+  /// Renk: YALNIZ `priorities.color` kolonu (#RRGGBB). Renk yoksa nötr
+  /// [AppColors.systemGray] — seviyeden önem/renk TÜRETİLMEZ (web ile aynı:
+  /// sabit severity eşlemesi yok).
   Color get displayColor {
     // HEX renk varsa parse et
     if (color != null && color!.isNotEmpty) {
@@ -62,11 +89,7 @@ class Priority {
       }
     }
 
-    // Level'a göre fallback renkler (düşük level = yüksek öncelik)
-    if (isCritical) return AppColors.error;
-    if (isHigh) return AppColors.warning;
-    if ((level ?? 5) <= 3) return AppColors.info;
-    return AppColors.success;
+    return AppColors.systemGray;
   }
 
   /// Geçerli HEX renk değeri var mı?
@@ -83,8 +106,14 @@ class Priority {
       code: json['code'] as String?,
       description: json['description'] as String?,
       color: json['color'] as String?,
-      level: json['level'] as int?,
+      level: (json['level'] as num?)?.toInt(),
       active: json['active'] as bool? ?? true,
+      vendor: json['vendor'] as String?,
+      vendorLevel: (json['vendor_level'] as num?)?.toInt(),
+      priorityClass: json['priority_class'] as String?,
+      explicitlyActive: json.containsKey('explicitly_active')
+          ? json['explicitly_active'] == true
+          : json['active'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -103,6 +132,10 @@ class Priority {
       'color': color,
       'level': level,
       'active': active,
+      'vendor': vendor,
+      'vendor_level': vendorLevel,
+      'priority_class': priorityClass,
+      'explicitly_active': explicitlyActive,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -117,4 +150,10 @@ class Priority {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+/// Web `priorityLabelKey` ile aynı: `alarm.priority.<code>` (kodsuz → `undefined`).
+String priorityLabelKey(String? code) {
+  final c = (code ?? '').trim().toLowerCase();
+  return 'alarm.priority.${c.isEmpty ? 'undefined' : c}';
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/alarm/alarm_history_model.dart';
 import '../../../core/di/service_locator.dart';
@@ -7,6 +6,7 @@ import '../../../core/localization/localization_service.dart';
 import '../../../core/priority/priority_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/time/app_clock.dart';
 
 /// Resetli alarm listesi widget'ı
 ///
@@ -91,7 +91,7 @@ class ResetAlarmList extends StatelessWidget {
           alarm: alarm,
           priorityColor: _priorityColor(alarm),
           priorityName: (alarm.priorityId != null && priorities != null)
-              ? priorities![alarm.priorityId!]?.label
+              ? priorities![alarm.priorityId!]?.localizedLabel(sl<LocalizationService>().translate)
               : null,
           brightness: brightness,
           onTap: onAlarmTap != null ? () => onAlarmTap!(alarm) : null,
@@ -118,7 +118,6 @@ class _ResetAlarmTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yy HH:mm');
 
     return InkWell(
       onTap: onTap,
@@ -149,7 +148,7 @@ class _ResetAlarmTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? 'Alarm',
+                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -193,7 +192,7 @@ class _ResetAlarmTile extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         alarm.resetTime != null
-                            ? dateFormat.format(alarm.resetTime!)
+                            ? AppClock.dateTime(alarm.resetTime!)
                             : '-',
                         style: TextStyle(
                           fontSize: 12,
@@ -292,7 +291,6 @@ class AlarmDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
     final loc = sl<LocalizationService>();
 
     return DraggableScrollableSheet(
@@ -324,7 +322,7 @@ class AlarmDetailSheet extends StatelessWidget {
 
                 // Başlık
                 Text(
-                  alarm.name ?? 'Alarm',
+                  alarm.name ?? sl<LocalizationService>().translate('alarm.default_name'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -334,7 +332,7 @@ class AlarmDetailSheet extends StatelessWidget {
                 if (alarm.code != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Kod: ${alarm.code}',
+                    '${sl<LocalizationService>().translate('common.code')}: ${alarm.code}',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary(brightness),
@@ -358,7 +356,9 @@ class AlarmDetailSheet extends StatelessWidget {
                 Row(
                   children: [
                     _StatusBadge(
-                      label: alarm.isResolved ? 'Reset' : 'Aktif',
+                      label: alarm.isResolved
+                          ? sl<LocalizationService>().translate('alarm.reset_label')
+                          : sl<LocalizationService>().translate('alarm.active_status'),
                       color: alarm.isResolved
                           ? AppColors.success
                           : AppColors.error,
@@ -366,7 +366,7 @@ class AlarmDetailSheet extends StatelessWidget {
                     if (priority != null) ...[
                       const SizedBox(width: AppSpacing.sm),
                       _StatusBadge(
-                        label: priority!.label,
+                        label: priority!.localizedLabel(sl<LocalizationService>().translate),
                         color: priority!.displayColor,
                       ),
                     ],
@@ -402,7 +402,7 @@ class AlarmDetailSheet extends StatelessWidget {
                   color: AppColors.error,
                   label: loc.translate('common.start'),
                   value: alarm.startTime != null
-                      ? dateFormat.format(alarm.startTime!)
+                      ? AppClock.dateTimeSeconds(alarm.startTime!)
                       : '-',
                   brightness: brightness,
                 ),
@@ -411,16 +411,16 @@ class AlarmDetailSheet extends StatelessWidget {
                     icon: Icons.directions_run,
                     color: AppColors.warning,
                     label: loc.translate('alarm.arrival'),
-                    value: dateFormat.format(alarm.arrivalStartTime!),
+                    value: AppClock.dateTimeSeconds(alarm.arrivalStartTime!),
                     brightness: brightness,
                   ),
                 if (alarm.localAcknowledgeTime != null)
                   _TimelineRow(
                     icon: Icons.check,
                     color: AppColors.info,
-                    label: 'Onay',
+                    label: sl<LocalizationService>().translate('alarm.local_ack'),
                     value:
-                        '${dateFormat.format(alarm.localAcknowledgeTime!)}'
+                        '${AppClock.dateTimeSeconds(alarm.localAcknowledgeTime!)}'
                         '${alarm.localAcknowledgeUser != null ? ' (${alarm.localAcknowledgeUser})' : ''}',
                     brightness: brightness,
                   ),
@@ -428,9 +428,9 @@ class AlarmDetailSheet extends StatelessWidget {
                   _TimelineRow(
                     icon: Icons.check_circle,
                     color: AppColors.info,
-                    label: 'Uzak Onay',
+                    label: sl<LocalizationService>().translate('alarm.remote_ack'),
                     value:
-                        '${dateFormat.format(alarm.remoteAcknowledgeTime!)}'
+                        '${AppClock.dateTimeSeconds(alarm.remoteAcknowledgeTime!)}'
                         '${alarm.remoteAcknowledgeUser != null ? ' (${alarm.remoteAcknowledgeUser})' : ''}',
                     brightness: brightness,
                   ),
@@ -438,9 +438,9 @@ class AlarmDetailSheet extends StatelessWidget {
                   _TimelineRow(
                     icon: Icons.restart_alt,
                     color: AppColors.success,
-                    label: 'Reset',
+                    label: sl<LocalizationService>().translate('alarm.reset_label'),
                     value:
-                        '${dateFormat.format(alarm.resetTime!)}'
+                        '${AppClock.dateTimeSeconds(alarm.resetTime!)}'
                         '${alarm.resetUser != null ? ' (${alarm.resetUser})' : ''}',
                     brightness: brightness,
                   ),
@@ -449,7 +449,7 @@ class AlarmDetailSheet extends StatelessWidget {
                     icon: Icons.stop,
                     color: AppColors.systemGray,
                     label: loc.translate('common.end'),
-                    value: dateFormat.format(alarm.endTime!),
+                    value: AppClock.dateTimeSeconds(alarm.endTime!),
                     brightness: brightness,
                     isLast: true,
                   ),
