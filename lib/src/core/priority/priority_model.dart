@@ -22,6 +22,10 @@ class Priority {
   /// Üretici alarm seviyesi — platform satırına `level` ile eşlenir.
   final int? vendorLevel;
 
+  /// Üretici satırının AÇIK platform eşlemesi (DB `platform_priority_id`;
+  /// web `v_pms_alarm_*` view'ları da bunu kullanır). Platform satırında null.
+  final String? platformPriorityId;
+
   /// `severity` | `technical` (DB `priority_class`).
   final String? priorityClass;
 
@@ -41,6 +45,7 @@ class Priority {
     this.active = true,
     this.vendor,
     this.vendorLevel,
+    this.platformPriorityId,
     this.priorityClass,
     this.explicitlyActive = false,
     this.createdAt,
@@ -110,6 +115,7 @@ class Priority {
       active: json['active'] as bool? ?? true,
       vendor: json['vendor'] as String?,
       vendorLevel: (json['vendor_level'] as num?)?.toInt(),
+      platformPriorityId: json['platform_priority_id'] as String?,
       priorityClass: json['priority_class'] as String?,
       explicitlyActive: json.containsKey('explicitly_active')
           ? json['explicitly_active'] == true
@@ -134,6 +140,7 @@ class Priority {
       'active': active,
       'vendor': vendor,
       'vendor_level': vendorLevel,
+      'platform_priority_id': platformPriorityId,
       'priority_class': priorityClass,
       'explicitly_active': explicitlyActive,
       'created_at': createdAt?.toIso8601String(),

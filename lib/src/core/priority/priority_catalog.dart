@@ -10,10 +10,10 @@ import 'priority_model.dart';
 ///   (critical/high/medium/low/technical + pasif UNDEFINED), üretici satırları
 ///   (`vendor = 'carel'`) içe aktarıcıların değişkenlere damgaladığı satırlardır.
 /// - UI yalnız `vendor IS NULL AND active = true` satırları sunar (filtre çipleri).
-/// - Bir alarmın `priority_id`'si üretici satırıysa, `vendor_level` (yoksa
-///   `level`) eşit olan platform satırına eşlenir. Seviyesi eşleşmeyen teknik
-///   sınıf üretici satırı (Carel TECHNICAL, level 0) platform teknik satırına
-///   düşer.
+/// - Bir alarmın `priority_id`'si üretici satırıysa, önce satırın AÇIK
+///   eşlemesi `platform_priority_id` kullanılır (Carel TECHNICAL → teknik).
+///   Eşleme yoksa `vendor_level` (yoksa `level`) eşit olan platform satırına,
+///   o da yoksa teknik sınıf satırlar platform teknik satırına düşer.
 /// - Etiket `alarm.priority.<code>`, renk `priorities.color`. UUID / severity
 ///   sabiti YOK.
 class PriorityCatalog {
@@ -63,6 +63,12 @@ class PriorityCatalog {
         if (p.id == row.id) return p;
       }
       return null;
+    }
+    final mapped = row.platformPriorityId;
+    if (mapped != null) {
+      for (final p in _platform) {
+        if (p.id == mapped) return p;
+      }
     }
     final lvl = row.vendorLevel ?? row.level;
     if (lvl != null) {

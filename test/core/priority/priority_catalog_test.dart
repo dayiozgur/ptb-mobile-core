@@ -12,7 +12,9 @@ List<Priority> _rows() => [
         {'id': 'p-tech', 'code': 'technical', 'name': 'Teknik', 'color': '#6c757d', 'level': null, 'vendor': null, 'active': true, 'priority_class': 'technical'},
         {'id': 'p-undef', 'code': 'UNDEFINED', 'name': 'Undefined', 'color': '#8dcfb3', 'level': null, 'vendor': null, 'active': null, 'priority_class': 'severity'},
         {'id': 'c-vh', 'code': 'VERYHIGH', 'name': 'Very High', 'color': '#ce6d6a', 'level': 1, 'vendor': 'carel', 'vendor_level': 1, 'active': null, 'priority_class': 'severity'},
-        {'id': 'c-tech', 'code': 'TECHNICAL', 'name': 'Technical', 'color': '#839bda', 'level': 0, 'vendor': 'carel', 'vendor_level': 0, 'active': null, 'priority_class': 'technical'},
+        {'id': 'c-tech', 'code': 'TECHNICAL', 'name': 'Technical', 'color': '#839bda', 'level': 0, 'vendor': 'carel', 'vendor_level': 0, 'active': null, 'priority_class': 'technical', 'platform_priority_id': 'p-tech'},
+        // Açık eşleme seviyeden önce gelir (level 1 olsa da high'a eşlenir).
+        {'id': 'x-odd', 'code': 'ODD', 'name': 'Odd', 'color': '#000000', 'level': 1, 'vendor': 'other', 'vendor_level': 1, 'active': null, 'priority_class': 'severity', 'platform_priority_id': 'p-high'},
         {'id': 'c-med', 'code': 'MEDIUM', 'name': 'Medium', 'color': '#facb86', 'level': 3, 'vendor': 'carel', 'vendor_level': 3, 'active': null, 'priority_class': 'severity'},
       ])
         Priority.fromJson(j),
@@ -31,8 +33,9 @@ void main() {
     expect(catalog.resolve('p-high')?.id, 'p-high');
   });
 
-  test('resolve: eşleşmeyen teknik vendor satırı platform teknik satırına düşer', () {
+  test('resolve: platform_priority_id açık eşlemesi önceliklidir (Carel TECHNICAL → teknik)', () {
     expect(catalog.resolve('c-tech')?.id, 'p-tech');
+    expect(catalog.resolve('x-odd')?.id, 'p-high');
   });
 
   test('resolve: platformda karşılığı olmayan / pasif / bilinmeyen → null', () {
