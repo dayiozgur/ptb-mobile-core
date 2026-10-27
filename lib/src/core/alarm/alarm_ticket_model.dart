@@ -2,10 +2,13 @@
 ///
 /// Sunucu yolu web ile aynı (protoolbag-platform
 /// `supabase/migrations/20261022150000_pms_alarm_ticket_routing.sql`):
-///  * `fn_pms_alarm_create_ticket(p_alarm_uid, p_subject, p_description)` →
-///    `{id, code}` — SECURITY DEFINER; kiracı + org görünürlüğü, FixFlow
-///    yetkisi, öncelik (alarmın platform önceliği), disiplin, SLA ve bakım
-///    firması yönlendirmesi SUNUCUDA belirlenir.
+///  * `fn_pms_alarm_create_ticket(p_alarm_uid, p_subject, p_description,
+///    p_priority_id DEFAULT NULL)` → `{id, code}` — SECURITY DEFINER; kiracı +
+///    org görünürlüğü, FixFlow yetkisi, disiplin, SLA ve bakım firması
+///    yönlendirmesi SUNUCUDA belirlenir. Öncelik: `p_priority_id` NULL →
+///    alarmın platform önceliği; dolu → platform önceliği olmalı
+///    (`vendor IS NULL AND active = true`, aksi halde `invalid priority`).
+///    SLA bitiş tarihi seçilen önceliği izler.
 ///  * `fn_pms_alarm_linked_ticket(p_alarm_uid)` → alarmdan açılmış iş emirleri
 ///    (firmanın FixFlow kiracısındakiler dahil), yeniden eskiye.
 ///  * `fn_pms_alarm_ticket_route_preview(p_alarm_uid)` → iş emri nereye gider.
@@ -19,6 +22,16 @@ const String kFixflowNotEntitled = 'fixflow_not_entitled';
 bool isFixflowNotEntitled(Object? error) {
   // PostgrestException.toString() mesajı içerir.
   return error != null && error.toString().contains(kFixflowNotEntitled);
+}
+
+/// `fn_pms_alarm_create_ticket` platform dışı / pasif `p_priority_id` için bu
+/// mesajla hata verir.
+const String kInvalidPriority = 'invalid priority';
+
+/// Hata seçilen önceliğin geçersiz olmasından mı (`invalid priority`)?
+bool isInvalidPriority(Object? error) {
+  return error != null &&
+      error.toString().toLowerCase().contains(kInvalidPriority);
 }
 
 /// Yeni oluşturulan iş emri (`{id, code}`).

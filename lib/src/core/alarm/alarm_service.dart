@@ -239,13 +239,17 @@ class AlarmService {
   /// Alarm için FixFlow iş emri aç — `fn_pms_alarm_create_ticket`.
   ///
   /// [alarmUid] canlı alarmda `alarms.id`, arşivde `alarm_histories.alarm_uid`.
-  /// Öncelik / disiplin / SLA / bakım firması yönlendirmesi sunucuda alarmdan
-  /// türetilir. FixFlow üyeliği yoksa hata mesajı [kFixflowNotEntitled] içerir
-  /// (bkz. [isFixflowNotEntitled]).
+  /// Disiplin / SLA / bakım firması yönlendirmesi sunucuda alarmdan türetilir.
+  /// [priorityId] null → alarmın platform önceliği (parametre gönderilmez);
+  /// dolu → `p_priority_id` (platform önceliği olmalı; değilse hata mesajı
+  /// [kInvalidPriority] içerir, bkz. [isInvalidPriority]). SLA bitişi seçilen
+  /// önceliği izler. FixFlow üyeliği yoksa hata mesajı [kFixflowNotEntitled]
+  /// içerir (bkz. [isFixflowNotEntitled]).
   Future<AlarmCreatedTicket> createFixflowTicket(
     String alarmUid, {
     required String subject,
     String? description,
+    String? priorityId,
   }) async {
     final s = subject.trim();
     if (alarmUid.isEmpty) throw ArgumentError('alarmUid is required');
@@ -255,6 +259,8 @@ class AlarmService {
       'p_alarm_uid': alarmUid,
       'p_subject': s,
       'p_description': (d == null || d.isEmpty) ? null : d,
+      if (priorityId != null && priorityId.isNotEmpty)
+        'p_priority_id': priorityId,
     });
     final row = data is List ? (data.isEmpty ? null : data.first) : data;
     if (row is! Map || row['id'] == null) {

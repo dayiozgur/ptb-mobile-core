@@ -5,7 +5,9 @@ import '../../../core/alarm/alarm_service.dart';
 import '../../../core/alarm/alarm_ticket_model.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/localization/localization_service.dart';
+import '../../../core/priority/priority_catalog.dart';
 import '../../../core/priority/priority_model.dart';
+import '../../../core/priority/priority_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/time/app_clock.dart';
@@ -19,8 +21,12 @@ import '../../../core/utils/logger.dart';
 ///
 /// * Konu alarm adıyla, açıklama alarm özetiyle (kod, cihaz, lokasyon,
 ///   başlangıç, öncelik) önceden doldurulur; ikisi de düzenlenebilir.
-/// * Öncelik / disiplin / SLA / bakım firması yönlendirmesi SUNUCUDA alarmdan
-///   türetilir (RPC öncelik parametresi almaz) → öncelik salt-okunur gösterilir.
+/// * Disiplin / SLA / bakım firması yönlendirmesi SUNUCUDA alarmdan türetilir.
+///   Öncelik seçilebilir: liste platform öncelikleri (`vendor IS NULL AND
+///   active = true`, web sırası); varsayılan alarmın (sunucunun yönlendirdiği)
+///   önceliği. `p_priority_id` YALNIZ kullanıcı değiştirdiyse gönderilir
+///   (null = sunucu alarmın önceliğini korur); SLA bitişi seçilen önceliği
+///   izler. Sunucu `invalid priority` derse dostça uyarı gösterilir.
 /// * Alarmın AÇIK (kapanmamış) bağlı iş emri varsa yeni iş emri açılmaz; mevcut
 ///   iş emri numarası gösterilir (sahada çift kayıt önleme).
 /// * FixFlow üyeliği yoksa (`fixflow_not_entitled`) bilgilendirme gösterilir.
@@ -122,9 +128,23 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
   bool _routeFailed = false;
   AlarmTicketRoutePreview? _route;
 
+  /// Seçilebilir platform öncelikleri ([PriorityCatalog.platform]).
+  List<Priority> _platformPriorities = const [];
+  PriorityCatalog _catalog = PriorityCatalog.empty;
+
+  /// Alarmın varsayılan (sunucu yönlendirmesi) platform önceliği.
+  String? _defaultPriorityId;
+  String? _selectedPriorityId;
+  bool _priorityTouched = false;
+
+  /// Önceden doldurulan açıklama — kullanıcı düzenlemediyse öncelik
+  /// değişiminde yeniden üretilir.
+  late String _generatedDescription;
+
   bool _notEntitled = false;
   bool _creating = false;
   bool _createFailed = false;
+  bool _invalidPriority = false;
 
   @override
   void initState() {
@@ -135,16 +155,16 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
           ? name
           : _loc.translate('pms.alarm.unnamed'),
     );
-    _description = TextEditingController(
-      text: buildAlarmTicketDescription(
-        widget.alarm,
-        priority: widget.priority,
-        siteName: widget.siteName,
-        translate: _loc.translate,
-      ),
+    _generatedDescription = buildAlarmTicketDescription(
+      widget.alarm,
+      priority: widget.priority,
+      siteName: widget.siteName,
+      translate: _loc.translate,
     );
+    _description = TextEditingController(text: _generatedDescription);
     _loadLinked();
     _loadRoute();
+    _loadPriorities();
   }
 
   @override
@@ -179,6 +199,7 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
       setState(() {
         _route = r;
         _loadingRoute = false;
+        _resolveDefaultPriority();
       });
     } catch (e) {
       Logger.error('Alarm ticket route preview failed', e);
@@ -188,6 +209,77 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
         _loadingRoute = false;
       });
     }
+  }
+
+  /// Platform öncelik listesi (mevcut [PriorityService] — önbellekli).
+  Future<void> _loadPriorities() async {
+    if (!sl.isRegistered<PriorityService>()) return;
+    try {
+      final rows = await sl<PriorityService>().getAll();
+      if (!mounted) return;
+      setState(() {
+        _catalog = PriorityCatalog(rows);
+        _platformPriorities = _catalog.platform;
+        _resolveDefaultPriority();
+      });
+    } catch (e) {
+      Logger.error('Alarm ticket priorities failed', e);
+    }
+  }
+
+  /// Varsayılan öncelik: sunucu yönlendirmesinin kodu → alarmın
+  /// `priority_id`'si (vendor satırı platforma çözülür) → çağıranın önceliği.
+  void _resolveDefaultPriority() {
+    if (_platformPriorities.isEmpty) return;
+    Priority? found;
+    final code = _route?.priorityCode?.trim().toLowerCase();
+    if (code != null && code.isNotEmpty) {
+      for (final p in _platformPriorities) {
+        if ((p.code ?? '').trim().toLowerCase() == code) {
+          found = p;
+          break;
+        }
+      }
+    }
+    found ??= _catalog.resolve(widget.alarm.priorityId);
+    found ??= _catalog.resolve(widget.priority?.id);
+    _defaultPriorityId = found?.id;
+    if (!_priorityTouched) _selectedPriorityId = _defaultPriorityId;
+  }
+
+  Priority? _platformById(String? id) {
+    if (id == null) return null;
+    for (final p in _platformPriorities) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+
+  /// RPC'ye gönderilecek öncelik: yalnız kullanıcı varsayılandan farklı
+  /// seçtiyse; aksi halde null (sunucu alarmın önceliğini korur).
+  String? get _priorityOverride {
+    final sel = _selectedPriorityId;
+    if (sel == null || sel == _defaultPriorityId) return null;
+    return sel;
+  }
+
+  void _onPriorityChanged(String? id) {
+    if (id == null || id == _selectedPriorityId) return;
+    setState(() {
+      _priorityTouched = true;
+      _selectedPriorityId = id;
+      _invalidPriority = false;
+      // Açıklama elle düzenlenmediyse öncelik satırını güncelle.
+      if (_description.text == _generatedDescription) {
+        _generatedDescription = buildAlarmTicketDescription(
+          widget.alarm,
+          priority: _platformById(id),
+          siteName: widget.siteName,
+          translate: _loc.translate,
+        );
+        _description.text = _generatedDescription;
+      }
+    });
   }
 
   AlarmLinkedTicket? get _openLinked {
@@ -206,12 +298,14 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
     setState(() {
       _creating = true;
       _createFailed = false;
+      _invalidPriority = false;
     });
     try {
       final ticket = await _alarms.createFixflowTicket(
         widget.alarm.id,
         subject: _subject.text,
         description: _description.text,
+        priorityId: _priorityOverride,
       );
       if (!mounted) return;
       Navigator.of(context).pop(ticket);
@@ -222,6 +316,8 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
         _creating = false;
         if (isFixflowNotEntitled(e)) {
           _notEntitled = true;
+        } else if (isInvalidPriority(e)) {
+          _invalidPriority = true;
         } else {
           _createFailed = true;
         }
@@ -235,6 +331,8 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
   }
 
   String? get _priorityLabel {
+    final sel = _platformById(_selectedPriorityId);
+    if (sel != null) return sel.localizedLabel(_loc.translate);
     if (widget.priority != null) {
       return widget.priority!.localizedLabel(_loc.translate);
     }
@@ -265,6 +363,51 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
     return head +
         fillTicketPlaceholders(
             _loc.translate(key), {'target': target, 'team': team});
+  }
+
+  /// Öncelik seçici — `alarm.priority.<code>` etiketi + `priorities.color`.
+  Widget _buildPriorityPicker(Brightness brightness) {
+    final selected = _platformById(_selectedPriorityId);
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: _loc.translate('common.priority'),
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          key: const ValueKey('alarm-ticket-priority-picker'),
+          isExpanded: true,
+          value: selected?.id,
+          onChanged: _creating ? null : _onPriorityChanged,
+          items: [
+            for (final p in _platformPriorities)
+              DropdownMenuItem<String>(
+                value: p.id,
+                child: Row(
+                  key: ValueKey('alarm-ticket-priority-${p.id}'),
+                  children: [
+                    Icon(Icons.circle, size: 12, color: p.displayColor),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        p.localizedLabel(_loc.translate),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(brightness),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -341,8 +484,11 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
                     ),
                 ],
 
-                // Öncelik (sunucu alarmdan yazar → salt-okunur)
-                if (_priorityLabel != null) ...[
+                // Öncelik: iş emri açılamıyorsa / liste yoksa salt-okunur.
+                if (_priorityLabel != null &&
+                    !(open == null &&
+                        !_notEntitled &&
+                        _platformPriorities.isNotEmpty)) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     '${loc.translate('common.priority')}: $_priorityLabel',
@@ -350,7 +496,8 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: widget.priority?.displayColor ??
+                      color: _platformById(_selectedPriorityId)?.displayColor ??
+                          widget.priority?.displayColor ??
                           AppColors.textPrimary(brightness),
                     ),
                   ),
@@ -445,6 +592,20 @@ class _AlarmTicketSheetState extends State<AlarmTicketSheet> {
                       border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
                     ),
+                  ),
+                  if (_platformPriorities.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildPriorityPicker(brightness),
+                  ],
+                ],
+
+                if (_invalidPriority) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    loc.translate('pms.alarm_ticket.error.invalid_priority'),
+                    key: const ValueKey('alarm-ticket-invalid-priority'),
+                    style:
+                        const TextStyle(fontSize: 13, color: AppColors.error),
                   ),
                 ],
 

@@ -35,6 +35,32 @@ void main() {
       });
     });
 
+    test('priorityId verilirse p_priority_id gönderilir', () async {
+      h.stubRpc('fn_pms_alarm_create_ticket', result: {'id': 't3'});
+      await svc.createFixflowTicket('a1', subject: 'x', priorityId: 'p-high');
+      expect(h.capturedRpcParams('fn_pms_alarm_create_ticket'), {
+        'p_alarm_uid': 'a1',
+        'p_subject': 'x',
+        'p_description': null,
+        'p_priority_id': 'p-high',
+      });
+    });
+
+    test('invalid priority hatası tanınır', () async {
+      const err =
+          PostgrestException(message: 'invalid priority', code: 'P0001');
+      h.stubRpc('fn_pms_alarm_create_ticket', error: err);
+      Object? caught;
+      try {
+        await svc.createFixflowTicket('a1', subject: 'x', priorityId: 'v1');
+      } catch (e) {
+        caught = e;
+      }
+      expect(isInvalidPriority(caught), isTrue);
+      expect(isInvalidPriority(Exception('other')), isFalse);
+      expect(isInvalidPriority(null), isFalse);
+    });
+
     test('kod yoksa displayCode = id', () async {
       h.stubRpc('fn_pms_alarm_create_ticket', result: {'id': 't2'});
       final t = await svc.createFixflowTicket('a1', subject: 'x');

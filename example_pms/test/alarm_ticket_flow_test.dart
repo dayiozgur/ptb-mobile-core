@@ -47,10 +47,17 @@ void main() {
             ));
     when(() => alarms.createFixflowTicket(any(),
             subject: any(named: 'subject'),
-            description: any(named: 'description')))
+            description: any(named: 'description'),
+            priorityId: any(named: 'priorityId')))
         .thenAnswer(
             (_) async => const AlarmCreatedTicket(id: 't1', code: 'TCK-0042'));
     registerFake<AlarmService>(alarms);
+    final priorities = MockPriorityService();
+    when(() => priorities.getAll(forceRefresh: any(named: 'forceRefresh')))
+        .thenAnswer((_) async => fixturePriorities());
+    when(() => priorities.getAll())
+        .thenAnswer((_) async => fixturePriorities());
+    registerFake<PriorityService>(priorities);
   });
 
   Future<void> openTicketForm(WidgetTester tester) async {
@@ -89,7 +96,13 @@ void main() {
     expect(desc.controller!.text, contains('common.code: HP1'));
     expect(desc.controller!.text, contains('pms.alarm.fixflow.device: Komp-1'));
     expect(desc.controller!.text, contains('05.01.2026 12:00:00'));
-    expect(find.text('Öncelik: Kritik'), findsOneWidget);
+    expect(desc.controller!.text, contains('Öncelik: Kritik'));
+    // Öncelik seçici: varsayılan = alarmın (yönlendirmenin) önceliği.
+    final picker = tester.widget<DropdownButton<String>>(
+        find.byKey(const ValueKey('alarm-ticket-priority-picker')));
+    expect(picker.value, 'p-crit');
+    // Yalnız platform öncelikleri (carel vendor satırı yok).
+    expect(picker.items!.map((i) => i.value), ['p-crit', 'p-high']);
     expect(
         find.text('ATALIAN — Müşteri A FixFlow\'unda Soğutma ekibine atanacak'),
         findsOneWidget);
@@ -105,8 +118,10 @@ void main() {
 
     final captured = verify(() => alarms.createFixflowTicket(captureAny(),
         subject: captureAny(named: 'subject'),
-        description: any(named: 'description'))).captured;
-    expect(captured, ['a1', 'HP alarmı']);
+        description: any(named: 'description'),
+        priorityId: captureAny(named: 'priorityId'))).captured;
+    // Öncelik değişmedi → p_priority_id gönderilmez (null).
+    expect(captured, ['a1', 'HP alarmı', null]);
     expect(find.text('FixFlow iş emri oluşturuldu: TCK-0042'), findsOneWidget);
     expect(find.byType(AlarmTicketSheet), findsNothing);
     expect(find.byType(ActiveAlarmDetailSheet), findsNothing);
@@ -138,14 +153,16 @@ void main() {
     await tester.pumpAndSettle();
     verify(() => alarms.createFixflowTicket('a1',
         subject: any(named: 'subject'),
-        description: any(named: 'description'))).called(1);
+        description: any(named: 'description'),
+        priorityId: any(named: 'priorityId'))).called(1);
   });
 
   testWidgets('FixFlow üyeliği yok → bilgilendirme, sheet açık kalır',
       (tester) async {
     when(() => alarms.createFixflowTicket(any(),
             subject: any(named: 'subject'),
-            description: any(named: 'description')))
+            description: any(named: 'description'),
+            priorityId: any(named: 'priorityId')))
         .thenThrow(Exception('fixflow_not_entitled'));
     await openTicketForm(tester);
     await tester.tap(find.byKey(const ValueKey('alarm-ticket-submit')));
@@ -158,11 +175,52 @@ void main() {
   testWidgets('sunucu hatası → hata metni, tekrar denenebilir', (tester) async {
     when(() => alarms.createFixflowTicket(any(),
         subject: any(named: 'subject'),
-        description: any(named: 'description'))).thenThrow(Exception('boom'));
+        description: any(named: 'description'),
+        priorityId: any(named: 'priorityId'))).thenThrow(Exception('boom'));
     await openTicketForm(tester);
     await tester.tap(find.byKey(const ValueKey('alarm-ticket-submit')));
     await tester.pumpAndSettle();
     expect(find.text('FixFlow iş emri oluşturulamadı'), findsOneWidget);
     expect(find.byKey(const ValueKey('alarm-ticket-subject')), findsOneWidget);
+  });
+
+  testWidgets('öncelik değişince priorityId gönderilir + açıklama güncellenir',
+      (tester) async {
+    await openTicketForm(tester);
+    await tester
+        .tap(find.byKey(const ValueKey('alarm-ticket-priority-picker')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey('alarm-ticket-priority-p-high')).last);
+    await tester.pumpAndSettle();
+
+    final desc = tester.widget<TextFormField>(
+        find.byKey(const ValueKey('alarm-ticket-description')));
+    expect(desc.controller!.text, contains('Öncelik: Yüksek'));
+
+    await tester.tap(find.byKey(const ValueKey('alarm-ticket-submit')));
+    await tester.pumpAndSettle();
+    final captured = verify(() => alarms.createFixflowTicket('a1',
+        subject: any(named: 'subject'),
+        description: any(named: 'description'),
+        priorityId: captureAny(named: 'priorityId'))).captured;
+    expect(captured, ['p-high']);
+  });
+
+  testWidgets('invalid priority → dostça uyarı, sheet açık kalır',
+      (tester) async {
+    when(() => alarms.createFixflowTicket(any(),
+            subject: any(named: 'subject'),
+            description: any(named: 'description'),
+            priorityId: any(named: 'priorityId')))
+        .thenThrow(Exception('invalid priority'));
+    await openTicketForm(tester);
+    await tester.tap(find.byKey(const ValueKey('alarm-ticket-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('alarm-ticket-invalid-priority')),
+        findsOneWidget);
+    expect(find.text('FixFlow iş emri oluşturulamadı'), findsNothing);
+    expect(find.byType(AlarmTicketSheet), findsOneWidget);
   });
 }
