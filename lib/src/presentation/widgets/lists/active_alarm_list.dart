@@ -307,6 +307,10 @@ class ActiveAlarmDetailSheet extends StatefulWidget {
   /// Inhibit / un-inhibit toggle. null ise buton gösterilmez.
   final Future<void> Function()? onInhibitToggle;
 
+  /// Alarmdan FixFlow iş emri aç (bkz. [AlarmTicketSheet]). null ise buton
+  /// gösterilmez.
+  final Future<void> Function()? onCreateTicket;
+
   const ActiveAlarmDetailSheet({
     super.key,
     required this.alarm,
@@ -314,6 +318,7 @@ class ActiveAlarmDetailSheet extends StatefulWidget {
     this.onAcknowledge,
     this.onReset,
     this.onInhibitToggle,
+    this.onCreateTicket,
   });
 
   /// Bottom sheet'i göster
@@ -324,6 +329,7 @@ class ActiveAlarmDetailSheet extends StatefulWidget {
     Future<void> Function()? onAcknowledge,
     Future<void> Function()? onReset,
     Future<void> Function()? onInhibitToggle,
+    Future<void> Function()? onCreateTicket,
   }) {
     showModalBottomSheet(
       context: context,
@@ -339,6 +345,7 @@ class ActiveAlarmDetailSheet extends StatefulWidget {
         onAcknowledge: onAcknowledge,
         onReset: onReset,
         onInhibitToggle: onInhibitToggle,
+        onCreateTicket: onCreateTicket,
       ),
     );
   }
@@ -358,7 +365,9 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
       widget.onAcknowledge != null && !_alarm.isAcknowledged;
   bool get _showReset => widget.onReset != null && _alarm.isActive;
   bool get _showInhibit => widget.onInhibitToggle != null;
-  bool get _hasAnyAction => _showAcknowledge || _showReset || _showInhibit;
+  bool get _showTicket => widget.onCreateTicket != null;
+  bool get _hasAnyAction =>
+      _showAcknowledge || _showReset || _showInhibit || _showTicket;
 
   Future<void> _run(_AlarmActionKind kind, Future<void> Function()? cb) async {
     if (cb == null || _inFlight != null) return;
@@ -433,7 +442,7 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
           const SizedBox(height: AppSpacing.sm),
         ],
         // Inhibit / Un-inhibit toggle
-        if (_showInhibit)
+        if (_showInhibit) ...[
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -449,6 +458,27 @@ class _ActiveAlarmDetailSheetState extends State<ActiveAlarmDetailSheet> {
               label: Text(
                 loc.translate(inhibited ? 'alarm.uninhibit' : 'alarm.inhibit'),
               ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        // Alarm → FixFlow iş emri
+        if (_showTicket)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('alarm-action-create-ticket'),
+              // Form kendi sheet'inde açılır (kendi yükleme durumu var) →
+              // burada spinner yok; sheet kapanana dek bekleme yapılmaz.
+              onPressed: busy ? null : () => widget.onCreateTicket!(),
+              icon: const Icon(Icons.confirmation_number_outlined),
+              label: Text(loc.translate('pms.alarm.fixflow.create')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 shape: RoundedRectangleBorder(

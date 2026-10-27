@@ -62,6 +62,8 @@ Future<void> showAlarmActions(
     context,
     alarm: alarm,
     priority: priority,
+    onCreateTicket: () =>
+        openAlarmTicketForm(context, alarm: alarm, priority: priority),
     onAcknowledge: () => handleAction(
       () => alarmService.acknowledgeAlarm(alarm.id),
       'alarm.ack_success',
@@ -92,4 +94,30 @@ Future<void> showAlarmActions(
       );
     },
   );
+}
+
+/// Alarm detay sheet'inden FixFlow iş emri formunu açar ([AlarmTicketSheet]).
+///
+/// Başarıda detay sheet'i kapatır ve iş emri numarasıyla SnackBar gösterir.
+/// Yetki / FixFlow üyeliği / yönlendirme sunucuda
+/// (`fn_pms_alarm_create_ticket`, SECDEF) denetlenir.
+Future<void> openAlarmTicketForm(
+  BuildContext context, {
+  required Alarm alarm,
+  Priority? priority,
+  String? siteName,
+}) async {
+  final ticket = await AlarmTicketSheet.show(
+    context,
+    alarm: alarm,
+    priority: priority,
+    siteName: siteName,
+  );
+  if (ticket == null || !context.mounted) return;
+  final loc = sl<LocalizationService>();
+  Navigator.of(context).pop(); // detay sheet'i kapat
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(
+        '${loc.translate('pms.alarm.fixflow.ticket_created')}: ${ticket.displayCode}'),
+  ));
 }

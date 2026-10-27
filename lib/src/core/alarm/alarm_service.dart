@@ -8,6 +8,7 @@ import '../utils/logger.dart';
 import 'alarm_model.dart';
 import 'alarm_history_model.dart';
 import 'alarm_stats_model.dart';
+import 'alarm_ticket_model.dart';
 
 /// Alarm Service
 ///
@@ -231,6 +232,67 @@ class AlarmService {
     final result = await _supabase.rpc('fn_pms_alarm_inhibit',
         params: {'p_alarm_id': alarmId, 'p_inhibit': inhibit});
     return _actionSucceeded(result);
+  }
+
+  // ============================================
+  // ALARM → FIXFLOW İŞ EMRİ (web ile aynı RPC'ler)
+  // ============================================
+
+  /// Alarm için FixFlow iş emri aç — `fn_pms_alarm_create_ticket`.
+  ///
+  /// [alarmUid] canlı alarmda `alarms.id`, arşivde `alarm_histories.alarm_uid`.
+  /// Öncelik / disiplin / SLA / bakım firması yönlendirmesi sunucuda alarmdan
+  /// türetilir. FixFlow üyeliği yoksa hata mesajı [kFixflowNotEntitled] içerir
+  /// (bkz. [isFixflowNotEntitled]).
+  Future<AlarmCreatedTicket> createFixflowTicket(
+    String alarmUid, {
+    required String subject,
+    String? description,
+  }) async {
+    final s = subject.trim();
+    if (alarmUid.isEmpty) throw ArgumentError('alarmUid is required');
+    if (s.isEmpty) throw ArgumentError('subject is required');
+    final d = description?.trim();
+    final data = await _supabase.rpc('fn_pms_alarm_create_ticket', params: {
+      'p_alarm_uid': alarmUid,
+      'p_subject': s,
+      'p_description': (d == null || d.isEmpty) ? null : d,
+    });
+    final row = data is List
+        ? (data.isEmpty ? null : data.first)
+        : data;
+    if (row is! Map || row['id'] == null) {
+      throw StateError('ticket was not created');
+    }
+    return AlarmCreatedTicket(
+      id: row['id'] as String,
+      code: row['code'] as String?,
+    );
+  }
+
+  /// Alarmdan açılmış iş emirleri (yeniden eskiye) — `fn_pms_alarm_linked_ticket`.
+  Future<List<AlarmLinkedTicket>> getLinkedTickets(String alarmUid) async {
+    if (alarmUid.isEmpty) return const [];
+    final data = await _supabase.rpc('fn_pms_alarm_linked_ticket',
+        params: {'p_alarm_uid': alarmUid});
+    if (data is! List) return const [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .where((r) => r['ticket_id'] != null)
+        .map(AlarmLinkedTicket.fromJson)
+        .toList();
+  }
+
+  /// İş emri nereye gider (bakım firması / ekip / öncelik) —
+  /// `fn_pms_alarm_ticket_route_preview`. Alarm görünmüyorsa null.
+  Future<AlarmTicketRoutePreview?> getTicketRoutePreview(
+      String alarmUid) async {
+    if (alarmUid.isEmpty) return null;
+    final data = await _supabase.rpc('fn_pms_alarm_ticket_route_preview',
+        params: {'p_alarm_uid': alarmUid});
+    final row = data is List ? (data.isEmpty ? null : data.first) : data;
+    if (row is! Map<String, dynamic> || row['mode'] == null) return null;
+    return AlarmTicketRoutePreview.fromJson(row);
   }
 
   bool _actionSucceeded(dynamic rpcResult) {

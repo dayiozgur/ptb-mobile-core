@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+import '../alarm_actions_helper.dart';
+
 /// Global Alarms Screen - Organization seviyesinde tum alarmlari gosterir
 class GlobalAlarmsScreen extends StatefulWidget {
   const GlobalAlarmsScreen({super.key});
@@ -185,6 +187,8 @@ class _GlobalAlarmsScreenState extends State<GlobalAlarmsScreen>
       context,
       alarm: alarm,
       priority: priority,
+      onCreateTicket: () =>
+          openAlarmTicketForm(context, alarm: alarm, priority: priority),
       onAcknowledge: () => _handleAction(
         action: () => alarmService.acknowledgeAlarm(alarm.id),
         successKey: 'alarm.ack_success',

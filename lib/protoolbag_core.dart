@@ -176,6 +176,7 @@ export 'src/core/alarm/alarm_model.dart';
 export 'src/core/alarm/alarm_history_model.dart';
 export 'src/core/alarm/alarm_service.dart';
 export 'src/core/alarm/alarm_stats_model.dart';
+export 'src/core/alarm/alarm_ticket_model.dart';
 
 // Core - IoT Log (Operational Logs)
 export 'src/core/iot_log/iot_log_model.dart';
@@ -312,6 +313,7 @@ export 'src/presentation/widgets/cards/metric_card.dart';
 export 'src/presentation/widgets/lists/app_list_tile.dart';
 export 'src/presentation/widgets/lists/app_section_header.dart';
 export 'src/presentation/widgets/lists/active_alarm_list.dart';
+export 'src/presentation/widgets/lists/alarm_ticket_sheet.dart';
 export 'src/presentation/widgets/lists/reset_alarm_list.dart';
 
 // Presentation - Widgets - Navigation
