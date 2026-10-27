@@ -12,8 +12,19 @@ void main() {
   late MockAlarmService alarms;
 
   final fixture = [
-    Site(id: 's1', name: 'Kadıköy Mağaza', organizationId: 'o1', markerId: '', code: 'KDK', address: 'Bahariye Cd.'),
-    Site(id: 's2', name: 'Ankara Depo', organizationId: 'o1', markerId: '', code: 'ANK'),
+    Site(
+        id: 's1',
+        name: 'Kadıköy Mağaza',
+        organizationId: 'o1',
+        markerId: '',
+        code: 'KDK',
+        address: 'Bahariye Cd.'),
+    Site(
+        id: 's2',
+        name: 'Ankara Depo',
+        organizationId: 'o1',
+        markerId: '',
+        code: 'ANK'),
   ];
 
   setUp(() async {
@@ -26,8 +37,8 @@ void main() {
     when(() => sites.getSites('o1')).thenAnswer((_) async => fixture);
     registerFake<SiteService>(sites);
     alarms = MockAlarmService();
-    when(() => alarms.getResetAlarmCountBySite('s1')).thenAnswer((_) async => 3);
-    when(() => alarms.getResetAlarmCountBySite('s2')).thenAnswer((_) async => 0);
+    when(() => alarms.getActiveAlarmCountsBySite())
+        .thenAnswer((_) async => {'s1': 3, 'other-org-site': 9});
     registerFake<AlarmService>(alarms);
   });
 
@@ -37,9 +48,20 @@ void main() {
     expect(find.text('Kadıköy Mağaza'), findsOneWidget);
     expect(find.text('Ankara Depo'), findsOneWidget);
     expect(find.text('3'), findsOneWidget); // yalnız s1 rozeti
+    expect(find.text('9'), findsNothing); // listede olmayan site sayılmaz
   });
 
-  testWidgets('arama: kod ile eşleşir; eşleşme yoksa boş-sonuç', (tester) async {
+  testWidgets('aktif alarm sayısı alınamazsa liste rozetsiz gösterilir',
+      (tester) async {
+    when(() => alarms.getActiveAlarmCountsBySite()).thenThrow(Exception('rls'));
+    await tester.pumpWidget(wrap(const SitesListScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Kadıköy Mağaza'), findsOneWidget);
+    expect(find.byIcon(Icons.warning_amber), findsNothing);
+  });
+
+  testWidgets('arama: kod ile eşleşir; eşleşme yoksa boş-sonuç',
+      (tester) async {
     await tester.pumpWidget(wrap(const SitesListScreen()));
     await tester.pumpAndSettle();
 
@@ -57,7 +79,8 @@ void main() {
     expect(find.text('common.no_results'), findsOneWidget);
   });
 
-  testWidgets('organizasyonda site yok → boş durum (aşağı çekilebilir)', (tester) async {
+  testWidgets('organizasyonda site yok → boş durum (aşağı çekilebilir)',
+      (tester) async {
     when(() => sites.getSites('o1')).thenAnswer((_) async => []);
     await tester.pumpWidget(wrap(const SitesListScreen()));
     await tester.pumpAndSettle();
@@ -65,7 +88,8 @@ void main() {
     expect(find.byType(RefreshIndicator), findsOneWidget);
   });
 
-  testWidgets('yükleme hatası → hata + tekrar dene yeniden yükler', (tester) async {
+  testWidgets('yükleme hatası → hata + tekrar dene yeniden yükler',
+      (tester) async {
     var calls = 0;
     when(() => sites.getSites('o1')).thenAnswer((_) async {
       calls++;

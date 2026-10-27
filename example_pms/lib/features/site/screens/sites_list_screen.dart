@@ -58,26 +58,23 @@ class _SitesListScreenState extends State<SitesListScreen> {
     }
   }
 
-  /// Site başı alarm sayıları — HEAD count sorguları, 4'lü gruplar halinde
-  /// paralel (önceden sıralı + tüm satırları indiriyordu). Tek setState / grup.
+  /// Site başı AKTİF alarm sayıları — tek sorgu (önceden site başına
+  /// tüm zamanların resetlenmiş alarm sayısı gösteriliyordu).
   Future<void> _loadAlarmCounts(List<Site> sites) async {
-    const batch = 4;
-    for (var i = 0; i < sites.length; i += batch) {
-      final chunk = sites.skip(i).take(batch).toList();
-      final counts = await Future.wait(chunk.map((site) async {
-        try {
-          return await alarmService.getResetAlarmCountBySite(site.id);
-        } catch (_) {
-          return 0; // rozet opsiyonel — liste yine gösterilir
-        }
-      }));
-      if (!mounted) return;
-      setState(() {
-        for (var j = 0; j < chunk.length; j++) {
-          if (counts[j] > 0) _siteAlarmCounts[chunk[j].id] = counts[j];
-        }
-      });
+    Map<String, int> counts;
+    try {
+      counts = await alarmService.getActiveAlarmCountsBySite();
+    } catch (_) {
+      return; // rozet opsiyonel — liste yine gösterilir
     }
+    if (!mounted) return;
+    final ids = sites.map((s) => s.id).toSet();
+    setState(() {
+      _siteAlarmCounts
+        ..clear()
+        ..addEntries(
+            counts.entries.where((e) => ids.contains(e.key) && e.value > 0));
+    });
   }
 
   List<Site> get _filteredSites {
@@ -159,7 +156,8 @@ class _SitesListScreenState extends State<SitesListScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: AppSearchField(
-              placeholder: sl<LocalizationService>().translate('site.search_placeholder'),
+              placeholder: sl<LocalizationService>()
+                  .translate('site.search_placeholder'),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
               },
@@ -172,7 +170,8 @@ class _SitesListScreenState extends State<SitesListScreen> {
                 ? Center(
                     child: AppEmptyState(
                       icon: Icons.search_off,
-                      title: sl<LocalizationService>().translate('common.no_results'),
+                      title: sl<LocalizationService>()
+                          .translate('common.no_results'),
                       message: sl<LocalizationService>().translate(
                         'site.no_match',
                         params: {'query': _searchQuery},
@@ -301,8 +300,7 @@ class _SiteCard extends StatelessWidget {
             ),
             if (alarmCount > 0) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),

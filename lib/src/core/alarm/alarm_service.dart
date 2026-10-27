@@ -171,8 +171,7 @@ class AlarmService {
     if (_currentTenantId == null) return const [];
 
     final effectiveDays = IoTConfig.clampDaysRange(days);
-    final response =
-        await _supabase.rpc('fn_pms_controller_uptime', params: {
+    final response = await _supabase.rpc('fn_pms_controller_uptime', params: {
       'p_tenant_id': _currentTenantId,
       'p_from': _rangeFrom(effectiveDays),
       'p_to': _rangeTo(),
@@ -201,8 +200,7 @@ class AlarmService {
     });
 
     return (response as List)
-        .map((e) =>
-            ProviderHealth.fromRow(Map<String, dynamic>.from(e as Map)))
+        .map((e) => ProviderHealth.fromRow(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
 
@@ -258,9 +256,7 @@ class AlarmService {
       'p_subject': s,
       'p_description': (d == null || d.isEmpty) ? null : d,
     });
-    final row = data is List
-        ? (data.isEmpty ? null : data.first)
-        : data;
+    final row = data is List ? (data.isEmpty ? null : data.first) : data;
     if (row is! Map || row['id'] == null) {
       throw StateError('ticket was not created');
     }
@@ -273,8 +269,8 @@ class AlarmService {
   /// Alarmdan açılmış iş emirleri (yeniden eskiye) — `fn_pms_alarm_linked_ticket`.
   Future<List<AlarmLinkedTicket>> getLinkedTickets(String alarmUid) async {
     if (alarmUid.isEmpty) return const [];
-    final data = await _supabase.rpc('fn_pms_alarm_linked_ticket',
-        params: {'p_alarm_uid': alarmUid});
+    final data = await _supabase
+        .rpc('fn_pms_alarm_linked_ticket', params: {'p_alarm_uid': alarmUid});
     if (data is! List) return const [];
     return data
         .whereType<Map<String, dynamic>>()
@@ -327,9 +323,7 @@ class AlarmService {
           : '*';
 
       // alarms tablosu zaten sadece aktif alarmları içerir (backend tarafından yönetilen)
-      var query = _supabase
-          .from('alarms')
-          .select(selectClause);
+      var query = _supabase.from('alarms').select(selectClause);
 
       // Multi-Tenant İzolasyon Filtreleri
       // NOT: alarms tablosunda tenant_id NULL olabilir, bu yüzden
@@ -446,7 +440,8 @@ class AlarmService {
     bool includeVariable = false,
   }) async {
     final filterKey = siteId ?? providerId ?? controllerId ?? 'all';
-    final cacheKey = 'alarm_history_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
+    final cacheKey =
+        'alarm_history_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
@@ -465,9 +460,7 @@ class AlarmService {
           ? '*, variable:variables(id, name, description, unit)'
           : '*';
 
-      var query = _supabase
-          .from('alarm_histories')
-          .select(selectClause);
+      var query = _supabase.from('alarm_histories').select(selectClause);
 
       // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
@@ -496,9 +489,8 @@ class AlarmService {
       }
 
       // start_time ile sırala (created_at NULL olabilir DB'de)
-      final response = await query
-          .order('start_time', ascending: false)
-          .limit(limit);
+      final response =
+          await query.order('start_time', ascending: false).limit(limit);
 
       final history = <AlarmHistory>[];
       for (final e in (response as List)) {
@@ -567,6 +559,40 @@ class AlarmService {
       // Drift-loud: sessizce 0 döndürme. Gerçek hata (imza/RLS/ağ) yüzeye
       // çıksın; çağıran (site listesi/harita) kendi try/catch'inde ele alır.
       Logger.error('Failed to get reset alarm count for site', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Site başına aktif alarm sayısı (`alarms` tablosu, tek sorgu).
+  ///
+  /// Web'deki `v_pms_alarm_active` ile aynı tanım: status='active',
+  /// end_time NULL, inhibit edilmemiş. Site listesi/seçici/harita rozetleri
+  /// bunu kullanır — önceki site başı `alarm_histories` sayımı tüm zamanların
+  /// resetlenmiş alarmlarını "uyarı" olarak gösteriyordu.
+  Future<Map<String, int>> getActiveAlarmCountsBySite() async {
+    try {
+      var query = _supabase
+          .from('alarms')
+          .select('site_id')
+          .eq('status', 'active')
+          .isFilter('end_time', null)
+          .not('inhibited', 'is', true);
+
+      if (_currentTenantId != null) {
+        query = query.eq('tenant_id', _currentTenantId!);
+      }
+
+      final rows = await query;
+      final counts = <String, int>{};
+      for (final r in (rows as List)) {
+        final sid = (r as Map)['site_id'] as String?;
+        if (sid == null) continue;
+        counts[sid] = (counts[sid] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, stackTrace) {
+      // Drift-loud: çağıran rozetleri opsiyonel sayar, kendi catch'inde ele alır.
+      Logger.error('Failed to get active alarm counts by site', e, stackTrace);
       rethrow;
     }
   }
@@ -660,9 +686,8 @@ class AlarmService {
         query = query.eq('provider_id', providerId);
       }
 
-      final response = await query
-          .order('start_time', ascending: false)
-          .limit(limit);
+      final response =
+          await query.order('start_time', ascending: false).limit(limit);
 
       final results = <AlarmHistory>[];
       for (final e in (response as List)) {
@@ -717,8 +742,7 @@ class AlarmService {
           return AlarmTimelineEntry(
             date: DateTime.parse(map['date'] as String),
             totalCount: map['totalCount'] as int,
-            countByPriority:
-                (map['countByPriority'] as Map<String, dynamic>?)
+            countByPriority: (map['countByPriority'] as Map<String, dynamic>?)
                     ?.map((k, v) => MapEntry(k, v as int)) ??
                 {},
           );
@@ -800,8 +824,7 @@ class AlarmService {
         query = query.eq('provider_id', providerId);
       }
 
-      final response =
-          await query.order('start_time', ascending: true);
+      final response = await query.order('start_time', ascending: true);
 
       // Client-side günlük gruplandırma
       final dailyMap = <String, Map<String, int>>{};
@@ -829,8 +852,8 @@ class AlarmService {
       final entries = <AlarmTimelineEntry>[];
       final now = DateTime.now();
       for (var i = effectiveDays - 1; i >= 0; i--) {
-        final day = DateTime(now.year, now.month, now.day)
-            .subtract(Duration(days: i));
+        final day =
+            DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
         final dateKey =
             '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
 
@@ -893,10 +916,13 @@ class AlarmService {
           activeCount: cached['activeCount'] as int,
           resetCount: cached['resetCount'] as int,
           acknowledgedCount: cached['acknowledgedCount'] as int? ?? 0,
-          activeByPriority: (cached['activeByPriority'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v as int)) ?? {},
+          activeByPriority:
+              (cached['activeByPriority'] as Map<String, dynamic>?)
+                      ?.map((k, v) => MapEntry(k, v as int)) ??
+                  {},
           resetByPriority: (cached['resetByPriority'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v as int)) ?? {},
+                  ?.map((k, v) => MapEntry(k, v as int)) ??
+              {},
         );
       }
     }
@@ -914,7 +940,8 @@ class AlarmService {
       });
       final kpiRows = kpiResp as List;
       final kpi = kpiRows.isNotEmpty
-          ? AlarmKpiSummary.fromRow(Map<String, dynamic>.from(kpiRows.first as Map))
+          ? AlarmKpiSummary.fromRow(
+              Map<String, dynamic>.from(kpiRows.first as Map))
           : AlarmKpiSummary.empty;
 
       // Reset alarm priority dağılımı (alarm_histories)
@@ -969,13 +996,12 @@ class AlarmService {
           .toIso8601String();
 
       // --- Aktif alarm sayısı ve priority dağılımı (alarms tablosu) ---
-      var activeQuery = _supabase
-          .from('alarms')
-          .select('id,priority_id');
+      var activeQuery = _supabase.from('alarms').select('id,priority_id');
 
       // Multi-Tenant İzolasyon: tenant_id veya NULL
       if (_currentTenantId != null) {
-        activeQuery = activeQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+        activeQuery =
+            activeQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -997,9 +1023,11 @@ class AlarmService {
       // Priority bazlı aktif alarm dağılımı
       final activeByPriority = <String, int>{};
       for (final row in activeList) {
-        final priorityId = (row as Map<String, dynamic>)['priority_id'] as String?;
+        final priorityId =
+            (row as Map<String, dynamic>)['priority_id'] as String?;
         if (priorityId != null) {
-          activeByPriority[priorityId] = (activeByPriority[priorityId] ?? 0) + 1;
+          activeByPriority[priorityId] =
+              (activeByPriority[priorityId] ?? 0) + 1;
         }
       }
 
@@ -1010,7 +1038,8 @@ class AlarmService {
           .not('local_acknowledge_time', 'is', null);
 
       if (_currentTenantId != null) {
-        ackQuery = ackQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+        ackQuery =
+            ackQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -1036,7 +1065,8 @@ class AlarmService {
           .gte('start_time', since);
 
       if (_currentTenantId != null) {
-        resetQuery = resetQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
+        resetQuery =
+            resetQuery.or('tenant_id.eq.$_currentTenantId,tenant_id.is.null');
       }
 
       if (_currentSiteId != null) {
@@ -1058,7 +1088,8 @@ class AlarmService {
       // Priority bazlı reset alarm dağılımı
       final resetByPriority = <String, int>{};
       for (final row in resetList) {
-        final priorityId = (row as Map<String, dynamic>)['priority_id'] as String?;
+        final priorityId =
+            (row as Map<String, dynamic>)['priority_id'] as String?;
         if (priorityId != null) {
           resetByPriority[priorityId] = (resetByPriority[priorityId] ?? 0) + 1;
         }
@@ -1130,7 +1161,8 @@ class AlarmService {
       });
       final rows = response as List;
       final kpi = rows.isNotEmpty
-          ? AlarmKpiSummary.fromRow(Map<String, dynamic>.from(rows.first as Map))
+          ? AlarmKpiSummary.fromRow(
+              Map<String, dynamic>.from(rows.first as Map))
           : AlarmKpiSummary.empty;
 
       final overallMttr = Duration(
@@ -1247,8 +1279,8 @@ class AlarmService {
         {
           'overallMttrMs': overallMttr.inMilliseconds,
           'totalAlarmCount': totalCount,
-          'mttrByPriority': mttrByPriority
-              .map((k, v) => MapEntry(k, v.inMilliseconds)),
+          'mttrByPriority':
+              mttrByPriority.map((k, v) => MapEntry(k, v.inMilliseconds)),
           'trend': trend
               .map((e) => {
                     'date': e.date.toIso8601String(),
@@ -1275,16 +1307,14 @@ class AlarmService {
       mttrByPriority: (cached['mttrByPriority'] as Map<String, dynamic>?)
               ?.map((k, v) => MapEntry(k, Duration(milliseconds: v as int))) ??
           {},
-      trend: (cached['trend'] as List<dynamic>?)
-              ?.map((e) {
-                final m = e as Map<String, dynamic>;
-                return MttrTrendEntry(
-                  date: DateTime.parse(m['date'] as String),
-                  avgMttr: Duration(milliseconds: m['avgMttrMs'] as int),
-                  alarmCount: m['alarmCount'] as int,
-                );
-              })
-              .toList() ??
+      trend: (cached['trend'] as List<dynamic>?)?.map((e) {
+            final m = e as Map<String, dynamic>;
+            return MttrTrendEntry(
+              date: DateTime.parse(m['date'] as String),
+              avgMttr: Duration(milliseconds: m['avgMttrMs'] as int),
+              alarmCount: m['alarmCount'] as int,
+            );
+          }).toList() ??
           [],
     );
   }

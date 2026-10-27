@@ -55,16 +55,17 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   }
 
   Future<void> _loadAlarmCounts(List<Site> sites) async {
-    for (final site in sites) {
-      try {
-        final count = await alarmService.getResetAlarmCountBySite(site.id);
-        if (mounted && count > 0) {
-          setState(() {
-            _siteAlarmCounts[site.id] = count;
-          });
-        }
-      } catch (_) {}
-    }
+    try {
+      final counts = await alarmService.getActiveAlarmCountsBySite();
+      if (!mounted) return;
+      final ids = sites.map((s) => s.id).toSet();
+      setState(() {
+        _siteAlarmCounts
+          ..clear()
+          ..addEntries(
+              counts.entries.where((e) => ids.contains(e.key) && e.value > 0));
+      });
+    } catch (_) {}
   }
 
   Future<void> _selectSite(Site site) async {
@@ -286,8 +287,7 @@ class _SiteCard extends StatelessWidget {
             ),
             if (alarmCount > 0) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),

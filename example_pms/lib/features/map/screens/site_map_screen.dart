@@ -50,22 +50,21 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
       // Site marker'larini al
       final markers = await mapService.getSiteMarkers(organizationId);
 
-      // Alarm sayilarini marker metadata'ya ekle
+      // Aktif alarm sayilarini marker metadata'ya ekle (tek sorgu; önceden
+      // site başına tüm zamanların resetlenmiş alarmları sayılıyordu)
+      Map<String, int> activeCounts = const {};
+      try {
+        activeCounts = await alarmService.getActiveAlarmCountsBySite();
+      } catch (_) {}
       final enrichedMarkers = <MapMarkerData>[];
       for (final marker in markers) {
         final siteId = marker.metadata['site_id'] as String?;
-        int alarmCount = 0;
+        final alarmCount = siteId == null ? 0 : (activeCounts[siteId] ?? 0);
         MapMarkerStatus status = marker.status;
-
-        if (siteId != null) {
-          try {
-            alarmCount = await alarmService.getResetAlarmCountBySite(siteId);
-            if (alarmCount > 5) {
-              status = MapMarkerStatus.critical;
-            } else if (alarmCount > 0) {
-              status = MapMarkerStatus.warning;
-            }
-          } catch (_) {}
+        if (alarmCount > 5) {
+          status = MapMarkerStatus.critical;
+        } else if (alarmCount > 0) {
+          status = MapMarkerStatus.warning;
         }
 
         enrichedMarkers.add(marker.copyWith(
@@ -125,7 +124,9 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(sl<LocalizationService>().translate('map.location_permission_denied'))),
+            SnackBar(
+                content: Text(sl<LocalizationService>()
+                    .translate('map.location_permission_denied'))),
           );
         }
       }
@@ -221,8 +222,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
           right: 0,
           child: _MapStatsBar(
             siteCount: _markers.length,
-            alarmCount:
-                _markers.fold(0, (sum, m) => sum + m.alarmCount),
+            alarmCount: _markers.fold(0, (sum, m) => sum + m.alarmCount),
             isTracking: _isTracking,
           ),
         ),
@@ -233,10 +233,22 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
           left: 12,
           child: MapLegend(
             items: [
-              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_normal'), color: AppColors.success),
-              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_warning'), color: AppColors.warning),
-              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_critical'), color: AppColors.error),
-              MapLegendItem(label: sl<LocalizationService>().translate('map.legend_offline'), color: AppColors.systemGray),
+              MapLegendItem(
+                  label:
+                      sl<LocalizationService>().translate('map.legend_normal'),
+                  color: AppColors.success),
+              MapLegendItem(
+                  label:
+                      sl<LocalizationService>().translate('map.legend_warning'),
+                  color: AppColors.warning),
+              MapLegendItem(
+                  label: sl<LocalizationService>()
+                      .translate('map.legend_critical'),
+                  color: AppColors.error),
+              MapLegendItem(
+                  label:
+                      sl<LocalizationService>().translate('map.legend_offline'),
+                  color: AppColors.systemGray),
             ],
           ),
         ),
@@ -448,7 +460,8 @@ class _MarkerDetailCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.warning_amber, size: 12, color: AppColors.error),
+                      Icon(Icons.warning_amber,
+                          size: 12, color: AppColors.error),
                       const SizedBox(width: 4),
                       Text(
                         sl<LocalizationService>().translate(
@@ -475,7 +488,8 @@ class _MarkerDetailCard extends StatelessWidget {
               color: AppColors.primary,
             ),
             onPressed: onNavigate,
-            tooltip: sl<LocalizationService>().translate('map.site_detail_tooltip'),
+            tooltip:
+                sl<LocalizationService>().translate('map.site_detail_tooltip'),
           ),
           IconButton(
             icon: Icon(
