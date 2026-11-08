@@ -23,7 +23,6 @@ import '../work/work_inbox_service.dart';
 import '../permission/permission_service.dart';
 import '../push/push_notification_service.dart';
 import '../realtime/realtime_service.dart';
-import '../reporting/reporting_service.dart';
 import '../reporting/report_query_service.dart';
 import '../reporting/page_service.dart';
 import '../reporting/report_service.dart';
@@ -64,7 +63,6 @@ import '../provider/provider_service.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
 import '../iot_realtime/iot_realtime_service.dart';
-import '../work_request/work_request_service.dart';
 import '../calendar/calendar_service.dart';
 import '../map/map_service.dart';
 import '../user/profile_service.dart';
@@ -320,13 +318,6 @@ Future<void> setupServiceLocator({
   // REPORTING SERVICE
   // ============================================
 
-  sl.registerLazySingleton<ReportingService>(
-    () => ReportingService(
-      supabase: sl<SupabaseClient>(),
-      cacheManager: sl<CacheManager>(),
-    ),
-  );
-
   // Dinamik report/page widget'ları için tek veri yolu (report-query EF)
   sl.registerLazySingleton<ReportQueryService>(
     () => ReportQueryService(sl<SupabaseClient>()),
@@ -544,13 +535,6 @@ Future<void> setupServiceLocator({
   // ============================================
   // WORK REQUEST SERVICE
   // ============================================
-
-  sl.registerLazySingleton<WorkRequestService>(
-    () => WorkRequestService(
-      supabase: sl<SupabaseClient>(),
-      cacheManager: sl<CacheManager>(),
-    ),
-  );
 
   // ============================================
   // CALENDAR SERVICE
@@ -822,7 +806,6 @@ ActivityService get activityService => sl<ActivityService>();
 NotificationService get notificationService => sl<NotificationService>();
 ConnectivityService get connectivityService => sl<ConnectivityService>();
 OfflineSyncService get offlineSyncService => sl<OfflineSyncService>();
-ReportingService get reportingService => sl<ReportingService>();
 ReportQueryService get reportQueryService => sl<ReportQueryService>();
 PageService get pageService => sl<PageService>();
 ReportService get reportService => sl<ReportService>();
@@ -851,7 +834,6 @@ AlarmService get alarmService => sl<AlarmService>();
 IoTLogService get iotLogService => sl<IoTLogService>();
 
 // Business Services
-WorkRequestService get workRequestService => sl<WorkRequestService>();
 CalendarService get calendarService => sl<CalendarService>();
 
 // Map Service

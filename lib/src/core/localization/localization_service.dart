@@ -308,7 +308,9 @@ class LocalizationService {
           .from('keywords')
           .select('key, defaultvalue, shortvalue, longvalue')
           .eq('language_id', locale.languageId)
-          .eq('active', true)
+          // `active` NULL = aktif (web ile aynı): `.eq(true)` NULL satırları
+          // eler → çeviri ham key görünür.
+          .or('active.is.null,active.eq.true')
           // STABİL sıralama ŞART: `.order` olmadan `.range` sayfalaması satır
           // atlar/tekrarlar (PostgREST sıra garantisi yok) → rastgele key'ler ham
           // görünür. `id` benzersiz+stabil; tüm aktif key'ler güvenilir çekilir.

@@ -42,9 +42,6 @@ import '../features/unit/screens/unit_form_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/showcase/screens/component_showcase_screen.dart';
-import '../features/work_request/screens/work_requests_screen.dart';
-import '../features/work_request/screens/work_request_detail_screen.dart';
-import '../features/work_request/screens/work_request_form_screen.dart';
 import '../features/calendar/screens/calendar_screen.dart';
 import '../features/calendar/screens/calendar_event_detail_screen.dart';
 import '../features/calendar/screens/calendar_event_form_screen.dart';
@@ -317,31 +314,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ==================
       // Work Request Routes
       // ==================
+      // Eski WorkRequestService (doğrudan `status` yazan, var olmayan
+      // kolonları kullanan) kaldırıldı; şema-doğru FixFlow ekranları kullanılır.
+      // Durum değişimi yalnız status-transition Edge Function üzerinden.
       GoRoute(
         path: '/work-requests',
         name: 'work-requests',
-        builder: (context, state) => const WorkRequestsScreen(),
+        builder: (context, state) => const FixflowWorkRequestListScreen(),
       ),
       GoRoute(
         path: '/work-requests/new',
         name: 'work-request-new',
-        builder: (context, state) => const WorkRequestFormScreen(),
-      ),
-      GoRoute(
-        path: '/work-requests/:id',
-        name: 'work-request-detail',
-        builder: (context, state) {
-          final requestId = state.pathParameters['id']!;
-          return WorkRequestDetailScreen(requestId: requestId);
-        },
-      ),
-      GoRoute(
-        path: '/work-requests/:id/edit',
-        name: 'work-request-edit',
-        builder: (context, state) {
-          final requestId = state.pathParameters['id']!;
-          return WorkRequestFormScreen(requestId: requestId);
-        },
+        builder: (context, state) => const FixflowWorkRequestCreateScreen(),
       ),
 
       // ==================

@@ -119,7 +119,6 @@ export 'src/core/connectivity/supabase_replay_dispatcher.dart';
 
 // Core - Reporting (Analytics)
 export 'src/core/reporting/reporting_model.dart';
-export 'src/core/reporting/reporting_service.dart';
 export 'src/core/reporting/report_query_service.dart';
 export 'src/core/reporting/aggregate_service.dart';
 export 'src/core/scan/card_scanner.dart';
@@ -188,7 +187,6 @@ export 'src/core/iot_log/iot_log_stats_model.dart';
 
 // Core - Work Request (İş Talepleri)
 export 'src/core/work_request/work_request_model.dart';
-export 'src/core/work_request/work_request_service.dart';
 
 // Core - Calendar (Takvim)
 export 'src/core/calendar/calendar_event_model.dart';

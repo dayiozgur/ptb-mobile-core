@@ -458,14 +458,20 @@ class SearchService {
   }
 
   /// Aktivitelerde ara
+  ///
+  /// Eski `activity_logs` tablosu kaldırıldı; canlı kaynak CRM `activities`
+  /// tablosu (`note`, `date`, `customer`, `deal`, `staff`). `metadata`
+  /// anahtarları (action_type/entity_type/entity_id/created_at) geriye dönük
+  /// uyum için korunur: entity_type = `deal` | `customer` (bağlı olan).
   Future<List<SearchResult>> _searchActivities(
     String searchText,
     SearchQuery query,
   ) async {
     try {
       var dbQuery = _supabase
-          .from('activity_logs')
-          .select('id, action_type, entity_type, entity_id, description, created_at');
+          .from('activities')
+          .select('id, note, date, customer, deal, staff, created_at')
+          .or('active.is.null,active.eq.true');
 
       // Tenant filtresi
       if (query.tenantId != null) {
@@ -473,28 +479,32 @@ class SearchService {
       }
 
       // Metin araması
-      dbQuery = dbQuery.or(
-        'description.ilike.%$searchText%,action_type.ilike.%$searchText%',
-      );
+      dbQuery = dbQuery.ilike('note', '%$searchText%');
 
-      final response = await dbQuery.order('created_at', ascending: false).limit(query.limit);
+      final response = await dbQuery.order('date', ascending: false).limit(query.limit);
 
       return response.map<SearchResult>((item) {
-        final actionType = item['action_type'] as String? ?? '';
-        final entityType = item['entity_type'] as String? ?? '';
-        final description = item['description'] as String?;
+        final note = item['note'] as String?;
+        final deal = item['deal'] as String?;
+        final customer = item['customer'] as String?;
+        final entityType = deal != null
+            ? 'deal'
+            : customer != null
+                ? 'customer'
+                : '';
+        final date = item['date'] ?? item['created_at'];
 
         return SearchResult(
           id: item['id'] as String,
           entityType: SearchEntityType.activity,
-          title: description ?? '$actionType on $entityType',
-          subtitle: '$actionType - $entityType',
-          score: _calculateScore(searchText, description ?? '', actionType),
+          title: (note != null && note.isNotEmpty) ? note : 'Activity',
+          subtitle: entityType.isNotEmpty ? 'activity - $entityType' : 'activity',
+          score: _calculateScore(searchText, note ?? '', null),
           metadata: {
-            'action_type': actionType,
+            'action_type': 'activity',
             'entity_type': entityType,
-            'entity_id': item['entity_id'],
-            'created_at': item['created_at'],
+            'entity_id': deal ?? customer,
+            'created_at': date,
           },
         );
       }).toList();

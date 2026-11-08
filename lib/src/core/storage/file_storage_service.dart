@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../di/service_locator.dart';
 import '../platform/platform_context.dart';
 import '../tenant/tenant_service.dart';
 import '../user/profile_service.dart';
@@ -401,7 +402,7 @@ class StorageBuckets {
 class FileStorageService {
   final SupabaseClient _supabase;
 
-  /// Aktif platform kodu kaynağı (PMS/CRM/…). null → varsayılan `PMS`.
+  /// Aktif platform kaynağı (PMS/CRM/…). null → DI'daki [PlatformContext].
   final PlatformContext? _platformContext;
 
   /// Aktif tenant kaynağı (private yol hiyerarşisi için).
@@ -413,13 +414,6 @@ class FileStorageService {
   // Varsayılan ayarlar
   static const int maxFileSizeMB = 50;
   static const Duration signedUrlExpiry = Duration(hours: 1);
-
-  /// Platform kodu çözülemezse kullanılacak varsayılan (tek tam-kurulu platform).
-  static const String _defaultPlatformCode = 'PMS';
-
-  /// PMS platform UUID — `PlatformContext.activePlatformId` yoksa
-  /// `storage_objects.platform_id` için fallback.
-  static const String _pmsPlatformId = 'f0113c6e-8000-4298-a07c-0fd90e406a7a';
 
   /// Registry tablosu — protected/private SELECT RLS bunu metadata olarak
   /// kontrol eder; kayıt olmadan `createSignedUrl` 403 döner.
@@ -442,12 +436,21 @@ class FileStorageService {
   /// `platformCode`/`tenantId`/`organizationId` bağlamını enjekte edilen
   /// kaynaklardan çöz. Web `StorageService` `ctx` ile aynı üç değer.
   ///
-  /// - platformCode: [PlatformContext.activePlatformCode] (null → `PMS`).
+  /// - platformCode: aktif [PlatformContext.activePlatformCode]. Sabit `PMS`
+  ///   fallback'i YOK — bağlam çözülemezse [StateError] (yükleme
+  ///   [UploadResult.failure] döner; dosya yanlış platforma yazılmaz).
   /// - tenantId: [TenantService.currentTenantId] → yoksa profilin `tenantId`'si.
   /// - organizationId: profilin `organizationId`'si (staffs'tan türetilmiş).
+  /// Aktif platform bağlamı: enjekte edilen, yoksa DI'da kayıtlı olan.
+  PlatformContext? get _activePlatform =>
+      _platformContext ??
+      (sl.isRegistered<PlatformContext>() ? sl<PlatformContext>() : null);
+
   Future<_StorageContext> _resolveContext() async {
-    final platformCode =
-        _platformContext?.activePlatformCode ?? _defaultPlatformCode;
+    final platformCode = _activePlatform?.activePlatformCode;
+    if (platformCode == null || platformCode.isEmpty) {
+      throw StateError('Storage: aktif platform kodu çözülemedi');
+    }
 
     UserProfile? profile;
     if (_profileService != null) {
@@ -628,7 +631,7 @@ class FileStorageService {
   }) async {
     final isPublic = access == StorageAccessLevel.public;
     final row = <String, dynamic>{
-      'platform_id': _platformContext?.activePlatformId ?? _pmsPlatformId,
+      'platform_id': _activePlatform?.activePlatformId,
       'tenant_id': tenantId,
       'organization_id': organizationId,
       'site_id': siteId,

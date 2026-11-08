@@ -468,32 +468,6 @@ class WorkflowService {
   }
 
   // ============================================
-  // HISTORY
-  // ============================================
-
-  /// Çalıştırma geçmişini getir
-  Future<List<WorkflowRun>> getRunHistory(
-    String workflowId, {
-    int limit = 50,
-  }) async {
-    try {
-      final response = await _supabase
-          .from('workflow_runs')
-          .select()
-          .eq('workflow_id', workflowId)
-          .order('started_at', ascending: false)
-          .limit(limit);
-
-      return (response as List)
-          .map((e) => WorkflowRun.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e, stackTrace) {
-      Logger.error('Failed to get workflow run history', e, stackTrace);
-      return [];
-    }
-  }
-
-  // ============================================
   // SELECTION
   // ============================================
 

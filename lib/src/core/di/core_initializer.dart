@@ -29,7 +29,6 @@ import '../user/profile_service.dart';
 import '../utils/logger.dart';
 import '../variable/variable_service.dart';
 import '../workflow/workflow_service.dart';
-import '../work_request/work_request_service.dart';
 import '../calendar/calendar_service.dart';
 import 'service_locator.dart';
 
@@ -472,7 +471,6 @@ class CoreInitializer {
       sl<IoTLogService>().setTenant(tenantId);
 
       // Business Services
-      sl<WorkRequestService>().setTenant(tenantId);
       sl<CalendarService>().setTenant(tenantId);
 
       Logger.debug('Tenant propagated to services: $tenantId');

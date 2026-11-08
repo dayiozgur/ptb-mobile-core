@@ -25,6 +25,19 @@ class StaffService {
   /// Cache TTL
   static const _cacheTtl = Duration(minutes: 10);
 
+  /// `staffs` için açık kolon listesi.
+  ///
+  /// `authenticated` rolünün `staffs` üzerinde tablo-düzeyi SELECT yetkisi
+  /// yok (yalnız kolon grant'ları; maaş/TCKN/IBAN gibi hassas kolonlar
+  /// hariç). `select()` (= `*`) bu yüzden 42501 döner; yalnız [Staff.fromJson]
+  /// 'un okuduğu ve grant'lı kolonlar istenir.
+  static const _staffColumns =
+      'id, tenant_id, profile_id, user_id, organization_id, staff_type_id, '
+      'contractor_id, sub_contractor_id, rating_id, route_location_id, name, '
+      'code, description, first_name, last_name, email, phone, fax, address, '
+      'town, city_id, country_id, website, active, created_by, created_at, '
+      'updated_by, updated_at';
+
   StaffService({
     required SupabaseClient supabase,
     required CacheManager cacheManager,
@@ -96,7 +109,7 @@ class StaffService {
     try {
       final response = await _supabase
           .from('staffs')
-          .select()
+          .select(_staffColumns)
           .or('tenant_id.eq.$_currentTenantId,tenant_id.is.null')
           .order('name');
 
@@ -123,7 +136,7 @@ class StaffService {
     try {
       final response = await _supabase
           .from('staffs')
-          .select()
+          .select(_staffColumns)
           .eq('id', id)
           .maybeSingle();
 
@@ -140,7 +153,7 @@ class StaffService {
     try {
       final response = await _supabase
           .from('staffs')
-          .select()
+          .select(_staffColumns)
           .eq('profile_id', profileId)
           .maybeSingle();
 
@@ -190,7 +203,7 @@ class StaffService {
       final response = await _supabase
           .from('staffs')
           .insert(data)
-          .select()
+          .select(_staffColumns)
           .single();
 
       final staff = Staff.fromJson(response);
@@ -240,7 +253,7 @@ class StaffService {
           .from('staffs')
           .update(data)
           .eq('id', id)
-          .select()
+          .select(_staffColumns)
           .single();
 
       final staff = Staff.fromJson(response);
