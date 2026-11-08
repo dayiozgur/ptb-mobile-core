@@ -1,0 +1,45 @@
+name: protoolbag_pem
+description: PEM (Protoolbag Energy Management) - enerji yöneticisi mobil uygulaması, Protoolbag Core üzerine kurulu.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Paylaşılan çekirdek (tüm dinamik motorlar + nötr shell)
+  protoolbag_core:
+    path: ../
+
+  # Supabase (PEM özel ekranları RPC/tabloları doğrudan okur)
+  supabase_flutter: ^2.5.6
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Environment
+  flutter_dotenv: ^5.1.0
+
+  # Date / number formatting
+  intl: ^0.19.0
+
+  # Grafikler — çekirdeğin zaten bağımlı olduğu sürüm (yeni ağır bağımlılık YOK).
+  fl_chart: ^0.69.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
