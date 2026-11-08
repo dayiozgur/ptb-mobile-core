@@ -11,8 +11,7 @@ import 'package:protoolbag_pem/features/sites/pem_sites_screen.dart';
 import 'helpers/fake_pem.dart';
 
 /// Canlı PEM DB-menü yolları (platform_menu_items, PEM platformu) → mobil
-/// ekran. Web'e özgü yollar bu çözümleyicide null (çekirdek /admin yedeği
-/// ComingSoon verir).
+/// ekran. Web'e özgü yollar bu çözümleyicide null ve kayıtla mobilde gizlenir.
 void main() {
   setUp(() => registerFakeLocalization());
 
@@ -63,5 +62,12 @@ void main() {
     expect(ScreenResolver.hasScreen('/admin/energy/alarms'), isTrue);
     expect(ScreenResolver.resolve(item('/admin/energy/meters')),
         isA<PemMetersScreen>());
+    // Web'e özgü yollar mobil menüde GİZLİ (çekirdek /admin yedeğine düşmez).
+    for (final p in kPemWebOnlyPaths) {
+      expect(ScreenResolver.isHiddenOnMobile(p), isTrue, reason: p);
+      expect(ScreenResolver.hasScreen(p), isFalse, reason: p);
+    }
+    // Eşlenmemiş diğer /admin yolları yine nötr yedeğe düşer.
+    expect(ScreenResolver.hasScreen('/admin/users'), isTrue);
   });
 }

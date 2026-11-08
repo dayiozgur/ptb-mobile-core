@@ -30,9 +30,10 @@ String _norm(String path) {
 /// ekranlara bağlar. Nötr yollar (settings/admin/report/page/notifications…)
 /// çekirdek [ScreenResolver]'da çözülür.
 ///
-/// NOT: çekirdeğin `/admin*` nötr yedeği tüm `/admin/...` yollarını
-/// ComingSoon'a çözer; bu yüzden burada eşlenmeyen `/admin/energy/*` yolları
-/// menüde "yakında" olarak görünür (gizlenmez). Buradaki eşlemeler ÖNCE çalışır.
+/// NOT: çekirdeğin `/admin*` nötr yedeği eşlenmemiş `/admin/...` yollarını
+/// ComingSoon'a çözer; web'e özgü [kPemWebOnlyPaths] ise
+/// [ScreenResolver.hideOnMobile] ile gizlenir (menüde görünmez). Buradaki
+/// eşlemeler ÖNCE çalışır.
 Widget? pemResolve(MenuItem item) {
   final raw = item.path;
   if (raw == null || raw.isEmpty) return null;
@@ -69,8 +70,9 @@ Widget? pemResolve(MenuItem item) {
 }
 
 /// Mobilde bilinçli olarak ekranı OLMAYAN PEM yolları (web'e özgü yapılandırma
-/// / veri girişi / büyük tablo ekranları). Çekirdek `/admin` yedeği bunları
-/// ComingSoon'a çözer. Test + rapor için listelenir.
+/// / veri girişi / büyük tablo ekranları). [registerPemScreens] bunları
+/// [ScreenResolver.hideOnMobile] ile gizler → menüde "yakında" olarak
+/// görünmezler.
 const List<String> kPemWebOnlyPaths = [
   '/admin/energy/enpis',
   '/admin/energy/baselines',
@@ -99,5 +101,6 @@ bool _done = false;
 void registerPemScreens() {
   if (_done) return;
   ScreenResolver.addResolver(pemResolve);
+  ScreenResolver.hideOnMobile(kPemWebOnlyPaths);
   _done = true;
 }

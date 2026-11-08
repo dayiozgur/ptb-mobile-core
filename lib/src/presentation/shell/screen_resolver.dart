@@ -40,13 +40,42 @@ class ScreenResolver {
 
   static final List<Widget? Function(MenuItem item)> _resolvers = [];
 
+  /// Mobilde bilinçli olarak GİZLENEN yollar (normalize: küçük harf, query'siz,
+  /// sondaki `/` yok). Nötr yedekten (ör. `/admin*` → ComingSoon) ÖNCE
+  /// bakılır: [hasScreen] false döner → menüden budanır.
+  static final Set<String> _hidden = {};
+
   /// App domain çözümleyicisini kaydeder (yolu bilmiyorsa null döndürür).
   static void addResolver(Widget? Function(MenuItem item) resolver) {
     _resolvers.add(resolver);
   }
 
-  /// Kayıtlı domain çözümleyicileri temizle (idempotent yeniden-kayıt için).
-  static void reset() => _resolvers.clear();
+  /// Domain çözümleyicinin "mobilde ekranı yok, menüde gösterme" dediği
+  /// yolları kaydet (ör. web'e özgü yapılandırma ekranları). Kayıtlı bir
+  /// çözümleyici yolu yine de çözerse o kazanır; gizleme yalnız nötr yedeği
+  /// (ComingSoon) bastırır. Tam-yol eşleşmesi (alt yollar etkilenmez).
+  static void hideOnMobile(Iterable<String> paths) {
+    _hidden.addAll(paths.map(_normalize).where((p) => p.isNotEmpty));
+  }
+
+  /// Yol [hideOnMobile] ile gizlenmiş mi?
+  static bool isHiddenOnMobile(String? path) =>
+      path != null && path.isNotEmpty && _hidden.contains(_normalize(path));
+
+  static String _normalize(String path) {
+    var p = path.split('?').first.trim().toLowerCase();
+    while (p.length > 1 && p.endsWith('/')) {
+      p = p.substring(0, p.length - 1);
+    }
+    return p;
+  }
+
+  /// Kayıtlı domain çözümleyicileri ve gizli yolları temizle (idempotent
+  /// yeniden-kayıt için).
+  static void reset() {
+    _resolvers.clear();
+    _hidden.clear();
+  }
 
   /// Bir menü öğesini mobil ekrana çöz.
   static Widget resolve(MenuItem item) {
@@ -54,7 +83,9 @@ class ScreenResolver {
       final w = r(item);
       if (w != null) return w;
     }
-    final neutral = _neutral(item.path);
+    // Gizli yol menüde görünmez; yine de açılırsa (eski bağlantı) genel
+    // ComingSoon — nötr yedeğe düşmez (asla 404/crash).
+    final neutral = isHiddenOnMobile(item.path) ? null : _neutral(item.path);
     if (neutral != null) return neutral;
     return ComingSoonScreen(
       titleKey: item.title,
@@ -184,6 +215,7 @@ class ScreenResolver {
     for (final r in _resolvers) {
       if (r(item) != null) return true;
     }
+    if (isHiddenOnMobile(path)) return false;
     return _neutral(path) != null;
   }
 
