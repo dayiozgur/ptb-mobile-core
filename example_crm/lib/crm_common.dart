@@ -9,3 +9,16 @@ String crmT(String key, String fallback) {
   final v = sl<LocalizationService>().translate(key);
   return v == key ? fallback : v;
 }
+
+/// [crmT] + `{{param}}` yer tutucu ikamesi (web ngx-translate biçimi).
+///
+/// Çekirdek `translate(params:)` tek-süslü `{x}` biçimini değiştirir; web
+/// anahtarları ise `{{x}}` taşır. Bu yardımcı her iki biçimi de doldurur.
+String crmTp(String key, String fallback, Map<String, Object?> params) {
+  var text = crmT(key, fallback);
+  params.forEach((k, v) {
+    final s = v?.toString() ?? '';
+    text = text.replaceAll('{{$k}}', s).replaceAll('{$k}', s);
+  });
+  return text;
+}

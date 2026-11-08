@@ -6,6 +6,12 @@ import '../features/contacts/contacts_list_screen.dart';
 import '../features/dashboard/crm_dashboard_screen.dart';
 import '../features/deals/crm_entity_actions.dart';
 import '../features/forecast/crm_forecast_screen.dart';
+import '../features/companies/crm_companies_screen.dart';
+import '../features/companies/crm_company_detail_screen.dart';
+import '../features/leads/crm_leads_screen.dart';
+import '../features/pipeline/crm_pipeline_screen.dart';
+import '../features/sequences/crm_sequences_screen.dart';
+import '../features/web_leads/web_leads_screen.dart';
 import '../features/duplicates/crm_duplicates_screen.dart';
 import '../crm_common.dart';
 
@@ -35,7 +41,8 @@ final WorkInboxSource crmMyWorkSource = WorkInboxSource(
 /// CRM'in çoğu tipi (deal/lead/activity/proposal/product) çekirdek entity-engine
 /// ile otomatik gelir; nötr yollar (settings/report/page) çekirdek
 /// [ScreenResolver]'da çözülür. Burada YALNIZ CRM-özel domain yolları:
-/// Kişiler (`contacts` gerçek tablosu) + Günlük İşlerim (`fn_crm_my_work`).
+/// Kişiler (`contacts` gerçek tablosu), Günlük İşlerim (`fn_crm_my_work`),
+/// Satış Hattı / Potansiyeller / Firmalar / Web Potansiyelleri / Diziler.
 Widget? crmResolve(MenuItem item) {
   final path = item.path;
   if (path == null || path.isEmpty) return null;
@@ -62,6 +69,23 @@ Widget? crmResolve(MenuItem item) {
   if (p == '/crm/duplicates') {
     return const CrmDuplicatesScreen();
   }
+  // WP-C: web DB-menü yolları (canlı platform_menu_items, CRM platformu) —
+  // önceden çözümsüzdü → mobilde gizleniyordu.
+  if (p == '/crm/pipeline') return const CrmPipelineScreen();
+  if (p == '/crm/leads') return const CrmLeadsScreen();
+  if (p == '/crm/companies') return const CrmCompaniesScreen();
+  // Firma 360 deep-link (web `/crm/companies/:id`).
+  final company = RegExp(r'^/crm/companies/([0-9a-f-]{36})$').firstMatch(p);
+  if (company != null) {
+    return CrmCompanyDetailScreen(companyId: company.group(1)!);
+  }
+  // Web `/crm/web-leads/:id` drawer'ı mobilde ayrı detay yok → kuyruğa düşer.
+  if (p == '/crm/web-leads' || p.startsWith('/crm/web-leads/')) {
+    return const WebLeadsScreen();
+  }
+  if (p == '/crm/sequences') return const CrmSequencesScreen();
+  // `/crm/mailbox` BİLİNÇLİ olarak çözümsüz (menüde gizli): web posta kutusu
+  // Microsoft Graph entegrasyonu + `mail.read` yeteneği ister; mobilde yok.
   return null;
 }
 
