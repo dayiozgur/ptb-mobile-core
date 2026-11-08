@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 import '../../crm_common.dart';
+import '../deals/crm_deal_reason.dart';
 import '../pipeline/crm_stage_service.dart';
 
 /// Aşama/durum değiştir akışı — web deal-pipeline `moveHandler` paritesi:
@@ -9,7 +10,8 @@ import '../pipeline/crm_stage_service.dart';
 ///    sihirbaz-yalnız hedefler hariç), 2) geçiş yorum isterse yorum, onay
 ///    isterse onay alınır, 3) `status-transition` EF ile yürütülür.
 ///
-/// Başarıda `true` döner (çağıran listeyi tazeler).
+/// Başarıda `true` döner (çağıran listeyi tazeler). Fırsat final duruma
+/// geçerken kazanma/kaybetme nedeni sorulur ([CrmDealReason]).
 Future<bool> showCrmStageChange(
   BuildContext context, {
   required CrmStageService stageService,
@@ -18,6 +20,7 @@ Future<bool> showCrmStageChange(
   required String? currentStatus,
   required List<CrmStage> stages,
   String? recordCode,
+  DealReasonCollector? collectDealReason,
 }) async {
   final from = currentStatus ?? '';
   final transitions = await stageService.availableTransitions(entityType, from);
@@ -80,6 +83,15 @@ Future<bool> showCrmStageChange(
   }
   if (!context.mounted) return false;
 
+  // Fırsat final duruma (kazanıldı/kaybedildi) → neden sor (web deal
+  // workspace); neden geçiş başarılı olunca kaydedilir.
+  Future<void> Function(BuildContext)? saveReason;
+  if (entityType == 'deal' && byCode[picked.toCode]?.isFinal == true) {
+    saveReason = await (collectDealReason ?? CrmDealReason.collect)(context,
+        dealId: entityId, finalStatus: picked.toCode);
+    if (saveReason == null || !context.mounted) return false;
+  }
+
   try {
     await stageService.move(
       entityType: entityType,
@@ -93,6 +105,7 @@ Future<bool> showCrmStageChange(
                 'Fırsat {{code}} aşamasına taşındı',
                 {'code': recordCode ?? nameOf(picked.toCode)})
             : crmT('crm.stage.updated', 'Durum güncellendi'))));
+    if (saveReason != null && context.mounted) await saveReason(context);
     return true;
   } catch (e) {
     Logger.error('crm stage move ($entityType/$entityId) hata', e);
@@ -105,6 +118,13 @@ Future<bool> showCrmStageChange(
     return false;
   }
 }
+
+/// [CrmDealReason.collect] imzası (testlerde değiştirilebilir).
+typedef DealReasonCollector = Future<Future<void> Function(BuildContext)?> Function(
+  BuildContext context, {
+  required String dealId,
+  required String finalStatus,
+});
 
 Future<bool?> _confirm(BuildContext context, String message) {
   return showDialog<bool>(

@@ -8,6 +8,7 @@ import '../pipeline/crm_stage_service.dart';
 import '../shared/crm_record.dart';
 import '../shared/crm_records_service.dart';
 import '../shared/crm_stage_change.dart';
+import 'lead_convert_screen.dart';
 
 /// Potansiyel listesi süzgeci — saf (test edilebilir).
 ///
@@ -45,18 +46,23 @@ List<CrmRecord> filterLeads(
 /// iş listesi. Karta dokun → çekirdek entity detayı (`lead`, CRM aksiyon
 /// çubuğu + skor + aktivite akışı). Durum değişimi izinli geçişlerle
 /// `status-transition` EF üzerinden; `converted` hedefi web'deki gibi YALNIZ
-/// dönüştürme sihirbazına aittir ve burada sunulmaz.
+/// dönüştürme sihirbazına aittir ([LeadConvertScreen], kart "dönüştür"
+/// aksiyonu).
 class CrmLeadsScreen extends StatefulWidget {
   const CrmLeadsScreen({
     super.key,
     this.records,
     this.stageService,
     this.onOpenLead,
+    this.onConvertLead,
   });
 
   final CrmRecordsService? records;
   final CrmStageService? stageService;
   final void Function(BuildContext context, CrmRecord lead)? onOpenLead;
+
+  /// Test seam: opens the convert wizard (default [openLeadConvert]).
+  final void Function(BuildContext context, CrmRecord lead)? onConvertLead;
 
   static const String entityType = 'lead';
 
@@ -146,6 +152,14 @@ class _CrmLeadsScreenState extends State<CrmLeadsScreen> {
                 const EntityFormScreen(typeCode: CrmLeadsScreen.entityType)))
         .then((_) {
       if (mounted) _load(silent: true);
+    });
+  }
+
+  void _convert(CrmRecord l) {
+    final hook = widget.onConvertLead;
+    if (hook != null) return hook(context, l);
+    openLeadConvert(context, l.id, onDone: () async {
+      if (mounted) await _load(silent: true);
     });
   }
 
@@ -317,6 +331,12 @@ class _CrmLeadsScreenState extends State<CrmLeadsScreen> {
                       ),
                   ],
                 ),
+              ),
+              AppIconButton(
+                key: ValueKey('crm-lead-convert-${l.id}'),
+                icon: Icons.arrow_circle_right_outlined,
+                tooltip: crmT('crm.leads.convert', 'Fırsata Dönüştür'),
+                onPressed: () => _convert(l),
               ),
               AppIconButton(
                 icon: Icons.swap_horiz,

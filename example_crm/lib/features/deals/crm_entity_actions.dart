@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../crm_common.dart';
 import '../contacts/contacts_service.dart' show CrmActivity;
+import '../leads/lead_convert_screen.dart';
+import 'crm_deal_reason.dart';
 
 /// **CRM entity-detay domain aksiyonları** — generic `entity_detail`'e
 /// (çekirdek `EntityDetailExtensions` registry'si üzerinden) CRM'e özel
@@ -21,14 +23,26 @@ void registerCrmEntityActions() {
           onPressed: () => _logActivity(ctx, dealId: e.id, reload: reload),
         ),
       ]);
-  // Lead: yeniden skorla + aktivite-ekle.
-  // NOT (WP-C): eski "dönüştür" düğmesi lead (form_submissions) id'siyle
-  // `fn_crm_convert_web_lead` çağırıyordu — o RPC `crm_web_leads` id'si
-  // bekler ('web lead not found in tenant' fırlatır) → düğme her zaman
-  // başarısızdı. Web'de lead→deal dönüşümü yalnız dönüştürme sihirbazındadır
-  // (`/crm/leads/:id/convert`, `crm-lead-to-deal-convert` otomasyonu); mobilde
-  // sihirbaz yok → düğme kaldırıldı. Web-lead dönüşümü: WebLeadsScreen.
+  // Deal: final (kazanıldı/kaybedildi) duruma geçişte neden sor (web deal
+  // workspace close modal); neden geçiş BAŞARILI olduktan sonra
+  // fn_crm_set_deal_reason ile yazılır.
+  EntityDetailExtensions.registerTransitionHook('deal', (ctx, e, t) async {
+    if (t.toRow['is_final'] != true) return EntityTransitionPlan.proceed;
+    final save = await CrmDealReason.collect(ctx,
+        dealId: e.id, finalStatus: t.toCode);
+    if (save == null) return null;
+    return EntityTransitionPlan(afterSuccess: save);
+  });
+  // Lead: dönüştür (sihirbaz) + yeniden skorla + aktivite-ekle.
+  // lead→converted yalnız dönüştürme sihirbazındadır (web
+  // `/crm/leads/:id/convert`, `crm-lead-to-deal-convert` otomasyonu); genel
+  // durum kontrolleri bu hedefi sunmaz. Web-lead dönüşümü: WebLeadsScreen.
   EntityDetailExtensions.registerActions('lead', (ctx, e, reload) => [
+        AppIconButton(
+          icon: Icons.arrow_circle_right_outlined,
+          tooltip: crmT('crm.leads.convert', 'Fırsata Dönüştür'),
+          onPressed: () => openLeadConvert(ctx, e.id, onDone: reload),
+        ),
         AppIconButton(
           icon: Icons.speed_outlined,
           onPressed: () => _rescoreLead(ctx, e.id, reload),

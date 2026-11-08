@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/entity/models/generic_entity.dart';
+import '../../../core/entity/status_transition_rules.dart';
 
 /// Entity detay ekranı için app-bar aksiyonları üreten fonksiyon.
 typedef EntityActionsBuilder = List<Widget> Function(
@@ -15,6 +16,28 @@ typedef EntitySectionsBuilder = List<Widget> Function(
   BuildContext context,
   GenericEntity entity,
   Future<void> Function() reload,
+);
+
+/// A type-specific step around a status transition started from the entity
+/// detail screen (e.g. CRM won/lost reason). Returned by an
+/// [EntityTransitionHook] after the user picked the transition and BEFORE the
+/// `status-transition` EF runs; [afterSuccess] runs only when the EF accepted
+/// the move.
+class EntityTransitionPlan {
+  final Future<void> Function(BuildContext context)? afterSuccess;
+
+  const EntityTransitionPlan({this.afterSuccess});
+
+  /// Proceed without extra work.
+  static const EntityTransitionPlan proceed = EntityTransitionPlan();
+}
+
+/// Called with the picked transition; returns the plan, or null to cancel the
+/// transition (the user dismissed the domain prompt).
+typedef EntityTransitionHook = Future<EntityTransitionPlan?> Function(
+  BuildContext context,
+  GenericEntity entity,
+  AllowedStatusTransition transition,
 );
 
 /// **Entity detay eklenti kaydı** — generic [EntityDetailScreen]'i platforma/
@@ -33,6 +56,7 @@ class EntityDetailExtensions {
   static const String all = '*';
   static final Map<String, EntityActionsBuilder> _actions = {};
   static final Map<String, EntitySectionsBuilder> _sections = {};
+  static final Map<String, EntityTransitionHook> _transitionHooks = {};
 
   static void registerActions(String typeCode, EntityActionsBuilder builder) {
     _actions[typeCode] = builder;
@@ -40,6 +64,24 @@ class EntityDetailExtensions {
 
   static void registerSections(String typeCode, EntitySectionsBuilder builder) {
     _sections[typeCode] = builder;
+  }
+
+  /// [typeCode] için durum-geçişi kancası kaydet (tip başına bir tane).
+  static void registerTransitionHook(String typeCode, EntityTransitionHook hook) {
+    _transitionHooks[typeCode] = hook;
+  }
+
+  /// [typeCode] için kayıtlı geçiş planı; kanca yoksa [EntityTransitionPlan.proceed].
+  /// null → kullanıcı vazgeçti, geçiş yürütülmez.
+  static Future<EntityTransitionPlan?> planTransition(
+    BuildContext context,
+    String typeCode,
+    GenericEntity entity,
+    AllowedStatusTransition transition,
+  ) async {
+    final hook = _transitionHooks[typeCode];
+    if (hook == null) return EntityTransitionPlan.proceed;
+    return hook(context, entity, transition);
   }
 
   /// [typeCode] + `'*'` için kayıtlı tüm aksiyonları birleştirir.

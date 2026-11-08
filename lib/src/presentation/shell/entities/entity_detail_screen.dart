@@ -277,6 +277,10 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
               .firstOrNull),
     );
     if (choice == null || !mounted) return;
+    // Tipe özel ön-adım (ör. CRM kazanma/kaybetme nedeni) — vazgeçilirse dur.
+    final plan = await EntityDetailExtensions.planTransition(
+        context, widget.typeCode, entity, choice.transition);
+    if (plan == null || !mounted) return;
     try {
       await sl<EntityDataService>().updateStatus(
         entityType: widget.typeCode,
@@ -292,7 +296,9 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
           content: Text(_t('fixflow.kanban.status_updated',
                   '{{code}} durumu güncellendi')
               .replaceAll('{{code}}', label))));
-      _loadData();
+      final after = plan.afterSuccess;
+      if (after != null) await after(context);
+      if (mounted) _loadData();
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(_transitionError(e))));

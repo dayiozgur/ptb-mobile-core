@@ -84,4 +84,27 @@ void main() {
     await tester.pumpAndSettle();
     expect((await result)!.transition.toCode, 'on_hold');
   });
+
+  testWidgets('EntityDetailExtensions.planTransition: default proceed, hook may cancel',
+      (tester) async {
+    late BuildContext ctx;
+    await tester.pumpWidget(MaterialApp(home: Builder(builder: (c) {
+      ctx = c;
+      return const SizedBox();
+    })));
+    const entity = GenericEntity(id: 'e1', entityType: 'wp_f_test');
+    const t = AllowedStatusTransition(
+        id: '1', fromCode: 'a', toCode: 'b', toRow: {'code': 'b', 'is_final': true});
+    expect(await EntityDetailExtensions.planTransition(ctx, 'wp_f_other', entity, t),
+        same(EntityTransitionPlan.proceed));
+
+    final seen = <String>[];
+    EntityDetailExtensions.registerTransitionHook('wp_f_test', (c, e, tr) async {
+      seen.add('${e.id}:${tr.toCode}');
+      return tr.toRow['is_final'] == true ? null : EntityTransitionPlan.proceed;
+    });
+    expect(await EntityDetailExtensions.planTransition(ctx, 'wp_f_test', entity, t),
+        isNull);
+    expect(seen, ['e1:b']);
+  });
 }
