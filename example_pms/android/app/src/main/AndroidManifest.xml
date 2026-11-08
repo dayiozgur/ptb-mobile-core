@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Supabase/REST/realtime traffic. Declared explicitly for release builds:
+         no Flutter plugin manifest in use contributes it (only debug/profile
+         manifests do); relying on transitive AARs (ML Kit datatransport) is fragile. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="protoolbag_pms"
         android:name="${applicationName}"
