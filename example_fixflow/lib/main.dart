@@ -33,6 +33,8 @@ void main() async {
       supabaseAnonKey: Environment.supabaseAnonKey,
       apiBaseUrl: Environment.apiBaseUrl,
       debugMode: Environment.isDebugMode,
+      // AndroidManifest intent-filter + Info.plist CFBundleURLSchemes ile aynı.
+      appUrlScheme: 'ptbfixflow',
     ),
     onProgress: (step) => Logger.debug('Initializing: $step'),
   );

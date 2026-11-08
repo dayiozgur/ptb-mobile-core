@@ -58,6 +58,20 @@ class CoreConfig {
   /// Otomatik tenant restore
   final bool autoRestoreTenant;
 
+  /// Uygulamanın kayıtlı custom URL scheme'i (Android intent-filter /
+  /// iOS CFBundleURLSchemes), ör. CRM `ptbcrm`, FixFlow `ptbfixflow`.
+  /// OAuth dönüş adresi bundan türetilir ([oauthRedirectUri]); null = app'in
+  /// custom scheme'i yok (OAuth bağlama akışı geri dönemez).
+  final String? appUrlScheme;
+
+  /// OAuth dönüş adresi (`<scheme>://oauth-callback`) — [DeepLinkService]'in
+  /// OAuth callback host'u ile eşleşir. [appUrlScheme] yoksa null.
+  String? get oauthRedirectUri {
+    final s = appUrlScheme?.trim();
+    if (s == null || s.isEmpty) return null;
+    return '$s://oauth-callback';
+  }
+
   const CoreConfig({
     required this.supabaseUrl,
     required this.supabaseAnonKey,
@@ -67,6 +81,7 @@ class CoreConfig {
     this.enableCacheCleanup = true,
     this.autoRestoreSession = true,
     this.autoRestoreTenant = true,
+    this.appUrlScheme,
   });
 
   /// Geliştirme ortamı için

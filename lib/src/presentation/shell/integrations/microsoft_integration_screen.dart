@@ -6,14 +6,16 @@ import 'package:url_launcher/url_launcher.dart';
 /// Microsoft account and control background sync, mirroring the web
 /// `account/integrations` page. The connect flow opens the Microsoft authorize
 /// URL in the device browser; `oauth-callback` bounces back into the app via the
-/// `ptbcrm://oauth-callback` deep link (or the user returns and taps Refresh).
+/// `<scheme>://oauth-callback` deep link (or the user returns and taps Refresh).
 ///
-/// Pass [deepLinkRedirect] as the app's registered redirect URI. When the app is
+/// The redirect defaults to [CoreConfig.oauthRedirectUri] (the app's
+/// [CoreConfig.appUrlScheme], e.g. CRM `ptbcrm://oauth-callback`);
+/// [deepLinkRedirect] overrides it. When the app is
 /// reopened by the deep link, call [refresh] (the host wires an app_links
 /// listener); a manual Refresh button is the fallback.
 class MicrosoftIntegrationScreen extends StatefulWidget {
-  final String deepLinkRedirect;
-  const MicrosoftIntegrationScreen({super.key, this.deepLinkRedirect = 'ptbcrm://oauth-callback'});
+  final String? deepLinkRedirect;
+  const MicrosoftIntegrationScreen({super.key, this.deepLinkRedirect});
 
   @override
   State<MicrosoftIntegrationScreen> createState() => _MicrosoftIntegrationScreenState();
@@ -67,9 +69,17 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
   }
 
   Future<void> _connect() async {
+    final redirect =
+        widget.deepLinkRedirect ?? CoreInitializer.config?.oauthRedirectUri;
+    if (redirect == null) {
+      // App'in custom URL scheme'i yok → tarayıcıdan geri dönülemez.
+      Logger.warning('[ms-screen] no appUrlScheme configured; connect disabled');
+      _toast(_t('integrations.ms.connect_failed'), error: true);
+      return;
+    }
     setState(() => _busy = true);
     try {
-      final url = await _svc.startConnect(redirectAfter: widget.deepLinkRedirect);
+      final url = await _svc.startConnect(redirectAfter: redirect);
       if (url == null) {
         _toast(_t('integrations.ms.connect_failed'), error: true);
         return;

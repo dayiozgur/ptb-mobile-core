@@ -103,7 +103,14 @@ class _MsMailboxScreenState extends State<MsMailboxScreen> {
   }
 
   Future<void> _connect() async {
-    final url = await _svc.startConnect(redirectAfter: 'ptbcrm://oauth-callback');
+    // Dönüş adresi app yapılandırmasından (CoreConfig.appUrlScheme), ör.
+    // CRM `ptbcrm://oauth-callback`. Scheme'i olmayan app bağlanamaz.
+    final redirect = CoreInitializer.config?.oauthRedirectUri;
+    if (redirect == null) {
+      _snack(_t('crm.mailbox.load_failed'), error: true);
+      return;
+    }
+    final url = await _svc.startConnect(redirectAfter: redirect);
     if (url != null) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
