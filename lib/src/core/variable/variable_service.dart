@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import '../tenant/tenant_scope.dart';
 import 'variable_model.dart';
 
 /// Variable Service
@@ -26,8 +27,15 @@ class VariableService {
   /// Değer güncelleme stream
   final _valueUpdates = StreamController<VariableValueUpdate>.broadcast();
 
-  /// Mevcut tenant ID (geriye uyumluluk için tutulur ama DB sorgularında kullanılmaz)
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService
+  /// (bkz. [TenantScope]).
+  /// (`variables` tablosunda tenant_id yok — sorgularda kullanılmaz.)
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
+
+  /// Etkin tenant (read-through).
+  String? get currentTenantId => _currentTenantId;
 
   /// Mevcut variable listesi
   List<Variable> _variables = [];
@@ -66,8 +74,7 @@ class VariableService {
 
   /// Tenant context'ini ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _variables = [];
       _selected = null;
       _variablesController.add(_variables);
@@ -77,7 +84,7 @@ class VariableService {
 
   /// Tenant context'ini temizle
   void clearTenant() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _variables = [];
     _selected = null;
     _variablesController.add(_variables);

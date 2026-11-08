@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import '../tenant/tenant_scope.dart';
 import 'provider_model.dart';
 
 /// DataProvider Service
@@ -19,8 +20,11 @@ class DataProviderService {
   /// Seçili provider stream
   final _selectedProvider = StreamController<DataProvider?>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService
+  /// (bkz. [TenantScope]).
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut provider listesi
   List<DataProvider> _providers = [];
@@ -64,8 +68,7 @@ class DataProviderService {
 
   /// Tenant context'ini ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _providers = [];
       _selected = null;
       _providersController.add(_providers);
@@ -75,7 +78,7 @@ class DataProviderService {
 
   /// Tenant context'ini temizle
   void clearTenant() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _providers = [];
     _selected = null;
     _providersController.add(_providers);

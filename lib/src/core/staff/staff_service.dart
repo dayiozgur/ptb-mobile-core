@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import '../tenant/tenant_scope.dart';
 import 'staff_model.dart';
 
 /// Staff Service
@@ -16,8 +17,11 @@ class StaffService {
   /// Staff listesi stream
   final _staffsController = StreamController<List<Staff>>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService
+  /// (bkz. [TenantScope]).
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut staff listesi
   List<Staff> _staffs = [];
@@ -64,8 +68,7 @@ class StaffService {
 
   /// Tenant context ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _staffs = [];
       _staffsController.add(_staffs);
     }
@@ -73,7 +76,7 @@ class StaffService {
 
   /// Context temizle
   void clearContext() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _staffs = [];
     _staffsController.add(_staffs);
   }

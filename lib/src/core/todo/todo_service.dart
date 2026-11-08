@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import '../tenant/tenant_scope.dart';
 import 'todo_model.dart';
 
 /// Todo Service
@@ -20,8 +21,11 @@ class TodoService {
   /// Secili todo stream
   final _selectedController = StreamController<TodoItem?>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService
+  /// (bkz. [TenantScope]).
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut kullanici ID
   String? _currentUserId;
@@ -71,8 +75,7 @@ class TodoService {
 
   /// Tenant context ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _todos = [];
       _selected = null;
       _todosController.add(_todos);
@@ -87,7 +90,7 @@ class TodoService {
 
   /// Context temizle
   void clearContext() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _currentUserId = null;
     _todos = [];
     _selected = null;

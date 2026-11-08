@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import '../tenant/tenant_scope.dart';
 import 'controller_model.dart';
 
 /// Controller Service
@@ -19,8 +20,11 @@ class ControllerService {
   /// Seçili controller stream
   final _selectedController = StreamController<Controller?>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService
+  /// (bkz. [TenantScope]).
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut organization ID (opsiyonel izolasyon)
   String? _currentOrganizationId;
@@ -74,8 +78,7 @@ class ControllerService {
 
   /// Tenant context'ini ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _controllers = [];
       _selected = null;
       _controllersController.add(_controllers);
@@ -85,7 +88,7 @@ class ControllerService {
 
   /// Tenant context'ini temizle
   void clearTenant() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _currentOrganizationId = null;
     _currentSiteId = null;
     _controllers = [];
