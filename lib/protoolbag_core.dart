@@ -226,6 +226,8 @@ export 'src/core/entity/models/generic_entity.dart';
 export 'src/core/entity/entity_config_service.dart';
 export 'src/core/entity/entity_data_service.dart';
 export 'src/core/entity/entity_status_labels.dart';
+export 'src/core/entity/status_transition_rules.dart';
+export 'src/core/entity/status_transition_roles.dart';
 export 'src/core/config/app_version_gate.dart';
 
 // Core - Dynamic Form Engine (low-code builder data layer)
@@ -430,6 +432,7 @@ export 'src/presentation/shell/dashboard/personal_dashboard_screen.dart';
 export 'src/presentation/shell/language_picker.dart';
 export 'src/presentation/shell/entities/entity_list_screen.dart';
 export 'src/presentation/shell/entities/entity_detail_screen.dart';
+export 'src/presentation/shell/entities/status_transition_sheet.dart';
 export 'src/presentation/shell/entities/entity_detail_extensions.dart';
 // Microsoft OneDrive/SharePoint "Files" section — spread to all entity types
 export 'src/presentation/shell/microsoft/entity_files_card.dart';

@@ -10,6 +10,8 @@ import '../storage/cache_manager.dart';
 import '../tenant/tenant_scope.dart';
 import '../utils/logger.dart';
 import 'entity_status_labels.dart';
+import 'status_transition_roles.dart';
+import 'status_transition_rules.dart';
 import 'models/entity_type_config.dart';
 import 'models/generic_entity.dart';
 
@@ -32,11 +34,30 @@ class EntityDataService {
 
   String? get _currentTenantId => _tenantScope.tenantId;
 
+  /// Test seam: translation lookup (default: [LocalizationService]).
+  final String Function(String key)? _translate;
+
+  /// Test seam: status-transition role set (default:
+  /// [currentStatusTransitionRoles], EF-identical).
+  final Future<Set<String>> Function()? _rolesResolver;
+
   EntityDataService({
     required SupabaseClient supabase,
     required CacheManager cacheManager,
+    String Function(String key)? translate,
+    Future<Set<String>> Function()? rolesResolver,
   })  : _supabase = supabase,
-        _cacheManager = cacheManager;
+        _cacheManager = cacheManager,
+        _translate = translate,
+        _rolesResolver = rolesResolver;
+
+  String _tr(String key) {
+    final t = _translate;
+    if (t != null) return t(key);
+    return sl.isRegistered<LocalizationService>()
+        ? sl<LocalizationService>().translate(key)
+        : key;
+  }
 
   /// Tenant context'ini ayarla.
   void setTenant(String tenantId) {
@@ -460,8 +481,9 @@ class EntityDataService {
   ///
   /// Platform kapsamı (web `applyPlatformFilter` ile birebir): bu platforma
   /// özel + tüm-platform + `platform_ids` listesinde bu platform olan satırlar.
-  /// Sistem satırlarının (`is_system`) adı `status.<code>` anahtarıyla
-  /// çevrilir (anahtar yoksa DB adı kalır) — web PtbStatusService I18N-01.
+  /// Görünen ad (`name`) FixFlow/CRM modülleriyle aynı kuralla çevrilir:
+  /// `metadata.i18n.name` anahtarı → (sistem satırı) `status.<code>` → DB adı
+  /// ([StatusTransitionRules.localizedName]; web PtbStatusService I18N-01).
   Future<List<Map<String, dynamic>>> loadStatusDefinitions(
     String entityType,
   ) async {
@@ -469,7 +491,7 @@ class EntityDataService {
       var query = _supabase
           .from('status_definitions')
           .select(
-            'id, code, name, color, icon, is_initial, is_final, sort_order, is_system',
+            'id, code, name, color, icon, is_initial, is_final, sort_order, is_system, metadata',
           )
           .eq('entity_type', entityType)
           .eq('active', true);
@@ -489,7 +511,7 @@ class EntityDataService {
         }
       }
 
-      final result = byCode.values.map(_translateSystemStatus).toList()
+      final result = byCode.values.map(_localizeStatus).toList()
         ..sort((a, b) => ((a['sort_order'] as num?) ?? 0)
             .compareTo((b['sort_order'] as num?) ?? 0));
 
@@ -503,15 +525,51 @@ class EntityDataService {
     }
   }
 
-  /// Sistem durumunun adını `status.<code>` çevirisiyle değiştir (varsa).
-  Map<String, dynamic> _translateSystemStatus(Map<String, dynamic> row) {
-    if (row['is_system'] != true) return row;
-    final code = row['code'] as String?;
-    if (code == null || !sl.isRegistered<LocalizationService>()) return row;
-    final key = 'status.$code';
-    final label = sl<LocalizationService>().translate(key);
-    if (label.isEmpty || label == key) return row;
+  /// `name` alanını çevrilmiş görünen adla değiştir (anahtar yoksa aynı satır).
+  Map<String, dynamic> _localizeStatus(Map<String, dynamic> row) {
+    if (StatusTransitionRules.labelKey(row) == null) return row;
+    final label = StatusTransitionRules.localizedName(row, _tr);
+    if (label == row['name']) return row;
     return {...row, 'name': label};
+  }
+
+  /// [fromCode]'dan oturumdaki kullanıcının başlatabileceği geçişler —
+  /// `status-transition` EF ile aynı satır seçimi + rol kontrolü
+  /// ([StatusTransitionRules.allowed]); form gerektiren geçişler ve
+  /// sihirbaz-yalnız hedefler (lead→converted) sunulmaz. Hata → boş liste.
+  Future<List<AllowedStatusTransition>> availableTransitions(
+    String entityType,
+    String fromCode,
+  ) async {
+    try {
+      final res = await _supabase
+          .from('status_transitions')
+          .select(
+            'id, name, tenant_id, required_roles, requires_comment, '
+            'requires_confirmation, required_form_template_id, sort_order, '
+            'from_status:status_definitions!from_status_id(code), '
+            'to_status:status_definitions!to_status_id(id, code, name, color, '
+            'is_initial, is_final, sort_order, is_system, metadata)',
+          )
+          .eq('entity_type', entityType)
+          .eq('active', true)
+          .order('sort_order', ascending: true);
+      final rows = (res as List).cast<Map<String, dynamic>>();
+      final resolver = _rolesResolver;
+      final roles = resolver != null
+          ? await resolver()
+          : await currentStatusTransitionRoles(_supabase);
+      return StatusTransitionRules.allowed(
+        rows,
+        entityType: entityType,
+        fromCode: fromCode,
+        roles: roles,
+        tenantId: _currentTenantId,
+      );
+    } catch (e) {
+      Logger.error('Error loading status transitions ($entityType/$fromCode): $e');
+      return const [];
+    }
   }
 
   final Map<String, Future<Map<String, EntityStatusLabel>>> _statusLabelMemo =

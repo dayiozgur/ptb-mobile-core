@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
+import '../entity/status_transition_rules.dart';
 import '../localization/localization_service.dart';
 import '../platform/builder_platform_filter.dart';
 import '../utils/logger.dart';
@@ -91,28 +92,9 @@ class FixflowStatusService {
     return list;
   }
 
-  /// `metadata.i18n.name` → (sistem satırı ise) `status.<code>` → DB adı.
-  String? _labelKey(Map<String, dynamic> row) {
-    final meta = row['metadata'];
-    if (meta is Map) {
-      final i18n = meta['i18n'];
-      if (i18n is Map && i18n['name'] is String) {
-        final k = (i18n['name'] as String).trim();
-        if (k.isNotEmpty) return k;
-      }
-    }
-    if (row['is_system'] == true) return 'status.${row['code']}';
-    return null;
-  }
-
   FixflowStatus _mapStatus(Map<String, dynamic> row) {
     final code = row['code'].toString();
-    var name = (row['name'] as String?)?.trim() ?? '';
-    final key = _labelKey(row);
-    if (key != null) {
-      final t = _tr(key);
-      if (t.isNotEmpty && t != key) name = t;
-    }
+    final name = StatusTransitionRules.localizedName(row, _tr);
     return FixflowStatus(
       code: code,
       name: name.isEmpty ? code : name,
@@ -134,7 +116,7 @@ class FixflowStatusService {
       final res = await _supabase
           .from('status_transitions')
           .select(
-            'id, name, required_roles, requires_comment, requires_confirmation, '
+            'id, name, tenant_id, required_roles, requires_comment, requires_confirmation, '
             'required_form_template_id, sort_order, '
             'from_status:status_definitions!from_status_id(code), '
             'to_status:status_definitions!to_status_id(id, code, name, color, is_initial, is_final, sort_order, is_system, metadata)',
@@ -144,34 +126,24 @@ class FixflowStatusService {
           .order('sort_order', ascending: true);
       final rows = (res as List).cast<Map<String, dynamic>>();
       final roles = await _session.roles();
-      final seen = <String>{};
-      final out = <FixflowTransition>[];
-      for (final r in rows) {
-        final from = r['from_status'];
-        if (from is! Map || from['code'] != currentStatus) continue;
-        final to = r['to_status'];
-        if (to is! Map) continue;
-        final toRow = Map<String, dynamic>.from(to);
-        final toCode = toRow['code']?.toString();
-        if (toCode == null || toCode.isEmpty || seen.contains(toCode)) continue;
-        final required = ((r['required_roles'] as List?) ?? const [])
-            .map((e) => e.toString())
-            .toList();
-        if (required.isNotEmpty &&
-            !required.any((x) => roles.contains(normalizeFixflowRole(x)))) {
-          continue;
-        }
-        if (r['required_form_template_id'] != null) continue;
-        seen.add(toCode);
-        out.add(FixflowTransition(
-          id: r['id'].toString(),
-          name: r['name'] as String?,
-          toStatus: _mapStatus(toRow),
-          requiredRoles: required,
-          requiresComment: r['requires_comment'] == true,
-          requiresConfirmation: r['requires_confirmation'] == true,
-        ));
-      }
+      final allowed = StatusTransitionRules.allowed(
+        rows,
+        entityType: entityType,
+        fromCode: currentStatus,
+        roles: roles,
+        tenantId: _session.tenantId,
+      );
+      final out = <FixflowTransition>[
+        for (final t in allowed)
+          FixflowTransition(
+            id: t.id,
+            name: t.name,
+            toStatus: _mapStatus(t.toRow),
+            requiredRoles: t.requiredRoles,
+            requiresComment: t.requiresComment,
+            requiresConfirmation: t.requiresConfirmation,
+          ),
+      ];
       return out;
     } catch (e) {
       Logger.error('FixFlow transitions ($entityType/$currentStatus) failed', e);

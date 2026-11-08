@@ -1,7 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
-import '../permission/permission_service.dart';
+import '../entity/status_transition_roles.dart';
+import '../entity/status_transition_rules.dart';
 import '../tenant/tenant_service.dart';
 import '../user/profile_service.dart';
 
@@ -25,7 +26,8 @@ abstract class FixflowSession {
   Future<String?> organizationId();
 
   /// `status-transition` EF'inin rol kontrolüyle aynı rol kümesi:
-  /// JWT `app_metadata.roles` + kaba rol (`ROLE_ADMIN` → `admin`), normalize.
+  /// JWT `app_metadata.roles`, yoksa kaba rol (`ROLE_ADMIN` → `admin`),
+  /// normalize ([currentStatusTransitionRoles]).
   Future<Set<String>> roles();
 
   factory FixflowSession.fixed({
@@ -37,8 +39,7 @@ abstract class FixflowSession {
 }
 
 /// `ROLE_ADMIN` → `admin` (EF `normalizeRole` ile aynı).
-String normalizeFixflowRole(String r) =>
-    r.replaceFirst(RegExp(r'^ROLE_', caseSensitive: false), '').toLowerCase();
+String normalizeFixflowRole(String r) => StatusTransitionRules.normalizeRole(r);
 
 class _FixedSession extends FixflowSession {
   @override
@@ -88,22 +89,5 @@ class AppFixflowSession extends FixflowSession {
   }
 
   @override
-  Future<Set<String>> roles() async {
-    final out = <String>{};
-    final meta = _supabase.auth.currentUser?.appMetadata['roles'];
-    if (meta is List) {
-      for (final r in meta) {
-        if (r != null) out.add(normalizeFixflowRole(r.toString()));
-      }
-    }
-    if (sl.isRegistered<PermissionService>()) {
-      try {
-        final coarse = await sl<PermissionService>().getCoarseRole();
-        if (coarse != null && coarse.isNotEmpty) {
-          out.add(normalizeFixflowRole(coarse));
-        }
-      } catch (_) {/* rol çözülemezse yalnız JWT rolleri */}
-    }
-    return out;
-  }
+  Future<Set<String>> roles() => currentStatusTransitionRoles(_supabase);
 }

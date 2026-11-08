@@ -234,62 +234,82 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
     );
   }
 
-  /// Durum değiştir — status_definitions'tan seçenekleri yükleyip alt-sayfada
-  /// sunar; seçilince `status-transition` EF ile günceller (geçiş doğrulamalı).
+  /// Durum değiştir — yalnız mevcut durumdan İZİNLİ geçişler sunulur
+  /// (`status_transitions`, EF ile aynı satır seçimi + rol kontrolü; form
+  /// gerektiren ve sihirbaz-yalnız hedefler — lead→converted — hariç). Geçiş
+  /// yorum/onay isterse alınır; yürütme `status-transition` EF ile.
   Future<void> _changeStatus() async {
-    final defs =
-        await sl<EntityDataService>().loadStatusDefinitions(widget.typeCode);
+    final entity = _entity;
+    if (entity == null) return;
+    final current = entity.status ?? '';
+    final transitions = await sl<EntityDataService>()
+        .availableTransitions(widget.typeCode, current);
     if (!mounted) return;
-    if (defs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_t('entity.no_status', 'Bu tip için durum tanımı yok'))));
+    final messenger = ScaffoldMessenger.of(context);
+    if (transitions.isEmpty) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(_t('fixflow.mobile.no_transitions',
+              'Yapabileceğiniz bir durum değişikliği yok.'))));
       return;
     }
-    final current = _entity?.status;
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(children: [
-                Text(_t('entity.change_status', 'Durum değiştir'),
-                    style: AppTypography.headline),
-              ]),
-            ),
-            for (final d in defs)
-              ListTile(
-                leading: Icon(
-                  (d['code'] as String?) == current
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  color: AppColors.primary,
-                ),
-                title: Text(EntityStatusLabels.rowName(d)),
-                onTap: () => Navigator.of(ctx).pop(d['code'] as String?),
-              ),
-          ],
-        ),
-      ),
+    String nameOf(String code) {
+      final known = _statusLabels[code];
+      if (known != null) return EntityStatusLabels.nameOf(code, _statusLabels);
+      for (final t in transitions) {
+        if (t.toCode == code) {
+          return StatusTransitionRules.localizedName(
+              t.toRow, sl<LocalizationService>().translate);
+        }
+      }
+      return EntityStatusLabels.humanize(code);
+    }
+
+    final choice = await showStatusTransitionFlow(
+      context,
+      transitions: transitions,
+      currentCode: current,
+      nameOf: nameOf,
+      colorOf: (code) =>
+          _statusLabels[code]?.color ??
+          EntityStatusLabels.parseHex(transitions
+              .where((t) => t.toCode == code)
+              .map((t) => t.toRow['color'] as String?)
+              .firstOrNull),
     );
-    if (selected == null || selected == current || !mounted) return;
+    if (choice == null || !mounted) return;
     try {
       await sl<EntityDataService>().updateStatus(
         entityType: widget.typeCode,
         entityId: widget.id,
-        toStatus: selected,
+        toStatus: choice.transition.toCode,
+        comment: choice.comment,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_t('entity.status_updated', 'Durum güncellendi ✓'))));
+      final label = entity.code?.isNotEmpty == true
+          ? entity.code!
+          : nameOf(choice.transition.toCode);
+      messenger.showSnackBar(SnackBar(
+          content: Text(_t('fixflow.kanban.status_updated',
+                  '{{code}} durumu güncellendi')
+              .replaceAll('{{code}}', label))));
       _loadData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_t('entity.status_failed', 'Durum güncellenemedi'))));
+      messenger.showSnackBar(SnackBar(content: Text(_transitionError(e))));
     }
+  }
+
+  /// EF hata kodu → kullanıcı mesajı (FixFlow modülüyle aynı anahtarlar).
+  String _transitionError(Object e) {
+    final s = e.toString();
+    if (s.contains('ERR_FORBIDDEN')) {
+      return _t('fixflow.mobile.transition_forbidden',
+          'Bu değişikliği yapma yetkiniz yok.');
+    }
+    if (s.contains('ERR_INVALID_TRANSITION')) {
+      return _t('fixflow.kanban.invalid_transition', 'Bu durum geçişi yapılamaz');
+    }
+    return _t('fixflow.kanban.transition_error', 'Durum geçişi başarısız');
   }
 
   Widget _buildHeader(GenericEntity entity) {

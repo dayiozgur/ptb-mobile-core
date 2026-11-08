@@ -44,39 +44,17 @@ class CrmTransition {
 class CrmStageLogic {
   CrmStageLogic._();
 
-  /// Yalnız sihirbazın yapabildiği hedefler (web `lead-convert-route.ts`
-  /// WIZARD_ONLY_TARGETS): lead→converted `crm-lead-to-deal-convert`
-  /// otomasyonunu tetikler ve sihirbazın topladığı tutarı ister → genel durum
-  /// kontrolleri bu geçişi SUNMAZ.
-  static const Map<String, List<String>> wizardOnlyTargets = {
-    'lead': ['converted'],
-  };
-
+  /// Yalnız sihirbazın yapabildiği hedefler — çekirdek
+  /// [StatusTransitionRules.wizardOnlyTargets] (lead→converted).
   static bool isWizardOnly(String entityType, String toStatus) =>
-      wizardOnlyTargets[entityType]?.contains(toStatus) ?? false;
+      StatusTransitionRules.isWizardOnly(entityType, toStatus);
 
-  /// Bir tanım satırının görünen adı: `metadata.i18n.name` anahtarı → sistem
-  /// satırında `status.<code>` → DB adı → okunur kod (web `labelKey` +
-  /// `localizeDefinitions`).
+  /// Bir tanım satırının görünen adı — çekirdek
+  /// [StatusTransitionRules.localizedName] (`metadata.i18n.name` → sistem
+  /// satırında `status.<code>` → DB adı → okunur kod).
   static String labelOf(
-      Map<String, dynamic> row, String Function(String key) translate) {
-    final code = (row['code'] as String?) ?? '';
-    String? key;
-    final meta = row['metadata'];
-    if (meta is Map) {
-      final i18n = meta['i18n'];
-      if (i18n is Map) {
-        final k = i18n['name'];
-        if (k is String && k.isNotEmpty) key = k;
-      }
-    }
-    key ??= row['is_system'] == true ? 'status.$code' : null;
-    if (key != null) {
-      final t = translate(key);
-      if (t.isNotEmpty && t != key) return t;
-    }
-    return EntityStatusLabels.rowName(row);
-  }
+          Map<String, dynamic> row, String Function(String key) translate) =>
+      StatusTransitionRules.localizedName(row, translate);
 
   /// Tanım satırları → aşamalar: aynı kodda kiracı satırı (is_system=false)
   /// sistemi yener (web dedup), sort_order sıralı.
@@ -105,41 +83,32 @@ class CrmStageLogic {
     return stages;
   }
 
-  /// [fromCode]'dan izinli geçişler — web `fetchTransitions`: from süzgeci,
-  /// rol süzgeci (`ROLE_ADMIN` ↔ `admin` normalize; required_roles boşsa
-  /// herkes), hedef-kod dedup (ilk kazanır), sihirbaz-yalnız hedefler hariç.
+  /// [fromCode]'dan izinli geçişler — çekirdek [StatusTransitionRules.allowed]
+  /// (EF ile aynı satır seçimi: kendi kiracı → düşük sort_order → id; rol
+  /// kontrolü seçilen satırda; form gerektiren ve sihirbaz-yalnız hedefler
+  /// hariç).
   static List<CrmTransition> transitionsFrom(
     List<Map<String, dynamic>> rows, {
     required String entityType,
     required String fromCode,
     String? role,
+    String? tenantId,
   }) {
-    final normRole =
-        role?.replaceFirst(RegExp('^ROLE_', caseSensitive: false), '').toLowerCase();
-    final seen = <String>{};
-    final out = <CrmTransition>[];
-    for (final r in rows) {
-      final from = r['from_status'];
-      final to = r['to_status'];
-      final f = from is Map ? from['code'] as String? : null;
-      final t = to is Map ? to['code'] as String? : null;
-      if (f != fromCode || t == null || t.isEmpty) continue;
-      final req = (r['required_roles'] as List?)?.cast<dynamic>() ?? const [];
-      if (req.isNotEmpty) {
-        if (normRole == null) continue;
-        if (!req.any((x) => x.toString().toLowerCase() == normRole)) continue;
-      }
-      if (seen.contains(t)) continue;
-      if (isWizardOnly(entityType, t)) continue;
-      seen.add(t);
-      out.add(CrmTransition(
-        fromCode: f!,
-        toCode: t,
-        requiresComment: r['requires_comment'] == true,
-        requiresConfirmation: r['requires_confirmation'] == true,
-      ));
-    }
-    return out;
+    return [
+      for (final t in StatusTransitionRules.allowed(
+        rows,
+        entityType: entityType,
+        fromCode: fromCode,
+        roles: {if (role != null && role.isNotEmpty) role},
+        tenantId: tenantId,
+      ))
+        CrmTransition(
+          fromCode: t.fromCode,
+          toCode: t.toCode,
+          requiresComment: t.requiresComment,
+          requiresConfirmation: t.requiresConfirmation,
+        ),
+    ];
   }
 
   /// Hata metni geçersiz-geçiş mi? (EF `ERR_INVALID_TRANSITION`).
@@ -191,7 +160,10 @@ class CrmStageService {
           _backend.statusTransitionRows(entityType));
       final role = await (_role ??= _backend.currentRole());
       return CrmStageLogic.transitionsFrom(rows,
-          entityType: entityType, fromCode: fromCode, role: role);
+          entityType: entityType,
+          fromCode: fromCode,
+          role: role,
+          tenantId: TenantScope().tenantId);
     } catch (e) {
       _txRows.remove(entityType);
       Logger.error('crm transitions($entityType/$fromCode) hata', e);

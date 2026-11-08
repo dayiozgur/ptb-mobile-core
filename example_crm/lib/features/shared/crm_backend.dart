@@ -106,7 +106,7 @@ class SupabaseCrmBackend implements CrmBackend {
     // Web PtbStatusService.fetchTransitionRows ile aynı seçim.
     final res = await _sb
         .from('status_transitions')
-        .select('id, name, required_roles, requires_comment, '
+        .select('id, name, tenant_id, required_roles, requires_comment, '
             'requires_confirmation, required_form_template_id, sort_order, '
             'from_status:status_definitions!from_status_id(code), '
             'to_status:status_definitions!to_status_id(code)')
