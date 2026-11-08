@@ -11,8 +11,8 @@ import '../utils/logger.dart';
 /// mantığı). RLS/JWT ile tenant-scoped; **satın alma YOK** (mobilde yasak).
 ///
 /// Kotalar `subscription_plans` → `plan_quotas` (plan başına limit) tablosundan
-/// gelir; global (platform_id NULL) abonelik tercih edilir — web `getActiveSubscription`
-/// ile aynı çözünürlük.
+/// gelir. Aktif platformun aboneliği (`platform_id = <aktif>`) tercih edilir; yoksa
+/// global (platform_id NULL) abonelik yedek olarak kullanılır.
 class AdminSubscriptionService {
   final SupabaseClient _supabase;
 
@@ -20,15 +20,22 @@ class AdminSubscriptionService {
       : _supabase = supabase;
 
   /// Geçerli tenant'ın aktif aboneliğini getirir (trial | active | past_due).
-  /// Global abonelik (platform_id NULL) tercih edilir.
-  Future<SubscriptionInfo?> getSubscription({required String? tenantId}) async {
+  ///
+  /// [platformId] verilirse yalnız o platformun ve global (platform_id NULL)
+  /// abonelikleri değerlendirilir; aktif platformunki önce gelir, NULL yedektir.
+  /// Verilmezse global abonelik tercih edilir (eski davranış).
+  Future<SubscriptionInfo?> getSubscription({
+    required String? tenantId,
+    String? platformId,
+  }) async {
     try {
       if (tenantId == null || tenantId.isEmpty) {
         Logger.debug('AdminSubscriptionService: tenant yok');
         return null;
       }
+      final scoped = platformId != null && platformId.isNotEmpty;
 
-      final row = await _supabase
+      var query = _supabase
           .from('tenant_subscriptions')
           .select('''
             *,
@@ -38,8 +45,15 @@ class AdminSubscriptionService {
             )
           ''')
           .eq('tenant_id', tenantId)
-          .inFilter('status', ['trial', 'active', 'past_due'])
-          .order('platform_id', ascending: true, nullsFirst: true)
+          .inFilter('status', ['trial', 'active', 'past_due']);
+      if (scoped) {
+        query = query.or('platform_id.eq.$platformId,platform_id.is.null');
+      }
+
+      final row = await query
+          // scoped: filtre yalnız aktif platform + NULL bırakır → nullsFirst:false
+          // aktif platformun satırını öne alır, NULL yedek kalır.
+          .order('platform_id', ascending: true, nullsFirst: !scoped)
           .order('created_at', ascending: false)
           .limit(1)
           .maybeSingle();

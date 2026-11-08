@@ -24,6 +24,21 @@ class Logger {
   static void Function(LogLevel level, String message, Object? error)?
       _onLog;
 
+  /// Hata gözlemcileri: `warning`/`error` ile loglanan HER hata nesnesi (seviye
+  /// filtresinden bağımsız) bunlara iletilir. Ör. lisans reddi (entitlement)
+  /// sinyalini uygulama genelinde yakalamak için. Gözlemci hatası yutulur.
+  static final List<void Function(Object error)> _errorObservers = [];
+
+  /// Hata gözlemcisi ekle.
+  static void addErrorObserver(void Function(Object error) observer) {
+    if (!_errorObservers.contains(observer)) _errorObservers.add(observer);
+  }
+
+  /// Hata gözlemcisini kaldır.
+  static void removeErrorObserver(void Function(Object error) observer) {
+    _errorObservers.remove(observer);
+  }
+
   /// Logger yapılandırması
   static void configure({
     LogLevel minLevel = LogLevel.debug,
@@ -198,6 +213,15 @@ class Logger {
     Object? error,
     StackTrace? stackTrace,
   ]) {
+    if (error != null &&
+        (level == LogLevel.warning || level == LogLevel.error) &&
+        _errorObservers.isNotEmpty) {
+      for (final observer in List.of(_errorObservers)) {
+        try {
+          observer(error);
+        } catch (_) {}
+      }
+    }
     if (!_shouldLog(level)) return;
 
     _printLog(level, message, error, stackTrace);

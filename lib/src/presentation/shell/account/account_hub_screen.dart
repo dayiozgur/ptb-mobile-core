@@ -38,6 +38,7 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
       final tenantId = sl<TenantService>().currentTenantId;
       sub = await sl<AdminSubscriptionService>().getSubscription(
         tenantId: tenantId,
+        platformId: sl<PlatformContext>().activePlatformId,
       );
     } catch (e, st) {
       // Overview kartı opsiyonel — hata hub'ı çökertmez, kart gizlenir.

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
 /// MainShellScreen sekme index'ini alt widget'lardan değiştirmek için.
@@ -46,6 +48,7 @@ class _NavDest {
 
 class _MainShellScreenState extends State<MainShellScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _tabsKey = GlobalKey();
   int _currentIndex = 0;
 
   int _unreadCount = 0;
@@ -61,6 +64,12 @@ class _MainShellScreenState extends State<MainShellScreen> {
   List<Organization> _orgs = const [];
   StreamSubscription<Tenant?>? _tenantSub;
   StreamSubscription<Organization?>? _orgSub;
+
+  // Lisans durumu (platform-context `license.accessState`): read_only → bant,
+  // locked → ürün ekranları yerine kilit ekranı (hesap/çıkış açık).
+  EntitlementService? _entitlement;
+  LicenseAccessState _access = LicenseAccessState.full;
+  bool _licenseBusy = false;
 
   // Alt-nav hedefleri (sabit çekirdek; ileride DB/kullanıcı-seçimi ile dinamik).
   late final List<_NavDest> _dests = [
@@ -86,11 +95,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _platformSub = sl<PlatformContext>().platformStream.listen((_) {
       _loadMenu(forceRefresh: true);
     });
+    _startEntitlement();
     // Tenant/org değişince (switcher veya başka akış) drawer'daki adları tazele
     // + duyuru bildiricisini yeni tenant'a bağla.
     _tenantSub = tenantService.tenantStream.listen((_) {
       _loadWorkspace();
       _startAnnouncementNotifier();
+      _entitlement?.refresh(force: true);
     });
     _orgSub = organizationService.organizationStream.listen((_) {
       if (mounted) {
@@ -137,6 +148,53 @@ class _MainShellScreenState extends State<MainShellScreen> {
       }
     } catch (_) {
       // Sayı çözülemezse switcher yine de aktif isim(ler)i gösterir.
+    }
+  }
+
+  /// Lisans servisini başlat (giriş sonrası ilk yenileme + platform/resume/yazma-reddi
+  /// dinleyicileri servis içinde).
+  void _startEntitlement() {
+    if (!sl.isRegistered<EntitlementService>()) return;
+    final svc = sl<EntitlementService>();
+    _entitlement = svc;
+    _access = svc.accessState;
+    svc.accessStateListenable.addListener(_onAccessChanged);
+    svc.start();
+  }
+
+  void _onAccessChanged() {
+    final next = _entitlement?.accessState ?? LicenseAccessState.full;
+    if (!mounted || next == _access) return;
+    setState(() => _access = next);
+  }
+
+  Future<void> _retryLicense() async {
+    final svc = _entitlement;
+    if (svc == null || _licenseBusy) return;
+    setState(() => _licenseBusy = true);
+    try {
+      await svc.refresh(force: true);
+    } finally {
+      if (mounted) setState(() => _licenseBusy = false);
+    }
+  }
+
+  Future<void> _signOutFromLocked() async {
+    await CoreInitializer.signOut();
+    if (mounted) context.go('/login');
+  }
+
+  String? _graceUntilText() {
+    final until = _entitlement?.license?.graceUntil;
+    if (until == null) return null;
+    final local = until.toLocal();
+    try {
+      return DateFormat.yMMMd(
+              sl<LocalizationService>().currentLocale.languageCode)
+          .format(local);
+    } catch (_) {
+      return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+          '${local.day.toString().padLeft(2, '0')}';
     }
   }
 
@@ -199,6 +257,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _platformSub?.cancel();
     _tenantSub?.cancel();
     _orgSub?.cancel();
+    _entitlement?.accessStateListenable.removeListener(_onAccessChanged);
+    _entitlement?.stop();
     announcementNotifier.stop();
     super.dispose();
   }
@@ -216,6 +276,38 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final locked = _access == LicenseAccessState.locked;
+    final readOnly = _access == LicenseAccessState.readOnly;
+    // GlobalKey: bant eklenip kalkınca (ağaç yapısı değişir) sekme state'i korunur.
+    final Widget tabs = IndexedStack(
+      key: _tabsKey,
+      index: _currentIndex,
+      children: [for (final d in _dests) d.build()],
+    );
+    final Widget body;
+    if (locked) {
+      // Ürün ekranları kapalı; hesap/abonelik, tekrar dene ve çıkış açık.
+      body = LicenseLockedView(
+        translate: _t,
+        busy: _licenseBusy,
+        onBilling: () => _push(const AccountHubScreen()),
+        onRetry: _retryLicense,
+        onSignOut: _signOutFromLocked,
+      );
+    } else if (readOnly) {
+      body = Column(
+        children: [
+          ReadOnlyLicenseBanner(
+            translate: _t,
+            graceUntilText: _graceUntilText(),
+            onBilling: () => _push(const AccountHubScreen()),
+          ),
+          Expanded(child: tabs),
+        ],
+      );
+    } else {
+      body = tabs;
+    }
     return MainShellScope(
       switchTab: _select,
       child: Scaffold(
@@ -227,30 +319,34 @@ class _MainShellScreenState extends State<MainShellScreen> {
           scrolledUnderElevation: 0.5,
           centerTitle: false,
           title: Text(
-            _dests[_currentIndex].label,
+            locked ? _t(LicenseKeys.lockedTitle) : _dests[_currentIndex].label,
             style: AppTypography.headline
                 .copyWith(color: AppColors.textPrimary(brightness)),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              tooltip: 'Ara',
-              onPressed: () => _push(const GlobalSearchScreen()),
-            ),
-            IconButton(
-              icon: const Icon(Icons.auto_awesome),
-              tooltip: 'AI Asistan',
-              onPressed: () => _push(const AiAssistantScreen()),
-            ),
-            IconButton(
-              icon: Badge.count(
-                count: _unreadCount,
-                isLabelVisible: _unreadCount > 0,
-                child: const Icon(Icons.notifications_outlined),
+            if (!locked) ...[
+              IconButton(
+                icon: const Icon(Icons.search),
+                tooltip: 'Ara',
+                onPressed: () => _push(const GlobalSearchScreen()),
               ),
-              tooltip: 'Bildirimler',
-              onPressed: () => _push(const NotificationsScreen()),
-            ),
+              IconButton(
+                icon: const Icon(Icons.auto_awesome),
+                tooltip: 'AI Asistan',
+                onPressed: () => _push(const AiAssistantScreen()),
+              ),
+              IconButton(
+                icon: Badge.count(
+                  count: _unreadCount,
+                  isLabelVisible: _unreadCount > 0,
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+                tooltip: 'Bildirimler',
+                onPressed: () => _push(const NotificationsScreen()),
+              ),
+            ],
+            // Platform değiştir kilitliyken de açık: kullanıcı lisanslı başka bir
+            // platforma geçebilir.
             IconButton(
               icon: const Icon(Icons.apps),
               tooltip: 'Platform Değiştir',
@@ -259,19 +355,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
             const SizedBox(width: 4),
           ],
         ),
-        drawer: _buildDrawer(brightness),
-        body: IndexedStack(
-          index: _currentIndex,
-          children: [for (final d in _dests) d.build()],
-        ),
-        bottomNavigationBar: AppBottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _select,
-          items: [
-            for (var i = 0; i < _dests.length; i++)
-              AppBottomNavItem(icon: _dests[i].icon, label: _dests[i].label),
-          ],
-        ),
+        drawer: _buildDrawer(brightness, locked: locked),
+        body: body,
+        bottomNavigationBar: locked
+            ? null
+            : AppBottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: _select,
+                items: [
+                  for (var i = 0; i < _dests.length; i++)
+                    AppBottomNavItem(
+                        icon: _dests[i].icon, label: _dests[i].label),
+                ],
+              ),
       ),
     );
   }
@@ -280,23 +376,27 @@ class _MainShellScreenState extends State<MainShellScreen> {
   // DİNAMİK SIDEBAR (web-benzeri DB-menü ağacı)
   // ============================================
 
-  Widget _buildDrawer(Brightness brightness) {
+  Widget _buildDrawer(Brightness brightness, {bool locked = false}) {
     // Mobilde devre-dışı gruplar (ör. "Yönetim"/`admin` = konsol/builder işleri;
-    // web konsolunda yönetilir) sidebar'dan gizlenir.
-    final groups = _tree
-        .where((it) => !_kMobileDisabledGroupKeys.contains(it.itemKey))
-        .toList();
+    // web konsolunda yönetilir) sidebar'dan gizlenir. Lisans kilitliyken ürün
+    // menüsü gösterilmez (yalnız Hesabım + çalışma alanı).
+    final groups = locked
+        ? const <MenuItem>[]
+        : _tree
+            .where((it) => !_kMobileDisabledGroupKeys.contains(it.itemKey))
+            .toList();
 
     final tiles = <Widget>[
       // Modüller — tüm modül ızgarasına hızlı erişim (profil kartı kaldırıldı).
-      ListTile(
-        leading: Icon(Icons.grid_view_rounded, color: AppColors.primary),
-        title: const Text('Modüller'),
-        onTap: () {
-          Navigator.of(context).pop();
-          _push(const ModulesScreen());
-        },
-      ),
+      if (!locked)
+        ListTile(
+          leading: Icon(Icons.grid_view_rounded, color: AppColors.primary),
+          title: const Text('Modüller'),
+          onTap: () {
+            Navigator.of(context).pop();
+            _push(const ModulesScreen());
+          },
+        ),
       // Hesabım — abonelik/krediler/faturalar/kullanım/güvenlik hub'ı.
       ListTile(
         leading: Icon(Icons.account_circle_outlined, color: AppColors.primary),

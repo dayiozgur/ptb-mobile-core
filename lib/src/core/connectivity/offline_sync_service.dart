@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../errors/entitlement_errors.dart';
 import '../storage/hive_encryption.dart';
 import '../utils/logger.dart';
 import 'connectivity_service.dart';
@@ -281,6 +282,13 @@ class OfflineSyncService {
   // yeterlidir; her fonksiyon/tablo için ayrı handler kaydına gerek kalmaz.
   OperationHandler? _defaultHandler;
 
+  // Lisans reddi (entitlement) nedeniyle kuyruk duraklatıldıysa o durum; null =
+  // çalışıyor. Lisans reddi KALICI bir hatadır: retry harcanmaz, işlem
+  // dead-letter'a düşmez; erişim tekrar `full` olunca kuyruk devam eder.
+  LicenseAccessState? _entitlementPause;
+  final _entitlementPauseController =
+      StreamController<LicenseAccessState?>.broadcast();
+
   // Stream controllers
   final _syncProgressController = StreamController<SyncProgress>.broadcast();
   final _operationAddedController = StreamController<PendingOperation>.broadcast();
@@ -306,6 +314,16 @@ class OfflineSyncService {
     final operations = await getPendingOperations();
     return operations.length;
   }
+
+  /// Kuyruk lisans reddi nedeniyle duraklatıldı mı?
+  bool get isPausedForEntitlement => _entitlementPause != null;
+
+  /// Duraklatmaya neden olan lisans durumu (duraklatılmadıysa null).
+  LicenseAccessState? get entitlementPause => _entitlementPause;
+
+  /// Lisans-duraklatma değişiklikleri (null = devam ediyor).
+  Stream<LicenseAccessState?> get entitlementPauseStream =>
+      _entitlementPauseController.stream;
 
   /// Senkronizasyon ilerleme stream'i
   Stream<SyncProgress> get syncProgressStream => _syncProgressController.stream;
@@ -338,7 +356,7 @@ class OfflineSyncService {
       // Bağlantı değişikliklerini dinle
       _connectivitySubscription =
           _connectivityService.statusStream.listen((info) {
-        if (info.isOnline && !_isSyncing) {
+        if (info.isOnline && !_isSyncing && !isPausedForEntitlement) {
           Logger.info('Online olundu, senkronizasyon başlatılıyor...');
           syncPendingOperations();
         }
@@ -417,8 +435,10 @@ class OfflineSyncService {
     Logger.debug(
         'Operation added: ${operation.type.value} ${operation.entityType}');
 
-    // Online ise hemen senkronize et
-    if (_connectivityService.isOnline && !_isSyncing) {
+    // Online ise hemen senkronize et (lisans-duraklatmada bekler).
+    if (_connectivityService.isOnline &&
+        !_isSyncing &&
+        !isPausedForEntitlement) {
       syncPendingOperations();
     }
 
@@ -577,6 +597,16 @@ class OfflineSyncService {
       );
     }
 
+    if (isPausedForEntitlement) {
+      return SyncResult(
+        success: false,
+        message: 'Lisans nedeniyle duraklatıldı',
+        processed: 0,
+        failed: 0,
+        pausedForEntitlement: true,
+      );
+    }
+
     _isSyncing = true;
     int processed = 0;
     int failed = 0;
@@ -616,6 +646,19 @@ class OfflineSyncService {
           await removeOperation(operation.id);
           _operationCompletedController.add(operation);
           processed++;
+        } else if (isPausedForEntitlement) {
+          // Lisans reddi: kalan işlemler de aynı nedenle reddedilir → denemeden
+          // dur; hepsi kuyrukta (retry harcamadan) bekler.
+          Logger.warning(
+              'Sync paused (entitlement ${_entitlementPause!.name}): '
+              '${operations.length - i} operation(s) kept in queue');
+          return SyncResult(
+            success: false,
+            message: 'Lisans nedeniyle duraklatıldı',
+            processed: processed,
+            failed: failed,
+            pausedForEntitlement: true,
+          );
         } else {
           failed++;
         }
@@ -667,6 +710,20 @@ class OfflineSyncService {
         throw Exception('Handler returned false');
       }
     } catch (e) {
+      // Lisans reddi KALICI: retry harcama, dead-letter'a düşürme. İşlem
+      // bekleyen olarak kalır, kuyruk duraklatılır, banner için sinyal yayınlanır.
+      final entitlement = EntitlementSignals.report(e);
+      if (entitlement != null) {
+        Logger.info(
+            'Operation ${operation.id} blocked by licence (${entitlement.name}); queue paused');
+        await _saveOperation(operation.copyWith(
+          lastError: e.toString(),
+          status: PendingOperationStatus.pending,
+        ));
+        _pauseForEntitlement(entitlement);
+        return false;
+      }
+
       Logger.error('Operation failed: ${operation.id}', e);
 
       // Retry sayısını artır
@@ -682,6 +739,32 @@ class OfflineSyncService {
       _operationFailedController.add(updatedOperation);
 
       return false;
+    }
+  }
+
+  // ============================================
+  // ENTITLEMENT PAUSE
+  // ============================================
+
+  void _pauseForEntitlement(LicenseAccessState state) {
+    if (_entitlementPause == state) return;
+    _entitlementPause = state;
+    if (!_entitlementPauseController.isClosed) {
+      _entitlementPauseController.add(state);
+    }
+  }
+
+  /// Lisans erişimi tekrar `full` olunca çağrılır (`EntitlementService`): duraklatmayı
+  /// kaldırır ve çevrimiçiyse bekleyen işlemleri senkronize eder.
+  void resumeAfterEntitlement() {
+    if (_entitlementPause == null) return;
+    _entitlementPause = null;
+    if (!_entitlementPauseController.isClosed) {
+      _entitlementPauseController.add(null);
+    }
+    Logger.info('Entitlement restored, resuming offline queue');
+    if (_isInitialized && _connectivityService.isOnline && !_isSyncing) {
+      syncPendingOperations();
     }
   }
 
@@ -715,6 +798,7 @@ class OfflineSyncService {
     _operationAddedController.close();
     _operationCompletedController.close();
     _operationFailedController.close();
+    _entitlementPauseController.close();
     await _box?.close();
     _isInitialized = false;
     Logger.debug('OfflineSyncService disposed');
@@ -746,11 +830,15 @@ class SyncResult {
   final int processed;
   final int failed;
 
+  /// Kuyruk lisans reddi (salt-okunur / kilitli) nedeniyle duraklatıldı mı?
+  final bool pausedForEntitlement;
+
   SyncResult({
     required this.success,
     required this.message,
     required this.processed,
     required this.failed,
+    this.pausedForEntitlement = false,
   });
 
   @override

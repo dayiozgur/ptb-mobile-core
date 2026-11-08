@@ -174,6 +174,7 @@ class TenantService {
   Future<void> clearTenant() async {
     _currentTenant = null;
     _currentMembership = null;
+    _licensePlan = null;
     _tenantController.add(null);
     await _secureStorage.delete(_currentTenantKey);
     Logger.debug('Tenant cleared');
@@ -596,11 +597,24 @@ class TenantService {
   // PLAN & LIMITS
   // ============================================
 
+  /// Aktif platform lisansından gelen plan (`EntitlementService` set eder).
+  SubscriptionPlan? _licensePlan;
+
+  /// Aktif platform lisansının planını ayarla (`platform-context` → `license.plan`).
+  /// `tenants` tablosunda plan kolonu olmadığından plan kaynağı budur.
+  void setLicensePlan(SubscriptionPlan? plan) {
+    _licensePlan = plan;
+  }
+
+  /// Etkin plan: aktif platform lisansı, yoksa tenant üzerinde taşınan (önbellek) değer.
+  /// null = bilinmiyor.
+  SubscriptionPlan? get effectivePlan => _licensePlan ?? _currentTenant?.plan;
+
   /// Mevcut plan özellikleri
   PlanFeatures? get planFeatures {
     if (_currentTenant == null) return null;
     // plan null = bilinmiyor; limit hesabında güvenli taban olarak free kullan.
-    return PlanFeatures.forPlan(_currentTenant!.plan ?? SubscriptionPlan.free);
+    return PlanFeatures.forPlan(effectivePlan ?? SubscriptionPlan.free);
   }
 
   /// Kullanıcı limiti aşıldı mı?
@@ -608,7 +622,7 @@ class TenantService {
     if (_currentTenant == null) return true;
 
     final features =
-        PlanFeatures.forPlan(_currentTenant!.plan ?? SubscriptionPlan.free);
+        PlanFeatures.forPlan(effectivePlan ?? SubscriptionPlan.free);
     if (features.hasUnlimitedUsers) return false;
 
     try {
@@ -630,6 +644,9 @@ class TenantService {
   // ============================================
 
   void _setCurrentTenant(Tenant tenant) {
+    // Lisans planı tenant'a özgü: farklı tenant'a geçişte bir sonraki
+    // platform-context yenilemesine kadar bilinmiyor.
+    if (_currentTenant?.id != tenant.id) _licensePlan = null;
     _currentTenant = tenant;
     // İş zaman damgalarını tenant saat dilimine göre göstermek için (çok-tz SaaS).
     AppClock.setZone(tenant.timeZone);

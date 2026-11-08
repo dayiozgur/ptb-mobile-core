@@ -35,7 +35,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     try {
       final tenantId = sl<TenantService>().currentTenantId;
       final service = sl<AdminSubscriptionService>();
-      final sub = await service.getSubscription(tenantId: tenantId);
+      final sub = await service.getSubscription(
+        tenantId: tenantId,
+        platformId: sl<PlatformContext>().activePlatformId,
+      );
       var quotas = <QuotaRow>[];
       if (sub?.planId != null) {
         quotas = await service.listPlanQuotas(

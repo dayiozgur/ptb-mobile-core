@@ -53,6 +53,28 @@ enum SubscriptionPlan {
     }
     return null;
   }
+
+  /// `subscription_plans.plan_code` → plan. Platform ön eki atılır
+  /// (`pms_professional` → professional, `crm_starter` → basic). Bilinmeyen → null.
+  static SubscriptionPlan? fromPlanCode(String? planCode) {
+    if (planCode == null || planCode.trim().isEmpty) return null;
+    final code = planCode.trim().toLowerCase();
+    final tier =
+        code.contains('_') ? code.substring(code.lastIndexOf('_') + 1) : code;
+    switch (tier) {
+      case 'free':
+        return SubscriptionPlan.free;
+      case 'starter':
+      case 'basic':
+        return SubscriptionPlan.basic;
+      case 'professional':
+      case 'pro':
+        return SubscriptionPlan.professional;
+      case 'enterprise':
+        return SubscriptionPlan.enterprise;
+    }
+    return null;
+  }
 }
 
 /// Tenant (Kiracı) modeli
@@ -150,9 +172,11 @@ class Tenant {
   /// Katılım tarihi (tenant_users.joined_at)
   final DateTime? joinedAt;
 
-  /// Abonelik planı (subscription tablosundan gelir).
-  /// Tenant JSON'ında plan bilgisi taşınmadığından çoğunlukla null olur;
-  /// null = bilinmiyor (UI rozeti gizlemeli, yanlışlıkla FREE göstermemeli).
+  /// Abonelik planı. `tenants` tablosunda plan kolonu YOK (`subscription_plan` canlı
+  /// DB'de mevcut değil); plan aktif platformun lisansından gelir
+  /// (`platform-context` → `license.plan.plan_code`, bkz. `TenantService.effectivePlan`).
+  /// Burada yalnız yerel önbellek round-trip'i için taşınır; null = bilinmiyor
+  /// (UI rozeti gizlemeli, yanlışlıkla FREE göstermemeli).
   final SubscriptionPlan? plan;
 
   const Tenant({
@@ -245,11 +269,9 @@ class Tenant {
       joinedAt: json['joined_at'] != null
           ? DateTime.tryParse(json['joined_at'] as String)
           : null,
-      // Plan bilgisi tenant JSON'ında genelde yoktur; varsa parse et, yoksa
-      // null bırak (yanlışlıkla FREE göstermemek için).
-      plan: SubscriptionPlan.fromName(
-        json['subscription_plan'] as String? ?? json['plan'] as String?,
-      ),
+      // `tenants` satırında plan kolonu yok; yalnız yerel önbellek (toJson)
+      // round-trip'inde `plan` anahtarı bulunur. Yoksa null (FREE değil).
+      plan: SubscriptionPlan.fromName(json['plan'] as String?),
     );
   }
 
@@ -278,7 +300,7 @@ class Tenant {
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
-      'subscription_plan': plan?.name,
+      'plan': plan?.name,
     };
   }
 
