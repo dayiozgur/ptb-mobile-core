@@ -1,3 +1,5 @@
+import '../navigation/in_app_route.dart';
+
 /// Bildirim türleri (mevcut DB şemasına uygun)
 enum NotificationType {
   /// Uyarı bildirimi
@@ -107,6 +109,9 @@ class AppNotification {
   /// Ek meta verisi (JSON string)
   final String? meta;
 
+  /// Hedef bağlantı (`notifications.action_url`) — ör. `/fixflow/tickets/<id>`.
+  final String? actionUrl;
+
   /// Bildirim tarihi/saati
   final DateTime? dateTime;
 
@@ -169,6 +174,7 @@ class AppNotification {
     this.entityType,
     this.entityId,
     this.meta,
+    this.actionUrl,
     this.dateTime,
     this.isRead = false,
     this.sent = false,
@@ -200,6 +206,7 @@ class AppNotification {
       entityType: NotificationEntityType.fromString(json['entity_type'] as String?),
       entityId: json['entity_id'] as String?,
       meta: json['meta'] as String?,
+      actionUrl: json['action_url'] as String?,
       dateTime: json['date_time'] != null
           ? DateTime.tryParse(json['date_time'] as String)
           : null,
@@ -245,6 +252,7 @@ class AppNotification {
         'entity_type': entityType?.value,
         'entity_id': entityId,
         'meta': meta,
+        'action_url': actionUrl,
         'date_time': dateTime?.toIso8601String(),
         'read': isRead,
         'sent': sent,
@@ -274,6 +282,7 @@ class AppNotification {
     NotificationEntityType? entityType,
     String? entityId,
     String? meta,
+    String? actionUrl,
     DateTime? dateTime,
     bool? isRead,
     bool? sent,
@@ -303,6 +312,7 @@ class AppNotification {
       entityType: entityType ?? this.entityType,
       entityId: entityId ?? this.entityId,
       meta: meta ?? this.meta,
+      actionUrl: actionUrl ?? this.actionUrl,
       dateTime: dateTime ?? this.dateTime,
       isRead: isRead ?? this.isRead,
       sent: sent ?? this.sent,
@@ -345,6 +355,9 @@ class AppNotification {
       return '${(difference.inDays / 365).floor()} yıl önce';
     }
   }
+
+  /// [actionUrl]'den çözülen uygulama-içi yol; yoksa / yabancı host ise null.
+  String? get route => InAppRoute.normalize(actionUrl);
 
   /// Mesaj metni (title veya description)
   String get message => description ?? title ?? '';

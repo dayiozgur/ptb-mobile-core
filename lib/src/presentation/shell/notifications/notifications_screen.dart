@@ -86,20 +86,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await _load();
   }
 
+  /// Tap: okunmamışsa okundu işaretle, ardından `action_url` hedefi varsa
+  /// oraya git (push tap'i ile aynı kural — [InAppRoute]). Mobilde ekranı
+  /// olmayan hedef açılmaz (yalnız okundu işaretlenir).
   Future<void> _handleTap(AppNotification notification) async {
-    if (notification.isRead) return;
+    if (!notification.isRead) {
+      await notificationService.markAsRead(notification.id);
+      if (!mounted) return;
+      // Yerel state'i anında güncelle (stream de yayınlar, ama optimistik).
+      setState(() {
+        final index =
+            _notifications.indexWhere((n) => n.id == notification.id);
+        if (index != -1) {
+          _notifications[index] =
+              _notifications[index].copyWith(isRead: true);
+        }
+      });
+    }
 
-    await notificationService.markAsRead(notification.id);
-    if (!mounted) return;
-    // Yerel state'i anında güncelle (stream de yayınlar, ama optimistik).
-    setState(() {
-      final index =
-          _notifications.indexWhere((n) => n.id == notification.id);
-      if (index != -1) {
-        _notifications[index] =
-            _notifications[index].copyWith(isRead: true);
-      }
-    });
+    final route = notification.route;
+    if (route == null || !mounted) return;
+    InAppRoute.open(route, context: context, requireScreen: true);
   }
 
   /// Bildirimi sil (kaydırma) — soft-delete (active=false). Okundu-işareti

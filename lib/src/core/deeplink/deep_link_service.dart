@@ -2,11 +2,9 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import '../menu/menu_item.dart';
+import '../navigation/in_app_route.dart';
 import '../utils/logger.dart';
-import '../../presentation/shell/screen_resolver.dart';
 
 /// **DeepLinkService** — reusable kernel host for mobile deep / universal links
 /// (STORY-0083). ONE instance per app, initialized once after `runApp`.
@@ -52,21 +50,11 @@ class DeepLinkService {
   void Function(Uri uri)? _onOAuthCallback;
   Set<String> _appHosts = const {};
   Set<String> _oauthHosts = const {'oauth-callback'};
-  Set<String> _shellRoutes = const {};
 
   /// Default go_router top-level routes that must be dispatched with
   /// `context.go(...)` rather than a Navigator push (mirrors example_crm's
   /// push-notification bridge). Callers may override via [init]'s `shellRoutes`.
-  static const Set<String> kDefaultShellRoutes = {
-    '/login',
-    '/request-access',
-    '/tenant-select',
-    '/organizations',
-    '/main',
-    '/dashboard',
-    '/portal',
-    '/settings',
-  };
+  static const Set<String> kDefaultShellRoutes = InAppRoute.kDefaultShellRoutes;
 
   /// Is the service listening?
   bool get isInitialized => _initialized;
@@ -88,6 +76,9 @@ class DeepLinkService {
   ///   (default `{'oauth-callback'}`).
   /// - [shellRoutes]: go_router top-level routes (default [kDefaultShellRoutes]).
   ///
+  /// [appHosts] / [shellRoutes] are also registered with [InAppRoute] so the
+  /// in-app notification list resolves `action_url`s with the same rules.
+  ///
   /// Safe to call once; a second call is a no-op (logged).
   Future<void> init({
     GlobalKey<NavigatorState>? navigatorKey,
@@ -106,7 +97,10 @@ class DeepLinkService {
     _onOAuthCallback = onOAuthCallback;
     _appHosts = appHosts ?? const {};
     _oauthHosts = oauthCallbackHosts ?? const {'oauth-callback'};
-    _shellRoutes = shellRoutes ?? kDefaultShellRoutes;
+    InAppRoute.configure(
+      shellRoutes: shellRoutes ?? kDefaultShellRoutes,
+      appHosts: _appHosts,
+    );
     _initialized = true;
 
     // Cold-start: the link that launched the app (if any).
@@ -179,40 +173,9 @@ class DeepLinkService {
   }
 
   /// Map an in-app path to a screen. Shell routes → go_router; resolvable paths
-  /// → [ScreenResolver] push; unknown → logged no-op.
+  /// → [ScreenResolver] push; unknown → logged no-op (see [InAppRoute.open]).
   void _navigateToPath(String path) {
-    final base = path.split('?').first;
-    final navState = _navigatorKey?.currentState;
-    final navContext = _navigatorKey?.currentContext;
-
-    // Shell top-level routes are owned by go_router.
-    if (path.startsWith('/') && _shellRoutes.contains(base)) {
-      if (navContext != null) {
-        navContext.go(path);
-      } else {
-        Logger.warning('[deeplink] no navigator context for shell route: $path');
-      }
-      return;
-    }
-
-    // Resolvable (domain / entity / neutral) screen → push on root navigator.
-    if (ScreenResolver.hasScreen(path)) {
-      if (navState != null) {
-        navState.push(
-          MaterialPageRoute<void>(
-            builder: (_) => ScreenResolver.resolve(
-              MenuItem(itemKey: '', title: '', path: path),
-            ),
-          ),
-        );
-      } else {
-        Logger.warning('[deeplink] no navigator state for path: $path');
-      }
-      return;
-    }
-
-    // Unknown path → no-op (never a crash / 404).
-    Logger.warning('[deeplink] no in-app screen for path: $path (ignored)');
+    InAppRoute.open(path, navigatorKey: _navigatorKey, requireScreen: true);
   }
 
   /// Cancel the link subscription. Idempotent.

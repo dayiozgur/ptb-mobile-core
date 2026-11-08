@@ -313,4 +313,30 @@ void main() {
       expect(empty.hasUnread, false);
     });
   });
+
+  group('AppNotification.actionUrl', () {
+    tearDown(InAppRoute.resetConfig);
+
+    test('parses action_url and exposes the in-app route', () {
+      final n = AppNotification.fromJson({
+        'id': 'n1',
+        'action_url': '/fixflow/tickets/abc',
+      });
+      expect(n.actionUrl, '/fixflow/tickets/abc');
+      expect(n.route, '/fixflow/tickets/abc');
+      expect(n.toJson()['action_url'], '/fixflow/tickets/abc');
+      expect(n.copyWith(isRead: true).actionUrl, '/fixflow/tickets/abc');
+    });
+
+    test('missing / empty / foreign action_url → no route', () {
+      expect(AppNotification.fromJson({'id': 'n1'}).route, isNull);
+      expect(
+          AppNotification.fromJson({'id': 'n1', 'action_url': ''}).route, isNull);
+      expect(
+          AppNotification.fromJson(
+                  {'id': 'n1', 'action_url': 'https://evil.example.com/x'})
+              .route,
+          isNull);
+    });
+  });
 }

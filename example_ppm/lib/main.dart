@@ -3,8 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-import 'package:go_router/go_router.dart';
-
 import 'app.dart';
 import 'config/environment.dart';
 import 'config/ppm_screens.dart';
@@ -69,6 +67,8 @@ void main() async {
     sl<ThemeService>().applyBranding(branding);
   }
 
+  // Bu app DeepLinkService kullanmıyor → shell rotalarını doğrudan kaydet.
+  InAppRoute.configure(shellRoutes: _kShellRoutes);
   _wirePushDeepLinking();
 
   Logger.info('PPM initialized in ${result.duration.inMilliseconds}ms');
@@ -88,27 +88,12 @@ const Set<String> _kShellRoutes = {
 };
 
 void _wirePushDeepLinking() {
+  // `action_url` → route/deep_link/screen; tam URL yalnız kendi host'umuzsa.
+  // Açma kuralı uygulama-içi bildirim listesiyle ortak (çekirdek [InAppRoute]).
   sl<PushNotificationService>().onNotificationTap = (n) {
-    if (!n.hasNavigationData) return;
-    final route = n.navigationRoute!;
-    if (route.isEmpty) return;
-
-    final navState = rootNavigatorKey.currentState;
-    final navContext = rootNavigatorKey.currentContext;
-
-    final base = route.split('?').first;
-    if (route.startsWith('/') && _kShellRoutes.contains(base)) {
-      if (navContext != null) navContext.go(route);
-      return;
-    }
-
-    navState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) => ScreenResolver.resolve(
-          MenuItem(itemKey: '', title: '', path: route),
-        ),
-      ),
-    );
+    final route = InAppRoute.fromPayload(n.data);
+    if (route == null) return;
+    InAppRoute.open(route, navigatorKey: rootNavigatorKey);
   };
 }
 

@@ -37,6 +37,7 @@ export 'src/core/consent/consent_service.dart';
 
 // Core - Deep / universal links (STORY-0083)
 export 'src/core/deeplink/deep_link_service.dart';
+export 'src/core/navigation/in_app_route.dart';
 
 // Core - Storage
 export 'src/core/storage/secure_storage.dart';

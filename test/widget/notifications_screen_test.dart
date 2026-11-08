@@ -105,4 +105,57 @@ void main() {
     // Unread present → the "mark all read" app-bar action shows.
     expect(find.byIcon(Icons.done_all), findsOneWidget);
   });
+
+  group('tap', () {
+    tearDown(ScreenResolver.reset);
+
+    testWidgets('marks as read and opens the action_url target',
+        (tester) async {
+      ScreenResolver.addResolver((item) =>
+          item.path == '/fixflow/tickets/t1' ? const Text('TICKET t1') : null);
+      when(() => notifications.markAsRead('n-1')).thenAnswer((_) async => true);
+      when(() => notifications.getNotifications('user-1',
+          forceRefresh: any(named: 'forceRefresh'))).thenAnswer(
+        (_) async => [
+          AppNotification(
+            id: 'n-1',
+            title: 'Yeni iş emri',
+            actionUrl: '/fixflow/tickets/t1',
+            dateTime: DateTime(2026, 8, 21, 9),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(const MaterialApp(home: NotificationsScreen()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Yeni iş emri'));
+      await tester.pumpAndSettle();
+
+      verify(() => notifications.markAsRead('n-1')).called(1);
+      expect(find.text('TICKET t1'), findsOneWidget);
+    });
+
+    testWidgets('read notification without a target: no mark, no navigation',
+        (tester) async {
+      when(() => notifications.getNotifications('user-1',
+          forceRefresh: any(named: 'forceRefresh'))).thenAnswer(
+        (_) async => [
+          AppNotification(
+            id: 'n-2',
+            title: 'Bilgi',
+            isRead: true,
+            dateTime: DateTime(2026, 8, 21, 9),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(const MaterialApp(home: NotificationsScreen()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bilgi'));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => notifications.markAsRead(any()));
+      expect(find.byType(NotificationsScreen), findsOneWidget);
+    });
+  });
 }
