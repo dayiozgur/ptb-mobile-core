@@ -3,11 +3,29 @@ import 'package:go_router/go_router.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Erişim Talebi (Waitlist) ekranı — PMS.
+/// Erişim Talebi (Waitlist) ekranı — platform-nötr.
 ///
 /// Invite-only: açık kayıt yoktur. Bu ekran `access_requests` tablosuna bir
-/// erişim talebi yazar (platform_code='PMS', source='mobile', status varsayılan
-/// 'pending'). Talep yönetici tarafından incelenir; onaylanırsa davet gönderilir.
+/// erişim talebi yazar (platform_code = AKTİF platform kodu, source='mobile',
+/// status varsayılan 'pending'). Talep yönetici tarafından incelenir;
+/// onaylanırsa davet gönderilir.
+///
+/// Platform kodu [PlatformContext.activePlatformCode]'dan gelir: her örnek app
+/// `main()` içinde runApp'ten ÖNCE `setActivePlatform(..., code: ...)` çağırır
+/// (CRM/PHR/PMP); PMS app'i çağırmaz ve PlatformContext varsayılanı 'PMS'dir.
+/// Bkz. [resolveAccessRequestPlatformCode].
+/// `access_requests.platform_code` değeri: aktif platform kodu (büyük harf,
+/// `platforms.code` ile aynı biçim — canlı satırlar PMP/PHR/FIXFLOW).
+///
+/// Geri dönüş: PlatformContext yoksa/kod boşsa [PlatformContext.defaultPlatformId]
+/// ile aynı platform olan 'PMS' — PlatformContext'in kendi varsayılanı da budur,
+/// yani bu yalnız DI kurulmamış/bozuk durumda devreye girer.
+String resolveAccessRequestPlatformCode(PlatformContext? platformContext) {
+  final code = platformContext?.activePlatformCode?.trim();
+  if (code == null || code.isEmpty) return 'PMS';
+  return code.toUpperCase();
+}
+
 class RequestAccessScreen extends StatefulWidget {
   const RequestAccessScreen({super.key});
 
@@ -50,7 +68,9 @@ class _RequestAccessScreenState extends State<RequestAccessScreen> {
           'phone': _phoneController.text.trim(),
         if (_messageController.text.trim().isNotEmpty)
           'message': _messageController.text.trim(),
-        'platform_code': 'PMS',
+        'platform_code': resolveAccessRequestPlatformCode(
+          sl.isRegistered<PlatformContext>() ? sl<PlatformContext>() : null,
+        ),
         'source': 'mobile',
       });
 

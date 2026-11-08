@@ -78,8 +78,13 @@ class ScreenResolver {
     if (p.startsWith('/organizations') || p.startsWith('/organization')) {
       return const OrganizationSelectorScreen();
     }
-    // Generic workflow onay-inbox (leave-özel /workflow/approvals'tan ayrı).
-    if (p == '/workflow/inbox' || p == '/approvals') {
+    // Generic workflow onay-inbox. `/workflow/approvals` = PMS/CRM/FixFlow DB
+    // menülerinin onay öğesi (canlı platform_menu_items yolu); domain resolver
+    // (ör. PHR izin onayı) bu yolu kendisi kaydederse ÖNCE o kazanır.
+    // `/fixflow/approvals` FixFlow modülünün kendi kaydıdır — burada YOK.
+    if (p == '/workflow/inbox' ||
+        p == '/workflow/approvals' ||
+        p == '/approvals') {
       return const ApprovalsInboxScreen();
     }
     // Kişisel pano (widget ekle/çıkar/sırala). /my-space bottom-nav tab'i ayrı.

@@ -57,7 +57,7 @@ void main() async {
 
   // CRA A-08: minimum desteklenen sürüm (platform_app_configs.min_mobile_app_version;
   // kolon yoksa no-op, hata olursa fail-open).
-  final versionGate = await AppVersionGate.check(supabase, MobileMenuService.pmsPlatformId);
+  final versionGate = await AppVersionGate.check(supabase, PlatformContext.pmsPlatformId);
   if (versionGate.status.updateRequired) {
     final url = versionGate.storeUrl;
     runApp(AppUpdateRequiredApp(
@@ -67,7 +67,7 @@ void main() async {
     return;
   }
 
-  await sl<BrandingService>().load(MobileMenuService.pmsPlatformId);
+  await sl<BrandingService>().load(PlatformContext.pmsPlatformId);
   final branding = sl<BrandingService>().current;
   if (branding != null) {
     sl<ThemeService>().applyBranding(branding);

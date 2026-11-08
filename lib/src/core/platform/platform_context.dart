@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../menu/mobile_menu_service.dart';
 import '../utils/logger.dart';
 
 /// Aktif platform context'i (Windows-OS "hangi uygulama açık" durumu).
@@ -13,8 +12,13 @@ import '../utils/logger.dart';
 /// [ChangeNotifier] + [Stream] — hem Riverpod/`AnimatedBuilder` hem de
 /// stream tabanlı dinleyiciler kullanabilsin.
 class PlatformContext extends ChangeNotifier {
-  /// Varsayılan (ve şu an tek tam-kurulu) platform: PMS.
-  static const String defaultPlatformId = MobileMenuService.pmsPlatformId;
+  /// PMS platform id (`platforms.id`, code='PMS').
+  static const String pmsPlatformId = 'f0113c6e-8000-4298-a07c-0fd90e406a7a';
+
+  /// Varsayılan platform: PMS. Diğer app'ler (CRM/PHR/PMP) `main()` içinde
+  /// runApp'ten ÖNCE [setActivePlatform] çağırır — giriş öncesi ekranlar
+  /// (erişim talebi) da aktif platformu buradan okur.
+  static const String defaultPlatformId = pmsPlatformId;
 
   String _activePlatformId;
   String? _activePlatformCode;

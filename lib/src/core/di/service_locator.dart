@@ -8,6 +8,7 @@ import '../integration/entity_file_link_service.dart';
 import '../ppm/planner_link_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
+import '../consent/consent_service.dart';
 import '../entitlement/entitlement_service.dart';
 import '../invitation/invitation_service.dart';
 import '../collaboration/comments_service.dart';
@@ -640,6 +641,11 @@ Future<void> setupServiceLocator({
 
   sl.registerLazySingleton<PlatformContext>(
     () => PlatformContext(),
+  );
+
+  // Yasal onay (KVKK) kapısı — web ConsentService eşleniği (platform_consents).
+  sl.registerLazySingleton<ConsentService>(
+    () => ConsentService(supabase: sl<SupabaseClient>()),
   );
 
   // Lisans durumu (platform-context `license.accessState`) — WP-A entitlement.

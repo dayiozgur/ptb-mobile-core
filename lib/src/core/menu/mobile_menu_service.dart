@@ -8,6 +8,7 @@ import '../localization/localization_service.dart';
 import '../platform/builder_platform_filter.dart';
 import '../storage/cache_manager.dart';
 import '../utils/logger.dart';
+import 'menu_capability.dart';
 import 'menu_item.dart';
 
 /// Mobil menü servisi — DB-tabanlı platform menüsü (Windows-OS modeli).
@@ -16,16 +17,18 @@ import 'menu_item.dart';
 /// Web `ptb-db-menu.loader.ts` filtre semantiğini birebir yansıtır:
 ///   1. platform_id + active=true ile yükle, sort_order'a göre sırala,
 ///   2. coarse rol dışında kalan (roles gate) öğeleri düşür,
-///   3. item_key / parent_item_key ile ağaç kur.
+///   3. item_key / parent_item_key ile ağaç kur,
+///   4. `requires_capability` yeteneği verilmeyen öğeleri düşür (web
+///      `filterByCapabilitiesRecursive`; bkz. [MenuCapabilities]).
+///
+/// Platform: çağıran AKTİF platformu ([PlatformContext.activePlatformId])
+/// vermek ZORUNDADIR — servis artık sabit bir PMS varsayılanı taşımaz.
 ///
 /// Not: disabled öğeler AĞAÇTA KALIR (görünür ama tıklanamaz) — web davranışı.
 /// permission[] gating TODO (öğelerin ~tamamında null).
 class MobileMenuService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
-
-  /// PMS platform id — varsayılan platform.
-  static const String pmsPlatformId = 'f0113c6e-8000-4298-a07c-0fd90e406a7a';
 
   static const String _table = 'platform_menu_items';
 
@@ -34,28 +37,37 @@ class MobileMenuService {
 
   static const Duration _cacheTtl = Duration(minutes: 30);
 
+  /// Yetenek çözücü: istenen yetenek kodlarından VERİLENLERİ döndürür.
+  /// null → varsayılan (kullanıcının `integration_connections` satırları).
+  final Future<Set<String>> Function(Set<String> capabilities)?
+      _capabilityResolver;
+
   /// Son yüklenen menüyü yayınlar (platform switch / rol değişiminde rebuild).
   final _menuController = StreamController<List<MenuItem>>.broadcast();
 
   MobileMenuService({
     required SupabaseClient supabase,
     required CacheManager cacheManager,
+    Future<Set<String>> Function(Set<String> capabilities)? capabilityResolver,
   })  : _supabase = supabase,
-        _cacheManager = cacheManager;
+        _cacheManager = cacheManager,
+        _capabilityResolver = capabilityResolver;
 
   /// Menü ağacı stream'i (top-level öğeler, çocuklar `children` altında).
   Stream<List<MenuItem>> get menuStream => _menuController.stream;
 
-  String _cacheKey(String platformId) => 'menu_flat_$platformId';
+  // v2: `requires_capability` kolonu ham satırlarda (eski v1 cache yok sayılır).
+  String _cacheKey(String platformId) => 'menu_flat_v2_$platformId';
   // v2: platform_ids-scoped rows included (stale v1 caches ignored).
   String _entityCacheKey(String platformId) => 'menu_entity_v2_$platformId';
 
   /// Platform menüsünü yükle, role göre filtrele, ağaç kur.
   ///
-  /// [platformId] varsayılan PMS. [coarseRole] ROLE_ADMIN|MANAGER|USER|CUSTOMER.
+  /// [platformId] = aktif platform (`PlatformContext.activePlatformId`).
+  /// [coarseRole] ROLE_ADMIN|MANAGER|USER|CUSTOMER.
   /// Dönüş: top-level [MenuItem] listesi (sort_order sıralı, `children` dolu).
   Future<List<MenuItem>> loadMenu({
-    String platformId = pmsPlatformId,
+    required String platformId,
     required String? coarseRole,
     bool forceRefresh = false,
   }) async {
@@ -88,10 +100,37 @@ class MobileMenuService {
         merged.where((m) => m.isVisibleForRole(coarseRole)).toList();
 
     // 2) ağaç kur
-    final tree = _buildTree(visible);
+    final built = _buildTree(visible);
+
+    // 3) yetenek filtresi (ağaç üzerinde — web ile aynı sıra: önce ağaç, sonra
+    //    filtre; böylece yolsuz grup başlığı çocuksuz kalınca düşer).
+    final required = MenuCapabilities.collect(built);
+    final tree = required.isEmpty
+        ? built
+        : MenuCapabilities.filter(built, await _grantedCapabilities(required));
 
     _menuController.add(tree);
     return tree;
+  }
+
+  /// İstenen yeteneklerden verilenler. Hata → boş küme (öğeler gizli kalır;
+  /// web resolver da durum bilinmezken `false` döner — menü asla düşmez).
+  Future<Set<String>> _grantedCapabilities(Set<String> required) async {
+    try {
+      final resolver = _capabilityResolver;
+      if (resolver != null) return await resolver(required);
+      final response = await _supabase
+          .from('integration_connections')
+          .select(MenuCapabilities.connectionColumns)
+          .order('updated_at', ascending: false);
+      final rows = (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return MenuCapabilities.granted(required, rows);
+    } catch (e) {
+      Logger.warning('Menu capability lookup failed: $e');
+      return const <String>{};
+    }
   }
 
   /// `entity_type_configs` ham satırlarını getir — cache-first (30dk, menü ile
@@ -323,7 +362,7 @@ class MobileMenuService {
   }
 
   /// Bir platformun menü cache'ini geçersiz kıl (rol değişimi / re-login sonrası).
-  Future<void> invalidateCache([String platformId = pmsPlatformId]) async {
+  Future<void> invalidateCache(String platformId) async {
     await _cacheManager.delete(_cacheKey(platformId));
     await _cacheManager.delete(_entityCacheKey(platformId));
   }

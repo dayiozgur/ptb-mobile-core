@@ -33,6 +33,7 @@ export 'src/core/errors/failures.dart';
 export 'src/core/errors/exceptions.dart';
 export 'src/core/errors/entitlement_errors.dart';
 export 'src/core/entitlement/entitlement_service.dart';
+export 'src/core/consent/consent_service.dart';
 
 // Core - Deep / universal links (STORY-0083)
 export 'src/core/deeplink/deep_link_service.dart';
@@ -212,6 +213,7 @@ export 'src/core/map/map_service.dart';
 // Core - Menu (M1 — Windows-OS DB menu)
 export 'src/core/menu/menu_item.dart';
 export 'src/core/menu/mobile_menu_service.dart';
+export 'src/core/menu/menu_capability.dart';
 export 'src/core/menu/bootstrap_icon_map.dart';
 
 // Core - Platform (M1 — platform switch)
@@ -383,6 +385,7 @@ export 'src/presentation/shell/modules/modules_screen.dart';
 export 'src/presentation/shell/notifications/notifications_screen.dart';
 export 'src/presentation/shell/platform/platform_switcher_sheet.dart';
 export 'src/presentation/shell/entitlement/license_state_views.dart';
+export 'src/presentation/shell/consent/consent_gate.dart';
 export 'src/presentation/shell/myspace/my_space_screen.dart';
 export 'src/presentation/shell/search/global_search_screen.dart';
 export 'src/presentation/shell/entities/entity_kanban_screen.dart';

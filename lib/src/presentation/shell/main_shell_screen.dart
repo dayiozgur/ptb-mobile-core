@@ -308,7 +308,16 @@ class _MainShellScreenState extends State<MainShellScreen> {
     } else {
       body = tabs;
     }
-    return MainShellScope(
+    // Yasal onay kapısı (web consentActiveGuard): eksik zorunlu onay → onay
+    // ekranı; aksi/hata → shell (fail-open).
+    return ConsentGate(
+      service: sl<ConsentService>(),
+      userId: () => authService.currentUser?.id,
+      tenantId: () => tenantService.currentTenantId,
+      platformId: () => sl<PlatformContext>().activePlatformId,
+      translate: _t,
+      onSignOut: _signOutFromLocked,
+      child: MainShellScope(
       switchTab: _select,
       child: Scaffold(
         key: _scaffoldKey,
@@ -369,6 +378,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 ],
               ),
       ),
+    ),
     );
   }
 

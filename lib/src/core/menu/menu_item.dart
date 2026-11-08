@@ -42,6 +42,12 @@ class MenuItem {
   /// Sıralama (`sort_order`).
   final int sortOrder;
 
+  /// Bağlı-uygulama yeteneği (`requires_capability`), örn. `files`,
+  /// `mail.read`, `calendar`. Doluysa öğe yalnız yetenek verildiğinde görünür
+  /// (web `PtbMenuService` + `PTB_MENU_CAPABILITY_RESOLVER` ile aynı; bkz.
+  /// `menu_capability.dart`). null = her zaman görünür.
+  final String? requiresCapability;
+
   /// Alt öğeler (ağaç kurulumundan sonra doldurulur).
   final List<MenuItem> children;
 
@@ -56,6 +62,7 @@ class MenuItem {
     this.module,
     this.disabled = false,
     this.sortOrder = 0,
+    this.requiresCapability,
     this.children = const [],
   });
 
@@ -105,6 +112,9 @@ class MenuItem {
       module: json['module'] as String?,
       disabled: json['disabled'] as bool? ?? false,
       sortOrder: asInt(json['sort_order']),
+      requiresCapability: (json['requires_capability'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : (json['requires_capability'] as String).trim(),
       children: const [],
     );
   }
@@ -121,6 +131,7 @@ class MenuItem {
       module: module,
       disabled: disabled,
       sortOrder: sortOrder,
+      requiresCapability: requiresCapability,
       children: children ?? this.children,
     );
   }
