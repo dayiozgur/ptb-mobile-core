@@ -124,7 +124,11 @@ class _OfflineIndicatorState extends State<OfflineIndicator>
 
     final banner = SizeTransition(
       sizeFactor: _animation,
-      axisAlignment: widget.position == OfflineBannerPosition.top ? 1.0 : -1.0,
+      // Eski axisAlignment'ın dikey eşdeğeri (Flutter göç notu ile birebir).
+      alignment: AlignmentDirectional(
+        -1.0,
+        widget.position == OfflineBannerPosition.top ? 1.0 : -1.0,
+      ),
       child: _OfflineBanner(
         isOffline: _isOffline,
         showingOnlineMessage: _showingOnlineMessage,

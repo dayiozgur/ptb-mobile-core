@@ -1083,11 +1083,16 @@ class FileStorageService {
     Duration expiry = signedUrlExpiry,
   }) async {
     try {
-      final response = await _supabase.storage.from(bucket).createSignedUrls(
-            paths,
-            expiry.inSeconds,
-          );
-      return response;
+      // createSignedUrlsResult: path başına başarı/başarısızlık. Eski
+      // createSignedUrls ile aynı davranış — imzalanamayan (ör. olmayan)
+      // yollar sessizce atlanır.
+      final results = await _supabase.storage
+          .from(bucket)
+          .createSignedUrlsResult(paths, expiry.inSeconds);
+      return results
+          .whereType<SignedUrlSuccess>()
+          .map((r) => SignedUrl(path: r.path, signedUrl: r.signedUrl))
+          .toList();
     } catch (e) {
       Logger.error('Failed to get signed URLs: $e');
       return [];

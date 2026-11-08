@@ -63,8 +63,7 @@ class _MenuBuilderScreenState extends State<MenuBuilderScreen> {
   /// numaralandır ve kalıcılaştır. Başarısızlıkta önceki sıraya geri dön.
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     if (_saving) return;
-    // ReorderableListView index düzeltmesi.
-    if (newIndex > oldIndex) newIndex -= 1;
+    // onReorderItem newIndex'i zaten düzeltilmiş verir (çıkarılan öğe hesaba katılı).
     if (oldIndex == newIndex) return;
 
     final previous = List<AdminMenuRow>.from(_items);
@@ -139,7 +138,7 @@ class _MenuBuilderScreenState extends State<MenuBuilderScreen> {
     return ReorderableListView.builder(
       padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: _items.length,
-      onReorder: _onReorder,
+      onReorderItem: _onReorder,
       itemBuilder: (context, i) => _buildTile(context, _items[i], i),
     );
   }

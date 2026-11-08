@@ -116,8 +116,7 @@ class _BacklogScreenState extends State<BacklogScreen> {
   /// Sürükle-bırak sonrası: önce yerel sırayı güncelle (optimistic), sonra
   /// yeni sırayı `backlog_rank`'e yaz. Yazım başarısızsa eski sıraya dön.
   Future<void> _onReorder(int oldIndex, int newIndex) async {
-    // ReorderableListView, aşağı taşımada newIndex'i bir fazla verir.
-    if (newIndex > oldIndex) newIndex -= 1;
+    // onReorderItem newIndex'i zaten düzeltilmiş verir (çıkarılan öğe hesaba katılı).
     if (newIndex == oldIndex) return;
 
     final previous = List<GenericEntity>.from(_entities);
@@ -200,7 +199,7 @@ class _BacklogScreenState extends State<BacklogScreen> {
     return ReorderableListView.builder(
       padding: AppSpacing.screenPadding,
       itemCount: _entities.length,
-      onReorder: _onReorder,
+      onReorderItem: _onReorder,
       itemBuilder: (context, index) {
         final entity = _entities[index];
         return _BacklogRow(

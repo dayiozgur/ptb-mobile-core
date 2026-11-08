@@ -127,7 +127,9 @@ Future<void> setupServiceLocator({
   // deposu KULLANILMAZ. Eski düz-metin oturum ilk açılışta göç edilir.
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey: supabaseAnonKey,
+    // anonKey parametresi kullanımdan kalktı; aynı değer publishableKey ile
+    // geçilir (legacy anon JWT de kabul edilir — supabase_flutter 2.18).
+    publishableKey: supabaseAnonKey,
     authOptions: FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
       localStorage: SecureSessionLocalStorage(

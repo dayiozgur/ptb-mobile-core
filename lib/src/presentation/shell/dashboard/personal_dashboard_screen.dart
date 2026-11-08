@@ -88,9 +88,9 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
 
   // ─── Mutasyonlar ──────────────────────────────────────────────────────────
 
+  // onReorderItem: newIndex, oldIndex'teki öğe çıkarılmış listeye göre gelir.
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
       final item = _widgets.removeAt(oldIndex);
       _widgets.insert(newIndex, item);
     });
@@ -228,7 +228,7 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
               AppSpacing.xl,
             ),
             itemCount: _widgets.length,
-            onReorder: _onReorder,
+            onReorderItem: _onReorder,
             itemBuilder: (context, index) {
               final w = _widgets[index];
               return _buildEditTile(w, index, key: ValueKey('edit_${w.id}'));

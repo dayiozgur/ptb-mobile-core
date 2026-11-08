@@ -16,7 +16,7 @@ import '../utils/logger.dart';
 /// ```dart
 /// await Supabase.initialize(
 ///   url: url,
-///   anonKey: anonKey,
+///   publishableKey: anonKey,
 ///   authOptions: FlutterAuthClientOptions(
 ///     authFlowType: AuthFlowType.pkce,
 ///     localStorage: SecureSessionLocalStorage(
