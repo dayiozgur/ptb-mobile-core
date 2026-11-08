@@ -1,6 +1,7 @@
 name: Mobile CI
 
-# protoolbag_core + example apps (pms/phr/crm/ppm): analyze + test + build-check.
+# protoolbag_core + example apps (pms/phr/crm/ppm/fixflow/pem): analyze + test;
+# build-check (Android + iOS, unsigned) runs on example_phr as the representative app.
 # Faz-4: mobil CI/CD. iOS imzalı-build harici-config gerektirir (APNs/provisioning);
 # burada imzasız derleme-doğrulaması yapılır.
 #
@@ -25,7 +26,7 @@ jobs:
           channel: stable
       - name: Placeholder .env (asset bundling — gerçek secret gerekmez)
         run: |
-          for app in example_pms example_phr example_crm example_ppm; do
+          for app in example_pms example_phr example_crm example_ppm example_fixflow example_pem; do
             cat > "$app/.env" <<'ENV'
           SUPABASE_URL=https://placeholder.supabase.co
           SUPABASE_ANON_KEY=placeholder-anon-key
@@ -37,7 +38,7 @@ jobs:
       - name: Pub get (core + apps)
         run: |
           flutter pub get
-          for app in example_pms example_phr example_crm example_ppm; do
+          for app in example_pms example_phr example_crm example_ppm example_fixflow example_pem; do
             (cd "$app" && flutter pub get)
           done
       - name: Analyze (0 hata gate)
@@ -45,7 +46,8 @@ jobs:
           # Sadece HATA seviyesi gate'lenir; pre-existing info/warning'ler tolere edilir.
           set -o pipefail
           flutter analyze --no-fatal-infos --no-fatal-warnings \
-            lib/src example_pms/lib example_phr/lib example_crm/lib example_ppm/lib 2>&1 | tee analyze.log
+            lib/src example_pms/lib example_phr/lib example_crm/lib example_ppm/lib \
+            example_fixflow/lib example_pem/lib 2>&1 | tee analyze.log
           if grep -qE " error •" analyze.log; then
             echo "::error::flutter analyze HATA içeriyor"; exit 1
           fi
@@ -60,7 +62,7 @@ jobs:
         # dahil — test/ klasörü olan her uygulama koşulur.
         run: |
           set -e
-          for app in example_pms example_phr example_crm example_ppm; do
+          for app in example_pms example_phr example_crm example_ppm example_fixflow example_pem; do
             if [ -d "$app/test" ]; then
               echo "::group::$app"
               (cd "$app" && flutter test)
