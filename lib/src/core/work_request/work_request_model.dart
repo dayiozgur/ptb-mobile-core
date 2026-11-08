@@ -35,8 +35,9 @@ enum WorkRequestStatus {
   const WorkRequestStatus(this.value, this.label);
 
   static WorkRequestStatus fromString(String? value) {
+    final v = value?.toUpperCase();
     return WorkRequestStatus.values.firstWhere(
-      (e) => e.value == value || e.name == value,
+      (e) => e.value == v || e.name == value,
       orElse: () => WorkRequestStatus.draft,
     );
   }
@@ -471,8 +472,10 @@ class WorkRequest {
   factory WorkRequest.fromJson(Map<String, dynamic> json) {
     return WorkRequest(
       id: json['id'] as String,
-      requestNumber: json['request_number'] as String?,
-      title: json['title'] as String,
+      // Canlı şema: `code` / `subject` / `staff_id` / `team_id` (web ile aynı);
+      // eski anahtarlar (request_number/title/assigned_*) geri-uyum için korunur.
+      requestNumber: json['request_number'] as String? ?? json['code'] as String?,
+      title: json['title'] as String? ?? json['subject'] as String? ?? '',
       description: json['description'] as String?,
       type: WorkRequestType.fromString(json['type'] as String?),
       status: WorkRequestStatus.fromString(json['status'] as String?),
@@ -488,9 +491,9 @@ class WorkRequest {
       actualCompletionDate: json['actual_completion_date'] != null
           ? DateTime.tryParse(json['actual_completion_date'] as String)
           : null,
-      assignedToId: json['assigned_to_id'] as String?,
+      assignedToId: json['assigned_to_id'] as String? ?? json['staff_id'] as String?,
       assignedToName: json['assigned_to_name'] as String?,
-      assignedTeamId: json['assigned_team_id'] as String?,
+      assignedTeamId: json['assigned_team_id'] as String? ?? json['team_id'] as String?,
       assignedAt: json['assigned_at'] != null
           ? DateTime.tryParse(json['assigned_at'] as String)
           : null,
@@ -502,7 +505,7 @@ class WorkRequest {
           : null,
       approvalNote: json['approval_note'] as String?,
       rejectionReason: json['rejection_reason'] as String?,
-      tenantId: json['tenant_id'] as String,
+      tenantId: json['tenant_id'] as String? ?? '',
       organizationId: json['organization_id'] as String?,
       siteId: json['site_id'] as String?,
       siteName: json['site_name'] as String?,

@@ -388,6 +388,21 @@ export 'src/presentation/shell/search/global_search_screen.dart';
 export 'src/presentation/shell/entities/entity_kanban_screen.dart';
 export 'src/presentation/shell/entities/backlog_screen.dart';
 export 'src/presentation/shell/workflow/approvals_inbox_screen.dart';
+// FixFlow (teknisyen modülü) — servisler + ekranlar; app `registerFixflowScreens()`
+// ile `/fixflow/*` menü yollarını ScreenResolver'a bağlar.
+export 'src/core/fixflow/fixflow_models.dart';
+export 'src/core/fixflow/fixflow_session.dart';
+export 'src/core/fixflow/fixflow_status_service.dart';
+export 'src/core/fixflow/fixflow_ticket_service.dart';
+export 'src/core/fixflow/fixflow_work_request_service.dart';
+export 'src/core/fixflow/fixflow_services.dart';
+export 'src/presentation/fixflow/fixflow_common.dart';
+export 'src/presentation/fixflow/fixflow_dashboard_screen.dart';
+export 'src/presentation/fixflow/fixflow_ticket_list_screen.dart';
+export 'src/presentation/fixflow/fixflow_ticket_detail_screen.dart';
+export 'src/presentation/fixflow/fixflow_work_request_screens.dart';
+export 'src/presentation/fixflow/fixflow_maintenance_list_screen.dart';
+export 'src/presentation/fixflow/fixflow_screens.dart';
 export 'src/core/ai/ai_models.dart';
 export 'src/core/ai/ai_assistant_service.dart';
 export 'src/presentation/shell/ai/ai_assistant_screen.dart';

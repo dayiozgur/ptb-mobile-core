@@ -10,6 +10,14 @@ import 'work_request_model.dart';
 ///
 /// İş taleplerini yönetir. CRUD operasyonları, durum geçişleri,
 /// atama ve onay işlemleri sağlar.
+///
+/// ⚠️ ŞEMA UYUMSUZLUĞU (2026-11-08, canlı `work_requests` ile doğrulandı):
+/// yazma yolları olmayan kolonlar kullanır (`title`, `type`,
+/// `requested_by_id`, `requested_at`, `assigned_to_id`, `tags`, …) ve durumu
+/// BÜYÜK harf sabit enum ile DOĞRUDAN yazar (`status-transition` EF'i
+/// atlanır). Okuma ([WorkRequest.fromJson]) canlı kolonlara geri-uyumlu hale
+/// getirildi. FixFlow ekranları şema-doğru [FixflowWorkRequestService]'i
+/// kullanır; yeni kod bu sınıfın yazma metotlarını KULLANMAMALI.
 class WorkRequestService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;

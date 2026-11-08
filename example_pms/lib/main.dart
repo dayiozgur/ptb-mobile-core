@@ -48,6 +48,8 @@ void main() async {
 
   // Domain ekranlarını çekirdek ScreenResolver'a kaydet (ilk shell'den ÖNCE).
   registerPmsScreens();
+  // FixFlow teknisyen ekranları (/fixflow/* — platform switch ile FIXFLOW menüsü).
+  registerFixflowScreens();
 
   // DB-driven markalama: PMS platform tabanını yükle ve temaya uygula.
   // (Tenant override login sonrası tenant bilindiğinde yeniden yüklenebilir:
