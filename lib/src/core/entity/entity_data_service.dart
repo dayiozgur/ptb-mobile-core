@@ -7,6 +7,7 @@ import '../localization/localization_service.dart';
 import '../platform/builder_platform_filter.dart';
 import '../platform/platform_context.dart';
 import '../storage/cache_manager.dart';
+import '../tenant/tenant_scope.dart';
 import '../utils/logger.dart';
 import 'entity_status_labels.dart';
 import 'models/entity_type_config.dart';
@@ -26,7 +27,10 @@ class EntityDataService {
   final SupabaseClient _supabase;
   final CacheManager _cacheManager;
 
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService.
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   EntityDataService({
     required SupabaseClient supabase,
@@ -36,12 +40,12 @@ class EntityDataService {
 
   /// Tenant context'ini ayarla.
   void setTenant(String tenantId) {
-    _currentTenantId = tenantId;
+    _tenantScope.set(tenantId);
   }
 
   /// Context'i temizle.
   void clearContext() {
-    _currentTenantId = null;
+    _tenantScope.clear();
   }
 
   /// Aktif platformId (in-app platform switch). Platform izolasyonu (Tranche 2):

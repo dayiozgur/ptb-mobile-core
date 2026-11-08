@@ -65,6 +65,7 @@ export 'src/core/user/profile_service.dart';
 // Core - Tenant
 export 'src/core/tenant/tenant_model.dart';
 export 'src/core/tenant/tenant_service.dart';
+export 'src/core/tenant/tenant_scope.dart';
 
 // Core - Organization
 export 'src/core/organization/organization_model.dart';

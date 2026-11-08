@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
+import '../tenant/tenant_scope.dart';
 import '../utils/logger.dart';
 import 'calendar_event_model.dart';
 
@@ -20,8 +21,10 @@ class CalendarService {
   /// Seçili etkinlik stream
   final _selectedController = StreamController<CalendarEvent?>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService.
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut kullanıcı ID
   String? _currentUserId;
@@ -77,8 +80,7 @@ class CalendarService {
 
   /// Tenant context'ini ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _events = [];
       _selected = null;
       _eventsController.add(_events);
@@ -93,7 +95,7 @@ class CalendarService {
 
   /// Context'i temizle
   void clearContext() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _currentUserId = null;
     _events = [];
     _selected = null;

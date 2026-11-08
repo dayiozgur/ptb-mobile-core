@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
+import '../tenant/tenant_scope.dart';
 import '../utils/logger.dart';
 import 'workflow_model.dart';
 
@@ -22,8 +23,10 @@ class WorkflowService {
   /// Çalıştırma bildirimi stream
   final _runNotifications = StreamController<WorkflowRun>.broadcast();
 
-  /// Mevcut tenant ID
-  String? _currentTenantId;
+  /// Tenant kaynağı — açık `setTenant` değeri, yoksa aktif TenantService.
+  final TenantScope _tenantScope = TenantScope();
+
+  String? get _currentTenantId => _tenantScope.tenantId;
 
   /// Mevcut workflow listesi
   List<Workflow> _workflows = [];
@@ -70,8 +73,7 @@ class WorkflowService {
 
   /// Tenant context'ini ayarla
   void setTenant(String tenantId) {
-    if (_currentTenantId != tenantId) {
-      _currentTenantId = tenantId;
+    if (_tenantScope.set(tenantId)) {
       _workflows = [];
       _selected = null;
       _workflowsController.add(_workflows);
@@ -81,7 +83,7 @@ class WorkflowService {
 
   /// Tenant context'ini temizle
   void clearTenant() {
-    _currentTenantId = null;
+    _tenantScope.clear();
     _workflows = [];
     _selected = null;
     _workflowsController.add(_workflows);
