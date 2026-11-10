@@ -107,6 +107,26 @@ class MicrosoftIntegrationService {
     }
   }
 
+  /// Finish the connect flow (B-09, 2026-11-10): `oauth-callback` no longer writes the connection; it
+  /// parks the code and returns to the app's deep link with `?oauth_complete=<nonce>`. This call — with
+  /// the user's JWT — lets `oauth-start` exchange the code (PKCE) and write the connection only if this
+  /// user started the flow. Returns true when the account was linked.
+  Future<bool> completeConnect(String completion) async {
+    try {
+      final res = await _supabase.functions.invoke('oauth-start', body: <String, dynamic>{
+        'action': 'complete',
+        'completion': completion,
+      });
+      final body = res.data;
+      final ok = res.status >= 200 && res.status < 300 && !(body is Map && body['error'] != null);
+      if (!ok) Logger.error('[ms-integration] completeConnect rejected', body);
+      return ok;
+    } catch (e) {
+      Logger.error('[ms-integration] completeConnect failed', e);
+      return false;
+    }
+  }
+
   /// Proxy one Microsoft Graph call. [method] e.g. 'GET'/'POST'; [path] a
   /// relative Graph path starting with '/'. [beta] swaps the Graph API version to
   /// /beta (endpoints not yet GA, e.g. Planner rosters). Returns null on transport error.

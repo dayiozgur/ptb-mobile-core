@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../navigation/in_app_route.dart';
+import '../integration/microsoft_integration_service.dart';
 import '../utils/logger.dart';
 
 /// **DeepLinkService** — reusable kernel host for mobile deep / universal links
@@ -135,7 +137,14 @@ class DeepLinkService {
       if (!isHttp) {
         if (_oauthHosts.contains(uri.host.toLowerCase()) ||
             uri.path.toLowerCase().contains('oauth-callback')) {
-          Logger.info('[deeplink] OAuth callback: $uri');
+          Logger.info('[deeplink] OAuth callback received');
+          // B-09: complete the account link with the user's session (single-use nonce, 5 min).
+          final completion = uri.queryParameters['oauth_complete'];
+          if (completion != null && completion.isNotEmpty) {
+            unawaited(MicrosoftIntegrationService(supabase: Supabase.instance.client)
+                .completeConnect(completion)
+                .then((ok) => Logger.info('[deeplink] Microsoft link completed: $ok')));
+          }
           if (_onOAuthCallback != null) {
             _onOAuthCallback!(uri);
           }
