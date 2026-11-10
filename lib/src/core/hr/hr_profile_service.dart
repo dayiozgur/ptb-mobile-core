@@ -47,10 +47,12 @@ class HrProfileService {
       }
 
       var query = _supabase.from('staffs').select(
-        'id,name,first_name,last_name,title,email,phone,address,town,hire_date,'
-        'organization_id,manager_id,gender,marital_status,blood_type,'
-        'emergency_contact_name,emergency_contact_phone,emergency_contact_relation,'
-        'education_level,military_status,'
+        // S-06: address / gender / marital / blood / military / emergency_* are NOT read from
+        // `staffs` (their column SELECT is being revoked — KVKK md.6); they come from
+        // `fn_staff_sensitive` below, exactly like the web StaffProfileService.
+        'id,name,first_name,last_name,title,email,phone,town,hire_date,'
+        'organization_id,manager_id,'
+        'education_level,'
         'positions!staffs_position_id_fkey(name),'
         'departments!staffs_department_id_fkey(name)',
       ).eq('profile_id', userId);
@@ -75,9 +77,10 @@ class HrProfileService {
         _lookupStaffName(managerId),
       ]);
       final personnel = await _fetchPersonnel(staffId);
+      final sensitive = await _fetchSensitive(staffId);
 
       return StaffProfile.fromJson(
-        row,
+        {...row, ...?sensitive},
         organizationName: names[0],
         managerName: names[1],
         personnel: personnel,
@@ -85,6 +88,29 @@ class HrProfileService {
     } catch (e) {
       Logger.error('Error fetching staff profile: $e');
       rethrow;
+    }
+  }
+
+  /// Özel nitelikli kolonlar — `fn_staff_sensitive(p_staff_id)` (SECURITY DEFINER, tenant-pinned:
+  /// kişinin kendisi, yönetici zinciri, tenant admin veya `hr.staff.sensitive.view` sahibi görür;
+  /// diğerleri satır almaz). Erişim yoksa / hata olursa `null` → profil yine gösterilir, alanlar boş.
+  Future<Map<String, dynamic>?> _fetchSensitive(String staffId) async {
+    try {
+      final data = await _supabase.rpc(
+        'fn_staff_sensitive',
+        params: {'p_staff_id': staffId},
+      );
+      final row = data is List ? (data.isNotEmpty ? data.first : null) : data;
+      if (row == null) return null;
+      const keys = [
+        'blood_type', 'marital_status', 'military_status', 'gender', 'address',
+        'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
+      ];
+      final m = row as Map<String, dynamic>;
+      return {for (final k in keys) if (m.containsKey(k)) k: m[k]};
+    } catch (e) {
+      Logger.error('Error fetching sensitive staff block: $e');
+      return null;
     }
   }
 
