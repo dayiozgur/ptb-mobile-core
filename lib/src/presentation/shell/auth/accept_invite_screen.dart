@@ -103,15 +103,14 @@ class _AcceptInviteScreenState extends State<AcceptInviteScreen> {
     );
   }
 
-  /// Güçlü şifre kuralı (web ile aynı): ≥8 karakter ve harf+rakam karışımı.
+  /// Güçlü şifre kuralı (web ile aynı): ≥8 karakter ve harf+rakam karışımı
+  /// — tek kaynak [PasswordPolicy].
   String? _validatePassword(String? value) {
     final v = value ?? '';
-    if (v.length < 8) {
+    if (!PasswordPolicy.hasMinLength(v)) {
       return _t('auth.accept_invite.password_min');
     }
-    final hasLetter = RegExp(r'[A-Za-zĞÜŞİÖÇğüşıöç]').hasMatch(v);
-    final hasDigit = RegExp(r'\d').hasMatch(v);
-    if (!hasLetter || !hasDigit) {
+    if (!PasswordPolicy.hasLetterAndDigit(v)) {
       return _t('auth.accept_invite.password_weak');
     }
     return null;

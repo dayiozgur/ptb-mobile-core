@@ -457,84 +457,163 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Şifre değişikliği sonucunu (başarı hariç) okunabilir metne çevirir.
+  /// Rate-limit ve ağ/diğer hatalar ASLA "yanlış şifre" olarak gösterilmez.
+  String _passwordChangeError(PasswordChangeOutcome outcome) {
+    switch (outcome) {
+      case PasswordChangeOutcome.wrongCurrentPassword:
+        return sl<LocalizationService>().tr('settings.current_password_wrong');
+      case PasswordChangeOutcome.samePassword:
+        return sl<LocalizationService>()
+            .tr('settings.password_same_as_current');
+      case PasswordChangeOutcome.weakPassword:
+        return sl<LocalizationService>().tr('settings.password_weak');
+      case PasswordChangeOutcome.rateLimited:
+        return sl<LocalizationService>().tr('settings.password_rate_limited');
+      case PasswordChangeOutcome.success:
+      case PasswordChangeOutcome.networkError:
+      case PasswordChangeOutcome.sessionMissing:
+      case PasswordChangeOutcome.failed:
+        return sl<LocalizationService>().tr('settings.password_update_failed');
+    }
+  }
+
+  /// Self-servis şifre değişikliği: mevcut şifre zorunlu ve sunucuya karşı
+  /// doğrulanır (`changePasswordVerified`, CRA F-108).
   void _showChangePasswordDialog() {
+    final currentController = TextEditingController();
     final newController = TextEditingController();
     final confirmController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    String? currentError;
+    String? newError;
+    String? formError;
+    bool submitting = false;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: AppBottomSheet(
-          title:
-              sl<LocalizationService>().translate('settings.change_password'),
-          child: Padding(
-            padding: AppSpacing.screenPadding,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppPasswordField(
-                    controller: newController,
-                    label: sl<LocalizationService>()
-                        .translate('settings.new_password'),
-                    validator: Validators.password(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppPasswordField(
-                    controller: confirmController,
-                    label: sl<LocalizationService>()
-                        .translate('settings.new_password_confirm'),
-                    validator: (value) {
-                      if (value != newController.text) {
-                        return sl<LocalizationService>()
-                            .translate('settings.passwords_not_match');
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AppButton(
-                    label: sl<LocalizationService>()
-                        .translate('settings.update_password'),
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-
-                      final result = await authService.updatePassword(
-                        newController.text,
-                      );
-
-                      if (context.mounted) {
-                        Navigator.pop(context);
-
-                        result.when(
-                          success: (_, __) {
-                            AppSnackbar.showSuccess(
-                              context,
-                              message: sl<LocalizationService>()
-                                  .translate('settings.password_updated'),
-                            );
-                          },
-                          failure: (error) {
-                            AppSnackbar.showError(
-                              context,
-                              message: error?.message ??
-                                  sl<LocalizationService>()
-                                      .translate('settings.password_update_failed'),
-                            );
-                          },
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: AppBottomSheet(
+            title: sl<LocalizationService>().tr('settings.change_password'),
+            child: Padding(
+              padding: AppSpacing.screenPadding,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppPasswordField(
+                      key: const Key('settings.password.current'),
+                      controller: currentController,
+                      label: sl<LocalizationService>()
+                          .tr('settings.current_password'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return sl<LocalizationService>()
+                              .tr('settings.current_password_required');
+                        }
+                        return currentError;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppPasswordField(
+                      key: const Key('settings.password.new'),
+                      controller: newController,
+                      label:
+                          sl<LocalizationService>().tr('settings.new_password'),
+                      validator: (value) {
+                        final base = Validators.password()(value);
+                        if (base != null) return base;
+                        if (value == currentController.text) {
+                          return _passwordChangeError(
+                              PasswordChangeOutcome.samePassword);
+                        }
+                        return newError;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppPasswordField(
+                      key: const Key('settings.password.confirm'),
+                      controller: confirmController,
+                      label: sl<LocalizationService>()
+                          .tr('settings.new_password_confirm'),
+                      validator: (value) {
+                        if (value != newController.text) {
+                          return sl<LocalizationService>()
+                              .tr('settings.passwords_not_match');
+                        }
+                        return null;
+                      },
+                    ),
+                    if (formError != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        formError!,
+                        style: TextStyle(
+                            color: Theme.of(sheetContext).colorScheme.error),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: sl<LocalizationService>()
+                          .tr('settings.update_password'),
+                      isLoading: submitting,
+                      onPressed: submitting
+                          ? null
+                          : () async {
+                              setSheetState(() {
+                                currentError = null;
+                                newError = null;
+                                formError = null;
+                              });
+                              if (!(formKey.currentState?.validate() ??
+                                  false)) {
+                                return;
+                              }
+                              setSheetState(() => submitting = true);
+                              final result =
+                                  await authService.changePasswordVerified(
+                                currentPassword: currentController.text,
+                                newPassword: newController.text,
+                              );
+                              if (!sheetContext.mounted) return;
+                              setSheetState(() => submitting = false);
+                              switch (result.outcome) {
+                                case PasswordChangeOutcome.success:
+                                  Navigator.pop(sheetContext);
+                                  if (!mounted) return;
+                                  AppSnackbar.showSuccess(
+                                    context,
+                                    message: sl<LocalizationService>()
+                                        .tr('settings.password_updated'),
+                                  );
+                                case PasswordChangeOutcome.wrongCurrentPassword:
+                                  currentError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.samePassword:
+                                case PasswordChangeOutcome.weakPassword:
+                                  newError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.rateLimited:
+                                case PasswordChangeOutcome.networkError:
+                                case PasswordChangeOutcome.sessionMissing:
+                                case PasswordChangeOutcome.failed:
+                                  setSheetState(() => formError =
+                                      _passwordChangeError(result.outcome));
+                              }
+                            },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
               ),
             ),
           ),

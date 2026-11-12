@@ -10,7 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 /// İki bölüm:
 ///  - **İki Adımlı Doğrulama (2FA)**: TOTP faktör kaydı (enroll → QR/secret →
 ///    doğrula → kaldır). `authService` MFA sarmalayıcılarını kullanır.
-///  - **Şifre**: yeni-parola diyaloğu (`authService.updatePassword`).
+///  - **Şifre**: mevcut + yeni parola diyaloğu
+///    (`authService.changePasswordVerified`, CRA F-108).
 ///
 /// Parola birincil kalır; 2FA opt-in ek katmandır.
 class SecurityScreen extends StatefulWidget {
@@ -346,75 +347,169 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
   // ── Parola değiştir ───────────────────────────────────────────────────────
 
+  /// Şifre değişikliği sonucunu (başarı hariç) okunabilir metne çevirir.
+  /// Rate-limit ve ağ/diğer hatalar ASLA "yanlış şifre" olarak gösterilmez.
+  String _passwordChangeError(PasswordChangeOutcome outcome) {
+    switch (outcome) {
+      case PasswordChangeOutcome.wrongCurrentPassword:
+        return _t(
+            'account.security.password.current_wrong', 'Mevcut şifre hatalı.');
+      case PasswordChangeOutcome.samePassword:
+        return _t('account.security.password.same_as_current',
+            'Yeni şifre mevcut şifreden farklı olmalı.');
+      case PasswordChangeOutcome.weakPassword:
+        return _t('account.security.password.weak',
+            'Şifre en az 8 karakter olmalı ve harf ile rakam içermelidir.');
+      case PasswordChangeOutcome.rateLimited:
+        return _t('account.security.password.rate_limited',
+            'Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.');
+      case PasswordChangeOutcome.success:
+      case PasswordChangeOutcome.networkError:
+      case PasswordChangeOutcome.sessionMissing:
+      case PasswordChangeOutcome.failed:
+        return _t(
+            'account.security.password.update_failed', 'Şifre güncellenemedi.');
+    }
+  }
+
   void _showChangePasswordDialog() {
+    final currentController = TextEditingController();
     final newController = TextEditingController();
     final confirmController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    String? currentError;
+    String? newError;
+    String? formError;
+    bool submitting = false;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: AppBottomSheet(
-          title: _t('account.security.password.change', 'Şifre Değiştir'),
-          child: Padding(
-            padding: AppSpacing.screenPadding,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppTextField(
-                    controller: newController,
-                    label: _t('account.security.password.new', 'Yeni Şifre'),
-                    obscureText: true,
-                    validator: Validators.password(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: confirmController,
-                    label: _t('account.security.password.confirm',
-                        'Yeni Şifre (Tekrar)'),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value != newController.text) {
-                        return _t('account.security.password.mismatch',
-                            'Şifreler eşleşmiyor.');
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AppButton(
-                    label: _t('account.security.password.update',
-                        'Şifreyi Güncelle'),
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) return;
-                      final result =
-                          await authService.updatePassword(newController.text);
-                      if (!sheetContext.mounted) return;
-                      Navigator.pop(sheetContext);
-                      result.when(
-                        success: (_, __) => AppSnackbar.showSuccess(
-                          context,
-                          message: _t('account.security.password.updated_success',
-                              'Şifreniz güncellendi.'),
-                        ),
-                        failure: (error) => AppSnackbar.showError(
-                          context,
-                          message: error?.message ??
-                              _t('account.security.password.update_failed',
-                                  'Şifre güncellenemedi.'),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: AppBottomSheet(
+            title: _t('account.security.password.change', 'Şifre Değiştir'),
+            child: Padding(
+              padding: AppSpacing.screenPadding,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppTextField(
+                      key: const Key('security.password.current'),
+                      controller: currentController,
+                      label: _t(
+                          'account.security.password.current', 'Mevcut Şifre'),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return _t(
+                              'account.security.password.current_required',
+                              'Mevcut şifrenizi girin.');
+                        }
+                        return currentError;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppTextField(
+                      key: const Key('security.password.new'),
+                      controller: newController,
+                      label: _t('account.security.password.new', 'Yeni Şifre'),
+                      obscureText: true,
+                      validator: (value) {
+                        final base = Validators.password()(value);
+                        if (base != null) return base;
+                        if (value == currentController.text) {
+                          return _passwordChangeError(
+                              PasswordChangeOutcome.samePassword);
+                        }
+                        return newError;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppTextField(
+                      key: const Key('security.password.confirm'),
+                      controller: confirmController,
+                      label: _t('account.security.password.confirm',
+                          'Yeni Şifre (Tekrar)'),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value != newController.text) {
+                          return _t('account.security.password.mismatch',
+                              'Şifreler eşleşmiyor.');
+                        }
+                        return null;
+                      },
+                    ),
+                    if (formError != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        formError!,
+                        style: TextStyle(
+                            color: Theme.of(sheetContext).colorScheme.error),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: _t('account.security.password.update',
+                          'Şifreyi Güncelle'),
+                      isLoading: submitting,
+                      onPressed: submitting
+                          ? null
+                          : () async {
+                              setSheetState(() {
+                                currentError = null;
+                                newError = null;
+                                formError = null;
+                              });
+                              if (!(formKey.currentState?.validate() ??
+                                  false)) {
+                                return;
+                              }
+                              setSheetState(() => submitting = true);
+                              final result =
+                                  await authService.changePasswordVerified(
+                                currentPassword: currentController.text,
+                                newPassword: newController.text,
+                              );
+                              if (!sheetContext.mounted) return;
+                              setSheetState(() => submitting = false);
+                              switch (result.outcome) {
+                                case PasswordChangeOutcome.success:
+                                  Navigator.pop(sheetContext);
+                                  if (!mounted) return;
+                                  AppSnackbar.showSuccess(
+                                    context,
+                                    message: _t(
+                                        'account.security.password.updated_success',
+                                        'Şifreniz güncellendi.'),
+                                  );
+                                case PasswordChangeOutcome.wrongCurrentPassword:
+                                  currentError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.samePassword:
+                                case PasswordChangeOutcome.weakPassword:
+                                  newError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.rateLimited:
+                                case PasswordChangeOutcome.networkError:
+                                case PasswordChangeOutcome.sessionMissing:
+                                case PasswordChangeOutcome.failed:
+                                  setSheetState(() => formError =
+                                      _passwordChangeError(result.outcome));
+                              }
+                            },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
               ),
             ),
           ),
