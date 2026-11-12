@@ -46,6 +46,7 @@ import '../api/interceptors/logger_interceptor.dart';
 import '../api/interceptors/tenant_interceptor.dart';
 import '../auth/auth_service.dart';
 import '../auth/biometric_auth.dart';
+import '../auth/password_change.dart';
 import '../organization/organization_service.dart';
 import '../site/site_service.dart';
 import '../storage/cache_manager.dart';
@@ -196,6 +197,12 @@ Future<void> setupServiceLocator({
       supabase: sl<SupabaseClient>(),
       secureStorage: sl<SecureStorage>(),
       biometricAuth: sl<BiometricAuth>(),
+      // Self-servis şifre değişikliğinde mevcut şifreyi ana oturuma
+      // dokunmadan doğrular (CRA F-108).
+      currentPasswordVerifier: SupabaseCurrentPasswordVerifier.forProject(
+        supabaseUrl: supabaseUrl,
+        apiKey: supabaseAnonKey,
+      ),
     ),
   );
 

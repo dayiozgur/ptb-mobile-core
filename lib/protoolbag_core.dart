@@ -56,6 +56,7 @@ export 'src/core/api/interceptors/logger_interceptor.dart';
 // Core - Auth
 export 'src/core/auth/auth_service.dart';
 export 'src/core/auth/auth_result.dart';
+export 'src/core/auth/password_change.dart';
 export 'src/core/auth/biometric_auth.dart';
 export 'src/core/auth/mfa_gate.dart';
 

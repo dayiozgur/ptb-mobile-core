@@ -7,6 +7,7 @@ import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
 import 'auth_result.dart';
 import 'biometric_auth.dart';
+import 'password_change.dart';
 
 /// Authentication durumu
 class AuthState {
@@ -88,6 +89,7 @@ class AuthService {
   final SupabaseClient _supabase;
   final SecureStorage _secureStorage;
   final BiometricAuth _biometricAuth;
+  final CurrentPasswordVerifier? _injectedPasswordVerifier;
 
   // Auth state stream
   final _authStateController = StreamController<AuthState>.broadcast();
@@ -100,9 +102,11 @@ class AuthService {
     required SupabaseClient supabase,
     required SecureStorage secureStorage,
     BiometricAuth? biometricAuth,
+    CurrentPasswordVerifier? currentPasswordVerifier,
   })  : _supabase = supabase,
         _secureStorage = secureStorage,
-        _biometricAuth = biometricAuth ?? BiometricAuth() {
+        _biometricAuth = biometricAuth ?? BiometricAuth(),
+        _injectedPasswordVerifier = currentPasswordVerifier {
     _initAuthListener();
   }
 
@@ -287,7 +291,12 @@ class AuthService {
     }
   }
 
-  /// Şifre güncelle
+  /// Şifreyi mevcut şifre SORMADAN ayarlar.
+  ///
+  /// YALNIZCA mevcut şifrenin bilinmediği meşru akışlar içindir: davet kabulü
+  /// (`AcceptInviteScreen`) ve şifre-sıfırlama bağlantısı (passwordRecovery).
+  /// Açık oturumdan self-servis şifre değişikliği için
+  /// [changePasswordVerified] kullanın (CRA F-108).
   Future<AuthResult> updatePassword(String newPassword) async {
     try {
       final response = await _supabase.auth.updateUser(
@@ -315,12 +324,129 @@ class AuthService {
     }
   }
 
-  /// Şifre değiştir (thin alias — [updatePassword] ile aynı davranış).
-  ///
-  /// Güvenlik ekranı bu adı kullanır; başarısızlıkta rethrow yerine
-  /// [AuthResult] döner (updatePassword ile tutarlı).
+  /// Eski, doğrulamasız alias — mevcut şifreyi kontrol etmez.
+  @Deprecated(
+    'Mevcut şifreyi doğrulamaz (CRA F-108). Self-servis değişiklik için '
+    'changePasswordVerified, davet/sıfırlama için updatePassword kullanın.',
+  )
   Future<AuthResult> changePassword(String newPassword) {
     return updatePassword(newPassword);
+  }
+
+  /// Mevcut şifre doğrulayıcı (enjekte edilmediyse istemciden türetilir).
+  CurrentPasswordVerifier? get _passwordVerifier =>
+      _injectedPasswordVerifier ??
+      SupabaseCurrentPasswordVerifier.fromClient(_supabase);
+
+  /// Self-servis şifre değişikliği — önce MEVCUT şifreyi doğrular (CRA F-108).
+  ///
+  /// 1. Yerel kontroller: oturum + e-posta var, yeni ≠ mevcut, yeni şifre
+  ///    [PasswordPolicy] kuralına uyar (ağ çağrısı yok).
+  /// 2. Mevcut şifre, ana oturuma DOKUNMAYAN tek kullanımlık bir istekle
+  ///    doğrulanır ([CurrentPasswordVerifier]; geçici oturum hemen
+  ///    `scope=local` ile kapatılır, hiçbir yere yazılmaz, auth olayı yaymaz).
+  /// 3. Ana istemcide `updateUser(password, current_password)` — sunucuda
+  ///    "require current password" açıksa sunucu da zorlar.
+  ///
+  /// Hata ayrımı: yanlış şifre → [PasswordChangeOutcome.wrongCurrentPassword];
+  /// 429/rate-limit → [PasswordChangeOutcome.rateLimited]; ağ/diğer → genel
+  /// hata (asla "yanlış şifre" olarak gösterilmez).
+  Future<PasswordChangeResult> changePasswordVerified({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = currentUser;
+    final email = user?.email;
+    if (user == null ||
+        currentSession == null ||
+        email == null ||
+        email.isEmpty) {
+      return const PasswordChangeResult(PasswordChangeOutcome.sessionMissing);
+    }
+    if (currentPassword.isEmpty) {
+      return const PasswordChangeResult(
+          PasswordChangeOutcome.wrongCurrentPassword);
+    }
+    if (newPassword == currentPassword) {
+      return const PasswordChangeResult(PasswordChangeOutcome.samePassword);
+    }
+    if (!PasswordPolicy.isStrong(newPassword)) {
+      return const PasswordChangeResult(PasswordChangeOutcome.weakPassword);
+    }
+
+    final verifier = _passwordVerifier;
+    if (verifier == null) {
+      Logger.error('Password change: verifier unavailable');
+      return const PasswordChangeResult(PasswordChangeOutcome.failed);
+    }
+
+    final PasswordVerification verification;
+    try {
+      verification = await verifier.verify(
+        email: email,
+        password: currentPassword,
+        expectedUserId: user.id,
+      );
+    } catch (e) {
+      Logger.error('Password change: verification error', e);
+      return PasswordChangeResult(PasswordChangeOutcome.failed, error: e);
+    }
+
+    switch (verification) {
+      case PasswordVerification.verified:
+        break;
+      case PasswordVerification.wrongPassword:
+        Logger.info('Password change rejected: wrong current password');
+        return const PasswordChangeResult(
+            PasswordChangeOutcome.wrongCurrentPassword);
+      case PasswordVerification.rateLimited:
+        return const PasswordChangeResult(PasswordChangeOutcome.rateLimited);
+      case PasswordVerification.networkError:
+        return const PasswordChangeResult(PasswordChangeOutcome.networkError);
+      case PasswordVerification.failed:
+        return const PasswordChangeResult(PasswordChangeOutcome.failed);
+    }
+
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword, currentPassword: currentPassword),
+      );
+      Logger.info('Password changed (current password verified)');
+      return const PasswordChangeResult(PasswordChangeOutcome.success);
+    } on AuthException catch (e) {
+      Logger.error('Password change failed', e);
+      return PasswordChangeResult(mapPasswordUpdateError(e), error: e);
+    } catch (e) {
+      Logger.error('Password change error', e);
+      return PasswordChangeResult(PasswordChangeOutcome.failed, error: e);
+    }
+  }
+
+  /// `updateUser` hatasını [PasswordChangeOutcome]'a çevirir.
+  static PasswordChangeOutcome mapPasswordUpdateError(AuthException e) {
+    final code = e.code;
+    final message = e.message.toLowerCase();
+    if (e is AuthSessionMissingException) {
+      return PasswordChangeOutcome.sessionMissing;
+    }
+    if (e.statusCode == '429' ||
+        code == 'over_request_rate_limit' ||
+        message.contains('rate limit')) {
+      return PasswordChangeOutcome.rateLimited;
+    }
+    if (code == 'same_password') return PasswordChangeOutcome.samePassword;
+    if (e is AuthWeakPasswordException || code == 'weak_password') {
+      return PasswordChangeOutcome.weakPassword;
+    }
+    if (code == 'current_password_mismatch' ||
+        code == 'current_password_required' ||
+        code == 'invalid_credentials') {
+      return PasswordChangeOutcome.wrongCurrentPassword;
+    }
+    if (e is AuthRetryableFetchException && e.statusCode == null) {
+      return PasswordChangeOutcome.networkError;
+    }
+    return PasswordChangeOutcome.failed;
   }
 
   // ============================================
