@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/localization/localization_service.dart';
 import 'app_empty_state.dart';
-import 'app_error_view.dart';
 import 'app_loading_indicator.dart';
+import 'app_no_access_view.dart';
 
 String _t(String key) => sl.isRegistered<LocalizationService>()
     ? sl<LocalizationService>().translate(key)
@@ -132,11 +132,12 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
           : const Center(child: AppLoadingIndicator());
     }
     if (_error != null) {
-      return Center(
-        child: AppErrorView(
-          message: widget.errorFallback ?? _t('common.load_error'),
-          onRetry: _load,
-        ),
+      // Refused for this role (42501 / 403) → calm "no access" state without a
+      // pointless retry; anything else → error + retry. Never the empty state.
+      return AppLoadFailedView(
+        error: _error,
+        message: widget.errorFallback,
+        onRetry: _load,
       );
     }
     final data = _data as T;

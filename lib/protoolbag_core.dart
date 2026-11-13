@@ -32,6 +32,7 @@ export 'src/core/extensions/date_extensions.dart';
 export 'src/core/errors/failures.dart';
 export 'src/core/errors/exceptions.dart';
 export 'src/core/errors/entitlement_errors.dart';
+export 'src/core/errors/access_errors.dart';
 export 'src/core/entitlement/entitlement_service.dart';
 export 'src/core/consent/consent_service.dart';
 
@@ -448,6 +449,7 @@ export 'src/presentation/shell/entities/entity_form_screen.dart';
 // Presentation - Widgets - Feedback
 export 'src/presentation/widgets/feedback/app_loading_indicator.dart';
 export 'src/presentation/widgets/feedback/app_error_view.dart';
+export 'src/presentation/widgets/feedback/app_no_access_view.dart';
 export 'src/presentation/widgets/feedback/app_empty_state.dart';
 export 'src/presentation/widgets/feedback/app_confirm_dialog.dart';
 export 'src/presentation/widgets/feedback/async_view.dart';

@@ -7,7 +7,7 @@
 -- No schema, RLS, grant or SECURITY DEFINER change. Apply on the web side (migration + db push);
 -- CACHE_VERSION bump: coordinator. Placeholders use the web form {{name}}.
 --
--- 11 keys x 4 languages = 44 rows.
+-- 16 keys x 4 languages = 64 rows.
 
 BEGIN;
 
@@ -57,7 +57,27 @@ SELECT gen_random_uuid(), v.key, v.language_id::uuid, v.txt, true, now()
     ('common.coming_soon_mobile', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu ekran mobil uygulamada henüz yok.'),
     ('common.coming_soon_mobile', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'This screen is not in the mobile app yet.'),
     ('common.coming_soon_mobile', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Dieser Bildschirm ist in der mobilen App noch nicht verfügbar.'),
-    ('common.coming_soon_mobile', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questa schermata non è ancora disponibile nell''app mobile.')
+    ('common.coming_soon_mobile', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questa schermata non è ancora disponibile nell''app mobile.'),
+    ('common.no_access.title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu içeriğe erişiminiz yok'),
+    ('common.no_access.title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'You have no access to this content'),
+    ('common.no_access.title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Sie haben keinen Zugriff auf diesen Inhalt'),
+    ('common.no_access.title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Non hai accesso a questo contenuto'),
+    ('common.no_access.message', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Rolünüz bu bilgiyi görmeye yetmiyor. Kendi kayıtlarınız ve size bağlı ekibinizin kayıtları ilgili ekranlarda görünmeye devam eder; daha fazlası gerekiyorsa kuruluş yöneticinize başvurun.'),
+    ('common.no_access.message', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Your role does not allow you to see this information. Your own records and those of the team reporting to you remain available on their screens; if you need more, ask your organisation''s administrator.'),
+    ('common.no_access.message', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ihre Rolle erlaubt es nicht, diese Informationen zu sehen. Ihre eigenen Einträge und die des Ihnen unterstellten Teams bleiben auf den jeweiligen Bildschirmen sichtbar; wenn Sie mehr benötigen, wenden Sie sich an den Administrator Ihrer Organisation.'),
+    ('common.no_access.message', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Il tuo ruolo non consente di vedere queste informazioni. I tuoi dati e quelli del team che fa capo a te restano disponibili nelle rispettive schermate; se ti serve altro, rivolgiti all''amministratore della tua organizzazione.'),
+    ('workflow_approvals.expires_at', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bitiş'),
+    ('workflow_approvals.expires_at', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Expires'),
+    ('workflow_approvals.expires_at', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Läuft ab'),
+    ('workflow_approvals.expires_at', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Scadenza'),
+    ('work_inbox.empty', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Atanmış iş yok'),
+    ('work_inbox.empty', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'No work assigned to you'),
+    ('work_inbox.empty', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ihnen ist keine Arbeit zugewiesen'),
+    ('work_inbox.empty', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Nessuna attività assegnata'),
+    ('alarm.active_load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Aktif alarmlar yüklenemedi. Bu, alarm olmadığı anlamına gelmez; tekrar deneyin.'),
+    ('alarm.active_load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The active alarms could not be loaded. This does not mean there are none; try again.'),
+    ('alarm.active_load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die aktiven Alarme konnten nicht geladen werden. Das bedeutet nicht, dass es keine gibt; versuchen Sie es erneut.'),
+    ('alarm.active_load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli allarmi attivi. Questo non significa che non ce ne siano; riprova.')
   ) AS v(key, language_id, txt)
  WHERE NOT EXISTS (SELECT 1 FROM public.keywords k WHERE k.key = v.key AND k.language_id = v.language_id::uuid);
 
