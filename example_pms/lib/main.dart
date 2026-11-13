@@ -7,6 +7,8 @@ import 'app.dart';
 import 'config/environment.dart';
 import 'config/pms_screens.dart';
 
+/// Listener for the Microsoft connect flow's custom-scheme return.
+final DeepLinkService _deepLinks = DeepLinkService();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -28,6 +30,8 @@ void main() async {
       supabaseAnonKey: Environment.supabaseAnonKey,
       apiBaseUrl: Environment.apiBaseUrl,
       debugMode: Environment.isDebugMode,
+      // OAuth return of the Microsoft connect flow: ptbpms://oauth-callback.
+      appUrlScheme: 'ptbpms',
     ),
     onProgress: (step) {
       Logger.debug('Initializing: $step');
@@ -59,7 +63,8 @@ void main() async {
 
   // CRA A-08: minimum desteklenen sürüm (platform_app_configs.min_mobile_app_version;
   // kolon yoksa no-op, hata olursa fail-open).
-  final versionGate = await AppVersionGate.check(supabase, PlatformContext.pmsPlatformId);
+  final versionGate =
+      await AppVersionGate.check(supabase, PlatformContext.pmsPlatformId);
   if (versionGate.status.updateRequired) {
     final url = versionGate.storeUrl;
     runApp(AppUpdateRequiredApp(
@@ -76,6 +81,18 @@ void main() async {
   }
 
   runApp(const ProviderScope(child: PMSApp()));
+
+  // OAuth-only link listener: the app registers no https links, so only the
+  // ptbpms:// return of the Microsoft connect flow arrives here (it finishes
+  // the link with the user's session; the integration screen refreshes).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _deepLinks.init(
+      onLink: (uri) => Logger.info('[deeplink] app link ignored: $uri'),
+      onOAuthCallback: (uri) =>
+          Logger.info('OAuth callback received (screen self-refreshes)'),
+      appHosts: const {'app.pms.protoolbag.com'},
+    );
+  });
 }
 
 /// Error app shown when initialization fails

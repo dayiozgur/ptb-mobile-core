@@ -12,6 +12,8 @@ import 'config/router.dart';
 /// platformunda açılır — menü + entity'ler bu platformdan yüklenir.
 const String kPpmPlatformId = '491ba5ba-7aee-4d19-8bca-b655e3010f83';
 
+/// Listener for the Microsoft connect flow's custom-scheme return.
+final DeepLinkService _deepLinks = DeepLinkService();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,6 +34,8 @@ void main() async {
       supabaseAnonKey: Environment.supabaseAnonKey,
       apiBaseUrl: Environment.apiBaseUrl,
       debugMode: Environment.isDebugMode,
+      // OAuth return of the Microsoft connect flow: ptbppm://oauth-callback.
+      appUrlScheme: 'ptbppm',
     ),
     onProgress: (step) => Logger.debug('Initializing: $step'),
   );
@@ -47,7 +51,6 @@ void main() async {
   sl<PlatformContext>().setActivePlatform(kPpmPlatformId, code: 'PMP');
 
   registerPpmScreens();
-
 
   // CRA A-08: minimum desteklenen sürüm (platform_app_configs.min_mobile_app_version;
   // kolon yoksa no-op, hata olursa fail-open).
@@ -78,6 +81,19 @@ void main() async {
   Logger.info('PPM initialized in ${result.duration.inMilliseconds}ms');
 
   runApp(const ProviderScope(child: PPMApp()));
+
+  // OAuth-only link listener: the app registers no https links, so only the
+  // ptbppm:// return of the Microsoft connect flow arrives here (it finishes
+  // the link with the user's session; the integration screen refreshes).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _deepLinks.init(
+      onLink: (uri) => Logger.info('[deeplink] app link ignored: $uri'),
+      onOAuthCallback: (uri) =>
+          Logger.info('OAuth callback received (screen self-refreshes)'),
+      appHosts: const {'app.ppm.protoolbag.com'},
+      shellRoutes: _kShellRoutes,
+    );
+  });
 }
 
 const Set<String> _kShellRoutes = {
