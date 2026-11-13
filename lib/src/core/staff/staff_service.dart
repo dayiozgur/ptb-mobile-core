@@ -35,10 +35,21 @@ class StaffService {
   /// yok (yalnız kolon grant'ları; maaş/TCKN/IBAN gibi hassas kolonlar
   /// hariç). `select()` (= `*`) bu yüzden 42501 döner; yalnız [Staff.fromJson]
   /// 'un okuduğu ve grant'lı kolonlar istenir.
-  static const _staffColumns =
+  ///
+  /// `address` listede YOK: özel nitelikli kolon grubuyla birlikte
+  /// (`gender`, `marital_status`, `blood_type`, `military_status`,
+  /// `emergency_contact_*`, `birth_date`) `staffs` üzerindeki SELECT yetkisi
+  /// kaldırıldı (KVKK md.6, S-06). Yetkisiz TEK kolon bile tüm sorguyu 42501
+  /// ile düşürür. Bu kolonların okuma yolu `fn_staff_sensitive(p_staff_id)`
+  /// RPC'sidir (bkz. `HrProfileService`); [Staff.address] artık hep null.
+  /// Regresyon testi: `test/core/staff/staff_revoked_columns_test.dart`.
+  static const _staffColumns = staffReadableColumns;
+
+  /// Bkz. [_staffColumns] — test edilebilsin diye herkese açık.
+  static const staffReadableColumns =
       'id, tenant_id, profile_id, user_id, organization_id, staff_type_id, '
       'contractor_id, sub_contractor_id, rating_id, route_location_id, name, '
-      'code, description, first_name, last_name, email, phone, fax, address, '
+      'code, description, first_name, last_name, email, phone, fax, '
       'town, city_id, country_id, website, active, created_by, created_at, '
       'updated_by, updated_at';
 

@@ -27,8 +27,13 @@ class AdminStaffService {
   Future<List<AdminStaffRow>> listStaff({String? tenantId}) async {
     try {
       var query = _supabase.from('staffs').select(
+            // `address` is NOT selected: it is a special-category column whose
+            // SELECT was revoked on `staffs` (KVKK md.6, S-06) — one revoked
+            // column in the list fails the WHOLE query with 42501. The roster
+            // does not show it; the personal profile reads it through
+            // `fn_staff_sensitive` (HrProfileService).
             'id,name,first_name,last_name,email,phone,title,code,description,'
-            'address,town,position_id,department_id,organization_id,manager_id,'
+            'town,position_id,department_id,organization_id,manager_id,'
             'positions!staffs_position_id_fkey(name),'
             'departments!staffs_department_id_fkey(name)',
           );
