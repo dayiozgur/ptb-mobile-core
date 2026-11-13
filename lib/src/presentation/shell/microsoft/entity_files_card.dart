@@ -146,11 +146,16 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
     if (m.contains('excel') ||
         m.contains('sheet') ||
         n.endsWith('.xlsx') ||
-        n.endsWith('.xls')) return Icons.table_chart;
-    if (m.contains('word') || n.endsWith('.docx') || n.endsWith('.doc'))
+        n.endsWith('.xls')) {
+      return Icons.table_chart;
+    }
+    if (m.contains('word') || n.endsWith('.docx') || n.endsWith('.doc')) {
       return Icons.description;
+    }
     if (m.startsWith('image/') ||
-        RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(n)) return Icons.image;
+        RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(n)) {
+      return Icons.image;
+    }
     return Icons.insert_drive_file;
   }
 

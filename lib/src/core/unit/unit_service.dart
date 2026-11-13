@@ -430,12 +430,15 @@ class UnitService {
       if (imageBucket != null) updateData['image_bucket'] = imageBucket;
       if (parentUnitId != null) updateData['parent_unit_id'] = parentUnitId;
       if (unitTypeId != null) updateData['unit_type_id'] = unitTypeId;
-      if (generalOpenTime != null)
+      if (generalOpenTime != null) {
         updateData['general_open_time'] = generalOpenTime;
-      if (generalCloseTime != null)
+      }
+      if (generalCloseTime != null) {
         updateData['general_close_time'] = generalCloseTime;
-      if (workingTimeActive != null)
+      }
+      if (workingTimeActive != null) {
         updateData['working_time_active'] = workingTimeActive;
+      }
       if (active != null) updateData['active'] = active;
       if (updatedBy != null) updateData['updated_by'] = updatedBy;
 

@@ -368,12 +368,15 @@ class SiteService {
       if (energyCertificateClass != null) {
         updateData['energy_certificate_class'] = energyCertificateClass;
       }
-      if (generalOpenTime != null)
+      if (generalOpenTime != null) {
         updateData['general_open_time'] = generalOpenTime;
-      if (generalCloseTime != null)
+      }
+      if (generalCloseTime != null) {
         updateData['general_close_time'] = generalCloseTime;
-      if (workingTimeActive != null)
+      }
+      if (workingTimeActive != null) {
         updateData['working_time_active'] = workingTimeActive;
+      }
       if (siteTypeId != null) updateData['site_type_id'] = siteTypeId;
       if (siteGroupId != null) updateData['site_group_id'] = siteGroupId;
       if (active != null) updateData['active'] = active;
