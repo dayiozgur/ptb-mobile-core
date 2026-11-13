@@ -1,0 +1,44 @@
+-- PROPOSED — NOT APPLIED. Keywords used by the mobile apps (ptb-mobile-core, lane/store-prep,
+-- 2026-11-13). The apps read UI texts from public.keywords (same table as the web app); until this
+-- is applied they fall back to the built-in tr / en / de texts in
+-- lib/src/core/localization/app_localizations.dart (Italian falls back to English).
+--
+-- Insert-only, idempotent (NOT EXISTS per key + language). tr, en, de, it.
+-- No schema, RLS, grant or SECURITY DEFINER change. Apply on the web side (migration + db push);
+-- CACHE_VERSION bump: coordinator. Placeholders use the web form {{name}}.
+--
+-- 6 keys x 4 languages = 24 rows.
+
+BEGIN;
+
+INSERT INTO public.keywords (id, key, language_id, defaultvalue, active, created_at)
+SELECT gen_random_uuid(), v.key, v.language_id::uuid, v.txt, true, now()
+  FROM (VALUES
+    ('m365.problem.admin_consent_required.title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Microsoft 365 yöneticinizin onayı gerekiyor'),
+    ('m365.problem.admin_consent_required.title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Your Microsoft 365 administrator has to approve this'),
+    ('m365.problem.admin_consent_required.title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ihr Microsoft 365-Administrator muss dies genehmigen'),
+    ('m365.problem.admin_consent_required.title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Serve l''approvazione dell''amministratore di Microsoft 365'),
+    ('m365.problem.admin_consent_required.hint', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Kuruluşunuz bu izin için yönetici onayı istiyor; yeniden bağlanmak bunu değiştirmez. Microsoft 365 yöneticinizden uygulamayı kuruluş adına onaylamasını isteyin (web uygulamasında Bağlı uygulamalar → kurulum sihirbazı → Kuruluş onayı). Onaydan sonra yeniden deneyin.'),
+    ('m365.problem.admin_consent_required.hint', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Your organisation requires administrator approval for this permission; reconnecting will not change it. Ask your Microsoft 365 administrator to approve the app for the organisation (in the web app: Connected apps → setup wizard → Organisation approval). Try again after the approval.'),
+    ('m365.problem.admin_consent_required.hint', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ihre Organisation verlangt für diese Berechtigung eine Administratorgenehmigung; erneutes Verbinden ändert das nicht. Bitten Sie Ihren Microsoft 365-Administrator, die App für die Organisation zu genehmigen (in der Web-App: Verbundene Apps → Einrichtungsassistent → Organisationsgenehmigung). Versuchen Sie es nach der Genehmigung erneut.'),
+    ('m365.problem.admin_consent_required.hint', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'La tua organizzazione richiede l''approvazione dell''amministratore per questa autorizzazione; ricollegare l''account non cambia la situazione. Chiedi all''amministratore di Microsoft 365 di approvare l''app per l''organizzazione (nell''app web: App collegate → configurazione guidata → Approvazione dell''organizzazione). Riprova dopo l''approvazione.'),
+    ('m365.problem.admin_consent_required.toast', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu işlem için Microsoft 365 yöneticinizin onayı gerekiyor.'),
+    ('m365.problem.admin_consent_required.toast', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'This action needs the approval of your Microsoft 365 administrator.'),
+    ('m365.problem.admin_consent_required.toast', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Für diese Aktion ist die Genehmigung Ihres Microsoft 365-Administrators erforderlich.'),
+    ('m365.problem.admin_consent_required.toast', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questa azione richiede l''approvazione dell''amministratore di Microsoft 365.'),
+    ('integrations.ms.oauth_result.admin_consent_required.hint', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Kuruluşunuz bu izinler için yönetici onayı istiyor; bu yüzden hesabınız bağlanamadı. Microsoft 365 yöneticiniz uygulamayı web uygulamasındaki Bağlı uygulamalar sayfasından (kurulum sihirbazı → Kuruluş onayı) tüm kuruluş için onaylayabilir. Onaydan sonra yeniden bağlanın.'),
+    ('integrations.ms.oauth_result.admin_consent_required.hint', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Your organisation requires administrator approval for these permissions, so your account could not be connected. Your Microsoft 365 administrator can approve the app for the whole organisation on the Connected apps page of the web app (setup wizard → Organisation approval). Connect again after the approval.'),
+    ('integrations.ms.oauth_result.admin_consent_required.hint', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ihre Organisation verlangt für diese Berechtigungen eine Administratorgenehmigung, daher konnte Ihr Konto nicht verbunden werden. Ihr Microsoft 365-Administrator kann die App auf der Seite „Verbundene Apps“ der Web-App (Einrichtungsassistent → Organisationsgenehmigung) für die gesamte Organisation genehmigen. Verbinden Sie sich danach erneut.'),
+    ('integrations.ms.oauth_result.admin_consent_required.hint', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'La tua organizzazione richiede l''approvazione dell''amministratore per queste autorizzazioni, quindi non è stato possibile collegare l''account. L''amministratore di Microsoft 365 può approvare l''app per tutta l''organizzazione nella pagina App collegate dell''app web (configurazione guidata → Approvazione dell''organizzazione). Dopo l''approvazione collega di nuovo l''account.'),
+    ('integrations.ms.connect_on_web', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu uygulamadan Microsoft hesabı bağlanamıyor. Hesabınızı web uygulamasındaki Bağlı uygulamalar sayfasından bağlayın; bağlantı burada da geçerli olur.'),
+    ('integrations.ms.connect_on_web', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'A Microsoft account cannot be connected from this app. Connect your account on the Connected apps page of the web app; the connection is then used here as well.'),
+    ('integrations.ms.connect_on_web', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'In dieser App kann kein Microsoft-Konto verbunden werden. Verbinden Sie Ihr Konto auf der Seite „Verbundene Apps“ der Web-App; die Verbindung gilt dann auch hier.'),
+    ('integrations.ms.connect_on_web', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Da questa app non è possibile collegare un account Microsoft. Collega il tuo account nella pagina App collegate dell''app web; il collegamento vale poi anche qui.'),
+    ('crm.agenda.load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'CRM etkinlikleri yüklenemedi.'),
+    ('crm.agenda.load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The CRM events could not be loaded.'),
+    ('crm.agenda.load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die CRM-Termine konnten nicht geladen werden.'),
+    ('crm.agenda.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli eventi CRM.')
+  ) AS v(key, language_id, txt)
+ WHERE NOT EXISTS (SELECT 1 FROM public.keywords k WHERE k.key = v.key AND k.language_id = v.language_id::uuid);
+
+COMMIT;

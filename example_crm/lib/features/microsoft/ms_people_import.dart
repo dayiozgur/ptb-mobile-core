@@ -65,6 +65,9 @@ class _PeopleImportSheetState extends State<_PeopleImportSheet> {
   bool _loading = true;
   bool _importedAny = false;
 
+  /// Why the suggestions could not be read (≠ "no suggested people").
+  GraphProblem? _problem;
+
   @override
   void initState() {
     super.initState();
@@ -78,21 +81,23 @@ class _PeopleImportSheetState extends State<_PeopleImportSheet> {
       '\$select': 'displayName,givenName,surname,scoredEmailAddresses,jobTitle,companyName,personType',
     });
     if (!mounted) return;
-    if (res == null || !res.ok || res.data is! Map) {
+    if (!res.ok || res.data is! Map) {
       setState(() {
         _people = const [];
+        _problem = res.problem ?? const GraphProblem(kind: GraphProblemKind.failed);
         _loading = false;
       });
       return;
     }
     final value = (res.data['value'] as List?) ?? const [];
     final mapped = <_Person>[];
-    for (final raw in value) {
-      final p = _mapPerson(raw as Map);
+    for (final raw in value.whereType<Map>()) {
+      final p = _mapPerson(raw);
       if (p != null) mapped.add(p);
     }
     setState(() {
       _people = mapped;
+      _problem = null;
       _loading = false;
     });
   }
@@ -166,6 +171,8 @@ class _PeopleImportSheetState extends State<_PeopleImportSheet> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
+              : _problem != null
+                  ? MsProblemView(problem: _problem!, onRetry: _load)
               : (_people.isEmpty
                   ? Center(child: Text(crmT('crm.people.empty', 'Önerilen kişi bulunamadı.')))
                   : ListView.separated(

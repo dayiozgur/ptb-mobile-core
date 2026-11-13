@@ -45,17 +45,55 @@ class _MsMailboxScreenState extends State<MsMailboxScreen> {
   bool _syncing = false;
   List<_MailItem> _items = const [];
 
+  /// Why the inbox could not be read (null = it was read). A failed load is
+  /// NEVER rendered as an empty inbox.
+  GraphProblem? _problem;
+
   @override
   void initState() {
     super.initState();
+    MicrosoftOAuthReturn.completions.addListener(_onOAuthCompleted);
+    MicrosoftOAuthReturn.notice.addListener(_onOAuthNotice);
     _load();
+  }
+
+  @override
+  void dispose() {
+    MicrosoftOAuthReturn.completions.removeListener(_onOAuthCompleted);
+    MicrosoftOAuthReturn.notice.removeListener(_onOAuthNotice);
+    super.dispose();
+  }
+
+  /// The browser leg of a connect started here came back and was completed.
+  void _onOAuthCompleted() {
+    if (mounted) _load();
+  }
+
+  /// The browser leg ended without a connection — say why (translated).
+  void _onOAuthNotice() {
+    final n = MicrosoftOAuthReturn.notice.value;
+    if (n == null || !mounted) return;
+    MicrosoftOAuthReturn.notice.value = null;
+    _snack(_t(n.titleKey), error: n.isError);
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final conn = await _svc.getConnected();
-    if (conn == null) {
-      if (mounted) setState(() { _connected = false; _loading = false; });
+    final lookup = await _svc.lookupConnection();
+    if (!mounted) return;
+    if (!lookup.isConnected) {
+      setState(() {
+        _connected = false;
+        _items = const [];
+        // unknown (read failed) / stale (reconnect) / never connected
+        _problem = lookup.failed
+            ? const GraphProblem(kind: GraphProblemKind.unavailable)
+            : GraphProblem(
+                kind: lookup.needsReconnect
+                    ? GraphProblemKind.reauth
+                    : GraphProblemKind.notConnected);
+        _loading = false;
+      });
       return;
     }
     final res = await _svc.graphCall('GET', '/me/mailFolders/inbox/messages', query: {
@@ -64,14 +102,20 @@ class _MsMailboxScreenState extends State<MsMailboxScreen> {
       '\$select': 'id,subject,from,receivedDateTime,isRead,bodyPreview',
     });
     if (!mounted) return;
-    if (res == null || !res.ok || res.data is! Map) {
-      setState(() { _connected = true; _items = const []; _loading = false; });
+    if (!res.ok || res.data is! Map) {
+      setState(() {
+        _connected = true;
+        _items = const [];
+        _problem = res.problem ?? const GraphProblem(kind: GraphProblemKind.failed);
+        _loading = false;
+      });
       return;
     }
     final value = (res.data['value'] as List?) ?? const [];
     setState(() {
       _connected = true;
-      _items = value.map((m) => _map(m as Map)).toList();
+      _problem = null;
+      _items = value.whereType<Map>().map(_map).toList();
       _loading = false;
     });
   }
@@ -107,7 +151,7 @@ class _MsMailboxScreenState extends State<MsMailboxScreen> {
     // CRM `ptbcrm://oauth-callback`. Scheme'i olmayan app bağlanamaz.
     final redirect = CoreInitializer.config?.oauthRedirectUri;
     if (redirect == null) {
-      _snack(_t('crm.mailbox.load_failed'), error: true);
+      _snack(_t('integrations.ms.connect_on_web'), error: true);
       return;
     }
     final url = await _svc.startConnect(redirectAfter: redirect);
@@ -144,22 +188,15 @@ class _MsMailboxScreenState extends State<MsMailboxScreen> {
           AppIconButton(icon: Icons.refresh, onPressed: _load),
         ],
       ],
-      floatingActionButton: _connected
+      floatingActionButton: _connected && _problem == null
           ? FloatingActionButton(onPressed: () => _compose(), child: const Icon(Icons.edit_outlined))
           : null,
       child: _loading
           ? const Center(child: AppLoadingIndicator())
-          : (!_connected
-              ? Center(
-                  child: Padding(
-                    padding: AppSpacing.screenPadding,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      AppEmptyState(icon: Icons.mark_email_unread_outlined, title: _t('crm.mailbox.not_connected')),
-                      const SizedBox(height: AppSpacing.md),
-                      AppButton(label: _t('crm.mailbox.connect'), icon: Icons.link, isFullWidth: false, onPressed: _connect),
-                    ]),
-                  ),
-                )
+          : (_problem != null
+              // Not connected / reconnect / missing consent / throttled / … —
+              // the reason and the next step, never an empty inbox.
+              ? MsProblemView(problem: _problem!, onRetry: _load, onConnect: _connect)
               : RefreshIndicator(
                   onRefresh: _load,
                   child: _items.isEmpty
@@ -210,6 +247,7 @@ class _MailDetailScreenState extends State<_MailDetailScreen> {
   bool _loading = true;
   String _body = '';
   String _to = '';
+  GraphProblem? _problem;
 
   @override
   void initState() {
@@ -218,9 +256,10 @@ class _MailDetailScreenState extends State<_MailDetailScreen> {
   }
 
   Future<void> _load() async {
+    if (!_loading) setState(() => _loading = true);
     final res = await _svc.graphCall('GET', '/me/messages/${widget.item.id}', query: {'\$select': 'body,toRecipients'});
     if (!mounted) return;
-    if (res != null && res.ok && res.data is Map) {
+    if (res.ok && res.data is Map) {
       final body = res.data['body'] as Map?;
       final content = (body?['content'] as String?) ?? '';
       final isHtml = (body?['contentType'] as String?) == 'html';
@@ -228,14 +267,21 @@ class _MailDetailScreenState extends State<_MailDetailScreen> {
       setState(() {
         _body = isHtml ? htmlToText(content) : content.trim();
         _to = toList.join(', ');
+        _problem = null;
         _loading = false;
       });
     } else {
-      setState(() => _loading = false);
+      // The body could not be read — say why instead of a blank reading pane.
+      setState(() {
+        _problem = res.problem ?? const GraphProblem(kind: GraphProblemKind.failed);
+        _loading = false;
+      });
+      return;
     }
-    // best-effort mark-read
+    // best-effort mark-read (needs Mail.ReadWrite; a refusal is not an error here)
     if (!widget.item.isRead) {
-      _svc.graphCall('PATCH', '/me/messages/${widget.item.id}', body: {'isRead': true}).then((_) => widget.item.isRead = true).catchError((_) => false);
+      final marked = await _svc.graphCall('PATCH', '/me/messages/${widget.item.id}', body: {'isRead': true});
+      if (marked.ok) widget.item.isRead = true;
     }
   }
 
@@ -262,7 +308,9 @@ class _MailDetailScreenState extends State<_MailDetailScreen> {
       actions: [AppIconButton(icon: Icons.reply, tooltip: _t('crm.mailbox.reply'), onPressed: _reply)],
       child: _loading
           ? const Center(child: AppLoadingIndicator())
-          : ListView(
+          : _problem != null
+              ? MsProblemView(problem: _problem!, onRetry: _load)
+              : ListView(
               padding: AppSpacing.screenPadding,
               children: [
                 Text(m.subject.isEmpty ? _t('crm.mailbox.no_subject') : m.subject, style: AppTypography.headline),
@@ -318,10 +366,16 @@ class _MsComposeSheetState extends State<MsComposeSheet> {
     });
     if (!mounted) return;
     setState(() => _sending = false);
-    if (res != null && res.ok) {
+    if (res.ok) {
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('crm.outlook_reply.failed')), backgroundColor: Colors.red.shade700));
+      // Keep the draft on screen; the message names the reason (reconnect /
+      // missing Mail.Send consent / throttled …) when the server classified it.
+      final problem = res.problem;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(problem == null ? _t('crm.outlook_reply.failed') : msProblemToast(problem)),
+        backgroundColor: Colors.red.shade700,
+      ));
     }
   }
 

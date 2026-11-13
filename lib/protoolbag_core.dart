@@ -106,6 +106,7 @@ export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';
 export 'src/core/crm/crm_forecast_service.dart';
 export 'src/core/crm/crm_duplicate_service.dart';
+export 'src/core/integration/graph_problem.dart';
 export 'src/core/integration/microsoft_integration_service.dart';
 export 'src/core/integration/entity_file_link_service.dart';
 export 'src/presentation/shell/collaboration/comments_thread.dart';
@@ -439,6 +440,7 @@ export 'src/presentation/shell/entities/entity_detail_extensions.dart';
 // Microsoft OneDrive/SharePoint "Files" section — spread to all entity types
 export 'src/presentation/shell/microsoft/entity_files_card.dart';
 export 'src/presentation/shell/microsoft/ms_onedrive_picker.dart';
+export 'src/presentation/shell/microsoft/ms_problem_view.dart';
 export 'src/presentation/shell/ppm/planner_link_card.dart';
 export 'src/presentation/shell/ppm/project_wizard_screen.dart';
 export 'src/presentation/shell/entities/entity_form_screen.dart';

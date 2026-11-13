@@ -55,6 +55,13 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
   bool _msConnected = false;
   List<_AgendaItem> _items = [];
 
+  /// CRM etkinlikleri okunamadı (≠ "etkinlik yok").
+  bool _crmFailed = false;
+
+  /// Outlook takvimi okunamadı — neden (bağlantı yenile / izin eksik /
+  /// sınırlandı…). Boş liste yerine gösterilir.
+  GraphProblem? _outlookProblem;
+
   static const _windowDays = 45;
 
   @override
@@ -71,18 +78,27 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
 
     final crm = await _loadCrm(from, to);
     final conn = await _ms.getConnected();
-    final outlook = conn != null ? await _loadOutlook(from, to) : <_AgendaItem>[];
+    GraphProblem? outlookProblem;
+    var outlook = <_AgendaItem>[];
+    if (conn != null && _showOutlook) {
+      final res = await _loadOutlook(from, to);
+      outlook = res.items;
+      outlookProblem = res.problem;
+    }
 
-    final merged = [...crm, if (_showOutlook) ...outlook]..sort((a, b) => a.when.compareTo(b.when));
+    final merged = [...?crm, ...outlook]..sort((a, b) => a.when.compareTo(b.when));
     if (!mounted) return;
     setState(() {
       _msConnected = conn != null;
+      _crmFailed = crm == null;
+      _outlookProblem = outlookProblem;
       _items = merged;
       _loading = false;
     });
   }
 
-  Future<List<_AgendaItem>> _loadCrm(DateTime from, DateTime to) async {
+  /// CRM takvim satırları; okuma başarısızsa null (boş liste DEĞİL).
+  Future<List<_AgendaItem>?> _loadCrm(DateTime from, DateTime to) async {
     try {
       final rows = await _svc.rows('fn_crm_calendar', params: {
         'p_from': from.toIso8601String(),
@@ -109,12 +125,13 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
           })
           .whereType<_AgendaItem>()
           .toList();
-    } catch (_) {
-      return [];
+    } catch (e) {
+      Logger.error('[crm-agenda] fn_crm_calendar failed', e);
+      return null;
     }
   }
 
-  Future<List<_AgendaItem>> _loadOutlook(DateTime from, DateTime to) async {
+  Future<({List<_AgendaItem> items, GraphProblem? problem})> _loadOutlook(DateTime from, DateTime to) async {
     final res = await _ms.graphCall('GET', '/me/calendarView', query: {
       'startDateTime': from.toUtc().toIso8601String(),
       'endDateTime': to.toUtc().toIso8601String(),
@@ -122,7 +139,12 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
       '\$orderby': 'start/dateTime',
       '\$top': '100',
     });
-    if (res == null || !res.ok || res.data is! Map) return [];
+    if (!res.ok || res.data is! Map) {
+      return (
+        items: <_AgendaItem>[],
+        problem: res.problem ?? const GraphProblem(kind: GraphProblemKind.failed),
+      );
+    }
     final value = (res.data['value'] as List?) ?? const [];
     DateTime parse(String? s, bool allDay) {
       if (s == null) return DateTime.now();
@@ -131,8 +153,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
       return allDay ? dt : dt.toLocal();
     }
 
-    return value.map((raw) {
-      final e = raw as Map;
+    final items = value.whereType<Map>().map((e) {
       final allDay = (e['isAllDay'] ?? false) == true;
       final loc = (e['location'] as Map?)?['displayName'] as String?;
       final org = ((e['organizer'] as Map?)?['emailAddress'] as Map?)?['name'] as String?;
@@ -147,6 +168,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
         allDay: allDay,
       );
     }).toList();
+    return (items: items, problem: null);
   }
 
   @override
@@ -197,12 +219,39 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
 
   Widget _buildBody() {
     if (_loading) return const Center(child: AppLoadingIndicator());
+
+    // Bir kaynak okunamadıysa "etkinlik yok" DENMEZ: neden + sonraki adım.
+    final notices = <Widget>[
+      if (_crmFailed)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+          child: AppGenericErrorView(
+            compact: true,
+            message: crmT('crm.agenda.load_failed', 'CRM etkinlikleri yüklenemedi.'),
+            onRetry: _load,
+          ),
+        ),
+      if (_outlookProblem != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+          child: AppCard(
+            child: Padding(
+              padding: AppSpacing.cardInsets,
+              child: MsProblemView(problem: _outlookProblem!, onRetry: _load, compact: true),
+            ),
+          ),
+        ),
+    ];
+
     if (_items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const SizedBox(height: 160),
-          Center(child: AppEmptyState(icon: Icons.event_available_outlined, title: crmT('crm.agenda.empty', 'Yaklaşan etkinlik yok'))),
+          ...notices,
+          if (notices.isEmpty) ...[
+            const SizedBox(height: 160),
+            Center(child: AppEmptyState(icon: Icons.event_available_outlined, title: crmT('crm.agenda.empty', 'Yaklaşan etkinlik yok'))),
+          ],
         ],
       );
     }
@@ -212,7 +261,7 @@ class _CrmAgendaScreenState extends State<CrmAgendaScreen> {
       groups.putIfAbsent(AppClock.dayLabel(it.when), () => []).add(it);
     }
 
-    final children = <Widget>[];
+    final children = <Widget>[...notices];
     groups.forEach((day, items) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xs),

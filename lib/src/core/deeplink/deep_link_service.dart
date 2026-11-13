@@ -40,9 +40,18 @@ import '../utils/logger.dart';
 /// deepLinks.dispose();
 /// ```
 class DeepLinkService {
-  DeepLinkService({AppLinks? appLinks}) : _appLinks = appLinks ?? AppLinks();
+  /// [completeOAuth] finishes the Microsoft link for an `oauth_complete`
+  /// nonce (default: `MicrosoftIntegrationService.completeConnect` with the
+  /// app's Supabase session); injectable for tests.
+  DeepLinkService({
+    AppLinks? appLinks,
+    Future<bool> Function(String completion)? completeOAuth,
+  })  : _appLinksOverride = appLinks,
+        _completeOAuth = completeOAuth;
 
-  final AppLinks _appLinks;
+  final AppLinks? _appLinksOverride;
+  late final AppLinks _appLinks = _appLinksOverride ?? AppLinks();
+  final Future<bool> Function(String completion)? _completeOAuth;
   StreamSubscription<Uri>? _sub;
   bool _initialized = false;
 
@@ -127,6 +136,10 @@ class DeepLinkService {
     }
   }
 
+  /// Feed one link through the same path as a platform link (tests).
+  @visibleForTesting
+  void handleUriForTest(Uri uri) => _handleUri(uri);
+
   /// Parse + dispatch a single incoming link. NEVER throws.
   void _handleUri(Uri uri) {
     try {
@@ -138,12 +151,28 @@ class DeepLinkService {
         if (_oauthHosts.contains(uri.host.toLowerCase()) ||
             uri.path.toLowerCase().contains('oauth-callback')) {
           Logger.info('[deeplink] OAuth callback received');
+          // The flow ended without a code: `?oauth_error=declined|
+          // admin_consent_required|failed` or `?admin_consent=granted|declined`
+          // (enumerated values only; anything else is ignored). The screens
+          // that started the flow show the translated reason.
+          final notice = MicrosoftOAuthReturn.report(uri);
+          if (notice != null) {
+            Logger.info('[deeplink] OAuth return: ${notice.code}');
+          }
           // B-09: complete the account link with the user's session (single-use nonce, 5 min).
           final completion = uri.queryParameters['oauth_complete'];
           if (completion != null && completion.isNotEmpty) {
-            unawaited(MicrosoftIntegrationService(supabase: Supabase.instance.client)
-                .completeConnect(completion)
-                .then((ok) => Logger.info('[deeplink] Microsoft link completed: $ok')));
+            final complete = _completeOAuth ??
+                (String c) =>
+                    MicrosoftIntegrationService(supabase: Supabase.instance.client)
+                        .completeConnect(c);
+            unawaited(complete(completion).then((ok) {
+              Logger.info('[deeplink] Microsoft link completed: $ok');
+              MicrosoftOAuthReturn.completed(linked: ok);
+            }).catchError((Object e) {
+              Logger.warning('[deeplink] Microsoft link completion failed: $e');
+              MicrosoftOAuthReturn.completed(linked: false);
+            }));
           }
           if (_onOAuthCallback != null) {
             _onOAuthCallback!(uri);

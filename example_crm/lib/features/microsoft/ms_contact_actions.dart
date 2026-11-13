@@ -56,6 +56,18 @@ class _MsActionsSheet extends StatelessWidget {
     );
   }
 
+  /// A Microsoft action failed: say WHY when the server classified it
+  /// (reconnect / permission not granted / administrator approval / throttled
+  /// with the wait), else the action's own [fallback] text.
+  void _fail(BuildContext c, GraphResult res, String fallback) {
+    final p = res.problem;
+    final specific = p != null &&
+        p.kind != GraphProblemKind.failed &&
+        p.kind != GraphProblemKind.notFound &&
+        p.kind != GraphProblemKind.conflict;
+    _snack(c, specific ? msProblemToast(p) : fallback, error: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -100,9 +112,9 @@ class _MsActionsSheet extends StatelessWidget {
           .replaceAll('{{name}}', contactName ?? ''),
     });
     if (!context.mounted) return;
-    final join = (res?.data is Map) ? (res!.data['joinWebUrl'] as String?) : null;
-    if (res == null || !res.ok || join == null) {
-      _snack(context, crmT('crm.teams.meeting_failed', 'Teams toplantısı oluşturulamadı'), error: true);
+    final join = (res.ok && res.data is Map) ? (res.data['joinWebUrl'] as String?) : null;
+    if (join == null) {
+      _fail(context, res, crmT('crm.teams.meeting_failed', 'Teams toplantısı oluşturulamadı'));
       return;
     }
     await showDialog<void>(
@@ -143,15 +155,22 @@ class _MsActionsSheet extends StatelessWidget {
 
     final u = await _svc.graphCall('GET', '/users/${Uri.encodeComponent(email)}',
         query: {'\$select': 'id,displayName'});
-    final targetId = (u?.data is Map) ? (u!.data['id'] as String?) : null;
-    if (u?.status == 404 || targetId == null) {
-      if (context.mounted) _snack(context, crmT('crm.teams.user_not_found', 'Bu e-posta bir Microsoft kullanıcısına eşleşmiyor'), error: true);
+    final targetId = (u.ok && u.data is Map) ? (u.data['id'] as String?) : null;
+    if (targetId == null) {
+      if (!context.mounted) return;
+      // 404 = the address is not a Microsoft user of this directory. Anything
+      // else (reconnect / missing consent / throttled) is NOT "user not found".
+      if (u.ok || u.status == 404) {
+        _snack(context, crmT('crm.teams.user_not_found', 'Bu e-posta bir Microsoft kullanıcısına eşleşmiyor'), error: true);
+      } else {
+        _fail(context, u, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'));
+      }
       return;
     }
     final me = await _svc.graphCall('GET', '/me', query: {'\$select': 'id'});
-    final myId = (me?.data is Map) ? (me!.data['id'] as String?) : null;
+    final myId = (me.ok && me.data is Map) ? (me.data['id'] as String?) : null;
     if (myId == null) {
-      if (context.mounted) _snack(context, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'), error: true);
+      if (context.mounted) _fail(context, me, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'));
       return;
     }
     final chat = await _svc.graphCall('POST', '/chats', body: {
@@ -169,20 +188,26 @@ class _MsActionsSheet extends StatelessWidget {
         },
       ],
     });
-    final chatId = (chat?.data is Map) ? (chat!.data['id'] as String?) : null;
+    final chatId = (chat.ok && chat.data is Map) ? (chat.data['id'] as String?) : null;
     if (chatId == null) {
-      // Most common cause: the recipient is a shared mailbox / not Teams-licensed.
-      if (context.mounted) _snack(context, crmT('crm.teams.chat_no_teams', 'Bu kişiyle Teams sohbeti açılamadı (Teams hesabı olmayabilir).'), error: true);
+      if (!context.mounted) return;
+      final kind = chat.problem?.kind;
+      if (kind == null || kind == GraphProblemKind.forbidden || kind == GraphProblemKind.failed || kind == GraphProblemKind.notFound) {
+        // Most common cause: the recipient is a shared mailbox / not Teams-licensed.
+        _snack(context, crmT('crm.teams.chat_no_teams', 'Bu kişiyle Teams sohbeti açılamadı (Teams hesabı olmayabilir).'), error: true);
+      } else {
+        _fail(context, chat, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'));
+      }
       return;
     }
     final sent = await _svc.graphCall('POST', '/chats/$chatId/messages',
         body: {'body': {'content': msg.trim()}});
     if (!context.mounted) return;
-    _snack(context,
-        (sent != null && sent.ok)
-            ? crmT('crm.teams.chat_sent', 'Teams\'te mesaj gönderildi')
-            : crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'),
-        error: !(sent != null && sent.ok));
+    if (sent.ok) {
+      _snack(context, crmT('crm.teams.chat_sent', 'Teams\'te mesaj gönderildi'));
+    } else {
+      _fail(context, sent, crmT('crm.teams.chat_failed', 'Teams mesajı gönderilemedi'));
+    }
   }
 
   // ── Outlook email ─────────────────────────────────────────────────────────
@@ -206,11 +231,11 @@ class _MsActionsSheet extends StatelessWidget {
       'saveToSentItems': true,
     });
     if (!context.mounted) return;
-    _snack(context,
-        (res != null && res.ok)
-            ? '${crmT('crm.outlook_reply.sent', 'E-posta gönderildi')}: $email'
-            : crmT('crm.outlook_reply.failed', 'E-posta gönderilemedi'),
-        error: !(res != null && res.ok));
+    if (res.ok) {
+      _snack(context, '${crmT('crm.outlook_reply.sent', 'E-posta gönderildi')}: $email');
+    } else {
+      _fail(context, res, crmT('crm.outlook_reply.failed', 'E-posta gönderilemedi'));
+    }
   }
 
   // ── OneDrive attach ─────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../integration/graph_problem.dart';
 import '../integration/microsoft_integration_service.dart';
 import '../utils/logger.dart';
 
@@ -43,7 +44,22 @@ class PlannerSyncResult {
   final int pushed;
   final int pulled;
   final int errors;
-  const PlannerSyncResult(this.pushed, this.pulled, this.errors);
+
+  /// The function ran but found no connected Microsoft account of the caller
+  /// that holds `Tasks.ReadWrite` — nothing was synchronised (not a success).
+  final bool noEligibleConnection;
+
+  const PlannerSyncResult(this.pushed, this.pulled, this.errors,
+      {this.noEligibleConnection = false});
+}
+
+/// Outcome of listing the user's Planner plans: the [plans], or the classified
+/// [problem] when Microsoft could not be read (never a silent empty list).
+class PlannerPlansResult {
+  final List<PlannerPlan> plans;
+  final GraphProblem? problem;
+  const PlannerPlansResult(this.plans, {this.problem});
+  bool get ok => problem == null;
 }
 
 /// **PPM ↔ Microsoft Planner link management (mobile)** — the client parity of the web
@@ -66,16 +82,31 @@ class PlannerLinkService {
   /// The caller's connected Microsoft account (or null). Used to gate the panel.
   Future<IntegrationConnection?> getConnection() => _ms.getConnected();
 
-  /// List the Planner plans the connected user can see (member of).
-  Future<List<PlannerPlan>> listPlans() async {
+  /// `planner_plan_links.plan_id` carries a format CHECK on the server
+  /// (`^[A-Za-z0-9_-]{8,64}$`, 2026-11-13): the id becomes a Graph path
+  /// segment in `ppm-planner-sync`. Ids that come from Graph satisfy it; the
+  /// app never writes anything else there.
+  static final RegExp planIdPattern = RegExp(r'^[A-Za-z0-9_-]{8,64}$');
+
+  /// Is [id] a Planner plan id the server will accept?
+  static bool isValidPlanId(String? id) => id != null && planIdPattern.hasMatch(id);
+
+  /// List the Planner plans the connected user can see (member of). A failed
+  /// read is reported as [PlannerPlansResult.problem], not as "no plans".
+  Future<PlannerPlansResult> listPlans() async {
     final res = await _ms.graphCall('GET', '/me/planner/plans');
-    if (res == null || !res.ok) return const <PlannerPlan>[];
+    if (!res.ok) {
+      return PlannerPlansResult(const <PlannerPlan>[],
+          problem: res.problem ?? const GraphProblem(kind: GraphProblemKind.failed));
+    }
     final value = (res.data is Map ? res.data['value'] : null);
-    if (value is! List) return const <PlannerPlan>[];
-    return value
+    if (value is! List) return const PlannerPlansResult(<PlannerPlan>[]);
+    return PlannerPlansResult(value
         .whereType<Map>()
+        // Only ids the link table accepts (defensive: Graph ids always match).
+        .where((p) => isValidPlanId(p['id'] as String?))
         .map((p) => PlannerPlan(id: p['id'] as String, title: (p['title'] ?? '') as String))
-        .toList();
+        .toList());
   }
 
   /// Auto-provision a brand-new standalone Planner plan owned by the caller. Standalone plans need a
@@ -84,19 +115,19 @@ class PlannerLinkService {
   Future<PlannerPlan?> createPlan(String title) async {
     final roster = await _ms.graphCall('POST', '/planner/rosters',
         body: {'@odata.type': '#microsoft.graph.plannerRoster'}, beta: true);
-    final rosterId = (roster != null && roster.ok && roster.data is Map) ? roster.data['id'] as String? : null;
+    final rosterId = (roster.ok && roster.data is Map) ? roster.data['id'] as String? : null;
     if (rosterId == null) {
-      Logger.error('[planner] createPlan roster failed', roster?.data);
+      Logger.error('[planner] createPlan roster failed', roster.problem ?? roster.data);
       return null;
     }
     final plan = await _ms.graphCall('POST', '/planner/plans',
         body: {'container': {'containerId': rosterId, 'type': 'roster'}, 'title': title}, beta: true);
-    final planId = (plan != null && plan.ok && plan.data is Map) ? plan.data['id'] as String? : null;
-    if (planId == null) {
-      Logger.error('[planner] createPlan plan failed', plan?.data);
+    final planId = (plan.ok && plan.data is Map) ? plan.data['id'] as String? : null;
+    if (planId == null || !isValidPlanId(planId)) {
+      Logger.error('[planner] createPlan plan failed', plan.problem ?? plan.data);
       return null;
     }
-    return PlannerPlan(id: planId, title: (plan!.data['title'] ?? title) as String);
+    return PlannerPlan(id: planId, title: (plan.data['title'] ?? title) as String);
   }
 
   /// The active Planner link for a project, or null.
@@ -123,6 +154,11 @@ class PlannerLinkService {
     required String bucketBy,
     String? connectionId,
   }) async {
+    if (!isValidPlanId(plan.id)) {
+      // Would be refused by planner_plan_links_plan_id_format_check (23514).
+      Logger.error('[planner] link refused: plan id is not a Planner id');
+      return null;
+    }
     try {
       final uid = _supabase.auth.currentUser?.id;
       final row = await _supabase
@@ -181,11 +217,14 @@ class PlannerLinkService {
       final conns = (body['connections'] as List?) ?? const [];
       int pushed = 0, pulled = 0, errors = 0;
       for (final c in conns.whereType<Map>()) {
-        pushed += (c['pushed'] as int?) ?? 0;
-        pulled += (c['pulled'] as int?) ?? 0;
-        errors += (c['errors'] as int?) ?? 0;
+        pushed += (c['pushed'] as num?)?.toInt() ?? 0;
+        pulled += (c['pulled'] as num?)?.toInt() ?? 0;
+        errors += (c['errors'] as num?)?.toInt() ?? 0;
       }
-      return PlannerSyncResult(pushed, pulled, errors);
+      // User mode answers 200 with `connections: []` + a `note` when the caller
+      // has no connected account holding Tasks.ReadWrite — nothing was synced.
+      return PlannerSyncResult(pushed, pulled, errors,
+          noEligibleConnection: conns.isEmpty && body['note'] != null);
     } catch (e) {
       Logger.error('[planner] syncNow failed', e);
       return null;

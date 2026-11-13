@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/logger.dart';
+import 'graph_problem.dart';
 
 /// One row of `public.integration_connections` for the signed-in user, read
 /// under the table's own RLS (read-own). Mirrors the web
@@ -35,12 +37,81 @@ class IntegrationConnection {
 }
 
 /// Result of one Microsoft Graph call proxied through the `graph-proxy` Edge
-/// Function: the upstream HTTP [status] and the decoded [data] body.
+/// Function: the upstream HTTP [status] and the decoded [data] body, or — when
+/// the call did not succeed — the classified [problem] (never a silent null).
 class GraphResult {
   final int status;
   final dynamic data;
-  const GraphResult(this.status, this.data);
-  bool get ok => status >= 200 && status < 400;
+
+  /// Why the call failed; null on success.
+  final GraphProblem? problem;
+
+  const GraphResult(this.status, this.data, {this.problem});
+
+  /// A failed call. [status] mirrors [GraphProblem.status] (Graph's own status
+  /// when Graph answered — so callers can still branch on 404 / 412).
+  GraphResult.failure(GraphProblem this.problem, {this.data})
+      : status = problem.status;
+
+  bool get ok => problem == null && status >= 200 && status < 400;
+}
+
+/// Outcome of reading the user's Microsoft connection, so a screen can tell
+/// "not connected" from "could not be checked" and from "needs to be renewed".
+class ConnectionLookup {
+  /// The usable (`status = 'connected'`) connection, if any.
+  final IntegrationConnection? connection;
+
+  /// A connection row that exists but is not usable (expired / revoked /
+  /// error) — the account has to be reconnected.
+  final IntegrationConnection? stale;
+
+  /// The read itself failed (network / server) — the state is UNKNOWN.
+  final bool failed;
+
+  const ConnectionLookup({this.connection, this.stale, this.failed = false});
+
+  bool get isConnected => connection != null;
+  bool get needsReconnect => connection == null && stale != null;
+}
+
+/// What came back from the browser leg of the Microsoft connect flow, for the
+/// screens that started it. `DeepLinkService` writes here when the app is
+/// reopened by `<scheme>://oauth-callback?...`; `MicrosoftIntegrationScreen`
+/// and `MsMailboxScreen` listen.
+class MicrosoftOAuthReturn {
+  MicrosoftOAuthReturn._();
+
+  /// The last non-success outcome (declined / admin consent required / failed
+  /// / admin-consent granted or declined). A screen that showed it clears it.
+  static final ValueNotifier<OAuthReturnNotice?> notice =
+      ValueNotifier<OAuthReturnNotice?>(null);
+
+  /// Bumped every time an `oauth_complete` hand-off finished (successfully or
+  /// not) — listeners re-read the connection instead of guessing the timing.
+  static final ValueNotifier<int> completions = ValueNotifier<int>(0);
+
+  /// Record the result carried by an OAuth return deep link. Unknown
+  /// parameters and unknown values are ignored.
+  static OAuthReturnNotice? report(Uri uri) {
+    final n = OAuthReturnNotice.fromQuery(uri.queryParameters);
+    if (n != null) notice.value = n;
+    return n;
+  }
+
+  /// The `oauth_complete` hand-off finished; [linked] false = the server
+  /// refused it (expired / already used / started by another user).
+  static void completed({required bool linked}) {
+    if (!linked) notice.value = OAuthReturnNotice.failed;
+    completions.value = completions.value + 1;
+  }
+
+  /// Test hook.
+  @visibleForTesting
+  static void reset() {
+    notice.value = null;
+    completions.value = 0;
+  }
 }
 
 /// **Microsoft integration service (mobile)** — the client-side parity of the
@@ -55,8 +126,11 @@ class GraphResult {
 /// reopening the app. Nothing here launches the browser — the caller opens the
 /// returned `authUrl` (url_launcher) and refreshes on the deep-link return.
 ///
-/// Ctor-inject (no service-locator dependency). Read/query errors are logged
-/// and surfaced as empty/false; the caller decides how to present them.
+/// Ctor-inject (no service-locator dependency). Graph calls never return a
+/// silent null: a failure carries a classified [GraphProblem] the screens turn
+/// into an honest state. Connection reads have a throwing twin
+/// ([lookupConnection]) for screens that must not show "not connected" when
+/// the read itself failed.
 class MicrosoftIntegrationService {
   final SupabaseClient _supabase;
   MicrosoftIntegrationService({required SupabaseClient supabase}) : _supabase = supabase;
@@ -86,6 +160,29 @@ class MicrosoftIntegrationService {
       if (c.isConnected) return c;
     }
     return null;
+  }
+
+  /// Like [getConnected], but tells the three "no usable connection" cases
+  /// apart: never connected, connected-but-stale (reconnect), read failed.
+  Future<ConnectionLookup> lookupConnection() async {
+    try {
+      final rows = await _supabase
+          .from('integration_connections')
+          .select('id,provider,status,account_email,sync_enabled,scopes')
+          .eq('provider', provider);
+      final conns = (rows as List)
+          .map((r) => IntegrationConnection.fromMap(Map<String, dynamic>.from(r as Map)))
+          .toList();
+      IntegrationConnection? stale;
+      for (final c in conns) {
+        if (c.isConnected) return ConnectionLookup(connection: c);
+        stale ??= c;
+      }
+      return ConnectionLookup(stale: stale);
+    } catch (e) {
+      Logger.error('[ms-integration] lookupConnection failed', e);
+      return const ConnectionLookup(failed: true);
+    }
   }
 
   /// Start the OAuth connect flow: returns the Microsoft authorize URL to open
@@ -129,8 +226,15 @@ class MicrosoftIntegrationService {
 
   /// Proxy one Microsoft Graph call. [method] e.g. 'GET'/'POST'; [path] a
   /// relative Graph path starting with '/'. [beta] swaps the Graph API version to
-  /// /beta (endpoints not yet GA, e.g. Planner rosters). Returns null on transport error.
-  Future<GraphResult?> graphCall(
+  /// /beta (endpoints not yet GA, e.g. Planner rosters).
+  ///
+  /// Never throws and never returns null: a failed call is a [GraphResult]
+  /// whose [GraphResult.problem] says why (not connected / reconnect / missing
+  /// consent / throttled with retry-after / …). `graph-proxy` answers an
+  /// upstream Graph failure with HTTP 502 and its own refusals with 401 / 403 /
+  /// 409, all of which `functions.invoke` throws — the body is read from the
+  /// exception and classified here.
+  Future<GraphResult> graphCall(
     String method,
     String path, {
     Map<String, String>? query,
@@ -148,14 +252,22 @@ class MicrosoftIntegrationService {
       });
       final env = res.data;
       if (env is Map && env['status'] is int) {
-        return GraphResult(env['status'] as int, env['data']);
+        final status = env['status'] as int;
+        if (status >= 200 && status < 400) return GraphResult(status, env['data']);
+        // Defensive: a 2xx envelope that reports an upstream failure.
+        return GraphResult.failure(GraphProblem.classify(res.status, env), data: env['data']);
       }
       // graph-proxy always returns {status,data}; anything else is an error envelope.
       Logger.error('[ms-integration] graph-proxy bad envelope', env);
-      return null;
+      return GraphResult.failure(GraphProblem.classify(res.status, env));
+    } on FunctionException catch (e) {
+      final problem = GraphProblem.classify(e.status, e.details);
+      Logger.warning('[ms-integration] graphCall $method $path → $problem');
+      final details = e.details;
+      return GraphResult.failure(problem, data: details is Map ? details['data'] : null);
     } catch (e) {
       Logger.error('[ms-integration] graphCall failed ($method $path)', e);
-      return null;
+      return GraphResult.failure(const GraphProblem(kind: GraphProblemKind.unavailable));
     }
   }
 
@@ -197,12 +309,31 @@ class MicrosoftIntegrationService {
     }
   }
 
-  /// Disconnect: remove the connection row (RLS-scoped to the user). Cascade
-  /// clears its Graph subscriptions; a fresh connect re-creates everything.
+  /// Disconnect through the `integration-disconnect` Edge Function — the only
+  /// supported path. It removes the Graph subscriptions at Microsoft, the
+  /// refresh token in Vault and the connection row, and writes the audit
+  /// record. (A direct client DELETE of the row skipped all of that; the RLS
+  /// policy that allowed it is being removed server-side.)
+  ///
+  /// True only when the function reports `ok: true`. A partial teardown
+  /// (HTTP 500 with `ok: false`) or a refusal (403 / 404) is false.
   Future<bool> disconnect(String connectionId) async {
     try {
-      await _supabase.from('integration_connections').delete().eq('id', connectionId);
-      return true;
+      final res = await _supabase.functions.invoke(
+        'integration-disconnect',
+        body: <String, dynamic>{'connection_id': connectionId},
+      );
+      final body = res.data;
+      final ok = res.status >= 200 && res.status < 300 && body is Map && body['ok'] == true;
+      if (!ok) {
+        Logger.error('[ms-integration] disconnect rejected', body);
+      } else if (((body['subscriptions_failed'] as num?) ?? 0) > 0 || body['secret_removed'] == false) {
+        Logger.warning('[ms-integration] disconnect: partial cleanup $body');
+      }
+      return ok;
+    } on FunctionException catch (e) {
+      Logger.error('[ms-integration] disconnect failed (HTTP ${e.status})', e.details);
+      return false;
     } catch (e) {
       Logger.error('[ms-integration] disconnect failed', e);
       return false;

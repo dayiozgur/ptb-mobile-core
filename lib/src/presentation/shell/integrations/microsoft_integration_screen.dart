@@ -30,17 +30,53 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
   bool _loading = true;
   bool _busy = false; // connect / disconnect / sync in flight
 
+  /// The connection row exists but is expired / revoked → "reconnect" state.
+  IntegrationConnection? _stale;
+
+  /// The connection could not be read at all → "could not check" (never
+  /// "not connected").
+  bool _lookupFailed = false;
+
+  /// What the browser leg of the connect flow reported (declined / admin
+  /// consent required / failed / org approval granted|declined). Persistent
+  /// until dismissed or a connection appears.
+  OAuthReturnNotice? _notice;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    MicrosoftOAuthReturn.notice.addListener(_onOAuthNotice);
+    MicrosoftOAuthReturn.completions.addListener(_onOAuthCompleted);
+    _takeNotice();
     refresh();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    MicrosoftOAuthReturn.notice.removeListener(_onOAuthNotice);
+    MicrosoftOAuthReturn.completions.removeListener(_onOAuthCompleted);
     super.dispose();
+  }
+
+  /// Consume the pending OAuth-return notice (set by `DeepLinkService`).
+  void _takeNotice() {
+    final n = MicrosoftOAuthReturn.notice.value;
+    if (n == null) return;
+    _notice = n;
+    MicrosoftOAuthReturn.notice.value = null;
+  }
+
+  void _onOAuthNotice() {
+    if (!mounted || MicrosoftOAuthReturn.notice.value == null) return;
+    setState(_takeNotice);
+  }
+
+  /// The `oauth_complete` hand-off finished → re-read the connection now
+  /// (the resume refresh may have run before the link was written).
+  void _onOAuthCompleted() {
+    if (mounted) refresh();
   }
 
   @override
@@ -52,10 +88,14 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
 
   Future<void> refresh() async {
     setState(() => _loading = true);
-    final conn = await _svc.getConnected();
+    final lookup = await _svc.lookupConnection();
     if (!mounted) return;
     setState(() {
-      _conn = conn;
+      _conn = lookup.connection;
+      _stale = lookup.stale;
+      _lookupFailed = lookup.failed;
+      // A connection is there → an older "not completed" notice is obsolete.
+      if (_conn != null && (_notice?.isError ?? false)) _notice = null;
       _loading = false;
     });
   }
@@ -69,15 +109,19 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
   }
 
   Future<void> _connect() async {
+    if (_busy) return;
     final redirect =
         widget.deepLinkRedirect ?? CoreInitializer.config?.oauthRedirectUri;
     if (redirect == null) {
       // App'in custom URL scheme'i yok → tarayıcıdan geri dönülemez.
       Logger.warning('[ms-screen] no appUrlScheme configured; connect disabled');
-      _toast(_t('integrations.ms.connect_failed'), error: true);
+      _toast(_t('integrations.ms.connect_on_web'), error: true);
       return;
     }
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _notice = null; // a new attempt starts clean
+    });
     try {
       final url = await _svc.startConnect(redirectAfter: redirect);
       if (url == null) {
@@ -94,8 +138,8 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
     }
   }
 
-  Future<void> _disconnect() async {
-    final conn = _conn;
+  Future<void> _disconnect([IntegrationConnection? target]) async {
+    final conn = target ?? _conn;
     if (conn == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -144,11 +188,85 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
           padding: AppSpacing.screenPadding,
           children: _loading
               ? [const SizedBox(height: 240, child: Center(child: CircularProgressIndicator()))]
-              : (_conn == null ? _notConnected() : _connected(_conn!)),
+              : [
+                  if (_notice != null) ...[_noticeCard(_notice!), const SizedBox(height: AppSpacing.md)],
+                  if (_lookupFailed)
+                    MsProblemView(
+                      problem: const GraphProblem(kind: GraphProblemKind.unavailable),
+                      onRetry: refresh,
+                      compact: true,
+                    )
+                  else if (_conn != null)
+                    ..._connected(_conn!)
+                  else if (_stale != null)
+                    ..._needsReconnect(_stale!)
+                  else
+                    ..._notConnected(),
+                ],
         ),
       ),
     );
   }
+
+  /// Persistent, translated result of the browser leg (one message per value).
+  Widget _noticeCard(OAuthReturnNotice n) {
+    final color = n.isError ? Colors.orange.shade800 : Colors.green.shade700;
+    return AppCard(
+      key: ValueKey('ms-oauth-notice-${n.code}'),
+      child: Padding(
+        padding: AppSpacing.cardInsets,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(n.isError ? Icons.info_outline : Icons.verified_outlined, color: color, size: 22),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(_t(n.titleKey), style: const TextStyle(fontWeight: FontWeight.w600))),
+            ]),
+            const SizedBox(height: AppSpacing.xs),
+            Text(_t(n.hintKey), style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => setState(() => _notice = null),
+                child: Text(_t('integrations.apps.oauth_result.dismiss')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The row exists but is expired / revoked: reconnect (data is kept).
+  List<Widget> _needsReconnect(IntegrationConnection c) => [
+        AppCard(
+          child: Padding(
+            padding: AppSpacing.cardInsets,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MsProblemView(
+                  problem: const GraphProblem(kind: GraphProblemKind.reauth),
+                  onConnect: _connect,
+                  compact: true,
+                ),
+                if (c.accountEmail != null)
+                  Text(c.accountEmail!,
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: _t('integrations.ms.disconnect'),
+          icon: Icons.link_off,
+          variant: AppButtonVariant.secondary,
+          isLoading: _busy,
+          onPressed: _busy ? null : () => _disconnect(c),
+        ),
+      ];
 
   List<Widget> _notConnected() => [
         AppCard(
@@ -244,7 +362,7 @@ class _MicrosoftIntegrationScreenState extends State<MicrosoftIntegrationScreen>
           icon: Icons.link_off,
           variant: AppButtonVariant.secondary,
           isLoading: _busy,
-          onPressed: _busy ? null : _disconnect,
+          onPressed: _busy ? null : () => _disconnect(),
         ),
       ];
 

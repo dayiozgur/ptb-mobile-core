@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/integration/entity_file_link_service.dart';
+import '../../../core/integration/graph_problem.dart';
 import '../../../core/integration/microsoft_integration_service.dart';
 import '../../../core/localization/localization_service.dart';
+import 'ms_problem_view.dart';
 
 /// Çekirdek i18n yardımcısı — anahtar bulunamazsa Türkçe [fb] gösterilir.
 String _t(String k, String fb) {
@@ -66,6 +68,11 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
   bool _loading = true;
   bool _adding = false;
 
+  /// Why the last browse/search failed (null = it succeeded). Shown instead of
+  /// "this folder is empty".
+  GraphProblem? _problem;
+  Future<void> Function()? _lastBrowse;
+
   @override
   void initState() {
     super.initState();
@@ -86,20 +93,22 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
   }
 
   Future<void> _browse(String path, {Map<String, String>? query}) async {
+    _lastBrowse = () => _browse(path, query: query);
     setState(() => _loading = true);
     final res = await _svc.graphCall('GET', path, query: query);
     if (!mounted) return;
-    if (res == null || !res.ok || res.data is! Map) {
+    if (!res.ok || res.data is! Map) {
       setState(() {
         _items = const [];
+        _problem = res.problem ?? const GraphProblem(kind: GraphProblemKind.failed);
         _loading = false;
       });
-      _snack(_t('crm.files.browse_failed', 'Dosyalar yüklenemedi. Lütfen tekrar deneyin.'), error: true);
       return;
     }
     final value = (res.data['value'] as List?) ?? const [];
     setState(() {
-      _items = value.map((e) => _DriveItem.fromMap(e as Map)).toList();
+      _items = value.whereType<Map>().map(_DriveItem.fromMap).toList();
+      _problem = null;
       _loading = false;
     });
   }
@@ -174,6 +183,8 @@ class _OneDrivePickerState extends State<_OneDrivePicker> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
+                : _problem != null
+                    ? MsProblemView(problem: _problem!, onRetry: _lastBrowse)
                 : (_items.isEmpty
                     ? Center(child: Text(_t('crm.files.no_files', 'Bu klasör boş.')))
                     : ListView.separated(

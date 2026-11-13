@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/integration/graph_problem.dart';
 import '../../../core/localization/localization_service.dart';
 import '../../../core/ppm/planner_link_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/url_actions.dart';
 import '../../widgets/cards/app_card.dart';
 import '../../widgets/feedback/app_loading_indicator.dart';
+import '../microsoft/ms_problem_view.dart';
 
 /// **Microsoft Planner card for a PPM project** — the mobile parity of the web project-workspace
 /// "Microsoft Planner" tab. Shows whether the project is linked to a Planner plan, lets the user
@@ -37,6 +39,10 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
   String? _lastSynced;
   PlannerSyncResult? _lastResult;
 
+  /// Why the plan list could not be read (null = it was read). Shown instead
+  /// of "no Planner plan in your account".
+  GraphProblem? _plansProblem;
+
   static String _t(String key, String fallback) {
     final v = sl<LocalizationService>().translate(key);
     return v == key ? fallback : v;
@@ -54,13 +60,16 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
     final connected = conn != null;
     PlannerLink? link;
     List<PlannerPlan> plans = const [];
+    GraphProblem? plansProblem;
     String? lastSynced;
     if (connected) {
       link = await _svc.getLink(widget.projectEntityId);
       if (link != null) {
         lastSynced = await _svc.getLastSyncedAt();
       } else {
-        plans = await _svc.listPlans();
+        final res = await _svc.listPlans();
+        plans = res.plans;
+        plansProblem = res.problem;
       }
     }
     if (!mounted) return;
@@ -68,6 +77,7 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
       _connected = connected;
       _link = link;
       _plans = plans;
+      _plansProblem = plansProblem;
       _lastSynced = lastSynced;
       _loading = false;
     });
@@ -110,6 +120,11 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
       _lastResult = res;
       _lastSynced = last;
     });
+    if (res != null && res.noEligibleConnection) {
+      // Ran, but the caller's account holds no Tasks.ReadWrite → nothing synced.
+      _snack(msProblemToast(const GraphProblem(kind: GraphProblemKind.missingConsent)), isError: true);
+      return;
+    }
     _snack(res != null
         ? _t('ppm.planner.toast_synced', 'Planner senkronizasyonu tamamlandı')
         : _t('ppm.planner.toast_sync_failed', 'Planner senkronizasyonu başarısız'),
@@ -123,12 +138,13 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
     final ok = await _svc.unlink(link.id);
     if (!mounted) return;
     if (ok) {
-      final plans = await _svc.listPlans();
+      final res = await _svc.listPlans();
       if (!mounted) return;
       setState(() {
         _link = null;
         _lastResult = null;
-        _plans = plans;
+        _plans = res.plans;
+        _plansProblem = res.problem;
         _busy = false;
       });
       _snack(_t('ppm.planner.toast_unlinked', 'Planner bağlantısı kaldırıldı'));
@@ -182,6 +198,9 @@ class _PlannerLinkCardState extends State<PlannerLinkCard> {
       );
 
   Widget _picker() {
+    if (_plansProblem != null) {
+      return MsProblemView(problem: _plansProblem!, onRetry: _load, compact: true);
+    }
     if (_plans.isEmpty) {
       return _hint(_t('ppm.planner.no_plans',
           'Hesabınızda Planner planı bulunamadı. Önce Planner\'da bir plan oluşturun.'));

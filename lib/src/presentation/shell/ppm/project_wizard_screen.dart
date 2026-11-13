@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/entity/entity_config_service.dart';
 import '../../../core/entity/entity_data_service.dart';
+import '../../../core/integration/graph_problem.dart';
 import '../../../core/localization/localization_service.dart';
 import '../../../core/ppm/planner_link_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/logger.dart';
 import '../../widgets/feedback/app_loading_indicator.dart';
 import '../../widgets/navigation/app_scaffold.dart';
+import '../microsoft/ms_problem_view.dart';
 
 /// **Mobile "New Project" wizard** — the mobile parity of the web project-creation wizard.
 /// Step 1: name + methodology (Scrum/Kanban, stored in metadata). Step 2: Microsoft Planner
@@ -47,6 +49,7 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
   bool _loadingPlanner = false;
   bool _connected = false;
   List<PlannerPlan> _plans = const [];
+  GraphProblem? _plansProblem; // plan list could not be read (≠ "no plans")
   String _plannerMode = 'off'; // off | create | existing
   String? _selectedPlanId;
 
@@ -64,9 +67,9 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
     setState(() { _step = 1; _loadingPlanner = true; });
     final conn = await _planner.getConnection();
     final connected = conn != null;
-    final plans = connected ? await _planner.listPlans() : const <PlannerPlan>[];
+    final res = connected ? await _planner.listPlans() : const PlannerPlansResult(<PlannerPlan>[]);
     if (!mounted) return;
-    setState(() { _connected = connected; _plans = plans; _loadingPlanner = false; });
+    setState(() { _connected = connected; _plans = res.plans; _plansProblem = res.problem; _loadingPlanner = false; });
   }
 
   Future<void> _create() async {
@@ -285,7 +288,9 @@ class _ProjectWizardScreenState extends State<ProjectWizardScreen> {
               onChanged: (v) => setState(() => _selectedPlanId = v),
             ),
           ),
-        if (_plans.isEmpty)
+        if (_plansProblem != null)
+          MsProblemView(problem: _plansProblem!, onRetry: _goPlanner, compact: true)
+        else if (_plans.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_t('ppm.wizard.planner_no_existing', 'Mevcut plan bulunamadı.'),
