@@ -72,8 +72,7 @@ class _LookupSelectFieldState extends State<_LookupSelectField> {
   void didUpdateWidget(covariant _LookupSelectField old) {
     super.didUpdateWidget(old);
     final dep = widget.ctx.field.options.dependsOn;
-    if (dep != null &&
-        old.ctx.formValues[dep.fieldCode] != _dependsOnValue) {
+    if (dep != null && old.ctx.formValues[dep.fieldCode] != _dependsOnValue) {
       _load();
     }
   }
@@ -213,7 +212,8 @@ class MultiselectFieldWidget extends FieldWidget {
   Widget build(BuildContext context, FieldRenderContext ctx) {
     final field = ctx.field;
     final options = field.options.items;
-    final selected = ctx.value is List ? List<dynamic>.from(ctx.value) : <dynamic>[];
+    final selected =
+        ctx.value is List ? List<dynamic>.from(ctx.value) : <dynamic>[];
 
     return FieldScaffold(
       labelText: field.label,

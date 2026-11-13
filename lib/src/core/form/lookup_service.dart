@@ -24,7 +24,9 @@ class LookupService {
     if (filters == null) return builder;
     var b = builder;
     filters.forEach((column, value) {
-      b = value == null ? b.isFilter(column, null) : b.eq(column, value as Object);
+      b = value == null
+          ? b.isFilter(column, null)
+          : b.eq(column, value as Object);
     });
     return b;
   }
@@ -119,8 +121,7 @@ class LookupService {
       if (query != null && query.trim().length >= 2) {
         final term = query.trim();
         final searchFields = options.searchFields ?? [labelField];
-        final orExpr =
-            searchFields.map((f) => '$f.ilike.%$term%').join(',');
+        final orExpr = searchFields.map((f) => '$f.ilike.%$term%').join(',');
         builder = builder.or(orExpr);
       }
 
