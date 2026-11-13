@@ -4,7 +4,7 @@
          manifests do); relying on transitive AARs (ML Kit datatransport) is fragile. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="protoolbag_ppm"
+        android:label="Protoolbag PM"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false"
