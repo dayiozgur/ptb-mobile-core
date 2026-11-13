@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+
+/// A public legal page of the web app (`<web origin>/legal/<slug>`).
+class _LegalLink {
+  final String slug;
+  final String labelKey;
+  final IconData icon;
+  final Uri url;
+  const _LegalLink(this.slug, this.labelKey, this.icon, this.url);
+}
 
 class SettingsScreen extends StatefulWidget {
   /// Shell sekmesi olarak gömülüyse kendi AppBar'ını çizmez (global chrome).
@@ -24,6 +34,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _themeMode = themeService.themeMode;
     _loadSettings();
     _loadProfile();
+    _loadVersion();
+  }
+
+  /// Installed version shown under "Version" (`1.0.0 (3)`); "—" until known.
+  String _version = '—';
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _version = info.buildNumber.isEmpty
+          ? info.version
+          : '${info.version} (${info.buildNumber})');
+    } catch (_) {
+      // plugin unavailable (tests / unsupported platform) → keep "—"
+    }
+  }
+
+  /// Privacy policy and terms of service on the app's web origin. Empty when
+  /// the app has not configured one ([InAppRoute.webOrigin]).
+  List<_LegalLink> get _legalLinks {
+    final privacy = InAppRoute.webUrlFor('/legal/privacy-policy');
+    final terms = InAppRoute.webUrlFor('/legal/terms-of-service');
+    return [
+      if (privacy != null)
+        _LegalLink('privacy-policy', 'legal.links.privacy_policy',
+            Icons.privacy_tip_outlined, privacy),
+      if (terms != null)
+        _LegalLink('terms-of-service', 'legal.links.terms_of_service',
+            Icons.description_outlined, terms),
+    ];
+  }
+
+  Future<void> _openLegal(Uri url) async {
+    final ok = await ComingSoonScreen.openOnWeb(url);
+    if (!ok && mounted) {
+      AppSnackbar.showError(context,
+          message: sl<LocalizationService>()
+              .translate('common.web_only.open_failed'));
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -163,7 +213,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
 
             // Security section
-            const AppSectionHeader(title: 'Güvenlik'),
+            AppSectionHeader(
+                title:
+                    sl<LocalizationService>().translate('settings.security')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -177,7 +229,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Icon(Icons.lock_outline, color: AppColors.primary),
                     ),
-                    title: 'Şifre Değiştir',
+                    title: sl<LocalizationService>()
+                        .translate('settings.change_password'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showChangePasswordDialog(),
                   ),
@@ -342,8 +395,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Icon(Icons.info_outline, color: AppColors.primary),
                     ),
                     title: sl<LocalizationService>().translate('settings.version'),
-                    subtitle: '1.0.0 (Build 1)',
+                    // The installed version, not a hardcoded one.
+                    subtitle: _version,
                   ),
+                  // Privacy policy / terms: public pages of the web app
+                  // (`/legal/<slug>`). Both stores expect the policy to be
+                  // reachable from inside the app.
+                  for (final link in _legalLinks) ...[
+                    Divider(height: 1, color: AppColors.separator(context)),
+                    AppListTile(
+                      key: ValueKey('settings.legal.${link.slug}'),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(link.icon, color: Colors.grey),
+                      ),
+                      title: sl<LocalizationService>().translate(link.labelKey),
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () => _openLegal(link.url),
+                    ),
+                  ],
                   Divider(height: 1, color: AppColors.separator(context)),
                   AppListTile(
                     leading: Container(
