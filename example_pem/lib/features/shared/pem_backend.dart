@@ -283,7 +283,11 @@ class SupabasePemBackend implements PemBackend {
     final res = await _sb
         .from('priorities')
         .select('id,name,code,color,level')
-        .eq('active', true)
+        // `priorities.active` is nullable with no default (6 NULL rows on the
+        // live table, 2026-11-13): `.eq('active', true)` silently drops them
+        // and the alarm then renders without its priority label / colour.
+        // Same rule as the core PriorityService: exclude only active = false.
+        .or('active.eq.true,active.is.null')
         .order('level', ascending: true);
     return _rows(res);
   }

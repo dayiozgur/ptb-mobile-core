@@ -577,7 +577,10 @@ class UnitService {
       var query = _supabase.from(_unitTypesTable).select();
 
       if (activeOnly) {
-        query = query.eq('active', true);
+        // `unit_types.active` is nullable with no default: a NULL row is an
+        // active type (only `false` means retired). `.eq('active', true)`
+        // hid such rows from every unit-type picker.
+        query = query.not('active', 'is', false);
       }
 
       if (category != null) {
