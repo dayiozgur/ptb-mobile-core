@@ -12,18 +12,21 @@ import '../calendar/crm_agenda_screen.dart';
 
 /// CRM **Kişiler** — ara / listele / hızlı-ekle. `public.contacts` (tenant-scoped).
 class ContactsListScreen extends StatefulWidget {
-  const ContactsListScreen({super.key});
+  /// Injectable for tests; defaults to the live service.
+  final ContactsService? service;
+  const ContactsListScreen({super.key, this.service});
 
   @override
   State<ContactsListScreen> createState() => _ContactsListScreenState();
 }
 
 class _ContactsListScreenState extends State<ContactsListScreen> {
-  final _svc = ContactsService();
+  late final ContactsService _svc = widget.service ?? ContactsService();
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
 
   bool _loading = true;
+  Object? _error;
   List<Contact> _contacts = [];
   final _rt = RealtimeRefresher();
 
@@ -60,11 +63,26 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
   }
 
   Future<void> _load([String? query, bool silent = false]) async {
-    if (!silent) setState(() => _loading = true);
-    final list = await _svc.list(query: query);
-    if (mounted) {
+    if (!silent) {
       setState(() {
-        _contacts = list;
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final list = await _svc.list(query: query);
+      if (mounted) {
+        setState(() {
+          _contacts = list;
+          _error = null;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      // A failed silent (realtime) refresh keeps the list already shown.
+      if (!mounted || (silent && _error == null && !_loading)) return;
+      setState(() {
+        _error = e;
         _loading = false;
       });
     }
@@ -162,7 +180,9 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
           onPressed: _suggestFromMicrosoft,
         ),
         AppIconButton(
-          icon: _scanning ? Icons.hourglass_bottom : Icons.document_scanner_outlined,
+          icon: _scanning
+              ? Icons.hourglass_bottom
+              : Icons.document_scanner_outlined,
           onPressed: _scanning ? null : _scanCard,
         ),
         AppIconButton(icon: Icons.refresh, onPressed: () => _load()),
@@ -179,8 +199,8 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
               controller: _searchCtrl,
               onChanged: _onSearch,
               decoration: InputDecoration(
-                hintText:
-                    crmT('crm.contact.search_hint', 'Ara: ad, e-posta, telefon…'),
+                hintText: crmT(
+                    'crm.contact.search_hint', 'Ara: ad, e-posta, telefon…'),
                 prefixIcon: const Icon(Icons.search),
                 isDense: true,
                 border: const OutlineInputBorder(),
@@ -200,6 +220,14 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
 
   Widget _buildList() {
     if (_loading) return const Center(child: AppLoadingIndicator());
+    if (_error != null) {
+      return AppLoadFailedView(
+        error: _error,
+        message: crmT('crm.contact.load_failed',
+            'Kişiler yüklenemedi. Bu, kayıt olmadığı anlamına gelmez; tekrar deneyin.'),
+        onRetry: () => _load(_searchCtrl.text),
+      );
+    }
     if (_contacts.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -230,8 +258,7 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.12),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                     child: Text(
                       (c.displayName.isNotEmpty
                               ? c.displayName.characters.first
@@ -246,7 +273,8 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(c.displayName, style: AppTypography.subhead),
-                        if ((c.title ?? '').isNotEmpty || (c.email ?? '').isNotEmpty)
+                        if ((c.title ?? '').isNotEmpty ||
+                            (c.email ?? '').isNotEmpty)
                           Text(
                             [c.title, c.email]
                                 .where((s) => (s ?? '').isNotEmpty)
@@ -282,12 +310,15 @@ class _QuickAddSheet extends StatefulWidget {
 
 class _QuickAddSheetState extends State<_QuickAddSheet> {
   final _svc = ContactsService();
-  late final _first = TextEditingController(text: widget.initial?.firstName ?? '');
-  late final _last = TextEditingController(text: widget.initial?.lastName ?? '');
+  late final _first =
+      TextEditingController(text: widget.initial?.firstName ?? '');
+  late final _last =
+      TextEditingController(text: widget.initial?.lastName ?? '');
   late final _email = TextEditingController(text: widget.initial?.email ?? '');
   late final _phone = TextEditingController(text: widget.initial?.phone ?? '');
   late final _title = TextEditingController(text: widget.initial?.title ?? '');
-  late final _company = TextEditingController(text: widget.initial?.company ?? '');
+  late final _company =
+      TextEditingController(text: widget.initial?.company ?? '');
   bool _saving = false;
 
   @override
@@ -388,7 +419,8 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
           TextField(
               controller: _title,
               decoration: InputDecoration(
-                  labelText: crmT('crm.contact.title_field', 'Pozisyon / Unvan'),
+                  labelText:
+                      crmT('crm.contact.title_field', 'Pozisyon / Unvan'),
                   isDense: true,
                   border: const OutlineInputBorder())),
           const SizedBox(height: AppSpacing.sm),

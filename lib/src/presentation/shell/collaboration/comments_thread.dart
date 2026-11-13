@@ -25,7 +25,14 @@ class _CommentsThreadState extends State<CommentsThread> {
 
   bool _loading = true;
   bool _sending = false;
+  Object? _error;
   List<EntityComment> _comments = [];
+
+  String _t(String key, String fallback) {
+    if (!sl.isRegistered<LocalizationService>()) return fallback;
+    final v = sl<LocalizationService>().translate(key);
+    return v == key ? fallback : v;
+  }
 
   @override
   void initState() {
@@ -40,12 +47,27 @@ class _CommentsThreadState extends State<CommentsThread> {
   }
 
   Future<void> _load() async {
-    final list = await _svc.list(widget.entityType, widget.entityId);
-    if (mounted) {
+    if (_error != null) {
       setState(() {
-        _comments = list;
-        _loading = false;
+        _loading = true;
+        _error = null;
       });
+    }
+    try {
+      final list = await _svc.list(widget.entityType, widget.entityId);
+      if (mounted) {
+        setState(() {
+          _comments = list;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -63,8 +85,9 @@ class _CommentsThreadState extends State<CommentsThread> {
       }
     });
     if (added == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yorum eklenemedi.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              _t('comments.add_failed', 'The comment could not be added.'))));
     }
   }
 
@@ -89,14 +112,14 @@ class _CommentsThreadState extends State<CommentsThread> {
               children: [
                 Icon(Icons.forum_outlined, size: 18, color: AppColors.primary),
                 const SizedBox(width: AppSpacing.sm),
-                Text('Yorumlar',
+                Text(_t('comments.title', 'Comments'),
                     style: AppTypography.withColor(
                         AppTypography.subhead, AppColors.textPrimary(b))),
                 const Spacer(),
-                if (!_loading)
+                if (!_loading && _error == null)
                   Text('${_comments.length}',
-                      style: AppTypography.withColor(AppTypography.footnote,
-                          AppColors.textSecondary(b))),
+                      style: AppTypography.withColor(
+                          AppTypography.footnote, AppColors.textSecondary(b))),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -105,17 +128,24 @@ class _CommentsThreadState extends State<CommentsThread> {
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Center(child: AppLoadingIndicator()),
               )
+            else if (_error != null)
+              AppLoadFailedView(
+                error: _error,
+                compact: true,
+                message: _t('comments.load_failed',
+                    'The comments could not be loaded.'),
+                onRetry: _load,
+              )
             else if (_comments.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Text('Henüz yorum yok.',
-                    style: AppTypography.withColor(AppTypography.footnote,
-                        AppColors.textSecondary(b))),
+                child: Text(_t('comments.empty', 'No comments yet.'),
+                    style: AppTypography.withColor(
+                        AppTypography.footnote, AppColors.textSecondary(b))),
               )
             else
               ..._comments.map((c) => Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: AppSpacing.sm),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -150,8 +180,8 @@ class _CommentsThreadState extends State<CommentsThread> {
                     maxLines: 4,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _send(),
-                    decoration: const InputDecoration(
-                      hintText: 'Yorum ekle…',
+                    decoration: InputDecoration(
+                      hintText: _t('comments.placeholder', 'Add a comment…'),
                       isDense: true,
                       border: OutlineInputBorder(),
                     ),

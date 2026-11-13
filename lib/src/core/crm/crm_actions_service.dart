@@ -85,11 +85,13 @@ class CrmActionsService {
         'p_activity_type': activityType,
         if (_has(notes)) 'p_notes': notes!.trim(),
         if (_has(outcome)) 'p_outcome': outcome!.trim(),
-        if (_has(relatedContactId)) 'p_related_contact_id': relatedContactId!.trim(),
+        if (_has(relatedContactId))
+          'p_related_contact_id': relatedContactId!.trim(),
         if (_has(relatedContactName))
           'p_related_contact_name': relatedContactName!.trim(),
         if (_has(relatedDealId)) 'p_related_deal_id': relatedDealId!.trim(),
-        if (_has(relatedDealName)) 'p_related_deal_name': relatedDealName!.trim(),
+        if (_has(relatedDealName))
+          'p_related_deal_name': relatedDealName!.trim(),
       },
       entityId: relatedDealId?.trim() ?? relatedContactId?.trim(),
       errorContext: 'logActivity',
@@ -156,7 +158,8 @@ class CrmActionsService {
     final id = leadId.trim();
     if (id.isEmpty) return null;
     try {
-      final res = await _supabase.rpc('fn_crm_score_lead', params: {'p_entity_id': id});
+      final res =
+          await _supabase.rpc('fn_crm_score_lead', params: {'p_entity_id': id});
       final list = (res as List?) ?? const [];
       if (list.isEmpty) return null;
       final s = Map<String, dynamic>.from(list.first as Map)['score'];
@@ -169,7 +172,8 @@ class CrmActionsService {
 
   /// Aktif CRM dizilerini listele (`fn_crm_sequences_list`) — dizi-seçici için.
   /// SECDEF + tenant-scoped. Yalnız enroll edilebilir (adım-içeren) diziler
-  /// gösterilsin diye `step_count > 0` süzülür. Hata/boş → `[]` (fırlatmaz).
+  /// gösterilsin diye `step_count > 0` süzülür. Boş → `[]`; a failed read is
+  /// rethrown so the picker can say "could not load" instead of "no sequences".
   Future<List<CrmSequence>> listSequences() async {
     try {
       final res = await _supabase.rpc('fn_crm_sequences_list');
@@ -180,7 +184,7 @@ class CrmActionsService {
           .toList();
     } catch (e) {
       Logger.error('crm listSequences hata', e);
-      return [];
+      rethrow;
     }
   }
 

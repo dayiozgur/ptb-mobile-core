@@ -98,14 +98,15 @@ class ContactsService {
         q = q.or('first_name.ilike.%$search%,last_name.ilike.%$search%,'
             'email.ilike.%$search%,phone.ilike.%$search%');
       }
-      final res =
-          await q.order('first_name', ascending: true).limit(limit);
+      final res = await q.order('first_name', ascending: true).limit(limit);
       return (res as List)
           .map((e) => Contact.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     } catch (e) {
+      // Rethrown: the list shows "could not load" / "no access" instead of
+      // "no contacts found" (an RLS-filtered result is still an empty list).
       Logger.error('contacts list hata', e);
-      return [];
+      rethrow;
     }
   }
 
@@ -213,8 +214,11 @@ class ContactsService {
     String? title,
     String? notes,
   }) async {
-    String? norm(String? v) => (v == null || v.trim().isEmpty) ? null : v.trim();
-    final patch = <String, dynamic>{'updated_at': DateTime.now().toUtc().toIso8601String()};
+    String? norm(String? v) =>
+        (v == null || v.trim().isEmpty) ? null : v.trim();
+    final patch = <String, dynamic>{
+      'updated_at': DateTime.now().toUtc().toIso8601String()
+    };
     if (firstName != null) patch['first_name'] = firstName.trim();
     if (lastName != null) patch['last_name'] = norm(lastName);
     if (email != null) patch['email'] = norm(email);
@@ -233,14 +237,14 @@ class ContactsService {
   /// Kişiye bağlı aktivite feed'i (`fn_crm_activity_feed(p_entity_id)`).
   Future<List<CrmActivity>> activityFeed(String contactId) async {
     try {
-      final res =
-          await _sb.rpc('fn_crm_activity_feed', params: {'p_entity_id': contactId});
+      final res = await _sb
+          .rpc('fn_crm_activity_feed', params: {'p_entity_id': contactId});
       return ((res as List?) ?? const [])
           .map((e) => CrmActivity.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     } catch (e) {
       Logger.error('activity feed hata', e);
-      return [];
+      rethrow;
     }
   }
 

@@ -27,7 +27,8 @@ class NotificationService {
   final _notificationsController =
       StreamController<List<AppNotification>>.broadcast();
   final _unreadCountController = StreamController<int>.broadcast();
-  final _newNotificationController = StreamController<AppNotification>.broadcast();
+  final _newNotificationController =
+      StreamController<AppNotification>.broadcast();
 
   NotificationService({
     required SupabaseClient supabase,
@@ -137,12 +138,14 @@ class NotificationService {
 
       return notifications;
     } catch (e) {
+      // Rethrown: the inbox shows "could not load" / "no access" — a failed
+      // read must never look like an empty inbox.
       Logger.error('Failed to get notifications', e);
-      return [];
+      rethrow;
     }
   }
 
-  /// Okunmamış bildirim sayısını getir
+  /// Okunmamış bildirim sayısını getir (badge — fail-soft: 0 on error).
   Future<int> getUnreadCount(String profileId) async {
     try {
       final response = await _supabase
@@ -178,7 +181,8 @@ class NotificationService {
 
       final byType = <NotificationType, int>{};
       for (final n in notifications) {
-        final type = NotificationType.fromString(n['notification_type'] as String?);
+        final type =
+            NotificationType.fromString(n['notification_type'] as String?);
         if (type != null) {
           byType[type] = (byType[type] ?? 0) + 1;
         }
@@ -199,14 +203,10 @@ class NotificationService {
   /// Tek bildirim getir
   Future<AppNotification?> getNotification(String notificationId) async {
     try {
-      final response = await _supabase
-          .from(_tableName)
-          .select('''
+      final response = await _supabase.from(_tableName).select('''
             *,
             profile:profile_id(id, full_name, avatar_url)
-          ''')
-          .eq('id', notificationId)
-          .maybeSingle();
+          ''').eq('id', notificationId).maybeSingle();
 
       if (response == null) return null;
       return AppNotification.fromJson(response);
@@ -256,14 +256,11 @@ class NotificationService {
         'created_by': createdBy,
       };
 
-      final response = await _supabase
-          .from(_tableName)
-          .insert(insertData)
-          .select('''
+      final response =
+          await _supabase.from(_tableName).insert(insertData).select('''
             *,
             profile:profile_id(id, full_name, avatar_url)
-          ''')
-          .single();
+          ''').single();
 
       final notification = AppNotification.fromJson(response);
 
@@ -308,16 +305,19 @@ class NotificationService {
   /// Tüm bildirimleri okundu olarak işaretle
   Future<bool> markAllAsRead(String profileId) async {
     try {
-      await _supabase.from(_tableName).update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('recipient_id', profileId).eq('is_read', false);
+      await _supabase
+          .from(_tableName)
+          .update({
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('recipient_id', profileId)
+          .eq('is_read', false);
 
       // Local state güncelle
-      _notifications = _notifications
-          .map((n) => n.copyWith(isRead: true))
-          .toList();
+      _notifications =
+          _notifications.map((n) => n.copyWith(isRead: true)).toList();
       _notificationsController.add(_notifications);
 
       _unreadCount = 0;

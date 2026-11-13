@@ -56,10 +56,9 @@ void main() {
       expect(list, isEmpty);
     });
 
-    test('error → [] (UI\'a fırlatmaz)', () async {
+    test('error is rethrown (the thread shows "could not load")', () async {
       h.stubFrom('comments', error: Exception('boom'));
-      final list = await service.list('deal', 'd1');
-      expect(list, isEmpty);
+      expect(service.list('deal', 'd1'), throwsException);
     });
   });
 

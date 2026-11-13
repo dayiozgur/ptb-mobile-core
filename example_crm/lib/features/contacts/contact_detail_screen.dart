@@ -28,6 +28,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   bool _loading = true;
   Contact? _contact;
   List<CrmActivity> _feed = [];
+  Object? _feedError;
 
   @override
   void initState() {
@@ -38,11 +39,18 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final c = await _svc.get(widget.contactId);
-    final feed = await _svc.activityFeed(widget.contactId);
+    List<CrmActivity> feed = const [];
+    Object? feedError;
+    try {
+      feed = await _svc.activityFeed(widget.contactId);
+    } catch (e) {
+      feedError = e;
+    }
     if (mounted) {
       setState(() {
         _contact = c;
         _feed = feed;
+        _feedError = feedError;
         _loading = false;
       });
     }
@@ -137,12 +145,21 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                         _AccountDealsCard(companyId: c.companyId!),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      EntityFilesCard(entityType: 'contact', entityId: widget.contactId),
+                      EntityFilesCard(
+                          entityType: 'contact', entityId: widget.contactId),
                       const SizedBox(height: AppSpacing.md),
                       Text(crmT('crm.contact.activities', 'Aktiviteler'),
                           style: AppTypography.headline),
                       const SizedBox(height: AppSpacing.sm),
-                      if (_feed.isEmpty)
+                      if (_feedError != null)
+                        AppLoadFailedView(
+                          error: _feedError,
+                          compact: true,
+                          message: crmT('crm.contact.activities_load_failed',
+                              'Aktiviteler yüklenemedi.'),
+                          onRetry: _load,
+                        )
+                      else if (_feed.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.md),
@@ -150,8 +167,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                               crmT('crm.contact.no_activities',
                                   'Henüz aktivite yok.'),
                               style: AppTypography.footnote.copyWith(
-                                  color:
-                                      AppColors.secondaryLabel(context))),
+                                  color: AppColors.secondaryLabel(context))),
                         )
                       else
                         ..._feed.map(_activityTile),
@@ -172,16 +188,18 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             if ((c.title ?? '').isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(c.title!,
-                  style: AppTypography.footnote.copyWith(
-                      color: AppColors.secondaryLabel(context))),
+                  style: AppTypography.footnote
+                      .copyWith(color: AppColors.secondaryLabel(context))),
             ],
             const SizedBox(height: AppSpacing.sm),
             if ((c.email ?? '').isNotEmpty)
               _row(Icons.email_outlined, c.email!,
-                  action: _ActionSpec(Icons.send_outlined, 'mailto:${c.email!.trim()}')),
+                  action: _ActionSpec(
+                      Icons.send_outlined, 'mailto:${c.email!.trim()}')),
             if ((c.phone ?? '').isNotEmpty)
               _row(Icons.phone_outlined, c.phone!,
-                  action: _ActionSpec(Icons.call_outlined, 'tel:${c.phone!.trim()}')),
+                  action: _ActionSpec(
+                      Icons.call_outlined, 'tel:${c.phone!.trim()}')),
             if ((c.notes ?? '').isNotEmpty)
               _row(Icons.notes_outlined, c.notes!),
           ],
@@ -235,8 +253,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                         size: AppBadgeSize.small),
                     const Spacer(),
                     Text(_time(a.occurredAt),
-                        style: AppTypography.caption2.copyWith(
-                            color: AppColors.tertiaryLabel(context))),
+                        style: AppTypography.caption2
+                            .copyWith(color: AppColors.tertiaryLabel(context))),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -244,8 +262,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 if ((a.notes ?? '').isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(a.notes!,
-                      style: AppTypography.footnote.copyWith(
-                          color: AppColors.secondaryLabel(context))),
+                      style: AppTypography.footnote
+                          .copyWith(color: AppColors.secondaryLabel(context))),
                 ],
               ],
             ),
@@ -347,7 +365,6 @@ class _AccountDealsCardState extends State<_AccountDealsCard> {
       ),
     );
   }
-
 }
 
 /// "Aktivite logla" alt-sayfası.
@@ -470,6 +487,7 @@ class _EnrollSequenceSheetState extends State<_EnrollSequenceSheet> {
 
   bool _loading = true;
   bool _enrolling = false;
+  Object? _error;
   List<CrmSequence> _sequences = const [];
 
   @override
@@ -479,12 +497,25 @@ class _EnrollSequenceSheetState extends State<_EnrollSequenceSheet> {
   }
 
   Future<void> _load() async {
-    final seqs = await _actions.listSequences();
-    if (mounted) {
-      setState(() {
-        _sequences = seqs;
-        _loading = false;
-      });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final seqs = await _actions.listSequences();
+      if (mounted) {
+        setState(() {
+          _sequences = seqs;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -530,6 +561,13 @@ class _EnrollSequenceSheetState extends State<_EnrollSequenceSheet> {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Center(child: AppLoadingIndicator()),
             )
+          else if (_error != null)
+            AppLoadFailedView(
+              error: _error,
+              compact: true,
+              message: crmT('crm.sequence.load_failed', 'Diziler yüklenemedi.'),
+              onRetry: _load,
+            )
           else if (_sequences.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -546,11 +584,12 @@ class _EnrollSequenceSheetState extends State<_EnrollSequenceSheet> {
                       enabled: !_enrolling,
                       title: Text(s.name, style: AppTypography.subhead),
                       subtitle: Text(
-                        crmT('crm.sequence.meta', '{steps} adım · {active} aktif')
+                        crmT('crm.sequence.meta',
+                                '{steps} adım · {active} aktif')
                             .replaceFirst('{steps}', '${s.stepCount}')
                             .replaceFirst('{active}', '${s.activeEnrollments}'),
-                        style: AppTypography.caption1.copyWith(
-                            color: AppColors.secondaryLabel(context)),
+                        style: AppTypography.caption1
+                            .copyWith(color: AppColors.secondaryLabel(context)),
                       ),
                       trailing: const Icon(Icons.add_circle_outline),
                       onTap: () => _enroll(s),
@@ -622,7 +661,9 @@ class _EditContactSheetState extends State<_EditContactSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 16, right: 16, top: 16,
+        left: 16,
+        right: 16,
+        top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       child: SingleChildScrollView(
@@ -633,17 +674,32 @@ class _EditContactSheetState extends State<_EditContactSheet> {
             Text(crmT('crm.contact.edit_title', 'Kişiyi düzenle'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.md),
-            AppTextField(label: crmT('crm.contact.first_name', 'Ad'), controller: _first),
+            AppTextField(
+                label: crmT('crm.contact.first_name', 'Ad'),
+                controller: _first),
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: crmT('crm.contact.last_name', 'Soyad'), controller: _last),
+            AppTextField(
+                label: crmT('crm.contact.last_name', 'Soyad'),
+                controller: _last),
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: crmT('crm.contact.email', 'E-posta'), controller: _email, keyboardType: TextInputType.emailAddress),
+            AppTextField(
+                label: crmT('crm.contact.email', 'E-posta'),
+                controller: _email,
+                keyboardType: TextInputType.emailAddress),
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: crmT('crm.contact.phone', 'Telefon'), controller: _phone, keyboardType: TextInputType.phone),
+            AppTextField(
+                label: crmT('crm.contact.phone', 'Telefon'),
+                controller: _phone,
+                keyboardType: TextInputType.phone),
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: crmT('crm.contact.title_field', 'Unvan'), controller: _title),
+            AppTextField(
+                label: crmT('crm.contact.title_field', 'Unvan'),
+                controller: _title),
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: crmT('crm.contact.notes', 'Notlar'), controller: _notes, maxLines: 3),
+            AppTextField(
+                label: crmT('crm.contact.notes', 'Notlar'),
+                controller: _notes,
+                maxLines: 3),
             const SizedBox(height: AppSpacing.lg),
             AppButton(
               label: crmT('common.save', 'Kaydet'),

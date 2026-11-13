@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../helpers/supabase_fakes.dart';
 import '../helpers/widget_test_helpers.dart';
@@ -41,6 +42,9 @@ void main() {
 
     registerFake<AuthService>(auth);
     registerFake<NotificationService>(notifications);
+    registerFake<LocalizationService>(buildFakeLocalization(
+      overrides: AppLocalizations.getTranslations(AppLocale.turkish),
+    ));
   });
 
   tearDown(() async {
@@ -104,6 +108,47 @@ void main() {
     expect(find.text('Yeni iş emri'), findsOneWidget);
     // Unread present → the "mark all read" app-bar action shows.
     expect(find.byIcon(Icons.done_all), findsOneWidget);
+  });
+
+  group('failed load is not an empty inbox', () {
+    testWidgets('network / timeout → could not load + retry', (tester) async {
+      var calls = 0;
+      when(() => notifications.getNotifications('user-1',
+          forceRefresh: any(named: 'forceRefresh'))).thenAnswer((_) async {
+        calls++;
+        if (calls == 1) {
+          throw const PostgrestException(
+              message: 'canceling statement due to statement timeout',
+              code: '57014');
+        }
+        return const <AppNotification>[];
+      });
+
+      await tester.pumpWidget(const MaterialApp(home: NotificationsScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppLoadFailedView), findsOneWidget);
+      expect(find.text('Bildirim yok'), findsNothing);
+
+      await tester.tap(find.text('Tekrar Dene'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bildirim yok'), findsOneWidget);
+    });
+
+    testWidgets('refused (42501) → no-access state, no retry', (tester) async {
+      when(() => notifications.getNotifications('user-1',
+              forceRefresh: any(named: 'forceRefresh')))
+          .thenThrow(const PostgrestException(
+              message: 'permission denied for table notifications',
+              code: '42501'));
+
+      await tester.pumpWidget(const MaterialApp(home: NotificationsScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppNoAccessView), findsOneWidget);
+      expect(find.text('Tekrar Dene'), findsNothing);
+      expect(find.text('Bildirim yok'), findsNothing);
+    });
   });
 
   group('tap', () {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../helpers/widget_test_helpers.dart';
 
@@ -22,6 +23,9 @@ void main() {
     await sl.reset();
     svc = MockCommentsService();
     registerFake<CommentsService>(svc);
+    registerFake<LocalizationService>(buildFakeLocalization(
+      overrides: AppLocalizations.getTranslations(AppLocale.turkish),
+    ));
   });
 
   tearDown(() async {
@@ -68,7 +72,8 @@ void main() {
               id: '1',
               content: 'İlk yorum',
               authorName: 'Ayşe',
-              createdAt: DateTime.utc(2026, 8, 28, 11, 29)), // 14:29 Europe/Istanbul
+              createdAt:
+                  DateTime.utc(2026, 8, 28, 11, 29)), // 14:29 Europe/Istanbul
           EntityComment(
               id: '2',
               content: 'İkinci yorum',
@@ -107,7 +112,8 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => svc.add('deal', 'e1', 'Yeni yorum')).called(1);
-    expect(find.text('Yeni yorum'), findsOneWidget); // input temizlendi, kalan = yorum
+    expect(find.text('Yeni yorum'),
+        findsOneWidget); // input temizlendi, kalan = yorum
     expect(find.text('Henüz yorum yok.'), findsNothing);
   });
 
@@ -123,5 +129,33 @@ void main() {
     await tester.pumpAndSettle();
 
     verifyNever(() => svc.add(any(), any(), any()));
+  });
+
+  testWidgets('failed load → could not load + retry, not "no comments"',
+      (tester) async {
+    var calls = 0;
+    when(() => svc.list('deal', 'e1')).thenAnswer((_) async {
+      calls++;
+      if (calls == 1) throw Exception('network');
+      return const <EntityComment>[];
+    });
+
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    expect(find.byType(AppLoadFailedView), findsOneWidget);
+    expect(find.text('Henüz yorum yok.'), findsNothing);
+
+    await tester.tap(find.text('Tekrar Dene'));
+    await tester.pumpAndSettle();
+    expect(find.text('Henüz yorum yok.'), findsOneWidget);
+  });
+
+  testWidgets('refused (42501) → no access', (tester) async {
+    when(() => svc.list('deal', 'e1')).thenThrow(
+        const PostgrestException(message: 'permission denied', code: '42501'));
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    expect(find.byType(AppNoAccessView), findsOneWidget);
+    expect(find.text('Henüz yorum yok.'), findsNothing);
   });
 }

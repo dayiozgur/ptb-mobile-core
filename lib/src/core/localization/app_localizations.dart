@@ -948,6 +948,17 @@ class AppLocalizations {
     'settings.delete_account.subtitle': 'Silme talebi web sayfasından iletilir',
     'settings.delete_account.explanation': 'Hesabınızın silinmesini tarayıcıda açılacak sayfadan talep edersiniz; talep doğrulandıktan sonra hesabınız ve kişisel verileriniz, yasal olarak saklanması gerekenler dışında silinir. Kuruluşunuza ait iş kayıtları kuruluşunuzda kalabilir ve silme işlemi geri alınamaz.',
     'settings.delete_account.continue': 'Web\'de devam et',
+    'notification.load_failed': 'Bildirimler yüklenemedi. Bu, bildiriminiz olmadığı anlamına gelmez; tekrar deneyin.',
+    'notification.empty_message': 'Henüz bildiriminiz bulunmuyor.',
+    'notification.untitled': 'Bildirim',
+    'crm.contact.load_failed': 'Kişiler yüklenemedi. Bu, kayıt olmadığı anlamına gelmez; tekrar deneyin.',
+    'crm.contact.activities_load_failed': 'Aktiviteler yüklenemedi.',
+    'crm.sequence.load_failed': 'Diziler yüklenemedi.',
+    'comments.title': 'Yorumlar',
+    'comments.empty': 'Henüz yorum yok.',
+    'comments.load_failed': 'Yorumlar yüklenemedi.',
+    'comments.add_failed': 'Yorum eklenemedi.',
+    'comments.placeholder': 'Yorum ekle…',
   };
 
   // ============================================
@@ -1874,6 +1885,17 @@ class AppLocalizations {
     'settings.delete_account.subtitle': 'The request is made on our web page',
     'settings.delete_account.explanation': 'You request the deletion of your account on the page that opens in your browser; once the request is confirmed, your account and your personal data are deleted, except what the law requires us to keep. Business records that belong to your organisation may stay with your organisation, and the deletion cannot be undone.',
     'settings.delete_account.continue': 'Continue on the web',
+    'notification.load_failed': 'Your notifications could not be loaded. This does not mean there are none; try again.',
+    'notification.empty_message': 'You have no notifications yet.',
+    'notification.untitled': 'Notification',
+    'crm.contact.load_failed': 'The contacts could not be loaded. This does not mean there are none; try again.',
+    'crm.contact.activities_load_failed': 'The activities could not be loaded.',
+    'crm.sequence.load_failed': 'The sequences could not be loaded.',
+    'comments.title': 'Comments',
+    'comments.empty': 'No comments yet.',
+    'comments.load_failed': 'The comments could not be loaded.',
+    'comments.add_failed': 'The comment could not be added.',
+    'comments.placeholder': 'Add a comment…',
   };
 
   // ============================================
@@ -2803,5 +2825,16 @@ class AppLocalizations {
     'settings.delete_account.subtitle': 'Die Anfrage wird auf unserer Webseite gestellt',
     'settings.delete_account.explanation': 'Sie beantragen die Löschung Ihres Kontos auf der Seite, die sich in Ihrem Browser öffnet; nach Bestätigung der Anfrage werden Ihr Konto und Ihre personenbezogenen Daten gelöscht, ausgenommen Daten, die wir gesetzlich aufbewahren müssen. Geschäftsunterlagen Ihrer Organisation können bei Ihrer Organisation verbleiben, und die Löschung kann nicht rückgängig gemacht werden.',
     'settings.delete_account.continue': 'Im Web fortfahren',
+    'notification.load_failed': 'Ihre Benachrichtigungen konnten nicht geladen werden. Das bedeutet nicht, dass es keine gibt; versuchen Sie es erneut.',
+    'notification.empty_message': 'Sie haben noch keine Benachrichtigungen.',
+    'notification.untitled': 'Benachrichtigung',
+    'crm.contact.load_failed': 'Die Kontakte konnten nicht geladen werden. Das bedeutet nicht, dass es keine gibt; versuchen Sie es erneut.',
+    'crm.contact.activities_load_failed': 'Die Aktivitäten konnten nicht geladen werden.',
+    'crm.sequence.load_failed': 'Die Sequenzen konnten nicht geladen werden.',
+    'comments.title': 'Kommentare',
+    'comments.empty': 'Noch keine Kommentare.',
+    'comments.load_failed': 'Die Kommentare konnten nicht geladen werden.',
+    'comments.add_failed': 'Der Kommentar konnte nicht hinzugefügt werden.',
+    'comments.placeholder': 'Kommentar hinzufügen…',
   };
 }

@@ -19,7 +19,10 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   List<AppNotification> _notifications = [];
   bool _loading = true;
+  Object? _error;
   String? _profileId;
+
+  String _t(String key) => sl<LocalizationService>().translate(key);
 
   StreamSubscription<List<AppNotification>>? _notificationsSub;
 
@@ -60,16 +63,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final id = _profileId;
     if (id == null) return;
 
-    if (mounted) setState(() => _loading = true);
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
-    final notifications =
-        await notificationService.getNotifications(id, forceRefresh: true);
-
-    if (!mounted) return;
-    setState(() {
-      _notifications = notifications;
-      _loading = false;
-    });
+    try {
+      final notifications =
+          await notificationService.getNotifications(id, forceRefresh: true);
+      if (!mounted) return;
+      setState(() {
+        _notifications = notifications;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _handleRefresh() async {
@@ -95,11 +110,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       // Yerel state'i anında güncelle (stream de yayınlar, ama optimistik).
       setState(() {
-        final index =
-            _notifications.indexWhere((n) => n.id == notification.id);
+        final index = _notifications.indexWhere((n) => n.id == notification.id);
         if (index != -1) {
-          _notifications[index] =
-              _notifications[index].copyWith(isRead: true);
+          _notifications[index] = _notifications[index].copyWith(isRead: true);
         }
       });
     }
@@ -133,14 +146,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = _notifications.any((n) => !n.isRead);
 
     return AppScaffold(
-      title: 'Bildirimler',
+      title: _t('notification.title'),
       showBackButton: false,
       actions: [
         if (hasUnread)
           IconButton(
             icon: const Icon(Icons.done_all),
             color: AppColors.primary,
-            tooltip: 'Tümünü okundu işaretle',
+            tooltip: _t('notification.mark_all_read'),
             onPressed: _handleMarkAllRead,
           ),
       ],
@@ -153,17 +166,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    if (_error != null) {
+      return RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: AppLoadFailedView(
+          error: _error,
+          message: _t('notification.load_failed'),
+          onRetry: _load,
+        ),
+      );
+    }
+
     if (_notifications.isEmpty) {
       return RefreshIndicator(
         onRefresh: _handleRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
+          children: [
+            const SizedBox(height: 120),
             AppEmptyState(
               icon: Icons.notifications_none,
-              title: 'Bildirim yok',
-              message: 'Henüz bildiriminiz bulunmuyor.',
+              title: _t('notification.no_notifications'),
+              message: _t('notification.empty_message'),
             ),
           ],
         ),
@@ -226,7 +250,8 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unread = !notification.isRead;
-    final title = notification.title ?? 'Bildirim';
+    final title = notification.title ??
+        sl<LocalizationService>().translate('notification.untitled');
     final body = notification.description ?? '';
     final color = _typeColor(notification.type);
 
@@ -258,8 +283,7 @@ class _NotificationTile extends StatelessWidget {
                   Text(
                     title,
                     style: AppTypography.body.copyWith(
-                      fontWeight:
-                          unread ? FontWeight.w700 : FontWeight.w400,
+                      fontWeight: unread ? FontWeight.w700 : FontWeight.w400,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

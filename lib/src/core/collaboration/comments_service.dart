@@ -90,8 +90,10 @@ class CommentsService {
               ))
           .toList();
     } catch (e) {
+      // Rethrown: the thread shows "could not load" / "no access" instead of
+      // "no comments yet". (Author names stay fail-soft: '—'.)
       Logger.error('comments list ($entityType/$entityId) hata', e);
-      return [];
+      rethrow;
     }
   }
 
