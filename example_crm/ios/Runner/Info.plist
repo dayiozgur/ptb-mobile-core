@@ -48,11 +48,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Kartvizit taramak için kameraya erişim gerekir.</string>
+	<string>The camera is used to scan business cards and to add photos to records and to your profile.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
+	<string>Face ID is used to sign you in quickly and securely.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Kartvizit görselini seçmek için fotoğraflara erişim gerekir.</string>
+	<string>Your photo library is used to choose a business card image and to attach pictures to records and to your profile.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -84,5 +84,14 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<false/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to fill location fields in forms and to show local weather on your dashboard.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+		<string>de</string>
+		<string>it</string>
+	</array>
 </dict>
 </plist>

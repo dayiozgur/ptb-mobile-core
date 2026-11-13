@@ -48,13 +48,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>İş emri / arıza fotoğrafı çekmek için kameraya erişim gerekir.</string>
+	<string>The camera is used to take photos of the fault and of the work done, and to scan barcodes and QR codes.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
+	<string>Face ID is used to sign you in quickly and securely.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Saha işinde konumunuzu haritada göstermek için konum erişimi kullanılır.</string>
+	<string>Your location is used while the app is open to record where field work starts and ends, to show your position on the map and to fill location fields in forms.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>İş emrine fotoğraf eklemek için fotoğraflara erişim gerekir.</string>
+	<string>Your photo library is used to attach pictures to a request and to choose your profile photo.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -86,5 +86,12 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<false/>
 	</dict>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+		<string>de</string>
+		<string>it</string>
+	</array>
 </dict>
 </plist>

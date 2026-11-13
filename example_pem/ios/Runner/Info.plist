@@ -29,7 +29,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Uygulamaya hızlı ve güvenli giriş için Face ID / Touch ID kullanılır.</string>
+	<string>Face ID is used to sign you in quickly and securely.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -81,6 +81,19 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to add photos to forms and to your profile.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Your photo library is used to attach pictures to forms and to choose your profile photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to fill location fields in forms and to show local weather on your dashboard.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+		<string>de</string>
+		<string>it</string>
 	</array>
 </dict>
 </plist>

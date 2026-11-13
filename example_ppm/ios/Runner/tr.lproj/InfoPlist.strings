@@ -1,0 +1,7 @@
+/* Purpose strings shown in the iOS permission prompts (tr).
+   Keep in sync with Info.plist (English base) and docs/store/STORE-READINESS-2026-11.md. */
+
+"NSCameraUsageDescription" = "Kamera; barkod ve QR kod okutmak, görevlere, formlara ve profilinize fotoğraf eklemek için kullanılır.";
+"NSPhotoLibraryUsageDescription" = "Fotoğraf arşiviniz; görevlere ve formlara görsel eklemek, profil fotoğrafınızı seçmek için kullanılır.";
+"NSLocationWhenInUseUsageDescription" = "Konumunuz; formlardaki konum alanlarını doldurmak ve panonuzda yerel hava durumunu göstermek için kullanılır.";
+"NSFaceIDUsageDescription" = "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır.";

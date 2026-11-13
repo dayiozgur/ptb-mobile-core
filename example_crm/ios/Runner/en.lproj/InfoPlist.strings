@@ -1,0 +1,7 @@
+/* Purpose strings shown in the iOS permission prompts (en).
+   Keep in sync with Info.plist (English base) and docs/store/STORE-READINESS-2026-11.md. */
+
+"NSCameraUsageDescription" = "The camera is used to scan business cards and to add photos to records and to your profile.";
+"NSPhotoLibraryUsageDescription" = "Your photo library is used to choose a business card image and to attach pictures to records and to your profile.";
+"NSLocationWhenInUseUsageDescription" = "Your location is used to fill location fields in forms and to show local weather on your dashboard.";
+"NSFaceIDUsageDescription" = "Face ID is used to sign you in quickly and securely.";
