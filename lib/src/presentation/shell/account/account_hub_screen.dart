@@ -73,15 +73,15 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
   String _statusLabel(String? status) {
     switch (status) {
       case 'active':
-        return 'Aktif';
+        return _t('admin.subscription.status_active');
       case 'trial':
-        return 'Deneme';
+        return _t('admin.subscription.status_trialing');
       case 'past_due':
-        return 'Gecikmiş';
+        return _t('admin.subscription.status_past_due');
       case 'canceled':
-        return 'İptal edildi';
+        return _t('admin.subscription.status_canceled');
       case 'expired':
-        return 'Süresi doldu';
+        return _t('admin.subscription.status_expired');
       default:
         return status ?? '—';
     }
@@ -96,7 +96,7 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Hesabım',
+      title: _t('account.hub.title'),
       showAppBar: !widget.embedded,
       showBackButton: false,
       actions: [
@@ -130,7 +130,7 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
 
     final sub = _sub;
     final planName = (sub?.planName == null || sub!.planName!.trim().isEmpty)
-        ? (sub?.planCode ?? 'Plan yok')
+        ? (sub?.planCode ?? _t('account.hub.no_plan'))
         : sub.planName!.trim();
     final status = sub?.status;
     final statusColor = _statusColor(status);
@@ -155,7 +155,7 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Mevcut Plan',
+                  _t('account.hub.current_plan'),
                   style: AppTypography.caption1.copyWith(
                     color: AppColors.secondaryLabel(context),
                   ),
@@ -180,20 +180,35 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
     return AppCard(
       child: Column(
         children: [
-          _tile(context, Icons.workspace_premium_outlined, 'Abonelik',
-              'Plan, durum ve kotalar', () => _push(const SubscriptionScreen())),
+          _tile(
+              context,
+              Icons.workspace_premium_outlined,
+              _t('admin.subscription.title'),
+              _t('account.hub.subscription_hint'),
+              () => _push(const SubscriptionScreen())),
           _divider(context),
-          _tile(context, Icons.toll_outlined, 'Krediler',
-              'Bakiye ve hareketler', () => _push(const CreditsScreen())),
+          _tile(
+              context,
+              Icons.toll_outlined,
+              _t('account.credits.title'),
+              _t('account.hub.credits_hint'),
+              () => _push(const CreditsScreen())),
           _divider(context),
-          _tile(context, Icons.receipt_long_outlined, 'Faturalar',
-              'Fatura geçmişi ve özet', () => _push(const InvoicesScreen())),
+          _tile(
+              context,
+              Icons.receipt_long_outlined,
+              _t('account.invoices.title'),
+              _t('account.hub.invoices_hint'),
+              () => _push(const InvoicesScreen())),
           _divider(context),
-          _tile(context, Icons.cloud_outlined, 'Kullanım & Depolama',
-              'Depolama kotası ve kullanım', () => _push(const UsageScreen())),
+          _tile(context, Icons.cloud_outlined, _t('account.usage.title'),
+              _t('account.hub.usage_hint'), () => _push(const UsageScreen())),
           _divider(context),
-          _tile(context, Icons.shield_outlined, 'Güvenlik',
-              'Şifre ve iki adımlı doğrulama',
+          _tile(
+              context,
+              Icons.shield_outlined,
+              _t('account.hub.security'),
+              _t('account.hub.security_hint'),
               () => _push(const SecurityScreen())),
         ],
       ),
@@ -237,3 +252,6 @@ class _AccountHubScreenState extends State<AccountHubScreen> {
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

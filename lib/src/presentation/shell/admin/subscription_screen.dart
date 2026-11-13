@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
 /// Hesap — Abonelik görüntüleyici ekranı (salt-okuma).
 ///
 /// Web hesap abonelik sayfasının mobil karşılığı. Geçerli tenant'ın planı,
@@ -55,7 +54,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Abonelik yüklenemedi';
+        _error = _t('admin.subscription.load_failed');
         _loading = false;
       });
     }
@@ -82,15 +81,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String _statusLabel(String? status) {
     switch (status) {
       case 'active':
-        return 'Aktif';
+        return _t('admin.subscription.status_active');
       case 'trial':
-        return 'Deneme';
+        return _t('admin.subscription.status_trialing');
       case 'past_due':
-        return 'Gecikmiş';
+        return _t('admin.subscription.status_past_due');
       case 'canceled':
-        return 'İptal edildi';
+        return _t('admin.subscription.status_canceled');
       case 'expired':
-        return 'Süresi doldu';
+        return _t('admin.subscription.status_expired');
       default:
         return status ?? '—';
     }
@@ -115,14 +114,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String _formatInt(num? n) {
     if (n == null) return '—';
-    final s = n.toInt().toString();
-    // Basit binlik ayırıcı (nokta, TR).
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return buf.toString();
+    // Grouping follows the UI language (Intl.defaultLocale).
+    return Formatters.number(n.toInt());
   }
 
   // ── UI ──────────────────────────────────────────────────────────────────────
@@ -130,7 +123,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Abonelik',
+      title: _t('admin.subscription.title'),
       showBackButton: true,
       child: _buildBody(context),
     );
@@ -145,7 +138,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
     if (_sub == null) {
       return _buildMessage(
-          context, Icons.credit_card_outlined, 'Aktif abonelik yok');
+          context, Icons.credit_card_outlined, _t('admin.subscription.empty'));
     }
 
     // CRITICAL: ListView (bounded) — kaydırma içinde unbounded Flex YOK.
@@ -159,7 +152,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           if (_quotas.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Kotalar',
+              _t('admin.subscription.quotas'),
               style: AppTypography.subhead.copyWith(
                 color: AppColors.secondaryLabel(context),
                 fontWeight: FontWeight.w600,
@@ -190,7 +183,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               Expanded(
                 child: Text(
                   (s.planName == null || s.planName!.trim().isEmpty)
-                      ? 'Plan'
+                      ? _t('admin.subscription.plan')
                       : s.planName!.trim(),
                   style: AppTypography.title3
                       .copyWith(fontWeight: FontWeight.w700),
@@ -201,19 +194,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _infoRow(context, Icons.workspace_premium_outlined, 'Plan',
-              (s.planName ?? s.planCode) ?? '—'),
-          _infoRow(context, Icons.info_outline, 'Durum',
+          _infoRow(context, Icons.workspace_premium_outlined,
+              _t('admin.subscription.plan'), (s.planName ?? s.planCode) ?? '—'),
+          _infoRow(context, Icons.info_outline, _t('common.status'),
               _statusLabel(s.status)),
           if (s.isTrial)
-            _infoRow(context, Icons.hourglass_bottom_outlined, 'Deneme Bitişi',
-                _formatDate(s.trialEndsAt))
+            _infoRow(context, Icons.hourglass_bottom_outlined,
+                _t('admin.subscription.trial_ends'), _formatDate(s.trialEndsAt))
           else
-            _infoRow(context, Icons.event_repeat_outlined, 'Yenileme',
+            _infoRow(
+                context,
+                Icons.event_repeat_outlined,
+                _t('admin.subscription.renews'),
                 _formatDate(s.currentPeriodEnd)),
           if (s.cancelAtPeriodEnd)
-            _infoRow(context, Icons.cancel_outlined, 'Dönem Sonunda',
-                'İptal edilecek'),
+            _infoRow(
+                context,
+                Icons.cancel_outlined,
+                _t('admin.subscription.at_period_end'),
+                _t('admin.subscription.will_cancel')),
         ],
       ),
     );
@@ -222,9 +221,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget _buildQuotaCard(BuildContext context, QuotaRow q) {
     final fraction = q.usageFraction;
     final limitText = _formatInt(q.quotaValue);
-    final unit = (q.quotaUnit == null || q.quotaUnit!.isEmpty)
-        ? ''
-        : ' ${q.quotaUnit}';
+    final unit =
+        (q.quotaUnit == null || q.quotaUnit!.isEmpty) ? '' : ' ${q.quotaUnit}';
     return AppCard(
       variant: AppCardVariant.outlined,
       child: Column(
@@ -257,8 +255,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 6,
-                backgroundColor: AppColors.secondaryLabel(context)
-                    .withValues(alpha: 0.15),
+                backgroundColor:
+                    AppColors.secondaryLabel(context).withValues(alpha: 0.15),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   fraction >= 1
                       ? const Color(0xFFDC2626)
@@ -330,10 +328,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
           if (retry) ...[
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
+            TextButton(onPressed: _load, child: Text(_t('common.retry'))),
           ],
         ],
       ),
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

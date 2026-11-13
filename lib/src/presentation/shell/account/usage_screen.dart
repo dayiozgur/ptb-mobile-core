@@ -15,7 +15,7 @@ class _UsageScreenState extends State<UsageScreen> {
   StorageQuota? _quota;
   Map<String, dynamic>? _aiUsage;
   bool _loading = true;
-  String? _error;
+  Object? _error;
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class _UsageScreenState extends State<UsageScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Kullanım bilgisi yüklenemedi';
+        _error = e;
         _loading = false;
       });
     }
@@ -67,7 +67,7 @@ class _UsageScreenState extends State<UsageScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Kullanım & Depolama',
+      title: _t('account.usage.title'),
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _load),
@@ -81,7 +81,11 @@ class _UsageScreenState extends State<UsageScreen> {
       return const Center(child: AppLoadingIndicator());
     }
     if (_error != null) {
-      return AppErrorView(message: _error!, onRetry: _load);
+      return AppLoadFailedView(
+        error: _error,
+        message: _t('account.usage.load_failed'),
+        onRetry: _load,
+      );
     }
 
     final q = _quota;
@@ -90,7 +94,7 @@ class _UsageScreenState extends State<UsageScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Text(
-          'Depolama',
+          _t('account.usage.storage'),
           style: AppTypography.subhead.copyWith(
             color: AppColors.secondaryLabel(context),
             fontWeight: FontWeight.w600,
@@ -98,9 +102,9 @@ class _UsageScreenState extends State<UsageScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (q == null)
-          const AppEmptyState(
+          AppEmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Depolama bilgisi yok',
+            title: _t('account.usage.no_storage'),
           )
         else
           _buildStorageCard(context, q),
@@ -128,9 +132,9 @@ class _UsageScreenState extends State<UsageScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Kullanılan Alan',
-                  style: AppTypography.body
-                      .copyWith(fontWeight: FontWeight.w600),
+                  _t('account.usage.used_space'),
+                  style:
+                      AppTypography.body.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               if (percent != null)
@@ -162,11 +166,12 @@ class _UsageScreenState extends State<UsageScreen> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          _infoRow(context, 'Maks. dosya boyutu', _humanBytes(q.maxFileBytes)),
+          _infoRow(context, _t('account.usage.max_file_size'),
+              _humanBytes(q.maxFileBytes)),
           if (q.perUserLimitBytes != null)
             _infoRow(
               context,
-              'Kişisel kullanım',
+              _t('account.usage.personal_usage'),
               '${_humanBytes(q.perUserUsedBytes)} / ${_humanBytes(q.perUserLimitBytes!)}',
             ),
         ],
@@ -180,10 +185,8 @@ class _UsageScreenState extends State<UsageScreen> {
 
     final builder = ai['builder'];
     final chat = ai['chat'];
-    final builderCalls =
-        builder is Map ? _aiNum(builder['calls']) : 0;
-    final chatMessages =
-        chat is Map ? _aiNum(chat['messages']) : 0;
+    final builderCalls = builder is Map ? _aiNum(builder['calls']) : 0;
+    final chatMessages = chat is Map ? _aiNum(chat['messages']) : 0;
 
     final quota = ai['quota'];
     String? quotaText;
@@ -201,7 +204,7 @@ class _UsageScreenState extends State<UsageScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AI Kullanımı (bu ay)',
+            _t('account.usage.ai_this_month'),
             style: AppTypography.subhead.copyWith(
               color: AppColors.secondaryLabel(context),
               fontWeight: FontWeight.w600,
@@ -213,12 +216,13 @@ class _UsageScreenState extends State<UsageScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _infoRow(context, 'Builder çağrıları',
+                _infoRow(context, _t('account.usage.builder_calls'),
                     builderCalls.toInt().toString()),
-                _infoRow(
-                    context, 'Sohbet mesajları', chatMessages.toInt().toString()),
+                _infoRow(context, _t('account.usage.chat_messages'),
+                    chatMessages.toInt().toString()),
                 if (quotaText != null)
-                  _infoRow(context, 'Aylık kota', quotaText),
+                  _infoRow(
+                      context, _t('account.usage.monthly_quota'), quotaText),
               ],
             ),
           ),
@@ -248,3 +252,6 @@ class _UsageScreenState extends State<UsageScreen> {
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

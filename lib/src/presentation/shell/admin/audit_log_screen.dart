@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
 /// Admin — Denetim İzi (audit trail) görüntüleyici ekranı.
 ///
 /// Web portal `/admin/audit-log` özelliğinin mobil, salt-okuma karşılığı.
@@ -43,7 +42,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Denetim kayıtları yüklenemedi';
+        _error = _t('admin.audit.load_failed');
         _loading = false;
       });
     }
@@ -71,15 +70,15 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
   String _actionLabel(String? action) {
     switch (action) {
       case 'create':
-        return 'Oluşturma';
+        return _t('admin.audit.action_create');
       case 'update':
-        return 'Güncelleme';
+        return _t('admin.audit.action_update');
       case 'status_change':
-        return 'Durum Değişimi';
+        return _t('admin.audit.action_status_change');
       case 'delete':
-        return 'Silme';
+        return _t('admin.audit.action_delete');
       case 'export':
-        return 'Dışa Aktarma';
+        return _t('admin.audit.action_export');
       default:
         return action == null || action.isEmpty ? '—' : action;
     }
@@ -99,7 +98,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Denetim İzi',
+      title: _t('admin.audit.title'),
       showBackButton: true,
       child: _buildBody(context),
     );
@@ -113,7 +112,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       return _buildMessage(context, Icons.error_outline, _error!, retry: true);
     }
     if (_entries.isEmpty) {
-      return _buildMessage(context, Icons.history_outlined, 'Kayıt yok');
+      return _buildMessage(
+          context, Icons.history_outlined, _t('common.no_records'));
     }
 
     // CRITICAL: ListView (bounded) — kaydırma içinde unbounded Flex YOK.
@@ -147,8 +147,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                 (e.entityType == null || e.entityType!.isEmpty)
                     ? '—'
                     : e.entityType!,
-                style:
-                    AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -161,7 +160,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
               Expanded(
                 child: Text(
                   (e.actorName == null || e.actorName!.isEmpty)
-                      ? 'Sistem'
+                      ? _t('admin.audit.system_actor')
                       : e.actorName!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -230,17 +229,21 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              _infoRow(ctx, Icons.person_outline, 'Aktör',
+              _infoRow(
+                  ctx,
+                  Icons.person_outline,
+                  _t('admin.audit.actor'),
                   (e.actorName == null || e.actorName!.isEmpty)
-                      ? 'Sistem'
+                      ? _t('admin.audit.system_actor')
                       : e.actorName!),
-              _infoRow(ctx, Icons.event_outlined, 'Tarih',
+              _infoRow(ctx, Icons.event_outlined, _t('common.date'),
                   e.changedAt == null ? '—' : _formatDateTime(e.changedAt)),
               if (e.entityId != null && e.entityId!.isNotEmpty)
-                _infoRow(ctx, Icons.tag_outlined, 'Kayıt', e.entityId!),
+                _infoRow(ctx, Icons.tag_outlined, _t('admin.audit.record'),
+                    e.entityId!),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Değişiklikler',
+                _t('admin.audit.changes'),
                 style: AppTypography.subhead.copyWith(
                   color: AppColors.secondaryLabel(ctx),
                   fontWeight: FontWeight.w600,
@@ -248,8 +251,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
               ),
               const SizedBox(height: AppSpacing.xs),
               if (diffs.isEmpty)
-                const Text(
-                  'Ayrıntı yok',
+                Text(
+                  _t('admin.audit.no_details'),
                   style: AppTypography.body,
                 )
               else
@@ -384,7 +387,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
           ),
           if (retry) ...[
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
+            TextButton(onPressed: _load, child: Text(_t('common.retry'))),
           ],
         ],
       ),
@@ -399,3 +402,6 @@ class _FieldDiff {
   final String newValue;
   const _FieldDiff(this.field, this.oldValue, this.newValue);
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

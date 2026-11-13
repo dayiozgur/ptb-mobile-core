@@ -49,13 +49,8 @@ class _CreditsScreenState extends State<CreditsScreen> {
   }
 
   String _fmtNum(num n) {
-    final s = n.toInt().toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return buf.toString();
+    // Grouping follows the UI language (Intl.defaultLocale).
+    return Formatters.number(n.toInt());
   }
 
   String _fmtDate(DateTime? d) {
@@ -68,16 +63,16 @@ class _CreditsScreenState extends State<CreditsScreen> {
   String _kindLabel(String? kind) {
     switch (kind) {
       case 'purchase':
-        return 'Satın alma';
+        return _t('account.credits.kind_purchase');
       case 'bonus':
-        return 'Bonus';
+        return _t('account.credits.kind_bonus');
       case 'refund':
-        return 'İade';
+        return _t('account.credits.kind_refund');
       case 'quota_upgrade':
-        return 'Kota yükseltme';
+        return _t('account.credits.kind_quota_upgrade');
       case null:
       case '':
-        return 'Hareket';
+        return _t('account.credits.kind_other');
       default:
         return kind
             .split('_')
@@ -90,7 +85,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: sl<LocalizationService>().translate('account.credits.title'),
+      title: _t('account.credits.title'),
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _load),
@@ -106,8 +101,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
     if (_error != null) {
       return AppLoadFailedView(
         error: _error,
-        message:
-            sl<LocalizationService>().translate('account.credits.load_failed'),
+        message: _t('account.credits.load_failed'),
         onRetry: _load,
       );
     }
@@ -120,7 +114,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
         _buildBalanceCard(context, b),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          'Hareketler',
+          _t('account.credits.movements'),
           style: AppTypography.subhead.copyWith(
             color: AppColors.secondaryLabel(context),
             fontWeight: FontWeight.w600,
@@ -130,7 +124,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
         if (_transactions.isEmpty)
           AppEmptyState(
             icon: Icons.history_outlined,
-            title: sl<LocalizationService>().translate('account.credits.empty'),
+            title: _t('account.credits.empty'),
           )
         else
           AppCard(
@@ -159,7 +153,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Kullanılabilir Bakiye',
+            _t('account.credits.available'),
             style: AppTypography.caption1
                 .copyWith(color: AppColors.secondaryLabel(context)),
           ),
@@ -174,13 +168,17 @@ class _CreditsScreenState extends State<CreditsScreen> {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(child: _stat(context, 'Toplam', _fmtNum(total))),
+              Expanded(
+                  child: _stat(
+                      context, _t('account.credits.total'), _fmtNum(total))),
               Container(
                 width: 1,
                 height: 32,
                 color: AppColors.separator(context),
               ),
-              Expanded(child: _stat(context, 'Kullanılan', _fmtNum(used))),
+              Expanded(
+                  child: _stat(
+                      context, _t('account.credits.used'), _fmtNum(used))),
             ],
           ),
         ],
@@ -225,3 +223,6 @@ class _CreditsScreenState extends State<CreditsScreen> {
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

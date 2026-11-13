@@ -90,17 +90,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   String _statusLabel(String status) {
     switch (status) {
       case 'paid':
-        return 'Ödendi';
+        return _t('account.invoices.status_paid');
       case 'sent':
-        return 'Gönderildi';
+        return _t('account.invoices.status_sent');
       case 'draft':
-        return 'Taslak';
+        return _t('account.invoices.status_draft');
       case 'pending':
-        return 'Bekliyor';
+        return _t('account.invoices.status_pending');
       case 'overdue':
-        return 'Gecikmiş';
+        return _t('account.invoices.status_overdue');
       case 'void':
-        return 'İptal';
+        return _t('account.invoices.status_void');
       default:
         return status.isEmpty ? '—' : status;
     }
@@ -109,7 +109,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: sl<LocalizationService>().translate('account.invoices.title'),
+      title: _t('account.invoices.title'),
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _load),
@@ -125,8 +125,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     if (_error != null) {
       return AppLoadFailedView(
         error: _error,
-        message:
-            sl<LocalizationService>().translate('account.invoices.load_failed'),
+        message: _t('account.invoices.load_failed'),
         onRetry: _load,
       );
     }
@@ -138,7 +137,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         _buildSummary(context),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          'Fatura Geçmişi',
+          _t('account.invoices.history'),
           style: AppTypography.subhead.copyWith(
             color: AppColors.secondaryLabel(context),
             fontWeight: FontWeight.w600,
@@ -148,8 +147,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         if (_invoices.isEmpty)
           AppEmptyState(
             icon: Icons.receipt_long_outlined,
-            title:
-                sl<LocalizationService>().translate('account.invoices.empty'),
+            title: _t('account.invoices.empty'),
           )
         else
           AppCard(
@@ -172,13 +170,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     return Row(
       children: [
         Expanded(
-          child: _chip(context, 'Toplam', '${s.totalCount}', AppColors.primary,
-              Icons.receipt_outlined),
+          child: _chip(context, _t('account.credits.total'), '${s.totalCount}',
+              AppColors.primary, Icons.receipt_outlined),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _chip(context, 'Ödenen', _money(s.paidTotal, s.currency),
-              const Color(0xFF059669), Icons.check_circle_outline),
+          child: _chip(
+              context,
+              _t('account.invoices.paid_total'),
+              _money(s.paidTotal, s.currency),
+              const Color(0xFF059669),
+              Icons.check_circle_outline),
         ),
       ],
     );
@@ -217,7 +219,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
   Widget _buildInvoiceRow(BuildContext context, Invoice inv) {
     final number = (inv.invoiceNumber == null || inv.invoiceNumber!.isEmpty)
-        ? 'Fatura'
+        ? _t('account.invoices.untitled')
         : inv.invoiceNumber!;
     return AppListTile(
       title: number,
@@ -242,3 +244,6 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

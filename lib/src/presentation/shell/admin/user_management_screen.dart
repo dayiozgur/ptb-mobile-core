@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
 /// Admin — Kullanıcı Yönetimi ekranı.
 ///
 /// Web portal `admin-management` user-management özelliğinin mobil karşılığı.
@@ -60,7 +59,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Kullanıcılar yüklenemedi';
+        _error = _t('admin.users.load_failed');
         _loading = false;
       });
     }
@@ -113,13 +112,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _roleLabel(String? role) {
     switch (role) {
       case 'ROLE_ADMIN':
-        return 'Yönetici';
+        return _t('role.admin');
       case 'ROLE_MANAGER':
-        return 'Müdür';
+        return _t('role.manager');
       case 'ROLE_CUSTOMER':
-        return 'Müşteri';
+        return _t('role.customer');
       default:
-        return 'Kullanıcı';
+        return _t('role.user');
     }
   }
 
@@ -128,7 +127,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Kullanıcı Yönetimi',
+      title: _t('admin.users.title'),
       showBackButton: true,
       child: Column(
         children: [
@@ -151,7 +150,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         controller: _searchController,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Ara',
+          hintText: _t('common.search'),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _searchController.text.isEmpty
               ? null
@@ -176,7 +175,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       return _buildMessage(context, Icons.error_outline, _error!, retry: true);
     }
     if (_filtered.isEmpty) {
-      return _buildMessage(context, Icons.people_outline, 'Kullanıcı bulunamadı');
+      return _buildMessage(
+          context, Icons.people_outline, _t('admin.users.empty'));
     }
 
     // CRITICAL: ListView (bounded) — kaydırma içinde unbounded Flex YOK.
@@ -287,19 +287,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               const SizedBox(height: AppSpacing.md),
               Center(child: _roleChip(color, _roleLabel(u.coarseRole))),
               const SizedBox(height: AppSpacing.lg),
-              _infoRow(ctx, Icons.badge_outlined, 'Rol',
+              _infoRow(ctx, Icons.badge_outlined, _t('admin.users.role'),
                   _roleLabel(u.coarseRole)),
               _infoRow(
                 ctx,
                 u.active ? Icons.check_circle_outline : Icons.block,
-                'Durum',
-                u.active ? 'Aktif' : 'Pasif',
+                _t('common.status'),
+                u.active ? _t('common.active') : _t('common.inactive'),
               ),
               if (u.username != null && u.username!.isNotEmpty)
-                _infoRow(ctx, Icons.alternate_email, 'Kullanıcı adı',
+                _infoRow(ctx, Icons.alternate_email, _t('admin.users.username'),
                     u.username!),
               if (u.hasPhone)
-                _infoRow(ctx, Icons.phone_outlined, 'Telefon', u.phone!),
+                _infoRow(
+                    ctx, Icons.phone_outlined, _t('profile.phone'), u.phone!),
             ],
           ),
         );
@@ -324,8 +325,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           Expanded(
             child: Text(
               value,
-              style: AppTypography.subhead
-                  .copyWith(fontWeight: FontWeight.w600),
+              style:
+                  AppTypography.subhead.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -348,10 +349,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
           if (retry) ...[
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
+            TextButton(onPressed: _load, child: Text(_t('common.retry'))),
           ],
         ],
       ),
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

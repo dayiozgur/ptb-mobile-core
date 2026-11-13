@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
 /// Admin "Personel / Organizasyon" görüntüleyici (salt-okuma, v1).
 ///
 /// Web portalının staff-roster / departman admin görünümlerini aynalar
@@ -25,7 +24,7 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
-  String? _errorMessage;
+  Object? _error;
 
   int _tabIndex = 0; // 0 = Personel, 1 = Departmanlar
   String _search = '';
@@ -48,7 +47,7 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
     try {
@@ -69,7 +68,7 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
       Logger.error('StaffRosterScreen yükleme hatası', e);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Kayıtlar yüklenemedi: $e';
+          _error = e;
           _isLoading = false;
         });
       }
@@ -103,7 +102,7 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Personel',
+      title: _t('admin.staff.title'),
       showBackButton: true,
       actions: [
         AppIconButton(
@@ -121,7 +120,10 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
               AppSpacing.xs,
             ),
             child: AppSegmentedControl(
-              segments: const ['Personel', 'Departmanlar'],
+              segments: [
+                _t('admin.staff.tab_staff'),
+                _t('admin.staff.tab_departments')
+              ],
               selectedIndex: _tabIndex,
               onSegmentChanged: (i) => setState(() => _tabIndex = i),
             ),
@@ -135,7 +137,7 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
             ),
             child: AppSearchField(
               controller: _searchController,
-              placeholder: 'Ara',
+              placeholder: _t('common.search'),
               onChanged: _onSearchChanged,
               onClear: () => _onSearchChanged(''),
             ),
@@ -156,12 +158,11 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
       return const Center(child: AppLoadingIndicator());
     }
 
-    if (_errorMessage != null) {
-      return Center(
-        child: AppErrorView(
-          message: _errorMessage!,
-          onRetry: _loadData,
-        ),
+    if (_error != null) {
+      return AppLoadFailedView(
+        error: _error,
+        message: _t('admin.staff.load_failed'),
+        onRetry: _loadData,
       );
     }
 
@@ -174,10 +175,10 @@ class _StaffRosterScreenState extends State<StaffRosterScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: const Center(
+          child: Center(
             child: AppEmptyState(
               icon: Icons.people_outline,
-              title: 'Kayıt yok',
+              title: _t('common.no_records'),
             ),
           ),
         ),
@@ -383,17 +384,18 @@ class _StaffDetailSheet extends StatelessWidget {
     final maxH = MediaQuery.of(context).size.height * 0.85;
 
     final employment = <_DetailEntry>[
-      _DetailEntry('Ünvan', staff.displayTitle),
-      _DetailEntry('Departman', staff.departmentName),
-      _DetailEntry('Organizasyon', staff.organizationName),
-      _DetailEntry('Personel Kodu', staff.code),
+      _DetailEntry(_t('admin.staff.field_title'), staff.displayTitle),
+      _DetailEntry(_t('admin.staff.field_department'), staff.departmentName),
+      _DetailEntry(
+          _t('admin.staff.field_organization'), staff.organizationName),
+      _DetailEntry(_t('admin.staff.field_code'), staff.code),
     ];
 
     final contact = <_DetailEntry>[
-      _DetailEntry('E-posta', staff.email),
-      _DetailEntry('Telefon', staff.phone),
-      _DetailEntry('Adres', staff.address),
-      _DetailEntry('Şehir', staff.town),
+      _DetailEntry(_t('admin.staff.field_email'), staff.email),
+      _DetailEntry(_t('profile.phone'), staff.phone),
+      _DetailEntry(_t('admin.staff.field_address'), staff.address),
+      _DetailEntry(_t('admin.staff.field_town'), staff.town),
     ];
 
     return Container(
@@ -460,9 +462,13 @@ class _StaffDetailSheet extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _DetailSection(title: 'İstihdam', entries: employment),
+                  _DetailSection(
+                      title: _t('admin.staff.section_employment'),
+                      entries: employment),
                   const SizedBox(height: AppSpacing.md),
-                  _DetailSection(title: 'İletişim', entries: contact),
+                  _DetailSection(
+                      title: _t('admin.staff.section_contact'),
+                      entries: contact),
                 ],
               ),
             ),
@@ -550,3 +556,6 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);

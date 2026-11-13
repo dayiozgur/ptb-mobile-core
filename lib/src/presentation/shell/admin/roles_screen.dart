@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
-
 /// Admin — Roller (RBAC) görüntüleyici ekranı.
 ///
 /// Web portal `admin-management` RBAC rol yönetimi özelliğinin mobil, salt-okuma
@@ -39,8 +38,8 @@ class _RolesScreenState extends State<RolesScreen> {
       final svc = sl<AdminRbacService>();
       final roles = await svc.listRoles();
       // Etkin platformun rol etiketleri (non-fatal; boş dönebilir).
-      final labels =
-          await svc.listRoleLabels(platformId: platformContext.activePlatformId);
+      final labels = await svc.listRoleLabels(
+          platformId: platformContext.activePlatformId);
       if (!mounted) return;
       setState(() {
         _roles = roles;
@@ -50,7 +49,7 @@ class _RolesScreenState extends State<RolesScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Roller yüklenemedi';
+        _error = _t('admin.roles.load_failed');
         _loading = false;
       });
     }
@@ -88,7 +87,7 @@ class _RolesScreenState extends State<RolesScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Roller',
+      title: _t('admin.roles.title'),
       showBackButton: true,
       child: _buildBody(context),
     );
@@ -102,7 +101,8 @@ class _RolesScreenState extends State<RolesScreen> {
       return _buildMessage(context, Icons.error_outline, _error!, retry: true);
     }
     if (_roles.isEmpty) {
-      return _buildMessage(context, Icons.badge_outlined, 'Rol bulunamadı');
+      return _buildMessage(
+          context, Icons.badge_outlined, _t('admin.roles.empty'));
     }
 
     // CRITICAL: ListView (bounded) — kaydırma içinde unbounded Flex YOK.
@@ -174,11 +174,11 @@ class _RolesScreenState extends State<RolesScreen> {
               _codeTag(context, role.code),
               if (role.isSystem) ...[
                 const SizedBox(width: AppSpacing.xs),
-                _flagTag(context, 'Sistem'),
+                _flagTag(context, _t('admin.roles.flag_system')),
               ],
               if (role.isExternal) ...[
                 const SizedBox(width: AppSpacing.xs),
-                _flagTag(context, 'Dış'),
+                _flagTag(context, _t('admin.roles.flag_external')),
               ],
             ],
           ),
@@ -195,7 +195,8 @@ class _RolesScreenState extends State<RolesScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        'Seviye $level',
+        sl<LocalizationService>()
+            .translate('admin.roles.level', params: {'level': level}),
         style: AppTypography.caption1
             .copyWith(color: color, fontWeight: FontWeight.w600),
       ),
@@ -247,10 +248,13 @@ class _RolesScreenState extends State<RolesScreen> {
           ),
           if (retry) ...[
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
+            TextButton(onPressed: _load, child: Text(_t('common.retry'))),
           ],
         ],
       ),
     );
   }
 }
+
+/// UI text from the keywords table (built-in tr / en / de fallbacks).
+String _t(String key) => sl<LocalizationService>().translate(key);
