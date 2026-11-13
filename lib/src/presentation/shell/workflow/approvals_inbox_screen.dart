@@ -20,9 +20,16 @@ class ApprovalsInboxScreen extends StatefulWidget {
   State<ApprovalsInboxScreen> createState() => _ApprovalsInboxScreenState();
 }
 
+String _t(String key) => sl<LocalizationService>().translate(key);
+
 class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
   bool _isLoading = true;
   List<WorkflowApproval> _rows = [];
+
+  /// The list could not be loaded (timeout / network / refused). A failed load
+  /// is NEVER shown as "no approvals waiting for you" — the user would miss a
+  /// pending approval.
+  Object? _loadError;
 
   /// Karar verilirken meşgul olan onayın id'si (aynı anda tek karar).
   String? _busyId;
@@ -51,13 +58,26 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
 
   Future<void> _loadData({bool silent = false}) async {
     if (!silent) setState(() => _isLoading = true);
-    // pendingApprovals() UI'a asla fırlatmaz — hata/boş durumda [] döner.
-    final rows = await workflowService.pendingApprovals();
-    if (!mounted) return;
-    setState(() {
-      _rows = rows;
-      _isLoading = false;
-    });
+    try {
+      final rows = await workflowService.pendingApprovalsOrThrow();
+      if (!mounted) return;
+      setState(() {
+        _rows = rows;
+        _loadError = null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        // A silent (realtime) refresh that fails keeps the list on screen;
+        // the error state is only for a load that has nothing to show.
+        if (!silent || _rows.isEmpty) {
+          _loadError = e;
+          _rows = [];
+        }
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _decide(WorkflowApproval row, bool approve) async {
@@ -79,7 +99,9 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(approve ? 'Talep onaylandı' : 'Talep reddedildi'),
+          content: Text(_t(approve
+              ? 'workflow_approvals.approved_toast'
+              : 'workflow_approvals.rejected_toast')),
           backgroundColor: AppColors.success,
         ),
       );
@@ -91,7 +113,9 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
       setState(() => _busyId = null);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('İşlem başarısız: $e'),
+          // Translated reason — never the raw exception text.
+          content: Text(AccessErrors.actionMessage(e,
+              fallback: _t('workflow_approvals.decide_error'))),
           backgroundColor: AppColors.error,
         ),
       );
@@ -104,23 +128,23 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reddetme nedeni'),
+        title: Text(_t('workflow_approvals.reject')),
         content: TextField(
           controller: controller,
           maxLines: 3,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'İsteğe bağlı not',
+          decoration: InputDecoration(
+            hintText: _t('workflow_approvals.comment_placeholder'),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('İptal'),
+            child: Text(_t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Reddet'),
+            child: Text(_t('workflow_approvals.reject')),
           ),
         ],
       ),
@@ -132,7 +156,7 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Onaylar',
+      title: _t('workflow_approvals.title'),
       showBackButton: true,
       onBack: () => context.pop(),
       actions: [
@@ -149,6 +173,14 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
     if (_isLoading) {
       return const Center(child: AppLoadingIndicator());
     }
+    if (_loadError != null) {
+      // Timeout / network → "could not load" + retry; refused → "no access".
+      return AppLoadFailedView(
+        error: _loadError,
+        message: _t('workflow_approvals.load_error'),
+        onRetry: _loadData,
+      );
+    }
     if (_rows.isEmpty) {
       // Boş durumda bile RefreshIndicator çekilebilsin diye kaydırılabilir.
       return LayoutBuilder(
@@ -156,10 +188,10 @@ class _ApprovalsInboxScreenState extends State<ApprovalsInboxScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: const Center(
+            child: Center(
               child: AppEmptyState(
                 icon: Icons.task_alt,
-                title: 'Bekleyen onay yok',
+                title: _t('workflow_approvals.empty'),
               ),
             ),
           ),
@@ -202,7 +234,7 @@ class _ApprovalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = (approval.title != null && approval.title!.isNotEmpty)
         ? approval.title!
-        : 'Onay talebi';
+        : _t('workflow_approvals.default_title');
 
     return AppCard(
       child: Padding(
@@ -258,7 +290,7 @@ class _ApprovalCard extends StatelessWidget {
                 ),
                 if (approval.timeoutAt != null)
                   Text(
-                    'Bitiş: ${_formatDate(approval.timeoutAt)}',
+                    '${_t('workflow_approvals.expires_at')}: ${_formatDate(approval.timeoutAt)}',
                     style: AppTypography.caption1
                         .copyWith(color: AppColors.tertiaryLabel(context)),
                   ),
@@ -274,7 +306,7 @@ class _ApprovalCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: AppButton(
-                          label: 'Onayla',
+                          label: _t('workflow_approvals.approve'),
                           variant: AppButtonVariant.primary,
                           size: AppButtonSize.small,
                           icon: Icons.check,
@@ -284,7 +316,7 @@ class _ApprovalCard extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: AppButton(
-                          label: 'Reddet',
+                          label: _t('workflow_approvals.reject'),
                           variant: AppButtonVariant.secondary,
                           size: AppButtonSize.small,
                           icon: Icons.close,
@@ -299,11 +331,7 @@ class _ApprovalCard extends StatelessWidget {
     );
   }
 
-  /// Basit `dd.MM.yyyy HH:mm` biçimi (harici intl bağımlılığı olmadan).
-  String _formatDate(DateTime? d) {
-    if (d == null) return '-';
-    final l = d.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(l.day)}.${two(l.month)}.${l.year} ${two(l.hour)}:${two(l.minute)}';
-  }
+  /// Date + time in the UI language's order (via [AppClock]).
+  String _formatDate(DateTime? d) =>
+      d == null ? '-' : '${AppClock.date(d)} ${AppClock.hm(d)}';
 }

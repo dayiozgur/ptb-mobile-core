@@ -44,10 +44,26 @@ void main() {
       expect(await service.pendingApprovals(), isEmpty);
     });
 
-    test('error is swallowed → empty list (never throws to UI)', () async {
+    test('pendingApprovals() (badge / summary use): error → empty list',
+        () async {
       h.stubRpc('fn_workflow_my_approvals', error: Exception('rpc failed'));
 
       expect(await service.pendingApprovals(), isEmpty);
+    });
+
+    test('pendingApprovalsOrThrow() (the inbox): a failed load THROWS — it must '
+        'not look like "nothing pending"', () async {
+      h.stubRpc('fn_workflow_my_approvals', error: Exception('statement timeout'));
+
+      await expectLater(service.pendingApprovalsOrThrow(), throwsException);
+    });
+
+    test('pendingApprovalsOrThrow() maps rows on success', () async {
+      h.stubRpc('fn_workflow_my_approvals', result: <dynamic>[
+        {'id': 'appr-1', 'title': 'x'},
+      ]);
+      final rows = await service.pendingApprovalsOrThrow();
+      expect(rows.single.id, 'appr-1');
     });
 
     test('tolerates rows missing optional fields', () async {

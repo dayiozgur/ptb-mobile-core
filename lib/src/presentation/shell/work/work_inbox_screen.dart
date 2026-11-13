@@ -17,9 +17,19 @@ class WorkInboxScreen extends StatefulWidget {
   State<WorkInboxScreen> createState() => _WorkInboxScreenState();
 }
 
+/// Keyword text; [fallback] when the key is not known yet.
+String _tr(String key, String fallback) {
+  if (!sl.isRegistered<LocalizationService>()) return fallback;
+  final v = sl<LocalizationService>().translate(key);
+  return v == key ? fallback : v;
+}
+
 class _WorkInboxScreenState extends State<WorkInboxScreen> {
   bool _loading = true;
   List<WorkInboxItem> _items = [];
+
+  /// The list could not be loaded — shown instead of "no assigned work".
+  Object? _loadError;
   final _rt = RealtimeRefresher();
 
   @override
@@ -43,10 +53,22 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
 
   Future<void> _load({bool silent = false}) async {
     if (!silent) setState(() => _loading = true);
-    final items = await sl<WorkInboxService>().load(widget.source);
-    if (mounted) {
+    try {
+      final items = await sl<WorkInboxService>().loadOrThrow(widget.source);
+      if (!mounted) return;
       setState(() {
         _items = items;
+        _loadError = null;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        // a failed silent (realtime) refresh keeps what is on screen
+        if (!silent || _items.isEmpty) {
+          _loadError = e;
+          _items = [];
+        }
         _loading = false;
       });
     }
@@ -83,15 +105,18 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
 
   Widget _buildBody(BuildContext context) {
     if (_loading) return const Center(child: AppLoadingIndicator());
+    if (_loadError != null) {
+      return AppLoadFailedView(error: _loadError, onRetry: _load);
+    }
     if (_items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
             child: AppEmptyState(
               icon: Icons.inbox_outlined,
-              title: 'Atanmış iş yok',
+              title: _tr('work_inbox.empty', 'Atanmış iş yok'),
             ),
           ),
         ],

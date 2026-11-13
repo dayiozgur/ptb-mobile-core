@@ -517,8 +517,12 @@ class WorkflowService {
   ///
   /// RPC yalnızca `approver_ids` içinde `auth.uid()` bulunan ve
   /// `status='pending'` olan, tenant-scoped `workflow_approvals` satırlarını
-  /// döner. UI'a asla exception fırlatmaz — hata/boş durumda `[]` döner.
-  Future<List<WorkflowApproval>> pendingApprovals() async {
+  /// döner.
+  ///
+  /// HATA FIRLATIR (zaman aşımı / ağ / yetki): onay gelen kutusu bunu
+  /// kullanır — yüklenemeyen bir liste "bekleyen onay yok" diye
+  /// GÖSTERİLMEZ (kullanıcı bekleyen bir onayı kaçırır).
+  Future<List<WorkflowApproval>> pendingApprovalsOrThrow() async {
     try {
       final response = await _supabase.rpc('fn_workflow_my_approvals');
       if (response is List) {
@@ -530,6 +534,17 @@ class WorkflowService {
       return [];
     } catch (e, stackTrace) {
       Logger.error('Failed to load pending approvals', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// [pendingApprovalsOrThrow]'un fırlatmayan biçimi — yalnız "kaç tane var"
+  /// gibi yardımcı (rozet/özet) kullanımlar için: hata → `[]`. Bir LİSTE
+  /// ekranı bunu kullanmamalı.
+  Future<List<WorkflowApproval>> pendingApprovals() async {
+    try {
+      return await pendingApprovalsOrThrow();
+    } catch (_) {
       return [];
     }
   }

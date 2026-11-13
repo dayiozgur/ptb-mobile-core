@@ -55,8 +55,9 @@ class WorkInboxService {
 
   WorkInboxService({required SupabaseClient supabase}) : _supabase = supabase;
 
-  /// Kaynağın RPC'sini çağır + eşle. Hata → boş liste (UI'a fırlatmaz).
-  Future<List<WorkInboxItem>> load(WorkInboxSource source) async {
+  /// Kaynağın RPC'sini çağır + eşle. HATA FIRLATIR — "bana atanan iş" ekranı
+  /// yüklenemeyen listeyi "iş yok" diye göstermesin.
+  Future<List<WorkInboxItem>> loadOrThrow(WorkInboxSource source) async {
     try {
       final res = source.params != null
           ? await _supabase.rpc(source.rpcName, params: source.params)
@@ -65,6 +66,15 @@ class WorkInboxService {
       return await _withStatusNames(rows.map(source.mapper).toList());
     } catch (e) {
       Logger.error('WorkInbox load (${source.rpcName}) hata', e);
+      rethrow;
+    }
+  }
+
+  /// [loadOrThrow]'un fırlatmayan biçimi (özet/rozet kullanımları): hata → `[]`.
+  Future<List<WorkInboxItem>> load(WorkInboxSource source) async {
+    try {
+      return await loadOrThrow(source);
+    } catch (_) {
       return [];
     }
   }

@@ -55,7 +55,7 @@ void main() {
 
   testWidgets('yüklenirken spinner gösterir', (tester) async {
     final completer = Completer<List<WorkInboxItem>>();
-    when(() => svc.load(source)).thenAnswer((_) => completer.future);
+    when(() => svc.loadOrThrow(source)).thenAnswer((_) => completer.future);
 
     await tester.pumpWidget(host());
     await tester.pump(); // initState
@@ -66,8 +66,30 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('yükleme başarısızsa "iş yok" DEĞİL: hata + yeniden dene',
+      (tester) async {
+    var calls = 0;
+    when(() => svc.loadOrThrow(source)).thenAnswer((_) async {
+      calls++;
+      if (calls == 1) throw Exception('statement timeout');
+      return const <WorkInboxItem>[];
+    });
+
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Atanmış iş yok'), findsNothing);
+    expect(find.byType(AppLoadFailedView), findsOneWidget);
+    expect(find.byType(AppErrorView), findsOneWidget);
+
+    // yenile → gerçekten boş
+    await tester.tap(find.byIcon(Icons.refresh).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Atanmış iş yok'), findsOneWidget);
+  });
+
   testWidgets('atanmış iş yoksa boş-durum', (tester) async {
-    when(() => svc.load(source))
+    when(() => svc.loadOrThrow(source))
         .thenAnswer((_) async => const <WorkInboxItem>[]);
 
     await tester.pumpWidget(host());
@@ -78,7 +100,7 @@ void main() {
 
   testWidgets('öğeleri gruplara (GECİKMİŞ/BUGÜN) ayırıp başlık+alt-başlık+rozet '
       'ile listeler', (tester) async {
-    when(() => svc.load(source)).thenAnswer((_) async => const [
+    when(() => svc.loadOrThrow(source)).thenAnswer((_) async => const [
           WorkInboxItem(
             id: '1',
             title: 'Gecikmiş görev',
@@ -112,7 +134,7 @@ void main() {
 
   testWidgets('öğeye dokununca /entities/<type>/<id> detayına gider',
       (tester) async {
-    when(() => svc.load(source)).thenAnswer((_) async => const [
+    when(() => svc.loadOrThrow(source)).thenAnswer((_) async => const [
           WorkInboxItem(
             id: '42',
             title: 'Gecikmiş görev',
@@ -133,7 +155,7 @@ void main() {
 
   testWidgets('entityType boş → navigasyon yok (çökmeye karşı)',
       (tester) async {
-    when(() => svc.load(source)).thenAnswer((_) async => const [
+    when(() => svc.loadOrThrow(source)).thenAnswer((_) async => const [
           WorkInboxItem(id: '7', title: 'Tipsiz öğe', group: 'today'),
         ]);
 
