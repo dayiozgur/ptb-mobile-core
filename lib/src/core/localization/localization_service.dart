@@ -355,10 +355,13 @@ class LocalizationService {
   String translate(String key, {Map<String, dynamic>? params}) {
     var text = _dbTranslations[key] ?? _translations[key] ?? key;
 
-    // Parametreleri değiştir
+    // Placeholders: the web form `{{name}}` (keywords table) first, then the
+    // legacy single-brace form `{name}`.
     if (params != null) {
       params.forEach((paramKey, value) {
-        text = text.replaceAll('{$paramKey}', value.toString());
+        text = text
+            .replaceAll('{{$paramKey}}', value.toString())
+            .replaceAll('{$paramKey}', value.toString());
       });
     }
 

@@ -157,6 +157,17 @@ void main() {
       expect(result.contains('8'), false);
     });
 
+    test('web-style {{name}} placeholders are replaced without stray braces',
+        () {
+      final result = localizationService.translate(
+        'pms.alarm_ticket.route.internal',
+        params: {'target': 'ACME', 'team': 'Saha'},
+      );
+      expect(result, contains('ACME'));
+      expect(result, contains('Saha'));
+      expect(result, isNot(contains('{')));
+    });
+
     test('tr shorthand works correctly', () {
       final result = localizationService.tr('common.cancel');
       expect(result, 'İptal');
