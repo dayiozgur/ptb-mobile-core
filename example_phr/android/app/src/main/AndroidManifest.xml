@@ -3,6 +3,12 @@
          no Flutter plugin manifest in use contributes it (only debug/profile
          manifests do); relying on transitive AARs (ML Kit datatransport) is fragile. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Konum (YALNIZ ön planda — arka plan konumu YOK, ACCESS_BACKGROUND_LOCATION
+         bilinçli olarak tanımlı değil): PDKS geofence giriş/çıkış (yalnız uygulama açıkken); formlardaki konum alanı.
+         geolocator izinleri manifest'te tanımlı değilse izin isteği hata verir
+         (PermissionDefinitionsNotFoundException). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <application
         android:label="Protoolbag HR"
         android:name="${applicationName}"
