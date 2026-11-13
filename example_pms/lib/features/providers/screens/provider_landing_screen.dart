@@ -42,6 +42,10 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   // Related data
   List<Controller> _controllers = [];
   List<Alarm> _activeAlarms = [];
+
+  /// Aktif alarmlar OKUNAMADI (zaman aşımı / ağ). Bu durumda "0 aktif alarm"
+  /// (yeşil) GÖSTERİLMEZ — bilinmeyen, "alarm yok" demek değildir.
+  bool _activeAlarmsFailed = false;
   List<AlarmHistory> _alarmHistory = [];
   List<IoTLog> _logs = [];
   Map<String, Priority> _priorityMap = {};
@@ -127,7 +131,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           _site = site;
           _priorityMap = pMap;
           _controllers = results[0] as List<Controller>;
-          _activeAlarms = results[1] as List<Alarm>;
+          final active = results[1] as List<Alarm>?;
+          _activeAlarmsFailed = active == null;
+          _activeAlarms = active ?? const [];
           _alarmHistory = results[2] as List<AlarmHistory>;
           _logs = results[3] as List<IoTLog>;
           _isLoading = false;
@@ -155,7 +161,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     }
   }
 
-  Future<List<Alarm>> _loadActiveAlarms() async {
+  /// Aktif alarmlar; okuma başarısızsa null (boş liste DEĞİL).
+  Future<List<Alarm>?> _loadActiveAlarms() async {
     try {
       final allControllers = await controllerService.getAll();
       final providerControllers = allControllers
@@ -166,8 +173,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
       final controllerIds = providerControllers.map((c) => c.id).toList();
       return await alarmService.getActiveAlarmsByControllers(controllerIds);
-    } catch (_) {
-      return [];
+    } catch (e) {
+      Logger.error('Failed to load active alarms', e);
+      return null;
     }
   }
 
@@ -558,8 +566,11 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           child: _StatCard(
             icon: Icons.warning_amber_rounded,
             label: sl<LocalizationService>().translate('common.alarm'),
-            value: _activeAlarms.length.toString(),
-            color: _activeAlarms.isNotEmpty ? AppColors.error : AppColors.success,
+            // Okunamadıysa sayı yerine "—" ve uyarı rengi (yeşil 0 değil).
+            value: _activeAlarmsFailed ? '—' : _activeAlarms.length.toString(),
+            color: _activeAlarmsFailed
+                ? AppColors.warning
+                : (_activeAlarms.isNotEmpty ? AppColors.error : AppColors.success),
             onTap: () => _tabController.animateTo(2),
           ),
         ),
@@ -710,6 +721,13 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   }
 
   Widget _buildActiveAlarmsContent() {
+    if (_activeAlarmsFailed) {
+      return AppLoadFailedView(
+        error: null,
+        message: sl<LocalizationService>().translate('alarm.active_load_failed'),
+        onRetry: _loadData,
+      );
+    }
     if (_activeAlarms.isEmpty) {
       return Center(
         child: AppEmptyState(icon: Icons.check_circle_outline, title: sl<LocalizationService>().translate('alarm.none_active'), message: sl<LocalizationService>().translate('provider.no_active_alarms')),
