@@ -35,7 +35,7 @@ class AppErrorView extends StatelessWidget {
   final VoidCallback? onRetry;
 
   /// Tekrar dene buton metni (or use actionLabel)
-  final String retryButtonText;
+  final String? retryButtonText;
 
   /// İkinci aksiyon callback'i
   final VoidCallback? onSecondaryAction;
@@ -65,7 +65,15 @@ class AppErrorView extends StatelessWidget {
     String? actionLabel,
     VoidCallback? onAction,
   }) : onRetry = onRetry ?? onAction,
-       retryButtonText = retryButtonText ?? actionLabel ?? 'Tekrar Dene';
+       retryButtonText = retryButtonText ?? actionLabel;
+
+  /// Retry label: the caller's text, else the translated `common.retry`
+  /// (follows the UI language — no hardcoded Turkish default).
+  String get _retryLabel =>
+      retryButtonText ??
+      (sl.isRegistered<LocalizationService>()
+          ? sl<LocalizationService>().translate('common.retry')
+          : 'Retry');
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +154,7 @@ class AppErrorView extends StatelessWidget {
       children: [
         if (onRetry != null)
           AppButton(
-            label: retryButtonText,
+            label: _retryLabel,
             variant: AppButtonVariant.primary,
             onPressed: onRetry,
             isFullWidth: false,
@@ -180,7 +188,7 @@ class AppErrorView extends StatelessWidget {
         ],
         if (onRetry != null)
           AppButton(
-            label: retryButtonText,
+            label: _retryLabel,
             variant: AppButtonVariant.primary,
             size: AppButtonSize.small,
             onPressed: onRetry,
