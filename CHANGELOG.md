@@ -77,6 +77,24 @@ release.
 - PEM alarm priorities and unit types with `active IS NULL` were hidden.
 - An https app link to a page without a mobile screen was a silent no-op.
 
+### Store preparation (configuration and documents — nothing built, signed or submitted)
+- `docs/store/STORE-READINESS-2026-11.md`: per-app readiness table, blockers,
+  privacy answers for both stores, owner checklists, release order;
+  `docs/store/listings/` (tr / en listing drafts) and `docs/store/well-known/`
+  (`assetlinks.json` / `apple-app-site-association` templates).
+- iOS: permission purpose strings in English and Turkish (`InfoPlist.strings`)
+  with the missing keys added (location: CRM, PPM, PEM; camera and photos:
+  PEM); PEM privacy manifest added; precise location declared in the CRM, PPM,
+  FixFlow and PEM manifests; PMS display name "Protoolbag PMS".
+- Android: launcher labels are the product names; foreground location
+  permission declared (no location request could succeed before);
+  `MainActivity` is a `FlutterFragmentActivity` (required for biometric
+  sign-in); launcher icons use each app's brand icon instead of the template
+  default.
+- Settings: privacy policy and terms of service links (public web pages), the
+  installed version instead of a hardcoded one.
+- Release scripts accept FixFlow (and PEM on Android).
+
 ### Keywords
 18 new keys (tr / en / de / it) are proposed in
 `docs/proposed-sql/20261113_mobile_store_prep_keywords.sql` — not applied; the

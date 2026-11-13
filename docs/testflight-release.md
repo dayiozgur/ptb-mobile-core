@@ -1,5 +1,10 @@
 # TestFlight Yayın Rehberi
 
+> **2026-11-13:** Altı uygulamanın mağaza hazırlık durumu, engeller ve sahip adımları için bkz.
+> [`store/STORE-READINESS-2026-11.md`](store/STORE-READINESS-2026-11.md). Bu rehber yalnız TestFlight
+> yükleme adımlarını anlatır; FixFlow artık `build-testflight.sh fixflow …` ile yüklenebilir, PEM'in iOS
+> projesi henüz hazır değil. PMS görünen adı "Protoolbag PMS" olarak düzeltildi.
+
 4 ürün uygulaması TestFlight'a hazır: **CRM, PHR, PMS, PPM** (paid team `283AHKB4WM`).
 `example/` demo'su yayınlanmaz.
 

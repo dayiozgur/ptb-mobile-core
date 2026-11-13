@@ -1,0 +1,82 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "<APPLE_TEAM_ID>.com.protoolbag.fixflow"
+        ],
+        "components": [
+          {
+            "/": "/legal/*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/auth/*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/login*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/register*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/consent*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/mfa*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/account/integrations*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/report/my*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/m365/*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/files*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/admin/menu-builder*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/admin/page-builder*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/admin/workflow-designer*",
+            "exclude": true,
+            "comment": "web-only page"
+          },
+          {
+            "/": "/*",
+            "comment": "everything else may open the app"
+          }
+        ]
+      }
+    ]
+  }
+}
