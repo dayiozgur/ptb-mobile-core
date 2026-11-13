@@ -351,9 +351,20 @@ class AuthService {
   /// Hata ayrımı: yanlış şifre → [PasswordChangeOutcome.wrongCurrentPassword];
   /// 429/rate-limit → [PasswordChangeOutcome.rateLimited]; ağ/diğer → genel
   /// hata (asla "yanlış şifre" olarak gösterilmez).
+  ///
+  /// MFA (doğrulanmış authenticator / TOTP) açık hesap: GoTrue, AAL1 oturumdan
+  /// şifre değişikliğini `insufficient_aal` ile reddeder →
+  /// [PasswordChangeOutcome.mfaRequired]. Ekran 6 haneli kodu sorar ve aynı
+  /// çağrıyı [mfaCode] ile yineler: kod ANA oturumda doğrulanır (oturum AAL2'ye
+  /// yükselir — kullanıcının kendi ikinci faktörü), sonra şifre güncellenir.
+  /// Yanlış kod → [PasswordChangeOutcome.mfaCodeInvalid]. E-posta kodu
+  /// (özel faktör) GoTrue AAL'ını etkilemez; o hesaplarda bu adım hiç çıkmaz.
+  /// "Güvenli şifre değişikliği" taze oturum isterse →
+  /// [PasswordChangeOutcome.reauthenticationNeeded] (web ile aynı).
   Future<PasswordChangeResult> changePasswordVerified({
     required String currentPassword,
     required String newPassword,
+    String? mfaCode,
   }) async {
     final user = currentUser;
     final email = user?.email;
@@ -407,6 +418,15 @@ class AuthService {
         return const PasswordChangeResult(PasswordChangeOutcome.failed);
     }
 
+    // Second factor, only when the screen came back with a code (the server
+    // asked for it on the previous attempt). The current password is already
+    // verified at this point.
+    final code = mfaCode?.trim();
+    if (code != null && code.isNotEmpty) {
+      final stepUp = await _stepUpWithTotp(code);
+      if (stepUp != null) return PasswordChangeResult(stepUp);
+    }
+
     try {
       await _supabase.auth.updateUser(
         UserAttributes(password: newPassword, currentPassword: currentPassword),
@@ -422,12 +442,55 @@ class AuthService {
     }
   }
 
+  /// Raise the MAIN session to AAL2 with the user's verified authenticator.
+  /// Returns null on success, else the outcome to report.
+  Future<PasswordChangeOutcome?> _stepUpWithTotp(String code) async {
+    try {
+      final factors = await _supabase.auth.mfa.listFactors();
+      String? factorId;
+      for (final f in factors.totp) {
+        if (f.status == FactorStatus.verified) {
+          factorId = f.id;
+          break;
+        }
+      }
+      if (factorId == null) {
+        // Nothing to step up with (e-mail code users never reach this).
+        Logger.warning('Password change: MFA code given but no verified TOTP');
+        return PasswordChangeOutcome.failed;
+      }
+      await _supabase.auth.mfa.challengeAndVerify(factorId: factorId, code: code);
+      return null;
+    } on AuthException catch (e) {
+      Logger.info('Password change: MFA step-up rejected (${e.code})');
+      if (e.statusCode == '429' || e.code == 'over_request_rate_limit') {
+        return PasswordChangeOutcome.rateLimited;
+      }
+      if (e is AuthRetryableFetchException && e.statusCode == null) {
+        return PasswordChangeOutcome.networkError;
+      }
+      return PasswordChangeOutcome.mfaCodeInvalid;
+    } catch (e) {
+      Logger.error('Password change: MFA step-up error', e);
+      return PasswordChangeOutcome.failed;
+    }
+  }
+
   /// `updateUser` hatasını [PasswordChangeOutcome]'a çevirir.
   static PasswordChangeOutcome mapPasswordUpdateError(AuthException e) {
     final code = e.code;
     final message = e.message.toLowerCase();
     if (e is AuthSessionMissingException) {
       return PasswordChangeOutcome.sessionMissing;
+    }
+    // MFA enabled + AAL1 session: "AAL2 session is required to update email or
+    // password when MFA is enabled."
+    if (code == 'insufficient_aal' || message.contains('aal2 session is required')) {
+      return PasswordChangeOutcome.mfaRequired;
+    }
+    // "Secure password change": the session is older than the server allows.
+    if (code == 'reauthentication_needed' || code == 'reauthentication_not_valid') {
+      return PasswordChangeOutcome.reauthenticationNeeded;
     }
     if (e.statusCode == '429' ||
         code == 'over_request_rate_limit' ||

@@ -271,6 +271,20 @@ enum PasswordChangeOutcome {
   /// No signed-in user with an email address.
   sessionMissing,
 
+  /// The server wants a fresh sign-in before a password change (GoTrue
+  /// "secure password change": `reauthentication_needed`). Same outcome and
+  /// wording as the web app (`profile.password_reauth_required`).
+  reauthenticationNeeded,
+
+  /// The account has a verified authenticator (TOTP) and this session has not
+  /// been confirmed with it (`insufficient_aal`): GoTrue refuses a password
+  /// change from an AAL1 session when MFA is enabled. Ask for the 6-digit code
+  /// and call `changePasswordVerified` again with `mfaCode`.
+  mfaRequired,
+
+  /// The authenticator code given as `mfaCode` was rejected.
+  mfaCodeInvalid,
+
   /// Any other failure — show the generic error.
   failed,
 }

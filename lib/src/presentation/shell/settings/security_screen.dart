@@ -363,6 +363,18 @@ class _SecurityScreenState extends State<SecurityScreen> {
       case PasswordChangeOutcome.rateLimited:
         return _t('account.security.password.rate_limited',
             'Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.');
+      case PasswordChangeOutcome.reauthenticationNeeded:
+        return _t(
+            'profile.password_reauth_required',
+            'Güvenliğiniz için çıkış yapıp yeniden giriş yapın, ardından şifrenizi tekrar değiştirmeyi deneyin.');
+      case PasswordChangeOutcome.mfaRequired:
+        return _t(
+            'account.security.password.mfa_required',
+            'İki adımlı doğrulamanız açık. Şifrenizi değiştirmek için doğrulama uygulamanızdaki 6 haneli kodu girin.');
+      case PasswordChangeOutcome.mfaCodeInvalid:
+        return _t(
+            'auth.mfa.email_error_invalid_code',
+            'Girdiğiniz kod hatalı.');
       case PasswordChangeOutcome.success:
       case PasswordChangeOutcome.networkError:
       case PasswordChangeOutcome.sessionMissing:
@@ -381,6 +393,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
     String? newError;
     String? formError;
     bool submitting = false;
+    // MFA (authenticator) step-up: shown only after the server answered
+    // `insufficient_aal` for this account (verified TOTP + AAL1 session).
+    final mfaController = TextEditingController();
+    bool needMfa = false;
+    String? mfaError;
 
     showModalBottomSheet<void>(
       context: context,
@@ -446,6 +463,26 @@ class _SecurityScreenState extends State<SecurityScreen> {
                         return null;
                       },
                     ),
+                    if (needMfa) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        key: const Key('security.password.mfa_code'),
+                        controller: mfaController,
+                        label: _t(
+            'auth.mfa.code_label',
+            'Doğrulama kodu'),
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return _t(
+            'account.security.password.mfa_code_required',
+            'Doğrulama kodunu girin.');
+                          }
+                          return mfaError;
+                        },
+                      ),
+                    ],
                     if (formError != null) ...[
                       const SizedBox(height: AppSpacing.md),
                       Text(
@@ -466,17 +503,23 @@ class _SecurityScreenState extends State<SecurityScreen> {
                                 currentError = null;
                                 newError = null;
                                 formError = null;
+                                mfaError = null;
                               });
                               if (!(formKey.currentState?.validate() ??
                                   false)) {
                                 return;
                               }
                               setSheetState(() => submitting = true);
-                              final result =
-                                  await authService.changePasswordVerified(
-                                currentPassword: currentController.text,
-                                newPassword: newController.text,
-                              );
+                              final result = needMfa
+                                  ? await authService.changePasswordVerified(
+                                      currentPassword: currentController.text,
+                                      newPassword: newController.text,
+                                      mfaCode: mfaController.text.trim(),
+                                    )
+                                  : await authService.changePasswordVerified(
+                                      currentPassword: currentController.text,
+                                      newPassword: newController.text,
+                                    );
                               if (!sheetContext.mounted) return;
                               setSheetState(() => submitting = false);
                               switch (result.outcome) {
@@ -498,6 +541,19 @@ class _SecurityScreenState extends State<SecurityScreen> {
                                   newError =
                                       _passwordChangeError(result.outcome);
                                   formKey.currentState?.validate();
+                                case PasswordChangeOutcome.mfaRequired:
+                                  // Ask for the authenticator code and let the
+                                  // user submit again (nothing was changed).
+                                  setSheetState(() {
+                                    needMfa = true;
+                                    formError =
+                                        _passwordChangeError(result.outcome);
+                                  });
+                                case PasswordChangeOutcome.mfaCodeInvalid:
+                                  mfaError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.reauthenticationNeeded:
                                 case PasswordChangeOutcome.rateLimited:
                                 case PasswordChangeOutcome.networkError:
                                 case PasswordChangeOutcome.sessionMissing:

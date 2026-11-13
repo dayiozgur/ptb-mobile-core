@@ -18,6 +18,8 @@ class _MockBiometricAuth extends Mock implements BiometricAuth {}
 
 class _MockSession extends Mock implements Session {}
 
+class _MockMfaApi extends Mock implements GoTrueMFAApi {}
+
 class _FakeVerifier implements CurrentPasswordVerifier {
   _FakeVerifier(this.result);
 
@@ -223,6 +225,132 @@ void main() {
       expect(
           await run(const AuthApiException('boom', statusCode: '400')),
           PasswordChangeOutcome.failed);
+    });
+
+    test('MFA account on an AAL1 session: insufficient_aal -> mfaRequired '
+        '(not a generic failure)', () async {
+      when(() => auth.updateUser(any())).thenThrow(const AuthApiException(
+          'AAL2 session is required to update email or password when MFA is enabled.',
+          statusCode: '401',
+          code: 'insufficient_aal'));
+
+      final r = await service.changePasswordVerified(
+          currentPassword: _current, newPassword: _newPw);
+
+      expect(r.outcome, PasswordChangeOutcome.mfaRequired);
+    });
+
+    test('secure password change: reauthentication_needed -> '
+        'reauthenticationNeeded (same as web)', () async {
+      for (final code in ['reauthentication_needed', 'reauthentication_not_valid']) {
+        when(() => auth.updateUser(any())).thenThrow(
+            AuthApiException('reauth', statusCode: '400', code: code));
+        final r = await service.changePasswordVerified(
+            currentPassword: _current, newPassword: _newPw);
+        expect(r.outcome, PasswordChangeOutcome.reauthenticationNeeded,
+            reason: code);
+      }
+    });
+
+    group('with mfaCode (authenticator step-up)', () {
+      late _MockMfaApi mfa;
+      final now = DateTime.utc(2026, 11, 13);
+      Factor totp(String id, FactorStatus status) => Factor(
+            id: id,
+            friendlyName: 'Authenticator',
+            factorType: FactorType.totp,
+            status: status,
+            createdAt: now,
+            updatedAt: now,
+          );
+
+      setUp(() {
+        mfa = _MockMfaApi();
+        when(() => auth.mfa).thenReturn(mfa);
+      });
+
+      void stubFactors(List<Factor> factors) {
+        when(() => mfa.listFactors()).thenAnswer((_) async =>
+            AuthMFAListFactorsResponse(
+                all: factors, totp: factors, phone: const [], webauthn: const []));
+      }
+
+      test('verifies the code on the verified TOTP factor, then updates the '
+          'password', () async {
+        stubFactors([
+          totp('f-unverified', FactorStatus.unverified),
+          totp('f-verified', FactorStatus.verified),
+        ]);
+        when(() => mfa.challengeAndVerify(
+                factorId: any(named: 'factorId'), code: any(named: 'code')))
+            .thenAnswer((_) async => AuthMFAVerifyResponse(
+                  accessToken: 'a',
+                  tokenType: 'bearer',
+                  expiresIn: const Duration(hours: 1),
+                  refreshToken: 'r',
+                  user: user,
+                ));
+
+        final r = await service.changePasswordVerified(
+            currentPassword: _current, newPassword: _newPw, mfaCode: ' 123456 ');
+
+        expect(r.isSuccess, isTrue);
+        verifyInOrder([
+          () => mfa.challengeAndVerify(factorId: 'f-verified', code: '123456'),
+          () => auth.updateUser(any()),
+        ]);
+      });
+
+      test('a wrong code -> mfaCodeInvalid and the password is NOT changed',
+          () async {
+        stubFactors([totp('f-verified', FactorStatus.verified)]);
+        when(() => mfa.challengeAndVerify(
+                factorId: any(named: 'factorId'), code: any(named: 'code')))
+            .thenThrow(const AuthApiException('Invalid TOTP code entered',
+                statusCode: '422', code: 'mfa_verification_failed'));
+
+        final r = await service.changePasswordVerified(
+            currentPassword: _current, newPassword: _newPw, mfaCode: '000000');
+
+        expect(r.outcome, PasswordChangeOutcome.mfaCodeInvalid);
+        verifyNever(() => auth.updateUser(any()));
+      });
+
+      test('rate-limited code check is not reported as a wrong code', () async {
+        stubFactors([totp('f-verified', FactorStatus.verified)]);
+        when(() => mfa.challengeAndVerify(
+                factorId: any(named: 'factorId'), code: any(named: 'code')))
+            .thenThrow(const AuthApiException('rate',
+                statusCode: '429', code: 'over_request_rate_limit'));
+
+        final r = await service.changePasswordVerified(
+            currentPassword: _current, newPassword: _newPw, mfaCode: '000000');
+
+        expect(r.outcome, PasswordChangeOutcome.rateLimited);
+        verifyNever(() => auth.updateUser(any()));
+      });
+
+      test('the current password is still verified first; a wrong password '
+          'never reaches the MFA step', () async {
+        verifier.result = PasswordVerification.wrongPassword;
+
+        final r = await service.changePasswordVerified(
+            currentPassword: 'wrong-one1', newPassword: _newPw, mfaCode: '123456');
+
+        expect(r.outcome, PasswordChangeOutcome.wrongCurrentPassword);
+        verifyNever(() => mfa.listFactors());
+        verifyNever(() => auth.updateUser(any()));
+      });
+
+      test('no verified authenticator -> failed (nothing changed)', () async {
+        stubFactors([totp('f-unverified', FactorStatus.unverified)]);
+
+        final r = await service.changePasswordVerified(
+            currentPassword: _current, newPassword: _newPw, mfaCode: '123456');
+
+        expect(r.outcome, PasswordChangeOutcome.failed);
+        verifyNever(() => auth.updateUser(any()));
+      });
     });
 
     test('the main session is never touched by verification', () async {

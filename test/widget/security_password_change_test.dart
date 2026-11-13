@@ -111,4 +111,84 @@ void main() {
     expect(find.text('Şifre güncellenemedi.'), findsOneWidget);
     expect(find.text('Mevcut şifre hatalı.'), findsNothing);
   });
+
+  /// First attempt (no code) → the server asks for the second factor; the
+  /// attempt that carries a code gets [withCode].
+  void stubMfaFlow({required PasswordChangeOutcome withCode}) {
+    when(() => auth.changePasswordVerified(
+          currentPassword: any(named: 'currentPassword'),
+          newPassword: any(named: 'newPassword'),
+          mfaCode: any(named: 'mfaCode'),
+        )).thenAnswer((inv) async {
+      final code = inv.namedArguments[#mfaCode] as String?;
+      return PasswordChangeResult(
+          code == null ? PasswordChangeOutcome.mfaRequired : withCode);
+    });
+  }
+
+  testWidgets('MFA account: the sheet asks for the authenticator code and '
+      'resubmits with it (nothing is lost, no generic error)', (tester) async {
+    stubMfaFlow(withCode: PasswordChangeOutcome.success);
+    await openSheet(tester);
+
+    expect(find.byKey(const Key('security.password.mfa_code')), findsNothing);
+    await fillAndSubmit(tester, current: 'OldPassw0rd!');
+
+    // the reason + the code field appear; the generic error does not
+    expect(find.byKey(const Key('security.password.mfa_code')), findsOneWidget);
+    expect(find.textContaining('6 haneli kodu girin'), findsOneWidget);
+    expect(find.text('Şifre güncellenemedi.'), findsNothing);
+
+    await tester.enterText(
+        find.descendant(
+            of: find.byKey(const Key('security.password.mfa_code')),
+            matching: find.byType(TextFormField)),
+        '123456');
+    final submit = find.text('Şifreyi Güncelle');
+    await tester.ensureVisible(submit);
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    verify(() => auth.changePasswordVerified(
+          currentPassword: 'OldPassw0rd!',
+          newPassword: 'NewPassw0rd!',
+          mfaCode: '123456',
+        )).called(1);
+    expect(find.text('Şifreniz güncellendi.'), findsOneWidget);
+  });
+
+  testWidgets('a wrong authenticator code is shown on the code field',
+      (tester) async {
+    stubMfaFlow(withCode: PasswordChangeOutcome.mfaCodeInvalid);
+    await openSheet(tester);
+    await fillAndSubmit(tester, current: 'OldPassw0rd!');
+
+    await tester.enterText(
+        find.descendant(
+            of: find.byKey(const Key('security.password.mfa_code')),
+            matching: find.byType(TextFormField)),
+        '000000');
+    final submit = find.text('Şifreyi Güncelle');
+    await tester.ensureVisible(submit);
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Girdiğiniz kod hatalı.'), findsOneWidget);
+    expect(find.text('Mevcut şifre hatalı.'), findsNothing);
+    expect(find.text('Şifreyi Güncelle'), findsOneWidget);
+  });
+
+  testWidgets('secure password change: asks to sign in again (web wording)',
+      (tester) async {
+    stubOutcome(PasswordChangeOutcome.reauthenticationNeeded);
+    await openSheet(tester);
+
+    await fillAndSubmit(tester, current: 'OldPassw0rd!');
+
+    expect(find.textContaining('çıkış yapıp yeniden giriş yapın'),
+        findsOneWidget);
+    expect(find.text('Mevcut şifre hatalı.'), findsNothing);
+  });
 }

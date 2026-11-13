@@ -470,6 +470,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return sl<LocalizationService>().tr('settings.password_weak');
       case PasswordChangeOutcome.rateLimited:
         return sl<LocalizationService>().tr('settings.password_rate_limited');
+      case PasswordChangeOutcome.reauthenticationNeeded:
+        return sl<LocalizationService>()
+            .tr('profile.password_reauth_required');
+      case PasswordChangeOutcome.mfaRequired:
+        return sl<LocalizationService>()
+            .tr('account.security.password.mfa_required');
+      case PasswordChangeOutcome.mfaCodeInvalid:
+        return sl<LocalizationService>()
+            .tr('auth.mfa.email_error_invalid_code');
       case PasswordChangeOutcome.success:
       case PasswordChangeOutcome.networkError:
       case PasswordChangeOutcome.sessionMissing:
@@ -489,6 +498,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? newError;
     String? formError;
     bool submitting = false;
+    // MFA (authenticator) step-up: shown only after the server answered
+    // `insufficient_aal` for this account (verified TOTP + AAL1 session).
+    final mfaController = TextEditingController();
+    bool needMfa = false;
+    String? mfaError;
 
     showModalBottomSheet<void>(
       context: context,
@@ -551,6 +565,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return null;
                       },
                     ),
+                    if (needMfa) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        key: const Key('settings.password.mfa_code'),
+                        controller: mfaController,
+                        label: sl<LocalizationService>()
+            .tr('auth.mfa.code_label'),
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return sl<LocalizationService>()
+            .tr('account.security.password.mfa_code_required');
+                          }
+                          return mfaError;
+                        },
+                      ),
+                    ],
                     if (formError != null) ...[
                       const SizedBox(height: AppSpacing.md),
                       Text(
@@ -571,17 +603,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 currentError = null;
                                 newError = null;
                                 formError = null;
+                                mfaError = null;
                               });
                               if (!(formKey.currentState?.validate() ??
                                   false)) {
                                 return;
                               }
                               setSheetState(() => submitting = true);
-                              final result =
-                                  await authService.changePasswordVerified(
-                                currentPassword: currentController.text,
-                                newPassword: newController.text,
-                              );
+                              final result = needMfa
+                                  ? await authService.changePasswordVerified(
+                                      currentPassword: currentController.text,
+                                      newPassword: newController.text,
+                                      mfaCode: mfaController.text.trim(),
+                                    )
+                                  : await authService.changePasswordVerified(
+                                      currentPassword: currentController.text,
+                                      newPassword: newController.text,
+                                    );
                               if (!sheetContext.mounted) return;
                               setSheetState(() => submitting = false);
                               switch (result.outcome) {
@@ -602,6 +640,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   newError =
                                       _passwordChangeError(result.outcome);
                                   formKey.currentState?.validate();
+                                case PasswordChangeOutcome.mfaRequired:
+                                  // Ask for the authenticator code and let the
+                                  // user submit again (nothing was changed).
+                                  setSheetState(() {
+                                    needMfa = true;
+                                    formError =
+                                        _passwordChangeError(result.outcome);
+                                  });
+                                case PasswordChangeOutcome.mfaCodeInvalid:
+                                  mfaError =
+                                      _passwordChangeError(result.outcome);
+                                  formKey.currentState?.validate();
+                                case PasswordChangeOutcome.reauthenticationNeeded:
                                 case PasswordChangeOutcome.rateLimited:
                                 case PasswordChangeOutcome.networkError:
                                 case PasswordChangeOutcome.sessionMissing:

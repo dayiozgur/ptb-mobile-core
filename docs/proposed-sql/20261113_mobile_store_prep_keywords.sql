@@ -7,7 +7,7 @@
 -- No schema, RLS, grant or SECURITY DEFINER change. Apply on the web side (migration + db push);
 -- CACHE_VERSION bump: coordinator. Placeholders use the web form {{name}}.
 --
--- 16 keys x 4 languages = 64 rows.
+-- 18 keys x 4 languages = 72 rows.
 
 BEGIN;
 
@@ -77,7 +77,15 @@ SELECT gen_random_uuid(), v.key, v.language_id::uuid, v.txt, true, now()
     ('alarm.active_load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Aktif alarmlar yüklenemedi. Bu, alarm olmadığı anlamına gelmez; tekrar deneyin.'),
     ('alarm.active_load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The active alarms could not be loaded. This does not mean there are none; try again.'),
     ('alarm.active_load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die aktiven Alarme konnten nicht geladen werden. Das bedeutet nicht, dass es keine gibt; versuchen Sie es erneut.'),
-    ('alarm.active_load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli allarmi attivi. Questo non significa che non ce ne siano; riprova.')
+    ('alarm.active_load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli allarmi attivi. Questo non significa che non ce ne siano; riprova.'),
+    ('account.security.password.mfa_required', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'İki adımlı doğrulamanız açık. Şifrenizi değiştirmek için doğrulama uygulamanızdaki 6 haneli kodu girin.'),
+    ('account.security.password.mfa_required', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Two-step verification is on for your account. To change your password, enter the 6-digit code from your authenticator app.'),
+    ('account.security.password.mfa_required', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Für Ihr Konto ist die zweistufige Verifizierung aktiviert. Geben Sie zum Ändern Ihres Passworts den 6-stelligen Code aus Ihrer Authenticator-App ein.'),
+    ('account.security.password.mfa_required', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'La verifica in due passaggi è attiva per il tuo account. Per cambiare la password inserisci il codice a 6 cifre della tua app di autenticazione.'),
+    ('account.security.password.mfa_code_required', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Doğrulama kodunu girin.'),
+    ('account.security.password.mfa_code_required', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Enter the verification code.'),
+    ('account.security.password.mfa_code_required', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Geben Sie den Bestätigungscode ein.'),
+    ('account.security.password.mfa_code_required', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Inserisci il codice di verifica.')
   ) AS v(key, language_id, txt)
  WHERE NOT EXISTS (SELECT 1 FROM public.keywords k WHERE k.key = v.key AND k.language_id = v.language_id::uuid);
 
