@@ -92,6 +92,10 @@ const List<String> kPemWebOnlyPaths = [
   '/admin/energy/data-import',
   '/admin/energy/sustainability-export',
   '/admin/energy/mv-savings',
+  // Kurulum sihirbazı (2026-11-13 menü satırı `energy-analysis/setup`,
+  // ROLE_ADMIN): çok adımlı web yapılandırması — mobilde menüde gizli, yol
+  // açılırsa "web uygulamasında aç" ekranı.
+  '/admin/energy/setup',
 ];
 
 bool _done = false;

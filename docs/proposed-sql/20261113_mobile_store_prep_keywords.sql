@@ -7,7 +7,7 @@
 -- No schema, RLS, grant or SECURITY DEFINER change. Apply on the web side (migration + db push);
 -- CACHE_VERSION bump: coordinator. Placeholders use the web form {{name}}.
 --
--- 6 keys x 4 languages = 24 rows.
+-- 11 keys x 4 languages = 44 rows.
 
 BEGIN;
 
@@ -37,7 +37,27 @@ SELECT gen_random_uuid(), v.key, v.language_id::uuid, v.txt, true, now()
     ('crm.agenda.load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'CRM etkinlikleri yüklenemedi.'),
     ('crm.agenda.load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The CRM events could not be loaded.'),
     ('crm.agenda.load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die CRM-Termine konnten nicht geladen werden.'),
-    ('crm.agenda.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli eventi CRM.')
+    ('crm.agenda.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli eventi CRM.'),
+    ('common.web_only.title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Web uygulamasında'),
+    ('common.web_only.title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'In the web app'),
+    ('common.web_only.title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'In der Web-App'),
+    ('common.web_only.title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Nell''app web'),
+    ('common.web_only.message', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu ekran web uygulamasında kullanılır; mobil uygulamada karşılığı yok.'),
+    ('common.web_only.message', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'This screen is used in the web app; it has no counterpart in the mobile app.'),
+    ('common.web_only.message', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Dieser Bildschirm wird in der Web-App verwendet; in der mobilen App gibt es kein Gegenstück.'),
+    ('common.web_only.message', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questa schermata si usa nell''app web; non ha un equivalente nell''app mobile.'),
+    ('common.web_only.open_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Tarayıcı açılamadı.'),
+    ('common.web_only.open_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The browser could not be opened.'),
+    ('common.web_only.open_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Der Browser konnte nicht geöffnet werden.'),
+    ('common.web_only.open_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile aprire il browser.'),
+    ('common.open_on_web', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Web''de aç'),
+    ('common.open_on_web', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Open on the web'),
+    ('common.open_on_web', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Im Web öffnen'),
+    ('common.open_on_web', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Apri sul web'),
+    ('common.coming_soon_mobile', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu ekran mobil uygulamada henüz yok.'),
+    ('common.coming_soon_mobile', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'This screen is not in the mobile app yet.'),
+    ('common.coming_soon_mobile', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Dieser Bildschirm ist in der mobilen App noch nicht verfügbar.'),
+    ('common.coming_soon_mobile', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questa schermata non è ancora disponibile nell''app mobile.')
   ) AS v(key, language_id, txt)
  WHERE NOT EXISTS (SELECT 1 FROM public.keywords k WHERE k.key = v.key AND k.language_id = v.language_id::uuid);
 

@@ -68,7 +68,11 @@ void main() async {
   }
 
   // Bu app DeepLinkService kullanmıyor → shell rotalarını doğrudan kaydet.
-  InAppRoute.configure(shellRoutes: _kShellRoutes);
+  // webOrigin: mobil ekranı olmayan yolların "web'de aç" hedefi.
+  InAppRoute.configure(
+    shellRoutes: _kShellRoutes,
+    webOrigin: 'https://app.ppm.protoolbag.com',
+  );
   _wirePushDeepLinking();
 
   Logger.info('PPM initialized in ${result.duration.inMilliseconds}ms');

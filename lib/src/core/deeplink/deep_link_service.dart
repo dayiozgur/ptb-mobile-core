@@ -211,9 +211,15 @@ class DeepLinkService {
   }
 
   /// Map an in-app path to a screen. Shell routes → go_router; resolvable paths
-  /// → [ScreenResolver] push; unknown → logged no-op (see [InAppRoute.open]).
+  /// → [ScreenResolver] push. A path with NO in-app screen is a page of the
+  /// web app the OS routed here (the app owns the https host): show the honest
+  /// "open on the web" screen instead of silently doing nothing.
   void _navigateToPath(String path) {
-    InAppRoute.open(path, navigatorKey: _navigatorKey, requireScreen: true);
+    final opened =
+        InAppRoute.open(path, navigatorKey: _navigatorKey, requireScreen: true);
+    if (!opened && !InAppRoute.isShellRoute(path)) {
+      InAppRoute.openWebOnly(path, navigatorKey: _navigatorKey);
+    }
   }
 
   /// Cancel the link subscription. Idempotent.

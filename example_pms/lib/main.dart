@@ -48,6 +48,8 @@ void main() async {
 
   // Domain ekranlarını çekirdek ScreenResolver'a kaydet (ilk shell'den ÖNCE).
   registerPmsScreens();
+  // Mobil ekranı olmayan yolların "web'de aç" hedefi.
+  InAppRoute.configure(webOrigin: 'https://app.pms.protoolbag.com');
   // FixFlow teknisyen ekranları (/fixflow/* — platform switch ile FIXFLOW menüsü).
   registerFixflowScreens();
 

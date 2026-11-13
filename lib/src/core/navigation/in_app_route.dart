@@ -45,6 +45,7 @@ class InAppRoute {
 
   static Set<String> _shellRoutes = kDefaultShellRoutes;
   static Set<String> _appHosts = const {};
+  static String? _webOrigin;
 
   /// Etkin shell rotaları.
   static Set<String> get shellRoutes => _shellRoutes;
@@ -52,11 +53,48 @@ class InAppRoute {
   /// Uygulamanın sahip olduğu https host'ları (küçük harf).
   static Set<String> get appHosts => _appHosts;
 
+  /// Origin of the app's WEB counterpart (`https://app.<code>.protoolbag.com`),
+  /// used by the "open on the web" action of screens that have no mobile
+  /// equivalent. Explicit [configure] value, else derived from the first
+  /// [appHosts] entry; null when the app configured neither.
+  static String? get webOrigin {
+    final explicit = _webOrigin;
+    if (explicit != null) return explicit;
+    return _appHosts.isEmpty ? null : 'https://${_appHosts.first}';
+  }
+
+  /// The web URL of an in-app [path] (`/report/my` →
+  /// `https://app.crm.protoolbag.com/report/my`), or null when the app has no
+  /// web origin or [path] is not an in-app path.
+  static Uri? webUrlFor(String? path) {
+    final origin = webOrigin;
+    final p = path?.trim();
+    if (origin == null || p == null || p.isEmpty) return null;
+    // Only relative in-app paths — never an absolute / scheme-relative URL.
+    if (!p.startsWith('/') || p.startsWith('//') || p.contains('\\')) return null;
+    return Uri.tryParse('$origin$p');
+  }
+
   /// App yapılandırması. Verilmeyen alan mevcut değerini korur.
-  static void configure({Set<String>? shellRoutes, Set<String>? appHosts}) {
+  ///
+  /// [webOrigin] must be an `https://` origin without a path (anything else is
+  /// ignored).
+  static void configure({
+    Set<String>? shellRoutes,
+    Set<String>? appHosts,
+    String? webOrigin,
+  }) {
     if (shellRoutes != null) _shellRoutes = Set.unmodifiable(shellRoutes);
     if (appHosts != null) {
       _appHosts = Set.unmodifiable(appHosts.map((h) => h.toLowerCase()));
+    }
+    if (webOrigin != null) {
+      final u = Uri.tryParse(webOrigin.trim());
+      if (u != null && u.scheme == 'https' && u.host.isNotEmpty) {
+        _webOrigin = 'https://${u.host.toLowerCase()}${u.hasPort ? ':${u.port}' : ''}';
+      } else {
+        Logger.warning('[in-app-route] ignoring invalid webOrigin');
+      }
     }
   }
 
@@ -64,6 +102,7 @@ class InAppRoute {
   static void resetConfig() {
     _shellRoutes = kDefaultShellRoutes;
     _appHosts = const {};
+    _webOrigin = null;
   }
 
   /// Ham bağlantıyı uygulama-içi yola çevir; çevrilemezse null.
@@ -125,7 +164,9 @@ class InAppRoute {
       return true;
     }
 
-    if (requireScreen && !ScreenResolver.hasScreen(route)) {
+    // canOpen = has a menu screen OR a direct-only screen (reachable by link
+    // but deliberately not in the menu, e.g. `/m365/mail`).
+    if (requireScreen && !ScreenResolver.canOpen(route)) {
       Logger.warning('[in-app-route] no in-app screen for: $route');
       return false;
     }
@@ -137,6 +178,27 @@ class InAppRoute {
       return false;
     }
     nav.push(MaterialPageRoute<void>(builder: (_) => screenFor(route)));
+    return true;
+  }
+
+  /// Open the honest "this page lives in the web app" screen for [route] — for
+  /// a link the OS handed to the app (universal / app link) that has no
+  /// in-app screen. Without it the tap would silently do nothing, and the user
+  /// could not reach the web page either (the app owns the link).
+  static bool openWebOnly(
+    String route, {
+    GlobalKey<NavigatorState>? navigatorKey,
+    BuildContext? context,
+  }) {
+    if (route.isEmpty || route == '/') return false;
+    final nav = navigatorKey?.currentState ??
+        (context == null ? null : Navigator.maybeOf(context, rootNavigator: true));
+    if (nav == null) {
+      Logger.warning('[in-app-route] no navigator for web-only: $route');
+      return false;
+    }
+    nav.push(MaterialPageRoute<void>(
+        builder: (_) => ScreenResolver.webOnlyScreen(route)));
     return true;
   }
 }

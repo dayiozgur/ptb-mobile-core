@@ -77,7 +77,11 @@ void main() async {
   // burada, ilk render'dan önce kaydediyoruz (yalnız additive — mevcut
   // rotalar/davranış değişmez). Navigasyon `rootNavigatorKey` üzerinden yapılır.
   // Bu app DeepLinkService kullanmıyor → shell rotalarını doğrudan kaydet.
-  InAppRoute.configure(shellRoutes: _kShellRoutes);
+  // webOrigin: mobil ekranı olmayan yolların "web'de aç" hedefi.
+  InAppRoute.configure(
+    shellRoutes: _kShellRoutes,
+    webOrigin: 'https://app.phr.protoolbag.com',
+  );
   _wirePushDeepLinking();
 
   Logger.info('PHR initialized in ${result.duration.inMilliseconds}ms');

@@ -22,6 +22,7 @@ import 'workflow/approvals_inbox_screen.dart';
 import 'account/account_hub_screen.dart';
 import 'coming_soon_screen.dart';
 import 'entities/entity_list_screen.dart';
+import 'mailbox/ms_mailbox_screen.dart';
 import 'organization/organization_selector_screen.dart';
 import 'settings/settings_screen.dart';
 
@@ -78,20 +79,108 @@ class ScreenResolver {
   }
 
   /// Bir menü öğesini mobil ekrana çöz.
+  ///
+  /// Sıra: domain çözümleyiciler → (gizli değilse) nötr çekirdek →
+  /// yalnız-doğrudan ekranlar ([_directOnly]) → dürüst yedek. Yedek asla
+  /// 404/crash/boş sayfa değildir: web'e özgü olduğu bilinen yol
+  /// ([isWebOnly]) "web uygulamasında aç" ekranına, diğerleri "yakında"
+  /// ekranına düşer (ikisi de — web adresi biliniyorsa — web'de açma düğmesi
+  /// taşır).
   static Widget resolve(MenuItem item) {
     for (final r in _resolvers) {
       final w = r(item);
       if (w != null) return w;
     }
-    // Gizli yol menüde görünmez; yine de açılırsa (eski bağlantı) genel
-    // ComingSoon — nötr yedeğe düşmez (asla 404/crash).
-    final neutral = isHiddenOnMobile(item.path) ? null : _neutral(item.path);
+    // Gizli yol menüde görünmez; yine de açılırsa (eski bağlantı / derin
+    // bağlantı) nötr yedeğe düşmez.
+    final hidden = isHiddenOnMobile(item.path);
+    final neutral = hidden ? null : _neutral(item.path);
     if (neutral != null) return neutral;
+    final direct = hidden ? null : _directOnly(item.path);
+    if (direct != null) return direct;
     return ComingSoonScreen(
-      titleKey: item.title,
+      titleKey: _fallbackTitle(item),
       path: item.path,
       icon: item.icon,
+      webOnly: isWebOnly(item.path),
     );
+  }
+
+  /// "Bu sayfa web uygulamasında" ekranı — uygulamaya düşen ama mobil ekranı
+  /// olmayan bir bağlantı için ([InAppRoute.openWebOnly]).
+  static Widget webOnlyScreen(String path) {
+    final item = MenuItem(itemKey: '', title: '', path: path);
+    return ComingSoonScreen(
+      titleKey: _fallbackTitle(item),
+      path: path,
+      webOnly: true,
+    );
+  }
+
+  /// Yedek ekran başlığı: menü öğesinin kendi başlığı; yoksa bilinen web
+  /// sayfasının anahtarı; o da yoksa genel başlık.
+  static String _fallbackTitle(MenuItem item) {
+    if (item.title.isNotEmpty) return item.title;
+    final p = _normalize(item.path ?? '');
+    if (p == '/report/my' || p.startsWith('/report/my/') || p == '/reports/my') {
+      return 'breadcrumb.my_reports';
+    }
+    if (p == '/m365/mail') return 'nav.m365_mail';
+    if (p == '/m365/calendar') return 'nav.m365_calendar';
+    if (p == '/m365/planner') return 'nav.m365_planner';
+    if (p == '/files') return 'files.title';
+    return 'common.web_only.title';
+  }
+
+  /// Web'e özgü olduğu BİLİNEN yol mu? (mobil ekranı bilinçli olarak yok)
+  ///
+  ///  * app'in [hideOnMobile] ile gizledikleri (ör. PEM kurulum sihirbazı
+  ///    `/admin/energy/setup`),
+  ///  * kişisel raporlar `/report/my[/…]` — rapor OLUŞTURUCU; `/report/<kod>`
+  ///    görüntüleyicisinin bir rapor kodu DEĞİL,
+  ///  * Microsoft 365 merkez sayfaları `/m365/*` (posta hariç: [_directOnly])
+  ///    ve web dosya yöneticisi `/files`.
+  static bool isWebOnly(String? path) {
+    if (path == null || path.isEmpty) return false;
+    if (isHiddenOnMobile(path)) return true;
+    final p = _normalize(path);
+    if (_isPersonalReports(p)) return true;
+    if (p == '/m365/mail') return false;
+    if (p == '/m365' || p.startsWith('/m365/')) return true;
+    if (p == '/files') return true;
+    return false;
+  }
+
+  /// `/report/my`, `/report/my/new`, `/report/my/<id>/edit`, `/reports/my`.
+  static bool _isPersonalReports(String p) =>
+      p == '/report/my' ||
+      p.startsWith('/report/my/') ||
+      p == '/reports/my' ||
+      p.startsWith('/reports/my/');
+
+  /// Yalnız DOĞRUDAN açılabilen ekranlar: bağlantıyla (derin bağlantı,
+  /// bildirim) ulaşılır ama [hasScreen] false kalır → mobil menüye GİRMEZ.
+  ///
+  /// `/m365/mail` (web'in platform-nötr Outlook sayfası; menü satırı
+  /// `requires_capability = mail.read` taşır): mobil karşılığı çekirdekteki
+  /// [MsMailboxScreen]. Menüde gösterilmez — mobilde posta kutusuna Microsoft
+  /// 365 ekranından girilir (CRM'in `/crm/mailbox` satırıyla aynı karar) —
+  /// ama yol açılırsa boş/“yakında” yerine gerçek ekran gelir. Ekran yeteneği
+  /// kendisi denetler: bağlantı yoksa "bağlı değil", `Mail.Read` izni yoksa
+  /// "izin eksik" durumunu gösterir (asla boş liste / hata penceresi).
+  static Widget? _directOnly(String? path) {
+    if (path == null || path.isEmpty) return null;
+    final p = _normalize(path);
+    if (p == '/m365/mail') return const MsMailboxScreen();
+    return null;
+  }
+
+  /// Yol uygulama içinde AÇILABİLİR mi? ([hasScreen] ∪ yalnız-doğrudan
+  /// ekranlar). Menü budaması [hasScreen] kullanır; bağlantı açma bunu.
+  static bool canOpen(String? path) {
+    if (hasScreen(path)) return true;
+    if (path == null || path.isEmpty || isHiddenOnMobile(path)) return false;
+    return _directOnly(path) != null;
   }
 
   /// Nötr, platform-bağımsız ekranlar (settings / organization / entity).
@@ -113,9 +202,15 @@ class ScreenResolver {
     // menülerinin onay öğesi (canlı platform_menu_items yolu); domain resolver
     // (ör. PHR izin onayı) bu yolu kendisi kaydederse ÖNCE o kazanır.
     // `/fixflow/approvals` FixFlow modülünün kendi kaydıdır — burada YOK.
-    if (p == '/workflow/inbox' ||
-        p == '/workflow/approvals' ||
-        p == '/approvals') {
+    // Birleşik onay satırı (web'in bir sonraki sürümü): yolu kesinleşene dek
+    // olası adların hepsi aynı gelen kutusuna çözülür.
+    final a = _normalize(path);
+    if (a == '/workflow/inbox' ||
+        a == '/workflow/approvals' ||
+        a == '/approvals' ||
+        a == '/approvals/inbox' ||
+        a == '/my-approvals' ||
+        a == '/workflow/my-approvals') {
       return const ApprovalsInboxScreen();
     }
     // Kişisel pano (widget ekle/çıkar/sırala). /my-space bottom-nav tab'i ayrı.
@@ -126,6 +221,9 @@ class ScreenResolver {
     }
     final t = _parseEntityType(path);
     if (t != null && t.isNotEmpty) return EntityListScreen(typeCode: t);
+    // Kişisel raporlar (`/report/my[/…]`) web'in rapor OLUŞTURUCUSUDUR —
+    // "my" bir rapor kodu değildir; görüntüleyiciye düşürme (bkz. [isWebOnly]).
+    if (_isPersonalReports(_normalize(path))) return null;
     // Report viewer (db-driven analitik/dashboard) — /report/<code> | /reports/<code>
     if (p.startsWith('/report/') || p.startsWith('/reports/')) {
       final code = _lastSegment(path);
