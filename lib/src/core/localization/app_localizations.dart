@@ -1066,6 +1066,8 @@ class AppLocalizations {
     'geo.map.no_gps': 'GPS konumu alınamadı (izin gerekli)',
     'geo.map.inside': 'İşyeri kapsamındasınız',
     'geo.map.distance': 'İşyerine {{distance}} uzaktasınız',
+    // mobile wave 3
+    'hr.profile.sensitive_denied': 'Hassas bilgileri (maaş, kimlik no, IBAN) görme yetkiniz yok.',
   };
 
   // ============================================
@@ -2110,6 +2112,8 @@ class AppLocalizations {
     'geo.map.no_gps': 'GPS location unavailable (permission required)',
     'geo.map.inside': 'You are within the workplace',
     'geo.map.distance': 'You are {{distance}} from the workplace',
+    // mobile wave 3
+    'hr.profile.sensitive_denied': 'You are not authorised to see the sensitive details (salary, ID number, IBAN).',
   };
 
   // ============================================
@@ -3157,5 +3161,7 @@ class AppLocalizations {
     'geo.map.no_gps': 'GPS-Standort nicht verfügbar (Berechtigung erforderlich)',
     'geo.map.inside': 'Sie befinden sich im Arbeitsort',
     'geo.map.distance': 'Sie sind {{distance}} vom Arbeitsort entfernt',
+    // mobile wave 3
+    'hr.profile.sensitive_denied': 'Sie sind nicht berechtigt, die sensiblen Angaben (Gehalt, Ausweisnummer, IBAN) zu sehen.',
   };
 }

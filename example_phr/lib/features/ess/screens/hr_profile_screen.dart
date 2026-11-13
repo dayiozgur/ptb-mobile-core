@@ -137,6 +137,17 @@ class _HrProfileScreenState extends State<HrProfileScreen> {
                 'Bu bilgiler yalnızca size görünür. Değişiklik için İK ile iletişime geçin.'),
           ),
         ],
+        if (p.personnel == null && p.personnelDenied) ...[
+          const SizedBox(height: AppSpacing.md),
+          _section(
+            context,
+            icon: Icons.lock_outline,
+            title: essT('hr.profile.section_sensitive', 'Hassas Bilgiler'),
+            rows: const [],
+            footnote: essT('hr.profile.sensitive_denied',
+                'Hassas bilgileri (maaş, kimlik no, IBAN) görme yetkiniz yok.'),
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
       ],
     );

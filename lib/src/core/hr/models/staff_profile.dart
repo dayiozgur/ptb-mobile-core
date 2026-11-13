@@ -39,6 +39,11 @@ class StaffProfile {
   /// çözülemezse `null` kalır (profilin geri kalanı yine gösterilir).
   final PersonnelData? personnel;
 
+  /// The server refused the sensitive block (`fn_staff_personnel_get` raised
+  /// `42501`). The screen shows a short "not authorised" note instead of the
+  /// card; [personnel] is `null` in that case.
+  final bool personnelDenied;
+
   const StaffProfile({
     required this.id,
     this.name,
@@ -63,6 +68,7 @@ class StaffProfile {
     this.educationLevel,
     this.militaryStatus,
     this.personnel,
+    this.personnelDenied = false,
   });
 
   /// Görünen ad — ad+soyad, yoksa `name`, o da yoksa em-dash.
@@ -81,6 +87,7 @@ class StaffProfile {
     String? organizationName,
     String? managerName,
     PersonnelData? personnel,
+    bool personnelDenied = false,
   }) {
     return StaffProfile(
       id: json['id'] as String,
@@ -106,6 +113,7 @@ class StaffProfile {
       educationLevel: json['education_level'] as String?,
       militaryStatus: json['military_status'] as String?,
       personnel: personnel,
+      personnelDenied: personnelDenied,
     );
   }
 

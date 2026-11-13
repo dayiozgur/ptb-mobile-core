@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
+import '../errors/access_errors.dart';
 import '../tenant/tenant_service.dart';
 import '../utils/logger.dart';
 import 'models/hr_summary.dart';
@@ -83,7 +84,8 @@ class HrProfileService {
         {...row, ...?sensitive},
         organizationName: names[0],
         managerName: names[1],
-        personnel: personnel,
+        personnel: personnel.data,
+        personnelDenied: personnel.denied,
       );
     } catch (e) {
       Logger.error('Error fetching staff profile: $e');
@@ -117,20 +119,32 @@ class HrProfileService {
   /// Hassas personel bloğu — `fn_staff_personnel_get(p_staff_id)`.
   ///
   /// Web ile aynı sözleşme; RPC tablo döndürdüğü için PostgREST diziye sarar.
-  /// GRACEFUL DEGRADE: erişim reddedilirse/hatalıysa `null` döner ki profilin
-  /// geri kalanı yine gösterilsin (web'de de personnel ayrı, catchError→null).
-  Future<PersonnelData?> _fetchPersonnel(String staffId) async {
+  ///
+  /// Since 2026-11-13 the RPC raises SQLSTATE `42501` unless the caller is a
+  /// tenant admin, holds `hr.payroll.view` or reads their own staff row. A
+  /// refusal is reported as `denied: true` (the screen shows a short "not
+  /// authorised" note instead of silently dropping the card); any other
+  /// failure still degrades to "no block" so the rest of the profile shows.
+  Future<({PersonnelData? data, bool denied})> _fetchPersonnel(
+      String staffId) async {
     try {
       final data = await _supabase.rpc(
         'fn_staff_personnel_get',
         params: {'p_staff_id': staffId},
       );
       final row = data is List ? (data.isNotEmpty ? data.first : null) : data;
-      if (row == null) return null;
-      return PersonnelData.fromJson(row as Map<String, dynamic>);
+      if (row == null) return (data: null, denied: false);
+      return (
+        data: PersonnelData.fromJson(row as Map<String, dynamic>),
+        denied: false,
+      );
     } catch (e) {
+      if (AccessErrors.isDenied(e)) {
+        Logger.warning('Personnel (sensitive) block refused for this user');
+        return (data: null, denied: true);
+      }
       Logger.error('Error fetching personnel (sensitive) block: $e');
-      return null;
+      return (data: null, denied: false);
     }
   }
 
