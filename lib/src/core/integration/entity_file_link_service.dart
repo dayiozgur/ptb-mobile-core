@@ -37,7 +37,8 @@ class EntityFileLink {
 /// defaults, so the client never supplies them.
 class EntityFileLinkService {
   final SupabaseClient _supabase;
-  EntityFileLinkService({required SupabaseClient supabase}) : _supabase = supabase;
+  EntityFileLinkService({required SupabaseClient supabase})
+      : _supabase = supabase;
 
   static const String _select = 'id,name,web_url,source,size,mime,created_at';
 
@@ -50,11 +51,13 @@ class EntityFileLinkService {
           .eq('entity_id', entityId)
           .order('created_at', ascending: false);
       return (rows as List)
-          .map((r) => EntityFileLink.fromMap(Map<String, dynamic>.from(r as Map)))
+          .map((r) =>
+              EntityFileLink.fromMap(Map<String, dynamic>.from(r as Map)))
           .toList();
     } catch (e) {
+      // Rethrown: the files card says "could not load" instead of "no files".
       Logger.error('[file-links] list failed', e);
-      return const <EntityFileLink>[];
+      rethrow;
     }
   }
 

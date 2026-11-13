@@ -15,6 +15,7 @@ class _OrganizationSelectorScreenState
   List<Organization> _organizations = [];
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
 
   @override
   void initState() {
@@ -37,13 +38,15 @@ class _OrganizationSelectorScreenState
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadError = null;
     });
 
     try {
       final tenantId = tenantService.currentTenantId;
       if (tenantId == null) {
         setState(() {
-          _error = sl<LocalizationService>().translate('org.tenant_not_selected');
+          _error =
+              sl<LocalizationService>().translate('org.tenant_not_selected');
           _isLoading = false;
         });
         return;
@@ -59,6 +62,7 @@ class _OrganizationSelectorScreenState
     } catch (e) {
       Logger.error('Failed to load organizations', e);
       setState(() {
+        _loadError = e;
         _error = sl<LocalizationService>().translate('org.load_failed');
         _isLoading = false;
       });
@@ -94,11 +98,10 @@ class _OrganizationSelectorScreenState
     }
 
     if (_error != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
-        message: _error!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadOrganizations,
+      return AppLoadFailedView(
+        error: _loadError,
+        message: _error,
+        onRetry: _loadOrganizations,
       );
     }
 

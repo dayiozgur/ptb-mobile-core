@@ -111,10 +111,8 @@ class UnitService {
         selectQuery = '*, unit_type:unit_types(*)';
       }
 
-      var query = _supabase
-          .from(_tableName)
-          .select(selectQuery)
-          .eq('site_id', siteId);
+      var query =
+          _supabase.from(_tableName).select(selectQuery).eq('site_id', siteId);
 
       if (activeOnly) {
         query = query.eq('active', true);
@@ -122,9 +120,7 @@ class UnitService {
 
       final response = await query.order('name');
 
-      final units = response
-          .map<Unit>((json) => Unit.fromJson(json))
-          .toList();
+      final units = response.map<Unit>((json) => Unit.fromJson(json)).toList();
 
       // Cache'e kaydet
       await _cacheManager.setList(
@@ -141,8 +137,9 @@ class UnitService {
       Logger.debug('Loaded ${units.length} units for site');
       return units;
     } catch (e) {
+      // Rethrown: callers show "could not load", never "no records".
       Logger.error('Failed to get units', e);
-      return [];
+      rethrow;
     }
   }
 
@@ -176,9 +173,7 @@ class UnitService {
 
       final response = await query.order('name');
 
-      final units = response
-          .map<Unit>((json) => Unit.fromJson(json))
-          .toList();
+      final units = response.map<Unit>((json) => Unit.fromJson(json)).toList();
 
       // Cache'e kaydet
       await _cacheManager.setList(
@@ -292,9 +287,7 @@ class UnitService {
           .eq('active', true)
           .order('name');
 
-      return response
-          .map<Unit>((json) => Unit.fromJson(json))
-          .toList();
+      return response.map<Unit>((json) => Unit.fromJson(json)).toList();
     } catch (e) {
       Logger.error('Failed to get child units', e);
       return [];
@@ -315,9 +308,7 @@ class UnitService {
           .eq('active', true)
           .order('name');
 
-      return response
-          .map<Unit>((json) => Unit.fromJson(json))
-          .toList();
+      return response.map<Unit>((json) => Unit.fromJson(json)).toList();
     } catch (e) {
       Logger.error('Failed to get units by category', e);
       return [];
@@ -439,9 +430,12 @@ class UnitService {
       if (imageBucket != null) updateData['image_bucket'] = imageBucket;
       if (parentUnitId != null) updateData['parent_unit_id'] = parentUnitId;
       if (unitTypeId != null) updateData['unit_type_id'] = unitTypeId;
-      if (generalOpenTime != null) updateData['general_open_time'] = generalOpenTime;
-      if (generalCloseTime != null) updateData['general_close_time'] = generalCloseTime;
-      if (workingTimeActive != null) updateData['working_time_active'] = workingTimeActive;
+      if (generalOpenTime != null)
+        updateData['general_open_time'] = generalOpenTime;
+      if (generalCloseTime != null)
+        updateData['general_close_time'] = generalCloseTime;
+      if (workingTimeActive != null)
+        updateData['working_time_active'] = workingTimeActive;
       if (active != null) updateData['active'] = active;
       if (updatedBy != null) updateData['updated_by'] = updatedBy;
 
@@ -493,13 +487,10 @@ class UnitService {
         return false;
       }
 
-      await _supabase
-          .from(_tableName)
-          .update({
-            'active': false,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', unitId);
+      await _supabase.from(_tableName).update({
+        'active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', unitId);
 
       // Cache'leri temizle
       await _cacheManager.delete('unit_$unitId');
@@ -532,13 +523,10 @@ class UnitService {
         }
       }
 
-      await _supabase
-          .from(_tableName)
-          .update({
-            'parent_unit_id': newParentId,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', unitId);
+      await _supabase.from(_tableName).update({
+        'parent_unit_id': newParentId,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', unitId);
 
       // Cache'leri temizle
       final unit = await getUnit(unitId);
@@ -589,9 +577,8 @@ class UnitService {
 
       final response = await query.order('name');
 
-      final types = response
-          .map<UnitType>((json) => UnitType.fromJson(json))
-          .toList();
+      final types =
+          response.map<UnitType>((json) => UnitType.fromJson(json)).toList();
 
       await _cacheManager.setList(
         key: cacheKey,
@@ -643,9 +630,7 @@ class UnitService {
           .order('name')
           .limit(20);
 
-      return response
-          .map<Unit>((json) => Unit.fromJson(json))
-          .toList();
+      return response.map<Unit>((json) => Unit.fromJson(json)).toList();
     } catch (e) {
       Logger.error('Failed to search units', e);
       return [];
@@ -670,7 +655,8 @@ class UnitService {
           totalArea += unit.areaSize!;
         }
         if (unit.category != null) {
-          categoryCount[unit.category!] = (categoryCount[unit.category] ?? 0) + 1;
+          categoryCount[unit.category!] =
+              (categoryCount[unit.category] ?? 0) + 1;
         }
       }
 

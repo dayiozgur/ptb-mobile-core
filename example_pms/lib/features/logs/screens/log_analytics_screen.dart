@@ -26,6 +26,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
   bool _isLoading = true;
   bool _isLoadingChart = false;
   String? _errorMessage;
+  Object? _loadError;
+  Object? _chartError;
 
   List<Controller> _controllers = [];
   String? _selectedControllerId;
@@ -55,6 +57,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadError = null;
     });
 
     try {
@@ -86,6 +89,7 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
         setState(() {
+          _loadError = e;
           _errorMessage = sl<LocalizationService>()
               .translate('logs.controllers_load_failed');
           _isLoading = false;
@@ -157,7 +161,9 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
 
     setState(() {
       _isLoadingChart = true;
+      _chartError = null;
       _errorMessage = null;
+      _loadError = null;
     });
 
     try {
@@ -192,6 +198,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       Logger.error('Failed to load chart data', e);
       if (mounted) {
         setState(() {
+          _loadError = e;
+          _chartError = e;
           _errorMessage =
               sl<LocalizationService>().translate('logs.chart_load_failed');
           _isLoadingChart = false;
@@ -240,7 +248,9 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       if (entries == null || entries.isEmpty) continue;
       final variable = _findVariable(varId);
       final name = variable?['name'] as String? ?? '';
-      final unit = variable?['measure_unit'] as String? ?? variable?['unit'] as String? ?? '';
+      final unit = variable?['measure_unit'] as String? ??
+          variable?['unit'] as String? ??
+          '';
       seriesList.add(VariableTimeSeries(
         variableId: varId,
         variableName: name,
@@ -324,13 +334,18 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       actions: [
         AppIconButton(
           icon: Icons.refresh,
-          onPressed: _selectedControllerId != null ? _loadChartData : _loadControllers,
+          onPressed:
+              _selectedControllerId != null ? _loadChartData : _loadControllers,
         ),
       ],
       child: _isLoading
           ? const Center(child: AppLoadingIndicator())
           : _errorMessage != null && _selectedControllerId == null
-              ? Center(child: AppErrorView(message: _errorMessage!, onRetry: _loadControllers))
+              ? Center(
+                  child: AppLoadFailedView(
+                      error: _loadError,
+                      message: _errorMessage!,
+                      onRetry: _loadControllers))
               : SingleChildScrollView(
                   padding: AppSpacing.screenPadding,
                   child: Column(
@@ -345,7 +360,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            sl<LocalizationService>().translate('logs.last_n_days',
+                            sl<LocalizationService>().translate(
+                                'logs.last_n_days',
                                 params: {'days': '$_selectedDays'}),
                             style: TextStyle(
                               fontSize: 15,
@@ -369,8 +385,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                       _buildSectionHeader(
                         brightness,
                         icon: Icons.show_chart,
-                        title:
-                            sl<LocalizationService>().translate('logs.analog_integer'),
+                        title: sl<LocalizationService>()
+                            .translate('logs.analog_integer'),
                         count: _analogVars.length,
                         selectedCount: _selectedAnalogIds.length,
                         maxCount: _maxAnalogSelection,
@@ -395,7 +411,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                       _buildSectionHeader(
                         brightness,
                         icon: Icons.toggle_on,
-                        title: sl<LocalizationService>().translate('logs.digital'),
+                        title:
+                            sl<LocalizationService>().translate('logs.digital'),
                         count: _digitalVars.length,
                         selectedCount: _selectedDigitalIds.length,
                         maxCount: _maxDigitalSelection,
@@ -425,7 +442,9 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(sl<LocalizationService>().translate('logs.controller'), style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+        Text(sl<LocalizationService>().translate('logs.controller'),
+            style: AppTypography.caption1
+                .copyWith(color: AppColors.secondaryLabel(context))),
         const SizedBox(height: AppSpacing.xs),
         Container(
           width: double.infinity,
@@ -437,25 +456,35 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedControllerId,
-              hint: Text(sl<LocalizationService>().translate('logs.select_controller_hint'), style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
+              hint: Text(
+                  sl<LocalizationService>()
+                      .translate('logs.select_controller_hint'),
+                  style: AppTypography.body
+                      .copyWith(color: AppColors.tertiaryLabel(context))),
               isExpanded: true,
-              items: _controllers.map((c) => DropdownMenuItem(
-                value: c.id,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: c.status == ControllerStatus.online ? AppColors.success : AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(child: Text(c.name, overflow: TextOverflow.ellipsis)),
-                  ],
-                ),
-              )).toList(),
+              items: _controllers
+                  .map((c) => DropdownMenuItem(
+                        value: c.id,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: c.status == ControllerStatus.online
+                                    ? AppColors.success
+                                    : AppColors.error,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                                child: Text(c.name,
+                                    overflow: TextOverflow.ellipsis)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
               onChanged: (value) {
                 setState(() => _selectedControllerId = value);
                 _loadVariables();
@@ -524,7 +553,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
         ),
         child: Text(
           sl<LocalizationService>().translate('logs.no_variables'),
-          style: TextStyle(fontSize: 13, color: AppColors.tertiaryLabel(context)),
+          style:
+              TextStyle(fontSize: 13, color: AppColors.tertiaryLabel(context)),
           textAlign: TextAlign.center,
         ),
       );
@@ -542,7 +572,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
         final unit = v['measure_unit'] as String? ?? v['unit'] as String? ?? '';
         final isSelected = selectedIds.contains(id);
         final colorIndex = isSelected ? selectedList.indexOf(id) : 0;
-        final chipColor = isSelected ? _getSeriesColor(colorIndex) : AppColors.systemGray;
+        final chipColor =
+            isSelected ? _getSeriesColor(colorIndex) : AppColors.systemGray;
 
         return GestureDetector(
           onTap: () => onToggle(id),
@@ -578,7 +609,9 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? chipColor : AppColors.textSecondary(brightness),
+                    color: isSelected
+                        ? chipColor
+                        : AppColors.textSecondary(brightness),
                   ),
                 ),
               ],
@@ -594,6 +627,14 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       return const Padding(
         padding: EdgeInsets.all(40),
         child: Center(child: AppLoadingIndicator()),
+      );
+    }
+    if (_selectedAnalogIds.isNotEmpty && _chartError != null) {
+      return AppLoadFailedView(
+        error: _chartError,
+        compact: true,
+        message: sl<LocalizationService>().translate('logs.chart_load_failed'),
+        onRetry: _loadChartData,
       );
     }
 
@@ -627,6 +668,14 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       return const Padding(
         padding: EdgeInsets.all(40),
         child: Center(child: AppLoadingIndicator()),
+      );
+    }
+    if (_selectedDigitalIds.isNotEmpty && _chartError != null) {
+      return AppLoadFailedView(
+        error: _chartError,
+        compact: true,
+        message: sl<LocalizationService>().translate('logs.chart_load_failed'),
+        onRetry: _loadChartData,
       );
     }
 
@@ -665,7 +714,8 @@ class _LogAnalyticsScreenState extends State<LogAnalyticsScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.touch_app, size: 28, color: AppColors.textSecondary(brightness)),
+          Icon(Icons.touch_app,
+              size: 28, color: AppColors.textSecondary(brightness)),
           const SizedBox(height: AppSpacing.sm),
           Text(
             message,

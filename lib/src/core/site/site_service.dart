@@ -108,9 +108,7 @@ class SiteService {
 
       final response = await query.order('name');
 
-      final sites = response
-          .map<Site>((json) => Site.fromJson(json))
-          .toList();
+      final sites = response.map<Site>((json) => Site.fromJson(json)).toList();
 
       // Cache'e kaydet
       await _cacheManager.setList(
@@ -126,8 +124,9 @@ class SiteService {
       Logger.debug('Loaded ${sites.length} sites for organization');
       return sites;
     } catch (e) {
+      // Rethrown: callers show "could not load", never "no records".
       Logger.error('Failed to get sites', e);
-      return [];
+      rethrow;
     }
   }
 
@@ -150,10 +149,7 @@ class SiteService {
       }
 
       // Supabase'den getir
-      var query = _supabase
-          .from(_tableName)
-          .select()
-          .eq('tenant_id', tenantId);
+      var query = _supabase.from(_tableName).select().eq('tenant_id', tenantId);
 
       if (activeOnly) {
         query = query.eq('active', true);
@@ -161,9 +157,7 @@ class SiteService {
 
       final response = await query.order('name');
 
-      final sites = response
-          .map<Site>((json) => Site.fromJson(json))
-          .toList();
+      final sites = response.map<Site>((json) => Site.fromJson(json)).toList();
 
       // Cache'e kaydet
       await _cacheManager.setList(
@@ -301,11 +295,8 @@ class SiteService {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final response = await _supabase
-          .from(_tableName)
-          .insert(data)
-          .select()
-          .single();
+      final response =
+          await _supabase.from(_tableName).insert(data).select().single();
 
       final site = Site.fromJson(response);
 
@@ -377,9 +368,12 @@ class SiteService {
       if (energyCertificateClass != null) {
         updateData['energy_certificate_class'] = energyCertificateClass;
       }
-      if (generalOpenTime != null) updateData['general_open_time'] = generalOpenTime;
-      if (generalCloseTime != null) updateData['general_close_time'] = generalCloseTime;
-      if (workingTimeActive != null) updateData['working_time_active'] = workingTimeActive;
+      if (generalOpenTime != null)
+        updateData['general_open_time'] = generalOpenTime;
+      if (generalCloseTime != null)
+        updateData['general_close_time'] = generalCloseTime;
+      if (workingTimeActive != null)
+        updateData['working_time_active'] = workingTimeActive;
       if (siteTypeId != null) updateData['site_type_id'] = siteTypeId;
       if (siteGroupId != null) updateData['site_group_id'] = siteGroupId;
       if (active != null) updateData['active'] = active;
@@ -428,13 +422,10 @@ class SiteService {
       final site = await getSite(siteId);
       if (site == null) return false;
 
-      await _supabase
-          .from(_tableName)
-          .update({
-            'active': false,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', siteId);
+      await _supabase.from(_tableName).update({
+        'active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', siteId);
 
       // Cache'leri temizle
       await _cacheManager.delete('site_$siteId');
@@ -477,9 +468,8 @@ class SiteService {
 
       final response = await query.order('name');
 
-      final types = response
-          .map<SiteType>((json) => SiteType.fromJson(json))
-          .toList();
+      final types =
+          response.map<SiteType>((json) => SiteType.fromJson(json)).toList();
 
       await _cacheManager.setList(
         key: 'site_types',
@@ -512,9 +502,8 @@ class SiteService {
 
       final response = await query.order('name');
 
-      final groups = response
-          .map<SiteGroup>((json) => SiteGroup.fromJson(json))
-          .toList();
+      final groups =
+          response.map<SiteGroup>((json) => SiteGroup.fromJson(json)).toList();
 
       await _cacheManager.setList(
         key: 'site_groups',
@@ -549,9 +538,7 @@ class SiteService {
           .order('name')
           .limit(20);
 
-      return response
-          .map<Site>((json) => Site.fromJson(json))
-          .toList();
+      return response.map<Site>((json) => Site.fromJson(json)).toList();
     } catch (e) {
       Logger.error('Failed to search sites', e);
       return [];
@@ -580,9 +567,7 @@ class SiteService {
           .lte('longitude', longitude + lonDiff)
           .limit(limit);
 
-      return response
-          .map<Site>((json) => Site.fromJson(json))
-          .toList();
+      return response.map<Site>((json) => Site.fromJson(json)).toList();
     } catch (e) {
       Logger.error('Failed to get nearby sites', e);
       return [];

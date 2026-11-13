@@ -14,6 +14,7 @@ class AlarmDashboardScreen extends StatefulWidget {
 class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+  Object? _loadError;
 
   int _selectedDays = 30;
   AlarmDistribution _distribution = const AlarmDistribution(
@@ -43,6 +44,7 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadError = null;
     });
 
     final tenantId = tenantService.currentTenantId;
@@ -54,7 +56,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
       // Load priorities and sites
       final orgId = organizationService.currentOrganizationId;
       final prioritiesFuture = priorityService.getAll(forceRefresh: true);
-      final sitesFuture = orgId != null ? siteService.getSites(orgId) : Future.value(<Site>[]);
+      final sitesFuture =
+          orgId != null ? siteService.getSites(orgId) : Future.value(<Site>[]);
       final priorities = await prioritiesFuture;
       final sites = await sitesFuture;
       // Vendor (Carel) satırları platform önceliğine eşlenir (web ile aynı).
@@ -115,7 +118,9 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
       Logger.error('Failed to load alarm dashboard', e);
       if (mounted) {
         setState(() {
-          _errorMessage = sl<LocalizationService>().translate('common.data_load_error');
+          _loadError = e;
+          _errorMessage =
+              sl<LocalizationService>().translate('common.data_load_error');
           _isLoading = false;
         });
       }
@@ -144,7 +149,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
             ? const Center(child: AppLoadingIndicator())
             : _errorMessage != null
                 ? Center(
-                    child: AppErrorView(
+                    child: AppLoadFailedView(
+                      error: _loadError,
                       message: _errorMessage!,
                       onRetry: _loadData,
                     ),
@@ -165,7 +171,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             children: [
                               Expanded(
                                 child: MetricCard(
-                                  title: sl<LocalizationService>().translate('common.active'),
+                                  title: sl<LocalizationService>()
+                                      .translate('common.active'),
                                   value: '${_distribution.activeCount}',
                                   icon: Icons.warning_amber_rounded,
                                   color: AppColors.error,
@@ -175,7 +182,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: MetricCard(
-                                  title: sl<LocalizationService>().translate('alarm.reset_label'),
+                                  title: sl<LocalizationService>()
+                                      .translate('alarm.reset_label'),
                                   value: '${_distribution.resetCount}',
                                   icon: Icons.restart_alt,
                                   color: AppColors.success,
@@ -185,7 +193,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: MetricCard(
-                                  title: sl<LocalizationService>().translate('common.total'),
+                                  title: sl<LocalizationService>()
+                                      .translate('common.total'),
                                   value: '${_distribution.totalCount}',
                                   icon: Icons.notifications_outlined,
                                   color: AppColors.primary,
@@ -199,10 +208,13 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Distribution Pie Chart
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.distribution_title'),
-                          subtitle: sl<LocalizationService>().translate('alarm.distribution_subtitle'),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.distribution_title'),
+                          subtitle: sl<LocalizationService>()
+                              .translate('alarm.distribution_subtitle'),
                           isEmpty: _distribution.totalCount == 0,
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_found'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_records_found'),
                           child: AlarmPieChart(
                             distribution: _distribution,
                             priorities: _priorityMap,
@@ -216,14 +228,18 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Trend Bar Chart
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.trend_title'),
-                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.trend_title'),
+                          subtitle: sl<LocalizationService>().translate(
+                              'common.last_days',
+                              params: {'days': _selectedDays}),
                           trailing: ChartPeriodSelector(
                             selectedDays: _selectedDays,
                             onChanged: _onPeriodChanged,
                           ),
                           isEmpty: _timeline.every((e) => e.totalCount == 0),
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_period'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_records_period'),
                           child: AlarmBarChart(
                             entries: _timeline,
                             priorities: _priorityMap,
@@ -235,10 +251,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Priority Trend (Stacked Area)
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.priority_trend_title'),
-                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.priority_trend_title'),
+                          subtitle: sl<LocalizationService>().translate(
+                              'common.last_days',
+                              params: {'days': _selectedDays}),
                           isEmpty: _timeline.every((e) => e.totalCount == 0),
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_period'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_records_period'),
                           child: AlarmPriorityTrendChart(
                             entries: _timeline,
                             priorities: _priorityMap,
@@ -250,10 +270,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // MTTR Card
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.mttr_title'),
-                          subtitle: sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.mttr_title'),
+                          subtitle: sl<LocalizationService>().translate(
+                              'common.last_days',
+                              params: {'days': _selectedDays}),
                           isEmpty: _mttrStats.totalAlarmCount == 0,
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_resolved'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_resolved'),
                           child: AlarmMttrCard(
                             stats: _mttrStats,
                             priorities: _priorityMap,
@@ -264,10 +288,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Top Offenders
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.top_offenders_title'),
-                          subtitle: sl<LocalizationService>().translate('alarm.last_days_top10', params: {'days': _selectedDays}),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.top_offenders_title'),
+                          subtitle: sl<LocalizationService>().translate(
+                              'alarm.last_days_top10',
+                              params: {'days': _selectedDays}),
                           isEmpty: _topAlarms.isEmpty,
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_alarm_data'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_alarm_data'),
                           child: AlarmTopOffendersCard(
                             alarms: _topAlarms,
                             priorities: _priorityMap,
@@ -278,10 +306,13 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Heatmap
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.heatmap_title'),
-                          subtitle: sl<LocalizationService>().translate('alarm.heatmap_subtitle'),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.heatmap_title'),
+                          subtitle: sl<LocalizationService>()
+                              .translate('alarm.heatmap_subtitle'),
                           isEmpty: _heatmapData.totalCount == 0,
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_records_week'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_records_week'),
                           child: AlarmHeatmapChart(
                             data: _heatmapData,
                             height: 200,
@@ -292,10 +323,14 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
 
                         // Site Alarm Ranking
                         ChartContainer(
-                          title: sl<LocalizationService>().translate('alarm.site_ranking_title'),
-                          subtitle: sl<LocalizationService>().translate('alarm.last_days_top10', params: {'days': _selectedDays}),
+                          title: sl<LocalizationService>()
+                              .translate('alarm.site_ranking_title'),
+                          subtitle: sl<LocalizationService>().translate(
+                              'alarm.last_days_top10',
+                              params: {'days': _selectedDays}),
                           isEmpty: _siteAlarmCounts.isEmpty,
-                          emptyMessage: sl<LocalizationService>().translate('alarm.no_site_data'),
+                          emptyMessage: sl<LocalizationService>()
+                              .translate('alarm.no_site_data'),
                           child: AlarmSiteRankingChart(
                             sites: _siteAlarmCounts,
                             height: 300,
@@ -312,15 +347,18 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           child: Row(
                             children: [
                               Text(
-                                sl<LocalizationService>().translate('alarm.active_title'),
+                                sl<LocalizationService>()
+                                    .translate('alarm.active_title'),
                                 style: AppTypography.title3,
                               ),
                               const Spacer(),
                               if (_activeAlarms.isNotEmpty)
                                 TextButton(
-                                  onPressed: () => context.push('/alarms/active'),
+                                  onPressed: () =>
+                                      context.push('/alarms/active'),
                                   child: Text(
-                                    sl<LocalizationService>().translate('common.see_all'),
+                                    sl<LocalizationService>()
+                                        .translate('common.see_all'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -340,7 +378,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             child: ActiveAlarmList(
                               alarms: _activeAlarms.take(5).toList(),
                               priorities: _priorityMap,
-                              emptyMessage: sl<LocalizationService>().translate('alarm.no_active'),
+                              emptyMessage: sl<LocalizationService>()
+                                  .translate('alarm.no_active'),
                               onAlarmTap: (alarm) {
                                 showAlarmActions(
                                   context,
@@ -365,15 +404,18 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                           child: Row(
                             children: [
                               Text(
-                                sl<LocalizationService>().translate('alarm.recent_reset_title'),
+                                sl<LocalizationService>()
+                                    .translate('alarm.recent_reset_title'),
                                 style: AppTypography.title3,
                               ),
                               const Spacer(),
                               if (_resetAlarms.isNotEmpty)
                                 TextButton(
-                                  onPressed: () => context.push('/alarms/history'),
+                                  onPressed: () =>
+                                      context.push('/alarms/history'),
                                   child: Text(
-                                    sl<LocalizationService>().translate('common.see_all'),
+                                    sl<LocalizationService>()
+                                        .translate('common.see_all'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -393,7 +435,8 @@ class _AlarmDashboardScreenState extends State<AlarmDashboardScreen> {
                             child: ResetAlarmList(
                               alarms: _resetAlarms.take(5).toList(),
                               priorities: _priorityMap,
-                              emptyMessage: sl<LocalizationService>().translate('alarm.no_reset_alarms'),
+                              emptyMessage: sl<LocalizationService>()
+                                  .translate('alarm.no_reset_alarms'),
                               onAlarmTap: (alarm) {
                                 AlarmDetailSheet.show(
                                   context,

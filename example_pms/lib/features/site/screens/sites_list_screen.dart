@@ -13,6 +13,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
   List<Site> _sites = [];
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
   String _searchQuery = '';
   final Map<String, int> _siteAlarmCounts = {};
 
@@ -26,6 +27,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadError = null;
     });
 
     try {
@@ -52,6 +54,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
       Logger.error('Failed to load sites', e);
       if (!mounted) return;
       setState(() {
+        _loadError = e;
         _error = sl<LocalizationService>().translate('site.load_failed');
         _isLoading = false;
       });
@@ -130,12 +133,15 @@ class _SitesListScreenState extends State<SitesListScreen> {
     }
 
     if (_error != null) {
-      return _scrollableState(AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
-        message: _error!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadSites,
-      ));
+      // AppLoadFailedView is scrollable itself (pull-to-refresh works).
+      return RefreshIndicator(
+        onRefresh: _loadSites,
+        child: AppLoadFailedView(
+          error: _loadError,
+          message: _error!,
+          onRetry: _loadSites,
+        ),
+      );
     }
 
     if (_sites.isEmpty) {

@@ -183,7 +183,7 @@ class _CommentsThreadState extends State<CommentsThread> {
                     decoration: InputDecoration(
                       hintText: _t('comments.placeholder', 'Add a comment…'),
                       isDense: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),

@@ -21,8 +21,9 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final loc = sl<LocalizationService>();
     return AppScaffold(
-      title: 'Duyuru',
+      title: loc.translate('announcement.detail_title'),
       showBackButton: true,
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
@@ -32,10 +33,10 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
         controller: _ctrl,
         load: () async {
           final a = await announcementService.getById(widget.id);
-          if (a == null) throw Exception('Duyuru bulunamadı');
+          if (a == null) throw Exception('announcement not found');
           return a;
         },
-        errorFallback: 'Duyuru yüklenemedi',
+        errorFallback: loc.translate('announcement.detail_load_failed'),
         builder: (context, a) => _content(context, a, brightness),
       ),
     );

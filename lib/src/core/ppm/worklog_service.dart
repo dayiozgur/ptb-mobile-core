@@ -128,7 +128,7 @@ class WorklogService {
   }
 
   /// Bir iş öğesinin efor kayıtları (yeniden eskiye). RLS tenant-scoped;
-  /// hata/boş → `[]` (UI'a fırlatmaz).
+  /// boş → `[]`; a failed read is rethrown (the sheet says so).
   Future<List<WorklogEntry>> listWorklogs(String submissionId) async {
     try {
       // Kanonik `worklogs`: iş öğesi = `entity_id` (submission uuid globaldir,
@@ -144,7 +144,7 @@ class WorklogService {
       return rows.map(WorklogEntry.fromRow).toList();
     } catch (e) {
       Logger.error('ppm listWorklogs ($submissionId) hata', e);
-      return [];
+      rethrow;
     }
   }
 }

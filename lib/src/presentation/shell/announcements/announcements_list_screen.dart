@@ -20,10 +20,12 @@ class _AnnouncementsListScreenState extends State<AnnouncementsListScreen> {
     ));
   }
 
+  String _t(String key) => sl<LocalizationService>().translate(key);
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Duyurular',
+      title: _t('announcement.title'),
       showBackButton: true,
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
@@ -32,13 +34,13 @@ class _AnnouncementsListScreenState extends State<AnnouncementsListScreen> {
       child: AsyncView<List<Announcement>>(
         controller: _ctrl,
         load: () => announcementService.list(),
-        errorFallback: 'Duyurular yüklenemedi',
+        errorFallback: _t('announcement.load_failed'),
         isEmpty: (d) => d.isEmpty,
-        emptyBuilder: (context) => const Center(
+        emptyBuilder: (context) => Center(
           child: AppEmptyState(
             icon: Icons.campaign_outlined,
-            title: 'Duyuru yok',
-            message: 'Görüntülenecek yayınlanmış duyuru bulunmuyor.',
+            title: _t('announcement.empty_title'),
+            message: _t('announcement.empty_message'),
           ),
         ),
         builder: (context, items) => ListView.separated(
@@ -105,16 +107,15 @@ class _AnnouncementCard extends StatelessWidget {
                       ],
                       Text(
                         _fmtDate(a.publishDate),
-                        style: AppTypography.caption1.copyWith(
-                            color: AppColors.tertiaryLabel(context)),
+                        style: AppTypography.caption1
+                            .copyWith(color: AppColors.tertiaryLabel(context)),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                color: AppColors.tertiaryLabel(context)),
+            Icon(Icons.chevron_right, color: AppColors.tertiaryLabel(context)),
           ],
         ),
       ),

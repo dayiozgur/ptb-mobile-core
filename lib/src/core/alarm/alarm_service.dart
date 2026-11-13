@@ -516,8 +516,9 @@ class AlarmService {
       _historyController.add(history);
       return history;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get alarm history', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -712,8 +713,9 @@ class AlarmService {
 
       return results;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get reset alarms', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -1444,8 +1446,9 @@ class AlarmService {
 
       return results;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get top alarms', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 

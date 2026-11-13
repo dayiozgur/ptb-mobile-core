@@ -13,6 +13,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
   List<Site> _sites = [];
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
   final Map<String, int> _siteAlarmCounts = {};
 
   @override
@@ -25,6 +26,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadError = null;
     });
 
     try {
@@ -48,6 +50,7 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     } catch (e) {
       Logger.error('Failed to load sites', e);
       setState(() {
+        _loadError = e;
         _error = sl<LocalizationService>().translate('site.load_failed');
         _isLoading = false;
       });
@@ -96,11 +99,10 @@ class _SiteSelectorScreenState extends State<SiteSelectorScreen> {
     }
 
     if (_error != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
+      return AppLoadFailedView(
+        error: _loadError,
         message: _error!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadSites,
+        onRetry: _loadSites,
       );
     }
 

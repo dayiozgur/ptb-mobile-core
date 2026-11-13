@@ -85,8 +85,9 @@ class MapService {
       Logger.debug('Generated ${markers.length} map markers from sites');
       return markers;
     } catch (e) {
+      // Rethrown: an empty map must not stand in for a failed site read.
       Logger.error('Failed to get site markers', e);
-      return [];
+      rethrow;
     }
   }
 

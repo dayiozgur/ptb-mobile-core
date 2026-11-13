@@ -12,7 +12,8 @@ void main() {
 
   setUp(() {
     h = SupabaseHarness();
-    service = SearchService(supabase: h.client, cacheManager: MockCacheManager());
+    service =
+        SearchService(supabase: h.client, cacheManager: MockCacheManager());
   });
 
   group('globalSearch (fn_universal_search rpc)', () {
@@ -51,10 +52,12 @@ void main() {
       expect(params['p_sources'], ['sites', 'units']);
     });
 
-    test('short query (< 2 chars) short-circuits without an rpc call', () async {
+    test('short query (< 2 chars) short-circuits without an rpc call',
+        () async {
       final hits = await service.globalSearch('a');
       expect(hits, isEmpty);
-      verifyNever(() => h.client.rpc<dynamic>(any(), params: any(named: 'params')));
+      verifyNever(
+          () => h.client.rpc<dynamic>(any(), params: any(named: 'params')));
     });
 
     test('non-list response yields empty list', () async {
@@ -62,9 +65,9 @@ void main() {
       expect(await service.globalSearch('pump'), isEmpty);
     });
 
-    test('error is swallowed → empty list', () async {
+    test('error is rethrown (the screen says "search failed")', () async {
       h.stubRpc('fn_universal_search', error: Exception('rpc down'));
-      expect(await service.globalSearch('pump'), isEmpty);
+      expect(service.globalSearch('pump'), throwsException);
     });
 
     test('title falls back to code when title is blank', () async {

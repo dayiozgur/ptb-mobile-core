@@ -21,6 +21,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
   String? _errorMessage;
   Variable? _variable;
   List<LogTimeSeriesEntry> _timeSeries = [];
+  Object? _chartError;
   LogValueStats _stats = const LogValueStats();
   int _selectedDays = 7;
 
@@ -48,6 +49,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
       // Load chart data using variable ID
       List<LogTimeSeriesEntry> timeSeries = [];
       LogValueStats stats = const LogValueStats();
+      Object? chartError;
 
       if (variable != null) {
         try {
@@ -65,6 +67,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
           timeSeries = results[0] as List<LogTimeSeriesEntry>;
           stats = results[1] as LogValueStats;
         } catch (e) {
+          chartError = e;
           Logger.error('Failed to load log data', e);
         }
       }
@@ -74,6 +77,7 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
           _variable = variable;
           _timeSeries = timeSeries;
           _stats = stats;
+          _chartError = chartError;
           _isLoading = false;
         });
       }
@@ -81,7 +85,8 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
       Logger.error('Failed to load variable detail', e);
       if (mounted) {
         setState(() {
-          _errorMessage = sl<LocalizationService>().translate('variable.load_failed_detail');
+          _errorMessage = sl<LocalizationService>()
+              .translate('variable.load_failed_detail');
           _isLoading = false;
         });
       }
@@ -96,7 +101,8 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: widget.variableName ?? sl<LocalizationService>().translate('variable.detail_title'),
+      title: widget.variableName ??
+          sl<LocalizationService>().translate('variable.detail_title'),
       onBack: () => context.go('/variables'),
       actions: [
         AppIconButton(
@@ -126,7 +132,8 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
     if (variable == null) {
       return AppErrorView(
         title: sl<LocalizationService>().translate('common.not_found_title'),
-        message: sl<LocalizationService>().translate('variable.not_found_message'),
+        message:
+            sl<LocalizationService>().translate('variable.not_found_message'),
         actionLabel: sl<LocalizationService>().translate('common.go_back'),
         onAction: () => context.go('/variables'),
       );
@@ -150,7 +157,8 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                 child: Column(
                   children: [
                     Text(
-                      sl<LocalizationService>().translate('variable.current_value'),
+                      sl<LocalizationService>()
+                          .translate('variable.current_value'),
                       style: AppTypography.caption1.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -160,7 +168,10 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                     if (variable.lastUpdate != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        sl<LocalizationService>().translate('variable.last_update', params: {'date': dateFormat.format(variable.lastUpdate!)}),
+                        sl<LocalizationService>()
+                            .translate('variable.last_update', params: {
+                          'date': dateFormat.format(variable.lastUpdate!)
+                        }),
                         style: AppTypography.caption2.copyWith(
                           color: AppColors.tertiaryLabel(context),
                         ),
@@ -174,27 +185,45 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Variable Info
-            AppSectionHeader(title: sl<LocalizationService>().translate('variable.info_title')),
+            AppSectionHeader(
+                title:
+                    sl<LocalizationService>().translate('variable.info_title')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: sl<LocalizationService>().translate('variable.data_type'), value: variable.dataType.label),
-                    _InfoRow(label: sl<LocalizationService>().translate('variable.address'), value: variable.address ?? '-'),
-                    _InfoRow(label: sl<LocalizationService>().translate('variable.unit'), value: variable.unit ?? '-'),
-                    _InfoRow(label: sl<LocalizationService>().translate('variable.access'), value: variable.accessMode.label),
+                    _InfoRow(
+                        label: sl<LocalizationService>()
+                            .translate('variable.data_type'),
+                        value: variable.dataType.label),
+                    _InfoRow(
+                        label: sl<LocalizationService>()
+                            .translate('variable.address'),
+                        value: variable.address ?? '-'),
+                    _InfoRow(
+                        label: sl<LocalizationService>()
+                            .translate('variable.unit'),
+                        value: variable.unit ?? '-'),
+                    _InfoRow(
+                        label: sl<LocalizationService>()
+                            .translate('variable.access'),
+                        value: variable.accessMode.label),
                   ],
                 ),
               ),
             ),
 
             // Min/Max values
-            if (variable.minimum != null || variable.maximum != null ||
-                variable.minValue != null || variable.maxValue != null) ...[
+            if (variable.minimum != null ||
+                variable.maximum != null ||
+                variable.minValue != null ||
+                variable.maxValue != null) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: sl<LocalizationService>().translate('variable.value_range')),
+              AppSectionHeader(
+                  title: sl<LocalizationService>()
+                      .translate('variable.value_range')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -202,13 +231,25 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
                   child: Column(
                     children: [
                       if (variable.minimum != null)
-                        _InfoRow(label: sl<LocalizationService>().translate('common.minimum'), value: variable.minimum!),
+                        _InfoRow(
+                            label: sl<LocalizationService>()
+                                .translate('common.minimum'),
+                            value: variable.minimum!),
                       if (variable.maximum != null)
-                        _InfoRow(label: sl<LocalizationService>().translate('common.maximum'), value: variable.maximum!),
+                        _InfoRow(
+                            label: sl<LocalizationService>()
+                                .translate('common.maximum'),
+                            value: variable.maximum!),
                       if (variable.minValue != null)
-                        _InfoRow(label: sl<LocalizationService>().translate('variable.min_value'), value: variable.minValue.toString()),
+                        _InfoRow(
+                            label: sl<LocalizationService>()
+                                .translate('variable.min_value'),
+                            value: variable.minValue.toString()),
                       if (variable.maxValue != null)
-                        _InfoRow(label: sl<LocalizationService>().translate('variable.max_value'), value: variable.maxValue.toString()),
+                        _InfoRow(
+                            label: sl<LocalizationService>()
+                                .translate('variable.max_value'),
+                            value: variable.maxValue.toString()),
                     ],
                   ),
                 ),
@@ -218,7 +259,10 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             // Statistics
             if (_stats.hasData) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: sl<LocalizationService>().translate('variable.stats_title', params: {'days': _selectedDays})),
+              AppSectionHeader(
+                  title: sl<LocalizationService>().translate(
+                      'variable.stats_title',
+                      params: {'days': _selectedDays})),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
@@ -252,19 +296,35 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
               ),
             ],
 
-            // Chart
+            // Chart — a failed read is said, not hidden.
+            if (_chartError != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              AppCard(
+                child: AppLoadFailedView(
+                  error: _chartError,
+                  compact: true,
+                  message: sl<LocalizationService>()
+                      .translate('logs.chart_load_failed'),
+                  onRetry: _loadData,
+                ),
+              ),
+            ],
             if (_timeSeries.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               ChartContainer(
-                title: sl<LocalizationService>().translate('provider.value_chart'),
-                subtitle: sl<LocalizationService>().translate('common.last_n_days', params: {'days': _selectedDays}),
+                title:
+                    sl<LocalizationService>().translate('provider.value_chart'),
+                subtitle: sl<LocalizationService>().translate(
+                    'common.last_n_days',
+                    params: {'days': _selectedDays}),
                 trailing: ChartPeriodSelector(
                   selectedDays: _selectedDays,
                   onChanged: _onPeriodChanged,
                   options: const [1, 7, 30],
                 ),
                 isEmpty: _timeSeries.where((e) => e.hasNumericValue).length < 2,
-                emptyMessage: sl<LocalizationService>().translate('chart.insufficient_data'),
+                emptyMessage: sl<LocalizationService>()
+                    .translate('chart.insufficient_data'),
                 child: LogLineChart(
                   entries: _timeSeries,
                   config: LogChartConfig(
@@ -280,7 +340,8 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
               if (_timeSeries.any((e) => e.hasOnOff)) ...[
                 const SizedBox(height: AppSpacing.sm),
                 ChartContainer(
-                  title: sl<LocalizationService>().translate('provider.onoff_status'),
+                  title: sl<LocalizationService>()
+                      .translate('provider.onoff_status'),
                   isEmpty: false,
                   child: LogOnOffChart(
                     entries: _timeSeries,
@@ -290,9 +351,11 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
               ],
             ],
 
-            if (variable.description != null && variable.description!.isNotEmpty) ...[
+            if (variable.description != null &&
+                variable.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
+              AppSectionHeader(
+                  title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
@@ -307,12 +370,14 @@ class _VariableDetailScreenState extends State<VariableDetailScreen> {
             // Write value action
             if (variable.isWritable)
               AppButton(
-                label: sl<LocalizationService>().translate('variable.write_value'),
+                label:
+                    sl<LocalizationService>().translate('variable.write_value'),
                 icon: Icons.edit,
                 onPressed: () {
                   AppSnackbar.showInfo(
                     context,
-                    message: sl<LocalizationService>().translate('variable.write_coming_soon'),
+                    message: sl<LocalizationService>()
+                        .translate('variable.write_coming_soon'),
                   );
                 },
               ),
@@ -348,7 +413,8 @@ class _LargeValueDisplay extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: (boolValue ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+          color: (boolValue ? AppColors.success : AppColors.error)
+              .withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(

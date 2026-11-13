@@ -8,7 +8,7 @@
 -- CACHE_VERSION bump: coordinator. Placeholders use the web form {{name}}.
 -- Companion of 20261113_mobile_store_prep_keywords.sql (yesterday's lane; no key overlap).
 --
--- 17 keys x 4 languages = 68 rows.
+-- 31 keys x 4 languages = 124 rows.
 
 BEGIN;
 
@@ -82,7 +82,63 @@ SELECT gen_random_uuid(), v.key, v.language_id::uuid, v.txt, true, now()
     ('comments.placeholder', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Yorum ekle…'),
     ('comments.placeholder', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Add a comment…'),
     ('comments.placeholder', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Kommentar hinzufügen…'),
-    ('comments.placeholder', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Aggiungi un commento…')
+    ('comments.placeholder', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Aggiungi un commento…'),
+    ('announcement.title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Duyurular'),
+    ('announcement.title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Announcements'),
+    ('announcement.title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ankündigungen'),
+    ('announcement.title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Annunci'),
+    ('announcement.load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Duyurular yüklenemedi.'),
+    ('announcement.load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The announcements could not be loaded.'),
+    ('announcement.load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die Ankündigungen konnten nicht geladen werden.'),
+    ('announcement.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli annunci.'),
+    ('announcement.empty_title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Duyuru yok'),
+    ('announcement.empty_title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'No announcements'),
+    ('announcement.empty_title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Keine Ankündigungen'),
+    ('announcement.empty_title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Nessun annuncio'),
+    ('announcement.empty_message', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Görüntülenecek yayınlanmış duyuru bulunmuyor.'),
+    ('announcement.empty_message', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'There are no published announcements to show.'),
+    ('announcement.empty_message', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Es gibt keine veröffentlichten Ankündigungen.'),
+    ('announcement.empty_message', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Non ci sono annunci pubblicati da mostrare.'),
+    ('announcement.detail_title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Duyuru'),
+    ('announcement.detail_title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Announcement'),
+    ('announcement.detail_title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Ankündigung'),
+    ('announcement.detail_title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Annuncio'),
+    ('announcement.detail_load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Duyuru yüklenemedi.'),
+    ('announcement.detail_load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The announcement could not be loaded.'),
+    ('announcement.detail_load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die Ankündigung konnte nicht geladen werden.'),
+    ('announcement.detail_load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare l''annuncio.'),
+    ('search.failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Arama yapılamadı. Bu, sonuç olmadığı anlamına gelmez; tekrar deneyin.'),
+    ('search.failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The search could not be run. This does not mean there are no results; try again.'),
+    ('search.failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die Suche konnte nicht ausgeführt werden. Das bedeutet nicht, dass es keine Ergebnisse gibt; versuchen Sie es erneut.'),
+    ('search.failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile eseguire la ricerca. Questo non significa che non ci siano risultati; riprova.'),
+    ('search.prompt_title', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Aramak için yazın'),
+    ('search.prompt_title', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Type to search'),
+    ('search.prompt_title', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Zum Suchen tippen'),
+    ('search.prompt_title', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Digita per cercare'),
+    ('search.prompt_message', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Tesis, kayıt, kişi ve daha fazlasında arayın.'),
+    ('search.prompt_message', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Search sites, records, people and more.'),
+    ('search.prompt_message', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Durchsuchen Sie Standorte, Einträge, Personen und mehr.'),
+    ('search.prompt_message', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Cerca tra sedi, record, persone e altro.'),
+    ('search.no_results_hint', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Farklı bir anahtar kelime deneyin.'),
+    ('search.no_results_hint', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'Try a different keyword.'),
+    ('search.no_results_hint', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Versuchen Sie einen anderen Suchbegriff.'),
+    ('search.no_results_hint', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Prova una parola chiave diversa.'),
+    ('search.result_mobile_soon', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Bu sonuç türü mobilde henüz açılamıyor.'),
+    ('search.result_mobile_soon', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'This kind of result cannot be opened on mobile yet.'),
+    ('search.result_mobile_soon', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Diese Art von Ergebnis kann mobil noch nicht geöffnet werden.'),
+    ('search.result_mobile_soon', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Questo tipo di risultato non si può ancora aprire da mobile.'),
+    ('files.load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Dosyalar yüklenemedi.'),
+    ('files.load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The files could not be loaded.'),
+    ('files.load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die Dateien konnten nicht geladen werden.'),
+    ('files.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare i file.'),
+    ('ppm.sprint.load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Sprintler yüklenemedi.'),
+    ('ppm.sprint.load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The sprints could not be loaded.'),
+    ('ppm.sprint.load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Die Sprints konnten nicht geladen werden.'),
+    ('ppm.sprint.load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare gli sprint.'),
+    ('ppm.worklog.history_load_failed', 'fc6e12d2-73b1-4c19-a465-ffdd1a785715', 'Efor geçmişi yüklenemedi.'),
+    ('ppm.worklog.history_load_failed', '198b2bf7-c859-4cc5-8a26-a1367cdd28ef', 'The work log history could not be loaded.'),
+    ('ppm.worklog.history_load_failed', '44929d49-5cf2-4ba9-b325-2166d250dabc', 'Der Verlauf der Arbeitszeiten konnte nicht geladen werden.'),
+    ('ppm.worklog.history_load_failed', '009377a3-faee-4c5e-ba26-ff1e6953c506', 'Impossibile caricare lo storico delle ore registrate.')
   ) AS v(key, language_id, txt)
  WHERE NOT EXISTS (SELECT 1 FROM public.keywords k WHERE k.key = v.key AND k.language_id = v.language_id::uuid);
 

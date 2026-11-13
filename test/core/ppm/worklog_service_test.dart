@@ -74,7 +74,8 @@ void main() {
       expect(await service.logWork(submissionId: 's5', hours: 1), isFalse);
     });
 
-    test('OFFLINE → RPC kuyruğa alınır (enqueueRpc), ağa gitmez, true', () async {
+    test('OFFLINE → RPC kuyruğa alınır (enqueueRpc), ağa gitmez, true',
+        () async {
       final sync = MockOfflineSyncService();
       final conn = MockConnectivityService();
       when(() => sync.isInitialized).thenReturn(true);
@@ -115,7 +116,8 @@ void main() {
       expect(captured[2], 's6'); // entityId
     });
 
-    test('ONLINE (offline servisi kayıtlı ama isOffline=false) → ağ yolu', () async {
+    test('ONLINE (offline servisi kayıtlı ama isOffline=false) → ağ yolu',
+        () async {
       final sync = MockOfflineSyncService();
       final conn = MockConnectivityService();
       when(() => sync.isInitialized).thenReturn(true);
@@ -180,9 +182,9 @@ void main() {
       expect(await service.listWorklogs('s1'), isEmpty);
     });
 
-    test('hata → [] (fırlatmaz)', () async {
+    test('read error is rethrown (not "no history")', () async {
       h.stubFrom('worklogs', error: Exception('x'));
-      expect(await service.listWorklogs('s1'), isEmpty);
+      expect(service.listWorklogs('s1'), throwsException);
     });
   });
 

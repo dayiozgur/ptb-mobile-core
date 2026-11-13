@@ -31,14 +31,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   String _term = '';
   bool _loading = false;
+  Object? _error;
   List<GlobalSearchHit> _hits = [];
+
+  String _t(String key) => sl<LocalizationService>().translate(key);
 
   /// Debounce süresi (~300ms).
   static const Duration _debounceDelay = Duration(milliseconds: 300);
 
   /// Bilinen kaynak türleri → `search.source.<tür>` çeviri anahtarı.
   static const Set<String> _knownSources = {
-    'form', 'ticket', 'site', 'controller', 'provider', 'contact', 'staff',
+    'form',
+    'ticket',
+    'site',
+    'controller',
+    'provider',
+    'contact',
+    'staff',
   };
 
   @override
@@ -53,25 +62,43 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(_debounceDelay, () => _runSearch(value));
     // Kutu temizlenince sonuçları anında düşür.
-    if (value.trim().length < 2 && _hits.isNotEmpty) {
-      setState(() => _hits = []);
+    if (value.trim().length < 2 && (_hits.isNotEmpty || _error != null)) {
+      setState(() {
+        _hits = [];
+        _error = null;
+      });
     }
   }
 
   Future<void> _runSearch(String value) async {
     final trimmed = value.trim();
     if (trimmed.length < 2) {
-      if (mounted) setState(() => _hits = []);
+      if (mounted) {
+        setState(() {
+          _hits = [];
+          _error = null;
+        });
+      }
       return;
     }
 
-    setState(() => _loading = true);
-    final results = await sl<SearchService>().globalSearch(trimmed);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    List<GlobalSearchHit> results = const [];
+    Object? error;
+    try {
+      results = await sl<SearchService>().globalSearch(trimmed);
+    } catch (e) {
+      error = e;
+    }
 
     // Kutu içeriği bu istekten sonra değiştiyse (yarış) sonucu yok say.
     if (!mounted || _term.trim() != trimmed) return;
     setState(() {
       _hits = results;
+      _error = error;
       _loading = false;
     });
   }
@@ -127,14 +154,14 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
     // Diğer kaynaklar için temiz bir mobil rota yok — çökmeden bilgilendir.
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bu sonuç türü mobilde yakında')),
+      SnackBar(content: Text(_t('search.result_mobile_soon'))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Ara',
+      title: _t('search.title'),
       child: Column(
         children: [
           Padding(
@@ -147,7 +174,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             child: AppSearchField(
               controller: _controller,
               autofocus: true,
-              placeholder: 'Ara...',
+              placeholder: _t('search.placeholder'),
               onChanged: _onChanged,
               onClear: () => _onChanged(''),
             ),
@@ -164,15 +191,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       return const Center(child: AppLoadingIndicator());
     }
 
+    if (_error != null) {
+      return AppLoadFailedView(
+        error: _error,
+        message: _t('search.failed'),
+        onRetry: () => _runSearch(_term),
+      );
+    }
+
     if (_hits.isEmpty) {
       final hasQuery = _term.trim().length >= 2;
       return Center(
         child: AppEmptyState(
           icon: hasQuery ? Icons.search_off_outlined : Icons.search,
-          title: hasQuery ? 'Sonuç yok' : 'Aramak için yazın',
+          title: hasQuery ? _t('search.no_results') : _t('search.prompt_title'),
           message: hasQuery
-              ? 'Farklı bir anahtar kelime deneyin.'
-              : 'Tesis, kayıt, kişi ve daha fazlasında arayın.',
+              ? _t('search.no_results_hint')
+              : _t('search.prompt_message'),
         ),
       );
     }

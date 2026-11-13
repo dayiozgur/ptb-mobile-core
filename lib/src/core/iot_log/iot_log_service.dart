@@ -125,7 +125,8 @@ class IoTLogService {
     bool activeOnly = false,
   }) async {
     final filterKey = controllerId ?? providerId ?? variableId ?? 'all';
-    final cacheKey = 'iot_logs_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
+    final cacheKey =
+        'iot_logs_${_currentTenantId}_${filterKey}_v${includeVariable ? 1 : 0}';
 
     if (!forceRefresh) {
       final cached = await _cacheManager.get<List<dynamic>>(cacheKey);
@@ -182,9 +183,8 @@ class IoTLogService {
       }
 
       // DB'de created_at NULL olabilir, date_time dolu - date_time üzerinden sırala
-      final response = await query
-          .order('date_time', ascending: false)
-          .limit(limit);
+      final response =
+          await query.order('date_time', ascending: false).limit(limit);
 
       final logs = <IoTLog>[];
       for (final e in (response as List)) {
@@ -204,8 +204,9 @@ class IoTLogService {
       _logsController.add(logs);
       return logs;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get IoT logs', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -237,10 +238,8 @@ class IoTLogService {
     try {
       // TODO(perf): 1.97M satırlık `logs` fact tablosunu tarar (provider bazlı
       // ham satır sayımı). Server-side sayım için özel bir RPC yok.
-      var query = _supabase
-          .from('logs')
-          .select('id')
-          .eq('provider_id', providerId);
+      var query =
+          _supabase.from('logs').select('id').eq('provider_id', providerId);
 
       // Multi-Tenant İzolasyon Filtreleri (KRİTİK: Önceden eksikti!)
       if (_currentTenantId != null) {
@@ -279,10 +278,8 @@ class IoTLogService {
     try {
       // TODO(perf): 1.97M satırlık `logs` fact tablosunu tarar (controller bazlı
       // ham satır sayımı). Server-side sayım için özel bir RPC yok.
-      var query = _supabase
-          .from('logs')
-          .select('id')
-          .eq('controller_id', controllerId);
+      var query =
+          _supabase.from('logs').select('id').eq('controller_id', controllerId);
 
       // Multi-Tenant İzolasyon Filtreleri (KRİTİK: Önceden eksikti!)
       if (_currentTenantId != null) {
@@ -382,9 +379,8 @@ class IoTLogService {
           variableId: variableId,
         );
         if (latest != null) {
-          final fallbackSince = latest
-              .subtract(Duration(days: effectiveDays))
-              .toIso8601String();
+          final fallbackSince =
+              latest.subtract(Duration(days: effectiveDays)).toIso8601String();
           entries = await _queryLogTimeSeries(
             controllerId: controllerId,
             variableId: variableId,
@@ -408,8 +404,9 @@ class IoTLogService {
 
       return entries;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get log time series', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -567,9 +564,8 @@ class IoTLogService {
         query = query.eq('site_id', _currentSiteId!);
       }
 
-      final response = await query
-          .order('date_time', ascending: true)
-          .limit(limit);
+      final response =
+          await query.order('date_time', ascending: true).limit(limit);
 
       final logs = <IoTLog>[];
       for (final e in (response as List)) {
@@ -582,8 +578,9 @@ class IoTLogService {
 
       return logs;
     } catch (e, stackTrace) {
+      // Rethrown: a failed read must not look like "no data" on screen.
       Logger.error('Failed to get logs by time range', e, stackTrace);
-      return [];
+      rethrow;
     }
   }
 
@@ -609,10 +606,8 @@ class IoTLogService {
         return const LogValueStats();
       }
 
-      final numericValues = entries
-          .where((e) => e.hasNumericValue)
-          .map((e) => e.value!)
-          .toList();
+      final numericValues =
+          entries.where((e) => e.hasNumericValue).map((e) => e.value!).toList();
 
       if (numericValues.isEmpty) {
         return LogValueStats(
@@ -623,10 +618,8 @@ class IoTLogService {
       }
 
       final sum = numericValues.reduce((a, b) => a + b);
-      final min = numericValues.reduce(
-          (a, b) => a < b ? a : b);
-      final max = numericValues.reduce(
-          (a, b) => a > b ? a : b);
+      final min = numericValues.reduce((a, b) => a < b ? a : b);
+      final max = numericValues.reduce((a, b) => a > b ? a : b);
 
       return LogValueStats(
         minValue: min,
@@ -688,10 +681,8 @@ class IoTLogService {
     // RPC variable_type/unit/minimum/maximum döndürmüyor; tüketiciler bunlara
     // ihtiyaç duyduğundan küçük id kümesini variables boyut tablosundan
     // zenginleştir (logs fact tablosuna DOKUNMAZ).
-    final ids = rpcRows
-        .map((r) => r['id'] as String?)
-        .whereType<String>()
-        .toList();
+    final ids =
+        rpcRows.map((r) => r['id'] as String?).whereType<String>().toList();
 
     final enrichById = <String, Map<String, dynamic>>{};
     final enrichResponse = await _supabase

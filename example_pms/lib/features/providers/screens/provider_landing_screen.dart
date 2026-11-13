@@ -57,6 +57,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   // Analytics state
   int _selectedDays = 7;
   bool _isLoadingChart = false;
+  Object? _chartError;
   List<Map<String, dynamic>> _analogVars = [];
   List<Map<String, dynamic>> _digitalVars = [];
   Set<String> _selectedAnalogIds = {};
@@ -118,6 +119,7 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       final pMap = PriorityCatalog(priorities).resolvedMap();
 
       // Load related data in parallel
+      _sectionErrors.clear();
       final results = await Future.wait([
         _loadControllers(),
         _loadActiveAlarms(),
@@ -150,16 +152,33 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     }
   }
 
-  Future<List<Controller>> _loadControllers() async {
+
+  /// Sections whose read failed (key → error). A failed section shows a
+  /// retry / no-access state, never its empty state.
+  final Map<String, Object> _sectionErrors = {};
+
+  Future<List<T>> _section<T>(String key, Future<List<T>> Function() load) async {
     try {
-      final allControllers = await controllerService.getAll();
-      return allControllers
-          .where((c) => c.providerId == widget.providerId)
-          .toList();
-    } catch (_) {
-      return [];
+      return await load();
+    } catch (e) {
+      Logger.error('Failed to load $key', e);
+      _sectionErrors[key] = e;
+      return <T>[];
     }
   }
+
+  Widget _sectionFailed(String key, String messageKey) => AppLoadFailedView(
+        error: _sectionErrors[key],
+        message: sl<LocalizationService>().translate(messageKey),
+        onRetry: _loadData,
+      );
+
+  Future<List<Controller>> _loadControllers() => _section('controllers', () async {
+        final allControllers = await controllerService.getAll();
+        return allControllers
+            .where((c) => c.providerId == widget.providerId)
+            .toList();
+      });
 
   /// Aktif alarmlar; okuma başarısızsa null (boş liste DEĞİL).
   Future<List<Alarm>?> _loadActiveAlarms() async {
@@ -179,31 +198,23 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     }
   }
 
-  Future<List<AlarmHistory>> _loadAlarmHistory() async {
-    try {
-      return await alarmService.getHistory(
-        providerId: widget.providerId,
-        limit: 100,
-        forceRefresh: true,
-        includeVariable: true,
-      );
-    } catch (_) {
-      return [];
-    }
-  }
+  Future<List<AlarmHistory>> _loadAlarmHistory() => _section(
+      'history',
+      () => alarmService.getHistory(
+            providerId: widget.providerId,
+            limit: 100,
+            forceRefresh: true,
+            includeVariable: true,
+          ));
 
-  Future<List<IoTLog>> _loadLogs() async {
-    try {
-      return await iotLogService.getLogs(
-        providerId: widget.providerId,
-        limit: 200,
-        forceRefresh: true,
-        includeVariable: true,
-      );
-    } catch (_) {
-      return [];
-    }
-  }
+  Future<List<IoTLog>> _loadLogs() => _section(
+      'logs',
+      () => iotLogService.getLogs(
+            providerId: widget.providerId,
+            limit: 200,
+            forceRefresh: true,
+            includeVariable: true,
+          ));
 
   List<IoTLog> get _filteredLogs {
     var logs = _logs;
@@ -279,7 +290,10 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       return;
     }
 
-    setState(() => _isLoadingChart = true);
+    setState(() {
+      _isLoadingChart = true;
+      _chartError = null;
+    });
 
     try {
       final futures = <Future<MapEntry<String, List<LogTimeSeriesEntry>>>>[];
@@ -310,7 +324,12 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
       }
     } catch (e) {
       Logger.error('Failed to load chart data', e);
-      if (mounted) setState(() => _isLoadingChart = false);
+      if (mounted) {
+        setState(() {
+          _isLoadingChart = false;
+          _chartError = e;
+        });
+      }
     }
   }
 
@@ -579,7 +598,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           child: _StatCard(
             icon: Icons.developer_board,
             label: sl<LocalizationService>().translate('common.controller'),
-            value: _controllers.length.toString(),
+            value: _sectionErrors.containsKey('controllers')
+                ? '—'
+                : _controllers.length.toString(),
             color: AppColors.info,
             onTap: () => _tabController.animateTo(1),
           ),
@@ -589,7 +610,8 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
           child: _StatCard(
             icon: Icons.article_outlined,
             label: sl<LocalizationService>().translate('common.log'),
-            value: _logs.length.toString(),
+            value:
+                _sectionErrors.containsKey('logs') ? '—' : _logs.length.toString(),
             color: AppColors.warning,
             onTap: () => _tabController.animateTo(3),
           ),
@@ -633,6 +655,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
   // Controllers Tab
   Widget _buildControllersTab() {
+    if (_sectionErrors.containsKey('controllers')) {
+      return _sectionFailed('controllers', 'controller.list_load_failed');
+    }
     if (_controllers.isEmpty) {
       return Center(
         child: AppEmptyState(
@@ -751,6 +776,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   }
 
   Widget _buildAlarmHistoryContent() {
+    if (_sectionErrors.containsKey('history')) {
+      return _sectionFailed('history', 'alarm.history_load_error');
+    }
     if (_alarmHistory.isEmpty) {
       return Center(
         child: AppEmptyState(icon: Icons.history, title: sl<LocalizationService>().translate('alarm.history_empty'), message: sl<LocalizationService>().translate('provider.no_alarm_history')),
@@ -877,7 +905,9 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
 
         // List
         Expanded(
-          child: _filteredLogs.isEmpty
+          child: _sectionErrors.containsKey('logs')
+              ? _sectionFailed('logs', 'logs.load_failed')
+              : _filteredLogs.isEmpty
               ? Center(
                   child: AppEmptyState(
                     icon: Icons.article_outlined,
@@ -1072,6 +1102,14 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
     if (_isLoadingChart && _selectedAnalogIds.isNotEmpty) {
       return const Padding(padding: EdgeInsets.all(40), child: Center(child: AppLoadingIndicator()));
     }
+    if (_selectedAnalogIds.isNotEmpty && _chartError != null) {
+      return AppLoadFailedView(
+        error: _chartError,
+        compact: true,
+        message: sl<LocalizationService>().translate('logs.chart_load_failed'),
+        onRetry: _loadChartData,
+      );
+    }
     if (_selectedAnalogIds.isEmpty) {
       return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.chart_select_analog'));
     }
@@ -1101,6 +1139,14 @@ class _ProviderLandingScreenState extends State<ProviderLandingScreen>
   Widget _buildDigitalChartContent(Brightness brightness) {
     if (_isLoadingChart && _selectedDigitalIds.isNotEmpty) {
       return const Padding(padding: EdgeInsets.all(40), child: Center(child: AppLoadingIndicator()));
+    }
+    if (_selectedDigitalIds.isNotEmpty && _chartError != null) {
+      return AppLoadFailedView(
+        error: _chartError,
+        compact: true,
+        message: sl<LocalizationService>().translate('logs.chart_load_failed'),
+        onRetry: _loadChartData,
+      );
     }
     if (_selectedDigitalIds.isEmpty) {
       return _buildEmptyChart(brightness, sl<LocalizationService>().translate('provider.chart_select_digital'));

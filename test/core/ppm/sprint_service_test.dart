@@ -18,9 +18,16 @@ void main() {
   });
 
   group('listSprints', () {
-    test('satırları Sprint listesine parse eder (state + projectId dahil)', () async {
+    test('satırları Sprint listesine parse eder (state + projectId dahil)',
+        () async {
       h.stubFrom('sprints', result: <Map<String, dynamic>>[
-        {'id': 's1', 'project_id': 'p1', 'name': 'Sprint 1', 'state': 'active', 'entity_type': 'ppm_task'},
+        {
+          'id': 's1',
+          'project_id': 'p1',
+          'name': 'Sprint 1',
+          'state': 'active',
+          'entity_type': 'ppm_task'
+        },
         {'id': 's2', 'project_id': 'p1', 'name': 'Sprint 2', 'state': 'future'},
         {'id': 's3', 'project_id': 'p1', 'name': 'Sprint 3', 'state': 'closed'},
       ]);
@@ -39,15 +46,17 @@ void main() {
       expect(await service.listSprints('  '), isEmpty);
     });
 
-    test('hata → boş liste (fırlatmaz)', () async {
+    test('read error is rethrown (not "no sprints")', () async {
       h.stubFrom('sprints', error: Exception('db down'));
-      expect(await service.listSprints('p1'), isEmpty);
+      expect(service.listSprints('p1'), throwsException);
     });
   });
 
   group('startSprint', () {
     test('geçerli → state=active update + true', () async {
-      h.stubFrom('sprints', result: <Map<String, dynamic>>[{'id': 's1'}]);
+      h.stubFrom('sprints', result: <Map<String, dynamic>>[
+        {'id': 's1'}
+      ]);
 
       final ok = await service.startSprint('  s1  ');
 
@@ -75,9 +84,12 @@ void main() {
   group('completeSprint', () {
     test('geçerli → state=closed + biten-olmayanı backlog (not-in final), true',
         () async {
-      h.stubFrom('sprints', result: <String, dynamic>{'entity_type': 'ppm_task'});
-      h.stubFrom('status_definitions',
-          result: <Map<String, dynamic>>[{'code': 'done'}, {'code': 'cancelled'}]);
+      h.stubFrom('sprints',
+          result: <String, dynamic>{'entity_type': 'ppm_task'});
+      h.stubFrom('status_definitions', result: <Map<String, dynamic>>[
+        {'code': 'done'},
+        {'code': 'cancelled'}
+      ]);
       h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
 
       final ok = await service.completeSprint('s1');
@@ -86,7 +98,8 @@ void main() {
       // sprint 'closed' yazıldı
       final closed = h.queryByTable['sprints']!.calls
           .where((i) => i.memberName == #update)
-          .any((i) => (i.positionalArguments.first as Map)['state'] == 'closed');
+          .any(
+              (i) => (i.positionalArguments.first as Map)['state'] == 'closed');
       expect(closed, isTrue);
       // form_submissions: sprint_id null + not-in final filtresi
       final fs = h.queryByTable['form_submissions']!.calls;

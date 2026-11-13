@@ -27,6 +27,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
   bool _alarmsFailed = false;
   Map<String, Priority> _priorityMap = {};
   List<IoTLog> _recentLogs = [];
+  Object? _logsError;
 
   @override
   void initState() {
@@ -88,6 +89,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
       // Load recent logs
       List<IoTLog> logs = [];
+      Object? logsError;
       try {
         logs = await iotLogService.getLogs(
           controllerId: widget.controllerId,
@@ -96,6 +98,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
           includeVariable: true,
         );
       } catch (e) {
+        logsError = e;
         Logger.error('Failed to load logs', e);
       }
 
@@ -107,6 +110,7 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
           _alarmsFailed = alarmsFailed;
           _priorityMap = priorityMap;
           _recentLogs = logs;
+          _logsError = logsError;
           _isLoading = false;
         });
       }
@@ -114,7 +118,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
       Logger.error('Failed to load controller detail', e);
       if (mounted) {
         setState(() {
-          _errorMessage = sl<LocalizationService>().translate('controller.load_failed');
+          _errorMessage =
+              sl<LocalizationService>().translate('controller.load_failed');
           _isLoading = false;
         });
       }
@@ -124,7 +129,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: widget.controllerName ?? sl<LocalizationService>().translate('controller.detail_title'),
+      title: widget.controllerName ??
+          sl<LocalizationService>().translate('controller.detail_title'),
       onBack: () => context.go('/controllers'),
       actions: [
         AppIconButton(
@@ -154,7 +160,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
     if (controller == null) {
       return AppErrorView(
         title: sl<LocalizationService>().translate('common.not_found_title'),
-        message: sl<LocalizationService>().translate('controller.not_found_message'),
+        message:
+            sl<LocalizationService>().translate('controller.not_found_message'),
         actionLabel: sl<LocalizationService>().translate('common.go_back'),
         onAction: () => context.go('/controllers'),
       );
@@ -179,7 +186,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   children: [
                     Expanded(
                       child: _DetailItem(
-                        label: sl<LocalizationService>().translate('common.status'),
+                        label: sl<LocalizationService>()
+                            .translate('common.status'),
                         child: AppBadge(
                           label: controller.status.label,
                           variant: _getStatusVariant(controller.status),
@@ -194,10 +202,12 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                     ),
                     Expanded(
                       child: _DetailItem(
-                        label: sl<LocalizationService>().translate('common.active'),
+                        label: sl<LocalizationService>()
+                            .translate('common.active'),
                         value: controller.active
                             ? sl<LocalizationService>().translate('common.yes')
-                            : sl<LocalizationService>().translate('common.no_ascii'),
+                            : sl<LocalizationService>()
+                                .translate('common.no_ascii'),
                       ),
                     ),
                   ],
@@ -208,28 +218,44 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Connection Info
-            AppSectionHeader(title: sl<LocalizationService>().translate('provider.connection_info')),
+            AppSectionHeader(
+                title: sl<LocalizationService>()
+                    .translate('provider.connection_info')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Padding(
                 padding: AppSpacing.cardInsets,
                 child: Column(
                   children: [
-                    _InfoRow(label: sl<LocalizationService>().translate('provider.ip_address'), value: controller.ipAddress ?? '-'),
+                    _InfoRow(
+                        label: sl<LocalizationService>()
+                            .translate('provider.ip_address'),
+                        value: controller.ipAddress ?? '-'),
                     if (controller.code != null)
-                      _InfoRow(label: sl<LocalizationService>().translate('common.code'), value: controller.code!),
+                      _InfoRow(
+                          label: sl<LocalizationService>()
+                              .translate('common.code'),
+                          value: controller.code!),
                     if (controller.serialNumber != null)
-                      _InfoRow(label: sl<LocalizationService>().translate('controller.serial_no'), value: controller.serialNumber!),
+                      _InfoRow(
+                          label: sl<LocalizationService>()
+                              .translate('controller.serial_no'),
+                          value: controller.serialNumber!),
                     if (controller.model != null)
-                      _InfoRow(label: sl<LocalizationService>().translate('common.model'), value: controller.model!),
+                      _InfoRow(
+                          label: sl<LocalizationService>()
+                              .translate('common.model'),
+                          value: controller.model!),
                     if (controller.lastConnectedAt != null)
                       _InfoRow(
-                        label: sl<LocalizationService>().translate('controller.last_connection'),
+                        label: sl<LocalizationService>()
+                            .translate('controller.last_connection'),
                         value: dateFormat.format(controller.lastConnectedAt!),
                       ),
                     if (controller.lastDataAt != null)
                       _InfoRow(
-                        label: sl<LocalizationService>().translate('controller.last_communication'),
+                        label: sl<LocalizationService>()
+                            .translate('controller.last_communication'),
                         value: dateFormat.format(controller.lastDataAt!),
                       ),
                   ],
@@ -237,14 +263,17 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
               ),
             ),
 
-            if (controller.description != null && controller.description!.isNotEmpty) ...[
+            if (controller.description != null &&
+                controller.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              AppSectionHeader(title: sl<LocalizationService>().translate('field.aciklama')),
+              AppSectionHeader(
+                  title: sl<LocalizationService>().translate('field.aciklama')),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Padding(
                   padding: AppSpacing.cardInsets,
-                  child: Text(controller.description!, style: AppTypography.body),
+                  child:
+                      Text(controller.description!, style: AppTypography.body),
                 ),
               ),
             ],
@@ -253,11 +282,16 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
             // Related Variables
             AppSectionHeader(
-              title: sl<LocalizationService>().translate('variable.list_count', params: {'count': _variables.length}),
+              title: sl<LocalizationService>().translate('variable.list_count',
+                  params: {'count': _variables.length}),
               action: _variables.isNotEmpty
                   ? TextButton(
                       onPressed: () => context.push('/variables'),
-                      child: Text(sl<LocalizationService>().translate('common.see_all_full'), style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                      child: Text(
+                          sl<LocalizationService>()
+                              .translate('common.see_all_full'),
+                          style: TextStyle(
+                              color: AppColors.primary, fontSize: 13)),
                     )
                   : null,
             ),
@@ -268,7 +302,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   padding: AppSpacing.cardInsets,
                   child: Center(
                     child: Text(
-                      sl<LocalizationService>().translate('controller.no_variables'),
+                      sl<LocalizationService>()
+                          .translate('controller.no_variables'),
                       style: AppTypography.subheadline.copyWith(
                         color: AppColors.secondaryLabel(context),
                       ),
@@ -285,13 +320,16 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                       children: [
                         AppListTile(
                           title: variable.name,
-                          subtitle: '${variable.dataType.label} - ${variable.formattedValue}',
+                          subtitle:
+                              '${variable.dataType.label} - ${variable.formattedValue}',
                           trailing: variable.isBoolean
                               ? Container(
                                   width: 10,
                                   height: 10,
                                   decoration: BoxDecoration(
-                                    color: (variable.booleanValue ?? false) ? AppColors.success : AppColors.error,
+                                    color: (variable.booleanValue ?? false)
+                                        ? AppColors.success
+                                        : AppColors.error,
                                     shape: BoxShape.circle,
                                   ),
                                 )
@@ -306,7 +344,9 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                             '/variables/${variable.id}?name=${Uri.encodeComponent(variable.name)}',
                           ),
                         ),
-                        if (!isLast) Divider(height: 1, color: AppColors.separator(context)),
+                        if (!isLast)
+                          Divider(
+                              height: 1, color: AppColors.separator(context)),
                       ],
                     );
                   }).toList(),
@@ -316,7 +356,10 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             const SizedBox(height: AppSpacing.md),
 
             // Active Alarms
-            AppSectionHeader(title: sl<LocalizationService>().translate('controller.active_alarms_count', params: {'count': _alarms.length})),
+            AppSectionHeader(
+                title: sl<LocalizationService>().translate(
+                    'controller.active_alarms_count',
+                    params: {'count': _alarms.length})),
             const SizedBox(height: AppSpacing.sm),
             if (_alarmsFailed)
               AppCard(
@@ -324,17 +367,21 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   padding: AppSpacing.cardInsets,
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                      Icon(Icons.error_outline,
+                          color: AppColors.error, size: 20),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          sl<LocalizationService>().translate('alarm.load_error'),
-                          style: AppTypography.subheadline.copyWith(color: AppColors.error),
+                          sl<LocalizationService>()
+                              .translate('alarm.load_error'),
+                          style: AppTypography.subheadline
+                              .copyWith(color: AppColors.error),
                         ),
                       ),
                       TextButton(
                         onPressed: _loadData,
-                        child: Text(sl<LocalizationService>().translate('common.retry')),
+                        child: Text(sl<LocalizationService>()
+                            .translate('common.retry')),
                       ),
                     ],
                   ),
@@ -347,10 +394,12 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                      Icon(Icons.check_circle,
+                          color: AppColors.success, size: 20),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
-                        sl<LocalizationService>().translate('alarm.none_active_inline'),
+                        sl<LocalizationService>()
+                            .translate('alarm.none_active_inline'),
                         style: AppTypography.subheadline.copyWith(
                           color: AppColors.success,
                         ),
@@ -363,9 +412,11 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
               ...List.generate(_alarms.length, (index) {
                 final alarm = _alarms[index];
                 final priority = _priorityMap[alarm.priorityId];
-                final priorityColor = priority?.displayColor ?? AppColors.systemGray;
+                final priorityColor =
+                    priority?.displayColor ?? AppColors.systemGray;
                 return Padding(
-                  padding: EdgeInsets.only(bottom: index < _alarms.length - 1 ? AppSpacing.sm : 0),
+                  padding: EdgeInsets.only(
+                      bottom: index < _alarms.length - 1 ? AppSpacing.sm : 0),
                   child: AppCard(
                     // Saha: alarma doğrudan müdahale (onay / reset / bastır; reset ve
                     // bastırma onay diyaloğu ister).
@@ -392,19 +443,27 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('common.alarm'), style: AppTypography.headline),
+                                Text(
+                                    alarm.name ??
+                                        alarm.code ??
+                                        sl<LocalizationService>()
+                                            .translate('common.alarm'),
+                                    style: AppTypography.headline),
                                 Text(
                                   [
                                     if (priority != null)
-                                      priority.localizedLabel(sl<LocalizationService>().translate),
+                                      priority.localizedLabel(
+                                          sl<LocalizationService>().translate),
                                     alarm.durationFormatted,
                                   ].join(' · '),
-                                  style: AppTypography.caption2.copyWith(color: priorityColor),
+                                  style: AppTypography.caption2
+                                      .copyWith(color: priorityColor),
                                 ),
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right, color: AppColors.tertiaryLabel(context)),
+                          Icon(Icons.chevron_right,
+                              color: AppColors.tertiaryLabel(context)),
                         ],
                       ),
                     ),
@@ -416,14 +475,27 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
 
             // Recent Logs
             AppSectionHeader(
-              title: sl<LocalizationService>().translate('log.recent_count', params: {'count': _recentLogs.length}),
+              title: sl<LocalizationService>().translate('log.recent_count',
+                  params: {'count': _recentLogs.length}),
               action: TextButton(
                 onPressed: () => context.push('/logs'),
-                child: Text(sl<LocalizationService>().translate('common.see_all_full'), style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                child: Text(
+                    sl<LocalizationService>().translate('common.see_all_full'),
+                    style: TextStyle(color: AppColors.primary, fontSize: 13)),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (_recentLogs.isEmpty)
+            if (_logsError != null)
+              AppCard(
+                child: AppLoadFailedView(
+                  error: _logsError,
+                  compact: true,
+                  message:
+                      sl<LocalizationService>().translate('logs.load_failed'),
+                  onRetry: _loadData,
+                ),
+              )
+            else if (_recentLogs.isEmpty)
               AppCard(
                 child: Padding(
                   padding: AppSpacing.cardInsets,
@@ -440,7 +512,8 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
             else
               AppCard(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: Column(
                     children: _recentLogs.take(10).map((log) {
                       final isLast = log == _recentLogs.take(10).last;
@@ -455,7 +528,9 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                         displayValue = isOn ? 'ON' : 'OFF';
                       } else {
                         displayValue = log.value ?? '-';
-                        if (unit != null && unit.isNotEmpty && log.value != null) {
+                        if (unit != null &&
+                            unit.isNotEmpty &&
+                            log.value != null) {
                           displayValue = '${log.value} $unit';
                         }
                       }
@@ -472,34 +547,60 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                                     width: 32,
                                     height: 32,
                                     decoration: BoxDecoration(
-                                      color: (isOn ? AppColors.success : AppColors.systemGray4).withValues(alpha: 0.15),
+                                      color: (isOn
+                                              ? AppColors.success
+                                              : AppColors.systemGray4)
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Icon(isOn ? Icons.power : Icons.power_off, size: 16, color: isOn ? AppColors.success : AppColors.systemGray),
+                                    child: Icon(
+                                        isOn ? Icons.power : Icons.power_off,
+                                        size: 16,
+                                        color: isOn
+                                            ? AppColors.success
+                                            : AppColors.systemGray),
                                   )
                                 else
                                   Container(
                                     width: 32,
                                     height: 32,
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Icon(Icons.show_chart, size: 16, color: AppColors.primary),
+                                    child: Icon(Icons.show_chart,
+                                        size: 16, color: AppColors.primary),
                                   ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (varName != null && varName.isNotEmpty)
-                                        Text(varName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                                      if (varDesc != null && varDesc.isNotEmpty && varDesc != varName)
-                                        Text(varDesc, style: TextStyle(fontSize: 11, color: AppColors.secondaryLabel(context)), overflow: TextOverflow.ellipsis),
+                                        Text(varName,
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600),
+                                            overflow: TextOverflow.ellipsis),
+                                      if (varDesc != null &&
+                                          varDesc.isNotEmpty &&
+                                          varDesc != varName)
+                                        Text(varDesc,
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.secondaryLabel(
+                                                    context)),
+                                            overflow: TextOverflow.ellipsis),
                                       const SizedBox(height: 2),
                                       Text(
-                                        log.dateTime != null ? dateFormat.format(log.dateTime!) : '-',
-                                        style: AppTypography.caption2.copyWith(color: AppColors.tertiaryLabel(context)),
+                                        log.dateTime != null
+                                            ? dateFormat.format(log.dateTime!)
+                                            : '-',
+                                        style: AppTypography.caption2.copyWith(
+                                            color: AppColors.tertiaryLabel(
+                                                context)),
                                       ),
                                     ],
                                   ),
@@ -507,20 +608,40 @@ class _ControllerDetailScreenState extends State<ControllerDetailScreen> {
                                 const SizedBox(width: 8),
                                 if (isOnOff)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: (isOn ? AppColors.success : AppColors.systemGray4).withValues(alpha: 0.15),
+                                      color: (isOn
+                                              ? AppColors.success
+                                              : AppColors.systemGray4)
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: isOn ? AppColors.success : AppColors.systemGray4, width: 1),
+                                      border: Border.all(
+                                          color: isOn
+                                              ? AppColors.success
+                                              : AppColors.systemGray4,
+                                          width: 1),
                                     ),
-                                    child: Text(displayValue, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isOn ? AppColors.success : AppColors.systemGray)),
+                                    child: Text(displayValue,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: isOn
+                                                ? AppColors.success
+                                                : AppColors.systemGray)),
                                   )
                                 else
-                                  Text(displayValue, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                                  Text(displayValue,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary)),
                               ],
                             ),
                           ),
-                          if (!isLast) Divider(height: 1, color: AppColors.separator(context)),
+                          if (!isLast)
+                            Divider(
+                                height: 1, color: AppColors.separator(context)),
                         ],
                       );
                     }).toList(),

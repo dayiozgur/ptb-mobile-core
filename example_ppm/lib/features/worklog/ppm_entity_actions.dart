@@ -15,8 +15,7 @@ void registerPpmEntityActions() {
       (ctx, e, reload) => [
         AppIconButton(
           icon: Icons.numbers,
-          onPressed: () =>
-              _editStoryPoints(ctx, e.id, e.storyPoints, reload),
+          onPressed: () => _editStoryPoints(ctx, e.id, e.storyPoints, reload),
         ),
         AppIconButton(
           icon: Icons.timer_outlined,
@@ -75,8 +74,8 @@ Future<void> _editStoryPoints(BuildContext ctx, String entityId, num? current,
         content: Text(ppmT('ppm.story_points.invalid', 'Geçersiz puan'))));
     return;
   }
-  final ok =
-      await sl<EntityDataService>().updateStoryPoints(entityId: entityId, points: points);
+  final ok = await sl<EntityDataService>()
+      .updateStoryPoints(entityId: entityId, points: points);
   if (!ctx.mounted) return;
   ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
       content: Text(ok
@@ -85,8 +84,8 @@ Future<void> _editStoryPoints(BuildContext ctx, String entityId, num? current,
   if (ok) await reload();
 }
 
-Future<void> _logWork(
-    BuildContext ctx, String submissionId, Future<void> Function() reload) async {
+Future<void> _logWork(BuildContext ctx, String submissionId,
+    Future<void> Function() reload) async {
   final ok = await showModalBottomSheet<bool>(
     context: ctx,
     isScrollControlled: true,
@@ -174,8 +173,7 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
             controller: _remaining,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-                labelText:
-                    ppmT('ppm.worklog.remaining', 'Kalan tahmin (saat)'),
+                labelText: ppmT('ppm.worklog.remaining', 'Kalan tahmin (saat)'),
                 isDense: true,
                 border: const OutlineInputBorder()),
           ),
@@ -206,7 +204,8 @@ class _LogWorkSheetState extends State<_LogWorkSheet> {
   }
 }
 
-/// Bu iş öğesinin efor geçmişi (son kayıtlar). Boş/hata → sessizce gizlenir.
+/// Bu iş öğesinin efor geçmişi (son kayıtlar). Boş → gizlenir; a failed read
+/// says so in one line (it is not "no history").
 class _WorklogHistory extends StatelessWidget {
   final Future<List<WorklogEntry>> future;
   const _WorklogHistory({required this.future});
@@ -218,6 +217,14 @@ class _WorklogHistory extends StatelessWidget {
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
+        }
+        if (snap.hasError) {
+          return AppLoadFailedView(
+            error: snap.error,
+            compact: true,
+            message: ppmT(
+                'ppm.worklog.history_load_failed', 'Efor geçmişi yüklenemedi.'),
+          );
         }
         final logs = snap.data ?? const <WorklogEntry>[];
         if (logs.isEmpty) return const SizedBox.shrink();

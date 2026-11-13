@@ -423,7 +423,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.person_remove_outlined,
+                        child: const Icon(Icons.person_remove_outlined,
                             color: AppColors.error),
                       ),
                       title: sl<LocalizationService>()

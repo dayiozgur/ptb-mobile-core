@@ -12,6 +12,7 @@ import '../../../core/utils/url_actions.dart';
 import '../../widgets/buttons/app_icon_button.dart';
 import '../../widgets/cards/app_card.dart';
 import '../../widgets/feedback/app_confirm_dialog.dart';
+import '../../widgets/feedback/app_no_access_view.dart';
 import '../entities/entity_detail_extensions.dart';
 import 'ms_onedrive_picker.dart';
 
@@ -45,7 +46,8 @@ void registerMicrosoftFilesSection() {
 class EntityFilesCard extends StatefulWidget {
   final String entityType;
   final String entityId;
-  const EntityFilesCard({super.key, required this.entityType, required this.entityId});
+  const EntityFilesCard(
+      {super.key, required this.entityType, required this.entityId});
 
   @override
   State<EntityFilesCard> createState() => _EntityFilesCardState();
@@ -60,6 +62,10 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
   bool _loading = true;
   bool _connected = false;
 
+  /// First read error of either source (internal files / Microsoft links).
+  /// The source that did load is still listed.
+  Object? _loadError;
+
   @override
   void initState() {
     super.initState();
@@ -67,17 +73,25 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
   }
 
   Future<void> _load() async {
-    // Internal files always load; MS links only when connected. A failure on either
-    // source never blocks the other (listEntityFiles already returns [] on error).
+    // Internal files always load; MS links only when connected. A failure on
+    // either source never blocks the other, but it is said ("could not load"),
+    // never shown as "no files".
     final conn = await sl<MicrosoftIntegrationService>().getConnected();
     final connected = conn != null;
-    final internal = await _storage.listEntityFiles(widget.entityType, widget.entityId);
+    Object? error;
+    List<InternalEntityFile> internal = const [];
+    try {
+      internal =
+          await _storage.listEntityFiles(widget.entityType, widget.entityId);
+    } catch (e) {
+      error = e;
+    }
     List<EntityFileLink> msFiles = const [];
     if (connected) {
       try {
         msFiles = await _links.list(widget.entityType, widget.entityId);
-      } catch (_) {
-        msFiles = const [];
+      } catch (e) {
+        error ??= e;
       }
     }
     if (!mounted) return;
@@ -85,12 +99,14 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
       _connected = connected;
       _files = msFiles;
       _internal = internal;
+      _loadError = error;
       _loading = false;
     });
   }
 
   Future<void> _attach() async {
-    await showMsOneDrivePicker(context, entityType: widget.entityType, entityId: widget.entityId);
+    await showMsOneDrivePicker(context,
+        entityType: widget.entityType, entityId: widget.entityId);
     await _load();
   }
 
@@ -127,9 +143,14 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
     final n = name.toLowerCase();
     final m = (mime ?? '').toLowerCase();
     if (m.contains('pdf') || n.endsWith('.pdf')) return Icons.picture_as_pdf;
-    if (m.contains('excel') || m.contains('sheet') || n.endsWith('.xlsx') || n.endsWith('.xls')) return Icons.table_chart;
-    if (m.contains('word') || n.endsWith('.docx') || n.endsWith('.doc')) return Icons.description;
-    if (m.startsWith('image/') || RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(n)) return Icons.image;
+    if (m.contains('excel') ||
+        m.contains('sheet') ||
+        n.endsWith('.xlsx') ||
+        n.endsWith('.xls')) return Icons.table_chart;
+    if (m.contains('word') || n.endsWith('.docx') || n.endsWith('.doc'))
+      return Icons.description;
+    if (m.startsWith('image/') ||
+        RegExp(r'\.(png|jpe?g|gif|webp)$').hasMatch(n)) return Icons.image;
     return Icons.insert_drive_file;
   }
 
@@ -150,7 +171,9 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
   Widget build(BuildContext context) {
     if (_loading) return const SizedBox.shrink();
     // Zero footprint when there is nothing to show and no MS account.
-    if (!_connected && _internal.isEmpty) return const SizedBox.shrink();
+    if (!_connected && _internal.isEmpty && _loadError == null) {
+      return const SizedBox.shrink();
+    }
 
     final total = _internal.length + _files.length;
     return Padding(
@@ -165,11 +188,13 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
                 children: [
                   Icon(Icons.attach_file, size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
-                  Text(_t('crm.files.title', 'Dosyalar'), style: AppTypography.subhead),
+                  Text(_t('crm.files.title', 'Dosyalar'),
+                      style: AppTypography.subhead),
                   if (total > 0) ...[
                     const SizedBox(width: 6),
                     Text('$total',
-                        style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+                        style: AppTypography.caption1.copyWith(
+                            color: AppColors.secondaryLabel(context))),
                   ],
                   const Spacer(),
                   if (_connected)
@@ -180,11 +205,20 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
                     ),
                 ],
               ),
-              if (total == 0)
+              if (_loadError != null)
+                AppLoadFailedView(
+                  error: _loadError,
+                  compact: true,
+                  message:
+                      _t('files.load_failed', 'The files could not be loaded.'),
+                  onRetry: _load,
+                ),
+              if (total == 0 && _loadError == null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(_t('crm.files.empty', 'Henüz dosya yok.'),
-                      style: AppTypography.footnote.copyWith(color: AppColors.tertiaryLabel(context))),
+                      style: AppTypography.footnote
+                          .copyWith(color: AppColors.tertiaryLabel(context))),
                 )
               else ...[
                 for (final f in _internal) _internalRow(f),
@@ -203,29 +237,36 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(label, style: AppTypography.caption2.copyWith(color: color, fontWeight: FontWeight.w600)),
+        child: Text(label,
+            style: AppTypography.caption2
+                .copyWith(color: color, fontWeight: FontWeight.w600)),
       );
 
   Widget _internalRow(InternalEntityFile f) => Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Row(
           children: [
-            Icon(_iconForName(f.name, f.mime), size: 18, color: AppColors.primary),
+            Icon(_iconForName(f.name, f.mime),
+                size: 18, color: AppColors.primary),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: InkWell(
                 onTap: () => _openInternal(f),
                 child: Text(f.name,
-                    style: AppTypography.footnote.copyWith(decoration: TextDecoration.underline),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                    style: AppTypography.footnote
+                        .copyWith(decoration: TextDecoration.underline),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ),
             ),
             const SizedBox(width: 6),
-            _sourceBadge(_t('files.badge_internal', 'Depomuz'), AppColors.primary),
+            _sourceBadge(
+                _t('files.badge_internal', 'Depomuz'), AppColors.primary),
             if (_size(f.size).isNotEmpty) ...[
               const SizedBox(width: 6),
               Text(_size(f.size),
-                  style: AppTypography.caption2.copyWith(color: AppColors.tertiaryLabel(context))),
+                  style: AppTypography.caption2
+                      .copyWith(color: AppColors.tertiaryLabel(context))),
             ],
           ],
         ),
@@ -235,22 +276,27 @@ class _EntityFilesCardState extends State<EntityFilesCard> {
         padding: const EdgeInsets.only(top: 6),
         child: Row(
           children: [
-            Icon(_iconForName(f.name, f.mime), size: 18, color: AppColors.primary),
+            Icon(_iconForName(f.name, f.mime),
+                size: 18, color: AppColors.primary),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: InkWell(
                 onTap: () => UrlActions.openUrl(f.webUrl),
                 child: Text(f.name,
-                    style: AppTypography.footnote.copyWith(decoration: TextDecoration.underline),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                    style: AppTypography.footnote
+                        .copyWith(decoration: TextDecoration.underline),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ),
             ),
             const SizedBox(width: 6),
-            _sourceBadge(_t('files.badge_onedrive', 'OneDrive'), Colors.blue.shade700),
+            _sourceBadge(
+                _t('files.badge_onedrive', 'OneDrive'), Colors.blue.shade700),
             if (_size(f.size).isNotEmpty) ...[
               const SizedBox(width: 6),
               Text(_size(f.size),
-                  style: AppTypography.caption2.copyWith(color: AppColors.tertiaryLabel(context))),
+                  style: AppTypography.caption2
+                      .copyWith(color: AppColors.tertiaryLabel(context))),
             ],
             IconButton(
               icon: const Icon(Icons.close, size: 16),

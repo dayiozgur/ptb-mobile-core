@@ -169,7 +169,8 @@ class SearchService {
   /// map'lenir.
   ///
   /// - Boş / 2 karakterden kısa sorgu → `[]`.
-  /// - Hata → `[]` (Logger.warning ile loglanır; UI'ı bloklamaz).
+  /// - A failed call is rethrown: the search screen says "search failed"
+  ///   instead of "no results".
   Future<List<GlobalSearchHit>> globalSearch(
     String query, {
     int limit = 8,
@@ -196,7 +197,7 @@ class SearchService {
           .toList();
     } catch (e) {
       Logger.warning('Global search failed for: "$trimmed"', e);
-      return [];
+      rethrow;
     }
   }
 
@@ -425,8 +426,9 @@ class SearchService {
     SearchQuery query,
   ) async {
     try {
-      var dbQuery = _supabase.from('profiles').select(
-          'id, first_name, last_name, email, title, avatar_url');
+      var dbQuery = _supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, title, avatar_url');
 
       // Metin araması
       dbQuery = dbQuery.or(
@@ -481,7 +483,8 @@ class SearchService {
       // Metin araması
       dbQuery = dbQuery.ilike('note', '%$searchText%');
 
-      final response = await dbQuery.order('date', ascending: false).limit(query.limit);
+      final response =
+          await dbQuery.order('date', ascending: false).limit(query.limit);
 
       return response.map<SearchResult>((item) {
         final note = item['note'] as String?;
@@ -498,7 +501,8 @@ class SearchService {
           id: item['id'] as String,
           entityType: SearchEntityType.activity,
           title: (note != null && note.isNotEmpty) ? note : 'Activity',
-          subtitle: entityType.isNotEmpty ? 'activity - $entityType' : 'activity',
+          subtitle:
+              entityType.isNotEmpty ? 'activity - $entityType' : 'activity',
           score: _calculateScore(searchText, note ?? '', null),
           metadata: {
             'action_type': 'activity',
@@ -720,7 +724,8 @@ class SearchService {
 
       // Limit uygula
       if (_recentSearches.length > _settings.maxRecentSearches) {
-        _recentSearches = _recentSearches.take(_settings.maxRecentSearches).toList();
+        _recentSearches =
+            _recentSearches.take(_settings.maxRecentSearches).toList();
       }
 
       // Kalıcı depolama

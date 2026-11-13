@@ -16,7 +16,8 @@ export 'announcement_model.dart';
 class AnnouncementService {
   final SupabaseClient _supabase;
 
-  AnnouncementService({required SupabaseClient supabase}) : _supabase = supabase;
+  AnnouncementService({required SupabaseClient supabase})
+      : _supabase = supabase;
 
   static const String _cols =
       'id, title, body, category, image_url, publish_date, published';
@@ -24,20 +25,19 @@ class AnnouncementService {
   /// Yayınlanmış duyurular (yeni → eski), tenant-scoped.
   Future<List<Announcement>> list({int limit = 50}) async {
     try {
-      var q = _supabase
-          .from('announcements')
-          .select(_cols)
-          .eq('published', true);
+      var q =
+          _supabase.from('announcements').select(_cols).eq('published', true);
       final tenantId = sl<TenantService>().currentTenantId;
       if (tenantId != null) q = q.eq('tenant_id', tenantId);
-      final res =
-          await q.order('publish_date', ascending: false).limit(limit);
+      final res = await q.order('publish_date', ascending: false).limit(limit);
       return (res as List)
           .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
+      // Rethrown: the list shows "could not load" / "no access" instead of
+      // "no announcements".
       Logger.error('Duyurular yüklenemedi', e);
-      return const [];
+      rethrow;
     }
   }
 

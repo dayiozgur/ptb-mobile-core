@@ -31,7 +31,8 @@ enum FileType {
   image('image', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']),
 
   /// Doküman dosyaları
-  document('document', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']),
+  document(
+      'document', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']),
 
   /// Video dosyaları
   video('video', ['mp4', 'mov', 'avi', 'wmv', 'webm']),
@@ -201,8 +202,10 @@ class StorageFileInfo {
       bucket: bucket,
       size: file.metadata?['size'] as int?,
       mimeType: file.metadata?['mimetype'] as String?,
-      createdAt: file.createdAt != null ? DateTime.parse(file.createdAt!) : null,
-      updatedAt: file.updatedAt != null ? DateTime.parse(file.updatedAt!) : null,
+      createdAt:
+          file.createdAt != null ? DateTime.parse(file.createdAt!) : null,
+      updatedAt:
+          file.updatedAt != null ? DateTime.parse(file.updatedAt!) : null,
     );
   }
 
@@ -218,7 +221,8 @@ class StorageFileInfo {
   }
 
   @override
-  String toString() => 'StorageFileInfo(name: $name, path: $path, size: $formattedSize)';
+  String toString() =>
+      'StorageFileInfo(name: $name, path: $path, size: $formattedSize)';
 }
 
 /// Yükleme sonucu
@@ -523,9 +527,8 @@ class FileStorageService {
     String? entityType,
     String? entityId,
   }) {
-    final tenant = (tenantId != null && tenantId.isNotEmpty)
-        ? tenantId
-        : '_unknown';
+    final tenant =
+        (tenantId != null && tenantId.isNotEmpty) ? tenantId : '_unknown';
     final unique = _generateUnique();
     final safe = _safeName(fileName);
     if (entityType != null &&
@@ -546,9 +549,8 @@ class FileStorageService {
     String? tenantId,
     String? organizationId,
   }) {
-    final tenant = (tenantId != null && tenantId.isNotEmpty)
-        ? tenantId
-        : '_unknown';
+    final tenant =
+        (tenantId != null && tenantId.isNotEmpty) ? tenantId : '_unknown';
     final org = (organizationId != null && organizationId.isNotEmpty)
         ? organizationId
         : '_tenant';
@@ -641,8 +643,9 @@ class FileStorageService {
       'uploaded_by': _supabase.auth.currentUser?.id,
       'bucket': bucket,
       'storage_path': storagePath,
-      'public_url':
-          isPublic ? _supabase.storage.from(bucket).getPublicUrl(storagePath) : null,
+      'public_url': isPublic
+          ? _supabase.storage.from(bucket).getPublicUrl(storagePath)
+          : null,
       'file_name': fileName,
       'file_size': fileSize,
       'mime_type': mimeType,
@@ -689,8 +692,8 @@ class FileStorageService {
 
       final name = fileName ?? file.path.split('/').last;
       final extension = name.split('.').last;
-      final mimeType =
-          contentType ?? FileType.fromExtension(extension).getMimeType(extension);
+      final mimeType = contentType ??
+          FileType.fromExtension(extension).getMimeType(extension);
 
       final ctx = await _resolveContext();
       final effTenant = tenantId ?? ctx.tenantId;
@@ -775,7 +778,8 @@ class FileStorageService {
         controllerId: controllerId,
       );
     } catch (e) {
-      Logger.error('Storage registry insert failed → removing orphan object: $e');
+      Logger.error(
+          'Storage registry insert failed → removing orphan object: $e');
       try {
         await _supabase.storage.from(bucket).remove([path]);
       } catch (_) {}
@@ -807,8 +811,8 @@ class FileStorageService {
       }
 
       final extension = fileName.split('.').last;
-      final mimeType =
-          contentType ?? FileType.fromExtension(extension).getMimeType(extension);
+      final mimeType = contentType ??
+          FileType.fromExtension(extension).getMimeType(extension);
 
       final ctx = await _resolveContext();
       final effTenant = tenantId ?? ctx.tenantId;
@@ -1007,7 +1011,8 @@ class FileStorageService {
   /// null. Tanır: `…/storage/v1/object/public/avatars/<yol>` (ve `/sign/`),
   /// `avatars/<yol>`.
   static String? legacyAvatarPath(String raw) {
-    final m = RegExp(r'/storage/v1/object/(?:public|sign|authenticated)/avatars/([^?]+)')
+    final m = RegExp(
+            r'/storage/v1/object/(?:public|sign|authenticated)/avatars/([^?]+)')
         .firstMatch(raw);
     if (m != null) return Uri.decodeFull(m.group(1)!);
     if (raw.startsWith('avatars/') && raw.length > 'avatars/'.length) {
@@ -1050,11 +1055,13 @@ class FileStorageService {
   /// `storage_objects` doğrudan sorgu (SELECT-RLS tenant-üyesine açık; web
   /// `StorageService.list({entityType, entityId})` mobil paritesi). İki-kaynak
   /// Files-card'ının iç-dosya kaynağı. Hata durumunda `[]` (MS kaynağını bloke etmez).
-  Future<List<InternalEntityFile>> listEntityFiles(String entityType, String entityId) async {
+  Future<List<InternalEntityFile>> listEntityFiles(
+      String entityType, String entityId) async {
     try {
       final rows = await _supabase
           .from(_registryTable)
-          .select('id, file_name, file_size, mime_type, bucket, storage_path, created_at')
+          .select(
+              'id, file_name, file_size, mime_type, bucket, storage_path, created_at')
           .eq('entity_type', entityType)
           .eq('entity_id', entityId)
           .order('created_at', ascending: false);
@@ -1067,12 +1074,15 @@ class FileStorageService {
           mime: m['mime_type'] as String?,
           bucket: (m['bucket'] as String?) ?? StorageBuckets.platformPrivate,
           path: (m['storage_path'] as String?) ?? '',
-          createdAt: m['created_at'] != null ? DateTime.tryParse(m['created_at'].toString()) : null,
+          createdAt: m['created_at'] != null
+              ? DateTime.tryParse(m['created_at'].toString())
+              : null,
         );
       }).toList();
     } catch (e) {
+      // Rethrown: the files card says "could not load" instead of "no files".
       Logger.error('listEntityFiles failed: $e');
-      return const [];
+      rethrow;
     }
   }
 
@@ -1250,8 +1260,10 @@ class FileStorageService {
   }) async {
     try {
       // Dosyayı indirmeye çalış (HEAD request yok)
-      final folderPath = path.contains('/') ? path.substring(0, path.lastIndexOf('/')) : '';
-      final fileName = path.contains('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
+      final folderPath =
+          path.contains('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+      final fileName =
+          path.contains('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
 
       final files = await listFiles(bucket: bucket, path: folderPath);
       return files.any((f) => f.name == fileName);

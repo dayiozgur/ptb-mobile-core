@@ -12,6 +12,7 @@ class LogViewerScreen extends StatefulWidget {
 class _LogViewerScreenState extends State<LogViewerScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+  Object? _loadError;
 
   List<Controller> _controllers = [];
   String? _selectedControllerId;
@@ -28,6 +29,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadError = null;
     });
 
     try {
@@ -59,6 +61,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       Logger.error('Failed to load controllers', e);
       if (mounted) {
         setState(() {
+          _loadError = e;
           _errorMessage = sl<LocalizationService>()
               .translate('logs.controllers_load_failed');
           _isLoading = false;
@@ -73,6 +76,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadError = null;
     });
 
     try {
@@ -93,6 +97,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       Logger.error('Failed to load logs', e);
       if (mounted) {
         setState(() {
+          _loadError = e;
           _errorMessage =
               sl<LocalizationService>().translate('logs.load_failed');
           _isLoading = false;
@@ -104,12 +109,15 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   List<IoTLog> get _filteredLogs {
     if (_searchQuery.isEmpty) return _logList;
     final query = _searchQuery.toLowerCase();
-    return _logList.where((log) =>
-        (log.effectiveName?.toLowerCase().contains(query) ?? false) ||
-        (log.effectiveDescription?.toLowerCase().contains(query) ?? false) ||
-        (log.value?.toLowerCase().contains(query) ?? false) ||
-        (log.name?.toLowerCase().contains(query) ?? false) ||
-        (log.code?.toLowerCase().contains(query) ?? false)).toList();
+    return _logList
+        .where((log) =>
+            (log.effectiveName?.toLowerCase().contains(query) ?? false) ||
+            (log.effectiveDescription?.toLowerCase().contains(query) ??
+                false) ||
+            (log.value?.toLowerCase().contains(query) ?? false) ||
+            (log.name?.toLowerCase().contains(query) ?? false) ||
+            (log.code?.toLowerCase().contains(query) ?? false))
+        .toList();
   }
 
   @override
@@ -124,7 +132,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
         ),
         AppIconButton(
           icon: Icons.refresh,
-          onPressed: _selectedControllerId != null ? _loadLogs : _loadControllers,
+          onPressed:
+              _selectedControllerId != null ? _loadLogs : _loadControllers,
         ),
       ],
       child: Column(
@@ -135,11 +144,14 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(sl<LocalizationService>().translate('logs.controller'), style: AppTypography.caption1.copyWith(color: AppColors.secondaryLabel(context))),
+                Text(sl<LocalizationService>().translate('logs.controller'),
+                    style: AppTypography.caption1
+                        .copyWith(color: AppColors.secondaryLabel(context))),
                 const SizedBox(height: AppSpacing.xs),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   decoration: BoxDecoration(
                     border: Border.all(color: AppColors.separator(context)),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -147,25 +159,36 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedControllerId,
-                      hint: Text(sl<LocalizationService>().translate('logs.select_controller_hint'), style: AppTypography.body.copyWith(color: AppColors.tertiaryLabel(context))),
+                      hint: Text(
+                          sl<LocalizationService>()
+                              .translate('logs.select_controller_hint'),
+                          style: AppTypography.body.copyWith(
+                              color: AppColors.tertiaryLabel(context))),
                       isExpanded: true,
-                      items: _controllers.map((c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: c.status == ControllerStatus.online ? AppColors.success : AppColors.error,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(child: Text(c.name, overflow: TextOverflow.ellipsis)),
-                          ],
-                        ),
-                      )).toList(),
+                      items: _controllers
+                          .map((c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            c.status == ControllerStatus.online
+                                                ? AppColors.success
+                                                : AppColors.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                        child: Text(c.name,
+                                            overflow: TextOverflow.ellipsis)),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         setState(() => _selectedControllerId = value);
                         _loadLogs();
@@ -181,8 +204,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: AppSearchField(
-              placeholder:
-                  sl<LocalizationService>().translate('logs.search_placeholder'),
+              placeholder: sl<LocalizationService>()
+                  .translate('logs.search_placeholder'),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
@@ -195,7 +218,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
               child: Row(
                 children: [
                   AppChip(
-                    label: sl<LocalizationService>().translate('logs.record_count',
+                    label: sl<LocalizationService>().translate(
+                        'logs.record_count',
                         params: {'count': '${_filteredLogs.length}'}),
                     variant: AppChipVariant.tonal,
                     color: AppColors.primary,
@@ -226,7 +250,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
     if (_errorMessage != null) {
       return Center(
-        child: AppErrorView(
+        child: AppLoadFailedView(
+          error: _loadError,
           message: _errorMessage!,
           onRetry: _selectedControllerId != null ? _loadLogs : _loadControllers,
         ),
@@ -312,7 +337,8 @@ class _LogRow extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: (isOn ? AppColors.success : AppColors.systemGray4).withValues(alpha: 0.15),
+                color: (isOn ? AppColors.success : AppColors.systemGray4)
+                    .withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -388,9 +414,11 @@ class _LogRow extends StatelessWidget {
             children: [
               if (isOnOff)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (isOn ? AppColors.success : AppColors.systemGray4).withValues(alpha: 0.15),
+                    color: (isOn ? AppColors.success : AppColors.systemGray4)
+                        .withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isOn ? AppColors.success : AppColors.systemGray4,

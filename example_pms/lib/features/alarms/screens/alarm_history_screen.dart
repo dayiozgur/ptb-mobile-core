@@ -12,6 +12,7 @@ class AlarmHistoryScreen extends StatefulWidget {
 class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+  Object? _loadError;
 
   List<AlarmHistory> _allAlarms = [];
   List<AlarmHistory> _filteredAlarms = [];
@@ -31,6 +32,7 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadError = null;
     });
 
     final tenantId = tenantService.currentTenantId;
@@ -66,7 +68,9 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
       Logger.error('Failed to load reset alarms', e);
       if (mounted) {
         setState(() {
-          _errorMessage = sl<LocalizationService>().translate('alarm.history_load_error');
+          _loadError = e;
+          _errorMessage =
+              sl<LocalizationService>().translate('alarm.history_load_error');
           _isLoading = false;
         });
       }
@@ -92,9 +96,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
     }
 
     // Sort by reset time desc
-    filtered.sort((a, b) =>
-        (b.resetTime ?? b.endTime ?? DateTime(1970))
-            .compareTo(a.resetTime ?? a.endTime ?? DateTime(1970)));
+    filtered.sort((a, b) => (b.resetTime ?? b.endTime ?? DateTime(1970))
+        .compareTo(a.resetTime ?? a.endTime ?? DateTime(1970)));
 
     _filteredAlarms = filtered;
   }
@@ -134,7 +137,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
               children: [
                 Expanded(
                   child: AppSearchBar(
-                    placeholder: sl<LocalizationService>().translate('alarm.search_placeholder'),
+                    placeholder: sl<LocalizationService>()
+                        .translate('alarm.search_placeholder'),
                     onChanged: (value) {
                       setState(() {
                         _searchQuery = value;
@@ -156,11 +160,13 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
           // Summary
           if (!_isLoading && _errorMessage == null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenHorizontal),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -168,19 +174,28 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.restart_alt, size: 16, color: AppColors.success),
+                        Icon(Icons.restart_alt,
+                            size: 16, color: AppColors.success),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          sl<LocalizationService>().translate('alarm.reset_count', params: {'count': _filteredAlarms.length}),
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success),
+                          sl<LocalizationService>().translate(
+                              'alarm.reset_count',
+                              params: {'count': _filteredAlarms.length}),
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    sl<LocalizationService>().translate('common.last_days', params: {'days': _selectedDays}),
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(brightness)),
+                    sl<LocalizationService>().translate('common.last_days',
+                        params: {'days': _selectedDays}),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(brightness)),
                   ),
                 ],
               ),
@@ -207,7 +222,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
 
     if (_errorMessage != null) {
       return Center(
-        child: AppErrorView(
+        child: AppLoadFailedView(
+          error: _loadError,
           message: _errorMessage!,
           onRetry: _loadData,
         ),
@@ -222,7 +238,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
               ? sl<LocalizationService>().translate('alarm.empty_history_title')
               : sl<LocalizationService>().translate('common.no_results_found'),
           message: _allAlarms.isEmpty
-              ? sl<LocalizationService>().translate('alarm.empty_history_message')
+              ? sl<LocalizationService>()
+                  .translate('alarm.empty_history_message')
               : sl<LocalizationService>().translate('alarm.no_search_match'),
         ),
       );
@@ -237,7 +254,8 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final alarm = _filteredAlarms[index];
-        final priority = alarm.priorityId != null ? _priorityMap[alarm.priorityId!] : null;
+        final priority =
+            alarm.priorityId != null ? _priorityMap[alarm.priorityId!] : null;
         final priorityColor = _getPriorityColor(alarm);
 
         return _ResetAlarmCard(
@@ -267,14 +285,16 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(sl<LocalizationService>().translate('alarm.priority_level'), style: AppTypography.subheadline),
+              Text(sl<LocalizationService>().translate('alarm.priority_level'),
+                  style: AppTypography.subheadline),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
                   FilterChip(
-                    label: Text(sl<LocalizationService>().translate('common.all_ascii')),
+                    label: Text(sl<LocalizationService>()
+                        .translate('common.all_ascii')),
                     selected: _selectedPriorityId == null,
                     onSelected: (_) {
                       setState(() {
@@ -284,17 +304,19 @@ class _AlarmHistoryScreenState extends State<AlarmHistoryScreen> {
                       Navigator.pop(context);
                     },
                   ),
-                  ...PriorityCatalog.distinctSorted(_priorityMap.values).map((p) => FilterChip(
-                    label: Text(p.localizedLabel(sl<LocalizationService>().translate)),
-                    selected: _selectedPriorityId == p.id,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedPriorityId = p.id;
-                        _applyFilters();
-                      });
-                      Navigator.pop(context);
-                    },
-                  )),
+                  ...PriorityCatalog.distinctSorted(_priorityMap.values)
+                      .map((p) => FilterChip(
+                            label: Text(p.localizedLabel(
+                                sl<LocalizationService>().translate)),
+                            selected: _selectedPriorityId == p.id,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedPriorityId = p.id;
+                                _applyFilters();
+                              });
+                              Navigator.pop(context);
+                            },
+                          )),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -347,21 +369,31 @@ class _ResetAlarmCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          alarm.name ?? alarm.code ?? sl<LocalizationService>().translate('alarm.default_name'),
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary(brightness)),
+                          alarm.name ??
+                              alarm.code ??
+                              sl<LocalizationService>()
+                                  .translate('alarm.default_name'),
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary(brightness)),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: priorityColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           alarm.durationFormatted,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: priorityColor),
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: priorityColor),
                         ),
                       ),
                     ],
@@ -371,41 +403,63 @@ class _ResetAlarmCard extends StatelessWidget {
                     children: [
                       if (alarm.code != null) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.segmentedBackground(context),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(alarm.code!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary(brightness))),
+                          child: Text(alarm.code!,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary(brightness))),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                       ],
                       if (priority != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: priorityColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(priority!.localizedLabel(sl<LocalizationService>().translate), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: priorityColor)),
+                          child: Text(
+                              priority!.localizedLabel(
+                                  sl<LocalizationService>().translate),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: priorityColor)),
                         ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
-                      Icon(Icons.play_arrow, size: 14, color: AppColors.textSecondary(brightness)),
+                      Icon(Icons.play_arrow,
+                          size: 14, color: AppColors.textSecondary(brightness)),
                       const SizedBox(width: 2),
                       Text(
-                        alarm.startTime != null ? _formatDateTime(alarm.startTime!) : '-',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary(brightness)),
+                        alarm.startTime != null
+                            ? _formatDateTime(alarm.startTime!)
+                            : '-',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary(brightness)),
                       ),
                       const SizedBox(width: AppSpacing.md),
-                      Icon(Icons.restart_alt, size: 14, color: AppColors.success),
+                      Icon(Icons.restart_alt,
+                          size: 14, color: AppColors.success),
                       const SizedBox(width: 2),
                       Text(
-                        alarm.resetTime != null ? _formatDateTime(alarm.resetTime!) : '-',
-                        style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500),
+                        alarm.resetTime != null
+                            ? _formatDateTime(alarm.resetTime!)
+                            : '-',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),

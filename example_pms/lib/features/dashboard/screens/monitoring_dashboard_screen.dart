@@ -8,7 +8,8 @@ class MonitoringDashboardScreen extends StatefulWidget {
   const MonitoringDashboardScreen({super.key});
 
   @override
-  State<MonitoringDashboardScreen> createState() => _MonitoringDashboardScreenState();
+  State<MonitoringDashboardScreen> createState() =>
+      _MonitoringDashboardScreenState();
 }
 
 class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
@@ -31,7 +32,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
   List<Priority> _priorities = [];
 
   // Site stats
-  int _siteCount = 0;
+  /// null = the site read failed (KPI shows '—', not 0).
+  int? _siteCount = 0;
 
   @override
   void initState() {
@@ -57,12 +59,13 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
     }
 
     // Load sites count
-    int siteCount = 0;
+    int? siteCount = 0;
     if (orgId != null) {
       try {
         final sites = await siteService.getSites(orgId);
         siteCount = sites.length;
       } catch (e) {
+        siteCount = null;
         Logger.error('Failed to load sites', e);
       }
     }
@@ -118,9 +121,14 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
         _siteCount = siteCount;
         _totalControllers = controllers.length;
         _totalProviders = providers.length;
-        _activeProviders = providers.where((p) => p.status == DataProviderStatus.active).length;
-        _inactiveProviders = providers.where((p) => p.status == DataProviderStatus.inactive).length;
-        _errorProviders = providers.where((p) => p.status == DataProviderStatus.error).length;
+        _activeProviders = providers
+            .where((p) => p.status == DataProviderStatus.active)
+            .length;
+        _inactiveProviders = providers
+            .where((p) => p.status == DataProviderStatus.inactive)
+            .length;
+        _errorProviders =
+            providers.where((p) => p.status == DataProviderStatus.error).length;
         _activeAlarmCount = activeAlarms.length;
         _alarmCountByPriority = alarmCountByPriority;
         _recentAlarms = activeAlarms.take(5).toList();
@@ -157,15 +165,18 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Genel Bakis: Siteler, Controllerlar, Providerlar
               AppSectionHeader(
-                  title:
-                      sl<LocalizationService>().translate('dashboard.overview')),
+                  title: sl<LocalizationService>()
+                      .translate('dashboard.overview')),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
                     child: MetricCard(
-                      title: sl<LocalizationService>().translate('dashboard.sites'),
-                      value: _isLoading ? '-' : '$_siteCount',
+                      title: sl<LocalizationService>()
+                          .translate('dashboard.sites'),
+                      value: _isLoading
+                          ? '-'
+                          : (_siteCount == null ? '—' : '$_siteCount'),
                       icon: Icons.location_city,
                       color: AppColors.primary,
                       onTap: () {
@@ -177,8 +188,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title:
-                          sl<LocalizationService>().translate('dashboard.controllers'),
+                      title: sl<LocalizationService>()
+                          .translate('dashboard.controllers'),
                       value: _isLoading ? '-' : '$_totalControllers',
                       icon: Icons.developer_board,
                       color: Colors.blue,
@@ -188,8 +199,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title:
-                          sl<LocalizationService>().translate('dashboard.providers'),
+                      title: sl<LocalizationService>()
+                          .translate('dashboard.providers'),
                       value: _isLoading ? '-' : '$_totalProviders',
                       icon: Icons.storage,
                       color: Colors.green,
@@ -203,8 +214,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Provider Durumu
               AppSectionHeader(
-                title:
-                    sl<LocalizationService>().translate('dashboard.provider_status'),
+                title: sl<LocalizationService>()
+                    .translate('dashboard.provider_status'),
                 action: _isLoading
                     ? const SizedBox(
                         width: 20,
@@ -218,7 +229,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                 children: [
                   Expanded(
                     child: MetricCard(
-                      title: sl<LocalizationService>().translate('common.active'),
+                      title:
+                          sl<LocalizationService>().translate('common.active'),
                       value: _isLoading ? '-' : '$_activeProviders',
                       icon: Icons.check_circle,
                       color: AppColors.success,
@@ -228,7 +240,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: sl<LocalizationService>().translate('common.inactive'),
+                      title: sl<LocalizationService>()
+                          .translate('common.inactive'),
                       value: _isLoading ? '-' : '$_inactiveProviders',
                       icon: Icons.pause_circle,
                       color: AppColors.warning,
@@ -238,7 +251,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricCard(
-                      title: sl<LocalizationService>().translate('common.error'),
+                      title:
+                          sl<LocalizationService>().translate('common.error'),
                       value: _isLoading ? '-' : '$_errorProviders',
                       icon: Icons.error,
                       color: AppColors.error,
@@ -252,13 +266,13 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Alarm Durumu
               AppSectionHeader(
-                  title:
-                      sl<LocalizationService>().translate('dashboard.alarm_status')),
+                  title: sl<LocalizationService>()
+                      .translate('dashboard.alarm_status')),
               const SizedBox(height: AppSpacing.sm),
               // Aktif alarm kart
               MetricCard(
-                title:
-                    sl<LocalizationService>().translate('dashboard.active_alarm'),
+                title: sl<LocalizationService>()
+                    .translate('dashboard.active_alarm'),
                 value: _isLoading ? '-' : '$_activeAlarmCount',
                 icon: Icons.warning_amber_rounded,
                 color: AppColors.error,
@@ -279,8 +293,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Son Alarmlar
               AppSectionHeader(
-                title:
-                    sl<LocalizationService>().translate('dashboard.recent_alarms'),
+                title: sl<LocalizationService>()
+                    .translate('dashboard.recent_alarms'),
                 action: TextButton(
                   onPressed: () => context.push('/alarms/active'),
                   child: Text(
@@ -298,8 +312,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
 
               // Hizli Erisim
               AppSectionHeader(
-                  title:
-                      sl<LocalizationService>().translate('dashboard.quick_access')),
+                  title: sl<LocalizationService>()
+                      .translate('dashboard.quick_access')),
               const SizedBox(height: AppSpacing.sm),
               _buildQuickNavigation(),
 
@@ -386,7 +400,10 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
       children: _priorities.map((priority) {
         final count = _alarmCountByPriority[priority.id] ?? 0;
         return SizedBox(
-          width: (MediaQuery.of(context).size.width - AppSpacing.screenHorizontal * 2 - AppSpacing.sm) / 2,
+          width: (MediaQuery.of(context).size.width -
+                  AppSpacing.screenHorizontal * 2 -
+                  AppSpacing.sm) /
+              2,
           child: AppCard(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
@@ -406,7 +423,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          priority.localizedLabel(sl<LocalizationService>().translate),
+                          priority.localizedLabel(
+                              sl<LocalizationService>().translate),
                           style: AppTypography.caption1.copyWith(
                             color: AppColors.secondaryLabel(context),
                           ),
@@ -415,7 +433,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                         Text(
                           '$count',
                           style: AppTypography.title3.copyWith(
-                            color: count > 0 ? priority.displayColor : AppColors.secondaryLabel(context),
+                            color: count > 0
+                                ? priority.displayColor
+                                : AppColors.secondaryLabel(context),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -462,7 +482,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
             ),
             TextButton(
               onPressed: () => context.go('/organizations'),
-              child: Text(sl<LocalizationService>().translate('dashboard.change')),
+              child:
+                  Text(sl<LocalizationService>().translate('dashboard.change')),
             ),
           ],
         ),
@@ -517,9 +538,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
       child: Column(
         children: List.generate(_recentAlarms.length, (index) {
           final alarm = _recentAlarms[index];
-          final priority = alarm.priorityId != null
-              ? _priorityMap[alarm.priorityId!]
-              : null;
+          final priority =
+              alarm.priorityId != null ? _priorityMap[alarm.priorityId!] : null;
           final priorityColor = priority?.displayColor ?? AppColors.systemGray;
 
           return Column(
@@ -538,7 +558,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
                 title: alarm.name ??
                     alarm.code ??
                     sl<LocalizationService>().translate('common.alarm'),
-                subtitle: priority?.localizedLabel(sl<LocalizationService>().translate) ??
+                subtitle: priority
+                        ?.localizedLabel(sl<LocalizationService>().translate) ??
                     alarm.durationFormatted,
                 trailing: Text(
                   alarm.durationFormatted,
@@ -570,7 +591,8 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
           _QuickNavItem(
             icon: Icons.developer_board,
             color: Colors.blue,
-            title: sl<LocalizationService>().translate('dashboard.nav_controllers'),
+            title: sl<LocalizationService>()
+                .translate('dashboard.nav_controllers'),
             subtitle: _isLoading
                 ? '...'
                 : sl<LocalizationService>().translate(
@@ -583,15 +605,16 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
             icon: Icons.data_object,
             color: Colors.orange,
             title: sl<LocalizationService>().translate('dashboard.variables'),
-            subtitle:
-                sl<LocalizationService>().translate('dashboard.variables_subtitle'),
+            subtitle: sl<LocalizationService>()
+                .translate('dashboard.variables_subtitle'),
             onTap: () => context.push('/variables'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.warning_amber_rounded,
             color: Colors.red,
-            title: sl<LocalizationService>().translate('dashboard.alarm_management'),
+            title: sl<LocalizationService>()
+                .translate('dashboard.alarm_management'),
             subtitle: sl<LocalizationService>()
                 .translate('dashboard.alarm_management_subtitle'),
             onTap: () => context.push('/alarms'),
@@ -601,15 +624,16 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen> {
             icon: Icons.article_outlined,
             color: Colors.teal,
             title: sl<LocalizationService>().translate('dashboard.log_view'),
-            subtitle:
-                sl<LocalizationService>().translate('dashboard.log_view_subtitle'),
+            subtitle: sl<LocalizationService>()
+                .translate('dashboard.log_view_subtitle'),
             onTap: () => context.push('/logs'),
           ),
           Divider(height: 1, color: AppColors.separator(context)),
           _QuickNavItem(
             icon: Icons.storage,
             color: Colors.green,
-            title: sl<LocalizationService>().translate('dashboard.data_providers'),
+            title:
+                sl<LocalizationService>().translate('dashboard.data_providers'),
             subtitle: _isLoading
                 ? '...'
                 : sl<LocalizationService>().translate(

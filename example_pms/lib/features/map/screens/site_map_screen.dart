@@ -20,6 +20,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
   List<GeofenceRegion> _geofences = [];
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
   LatLng? _userLocation;
   bool _isTracking = false;
   final _mapController = AppMapController();
@@ -35,6 +36,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadError = null;
     });
 
     try {
@@ -95,6 +97,7 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
     } catch (e) {
       Logger.error('Failed to load map markers', e);
       setState(() {
+        _loadError = e;
         _error = sl<LocalizationService>().translate('map.load_failed');
         _isLoading = false;
       });
@@ -185,11 +188,10 @@ class _SiteMapScreenState extends State<SiteMapScreen> {
     }
 
     if (_error != null) {
-      return AppErrorView(
-        title: sl<LocalizationService>().translate('common.error'),
+      return AppLoadFailedView(
+        error: _loadError,
         message: _error!,
-        actionLabel: sl<LocalizationService>().translate('common.retry'),
-        onAction: _loadMarkers,
+        onRetry: _loadMarkers,
       );
     }
 

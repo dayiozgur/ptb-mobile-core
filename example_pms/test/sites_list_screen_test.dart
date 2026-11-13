@@ -104,4 +104,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Kadıköy Mağaza'), findsOneWidget);
   });
+
+  testWidgets('okuma reddedildi (42501) → erişim yok, tekrar dene yok',
+      (tester) async {
+    // Same classification as a 42501 / 403 refusal (AccessErrors.isDenied).
+    when(() => sites.getSites('o1')).thenThrow(const AuthorizationException());
+    await tester.pumpWidget(wrap(const SitesListScreen()));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppNoAccessView), findsOneWidget);
+    expect(find.text('common.retry'), findsNothing);
+    expect(find.text('site.not_found_title'), findsNothing);
+  });
 }

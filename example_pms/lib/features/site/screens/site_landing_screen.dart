@@ -107,6 +107,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
       final pMap = PriorityCatalog(priorities).resolvedMap();
 
       // Load IoT data + KPI data in parallel
+      _sectionErrors.clear();
       final results = await Future.wait([
         _loadProviders(),
         _loadControllers(),
@@ -114,7 +115,7 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
         _loadResetAlarms(),
         alarmService.getAlarmTimeline(siteId: widget.siteId, days: 30),
         alarmService.getMttrStats(siteId: widget.siteId),
-        alarmService.getTopAlarms(siteId: widget.siteId),
+        _section('top', () => alarmService.getTopAlarms(siteId: widget.siteId)),
         alarmService.getAlarmHeatmap(siteId: widget.siteId),
       ]);
 
@@ -153,23 +154,36 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
     }
   }
 
-  Future<List<DataProvider>> _loadProviders() async {
+
+  /// Sections whose read failed (key → error). A failed section shows a
+  /// retry / no-access state, never its empty state.
+  final Map<String, Object> _sectionErrors = {};
+
+  Future<List<T>> _section<T>(String key, Future<List<T>> Function() load) async {
     try {
-      final allProviders = await dataProviderService.getAll();
-      return allProviders.where((p) => p.siteId == widget.siteId).toList();
-    } catch (_) {
-      return [];
+      return await load();
+    } catch (e) {
+      Logger.error('Failed to load $key', e);
+      _sectionErrors[key] = e;
+      return <T>[];
     }
   }
 
-  Future<List<Controller>> _loadControllers() async {
-    try {
-      final allControllers = await controllerService.getAll();
-      return allControllers.where((c) => c.siteId == widget.siteId).toList();
-    } catch (_) {
-      return [];
-    }
-  }
+  Widget _sectionFailed(String key, String messageKey) => AppLoadFailedView(
+        error: _sectionErrors[key],
+        message: sl<LocalizationService>().translate(messageKey),
+        onRetry: _loadData,
+      );
+
+  Future<List<DataProvider>> _loadProviders() => _section('providers', () async {
+        final allProviders = await dataProviderService.getAll();
+        return allProviders.where((p) => p.siteId == widget.siteId).toList();
+      });
+
+  Future<List<Controller>> _loadControllers() => _section('controllers', () async {
+        final allControllers = await controllerService.getAll();
+        return allControllers.where((c) => c.siteId == widget.siteId).toList();
+      });
 
   /// Aktif alarmlar; okuma başarısızsa null (boş liste DEĞİL).
   Future<List<Alarm>?> _loadActiveAlarms() async {
@@ -189,18 +203,14 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
     }
   }
 
-  Future<List<AlarmHistory>> _loadResetAlarms() async {
-    try {
-      return await alarmService.getHistory(
-        siteId: widget.siteId,
-        limit: 100,
-        forceRefresh: true,
-        includeVariable: true,
-      );
-    } catch (_) {
-      return [];
-    }
-  }
+  Future<List<AlarmHistory>> _loadResetAlarms() => _section(
+      'history',
+      () => alarmService.getHistory(
+            siteId: widget.siteId,
+            limit: 100,
+            forceRefresh: true,
+            includeVariable: true,
+          ));
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +391,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
             ChartContainer(
               title: sl<LocalizationService>().translate('site.top_recurring_alarms'),
               subtitle: sl<LocalizationService>().translate('site.last_30_days_top10'),
+              errorMessage: _sectionErrors.containsKey('top')
+                  ? sl<LocalizationService>().translate('common.load_error')
+                  : null,
               isEmpty: _topAlarms.isEmpty,
               emptyMessage: sl<LocalizationService>().translate('site.no_alarm_data'),
               child: AlarmTopOffendersCard(
@@ -511,7 +524,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           child: _StatCard(
             icon: Icons.storage,
             label: sl<LocalizationService>().translate('provider.singular'),
-            value: '$_activeProviderCount/${_providers.length}',
+            value: _sectionErrors.containsKey('providers')
+                ? '—'
+                : '$_activeProviderCount/${_providers.length}',
             color: AppColors.success,
             onTap: () => _tabController.animateTo(1),
           ),
@@ -521,7 +536,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
           child: _StatCard(
             icon: Icons.developer_board,
             label: sl<LocalizationService>().translate('controller.singular'),
-            value: '$_activeControllerCount/${_controllers.length}',
+            value: _sectionErrors.containsKey('controllers')
+                ? '—'
+                : '$_activeControllerCount/${_controllers.length}',
             color: AppColors.info,
             onTap: () => _tabController.animateTo(3),
           ),
@@ -575,6 +592,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   // Providers Tab
   Widget _buildProvidersTab() {
+    if (_sectionErrors.containsKey('providers')) {
+      return _sectionFailed('providers', 'provider.load_failed');
+    }
     if (_providers.isEmpty) {
       return Center(
         child: AppEmptyState(
@@ -702,6 +722,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
   }
 
   Widget _buildAlarmHistoryContent() {
+    if (_sectionErrors.containsKey('history')) {
+      return _sectionFailed('history', 'alarm.history_load_error');
+    }
     if (_resetAlarms.isEmpty) {
       return Center(
         child: AppEmptyState(
@@ -732,6 +755,9 @@ class _SiteLandingScreenState extends State<SiteLandingScreen>
 
   // Controllers Tab
   Widget _buildControllersTab() {
+    if (_sectionErrors.containsKey('controllers')) {
+      return _sectionFailed('controllers', 'controller.list_load_failed');
+    }
     if (_controllers.isEmpty) {
       return Center(
         child: AppEmptyState(

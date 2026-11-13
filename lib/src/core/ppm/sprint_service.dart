@@ -25,6 +25,7 @@ SprintState _stateFromDb(Object? v) {
 /// yalnız yönetim ekranının ihtiyaç duyduğu alanlar.
 class Sprint {
   final String id;
+
   /// Sahip proje (form_submissions id). Jira-style: sprint tam 1 projeye ait.
   final String projectId;
   final String name;
@@ -71,14 +72,16 @@ class SprintService {
   SprintService({required SupabaseClient supabase}) : _supabase = supabase;
 
   /// Bir projenin sprint'lerini `sort_order`'a göre listeler (RLS + proje scope).
-  /// Jira-style: sprint tam 1 projeye ait, o yüzden [projectId] zorunlu. Hata → [].
+  /// Jira-style: sprint tam 1 projeye ait, o yüzden [projectId] zorunlu. A failed
+  /// read is rethrown (the screen says "could not load", not "no sprints").
   Future<List<Sprint>> listSprints(String projectId) async {
     final pid = projectId.trim();
     if (pid.isEmpty) return const [];
     try {
       final rows = await _supabase
           .from('sprints')
-          .select('id, project_id, name, goal, start_date, end_date, state, entity_type, sort_order')
+          .select(
+              'id, project_id, name, goal, start_date, end_date, state, entity_type, sort_order')
           .eq('project_id', pid)
           .order('sort_order', ascending: true);
       return (rows as List)
@@ -86,7 +89,7 @@ class SprintService {
           .toList();
     } catch (e) {
       Logger.error('listSprints hata', e);
-      return const [];
+      rethrow;
     }
   }
 
@@ -141,15 +144,14 @@ class SprintService {
               .eq('active', true),
           pid,
         );
-        finalCodes = (defs as List)
-            .map((d) => (d as Map)['code'] as String)
-            .toList();
+        finalCodes =
+            (defs as List).map((d) => (d as Map)['code'] as String).toList();
       }
 
-      var q = _supabase
-          .from('form_submissions')
-          .update({'sprint_id': null, 'updated_by': _supabase.auth.currentUser?.id})
-          .eq('sprint_id', sid);
+      var q = _supabase.from('form_submissions').update({
+        'sprint_id': null,
+        'updated_by': _supabase.auth.currentUser?.id
+      }).eq('sprint_id', sid);
       if (finalCodes.isNotEmpty) {
         q = q.not('status', 'in', '(${finalCodes.join(',')})');
       }

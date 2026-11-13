@@ -24,6 +24,7 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
   bool _loading = false;
   bool _loadingProjects = true;
   List<Sprint> _sprints = const [];
+  Object? _error;
   List<AppDropdownItem<String>> _projectItems = const [];
   String? _projectId;
   String? _busyId;
@@ -77,8 +78,21 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
   Future<void> _load() async {
     final pid = _projectId;
     if (pid == null) return;
-    setState(() => _loading = true);
-    final s = await _svc.listSprints(pid);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final List<Sprint> s;
+    try {
+      s = await _svc.listSprints(pid);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
+      return;
+    }
     if (!mounted) return;
     // active → future → closed sırası (yönetimde en alakalı en üstte).
     int rank(SprintState st) => switch (st) {
@@ -158,7 +172,8 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
             padding: const EdgeInsets.all(AppSpacing.sm),
             child: AppDropdown<String>(
               label: ppmT('ppm.sprint.project', 'Proje'),
-              placeholder: ppmT('ppm.sprint.select_project', 'Bir proje seçin…'),
+              placeholder:
+                  ppmT('ppm.sprint.select_project', 'Bir proje seçin…'),
               prefixIcon: Icons.folder_outlined,
               items: _projectItems,
               value: _projectId,
@@ -184,6 +199,16 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
                   'Sprint\'leri görüntülemek için bir proje seçin.'))),
         )
       ]);
+    }
+    if (_error != null) {
+      return RefreshIndicator(
+        onRefresh: _load,
+        child: AppLoadFailedView(
+          error: _error,
+          message: ppmT('ppm.sprint.load_failed', 'Sprintler yüklenemedi.'),
+          onRetry: _load,
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -216,7 +241,9 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
         leading: _stateChip(s.state),
         trailing: busy
             ? const SizedBox(
-                width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : _actionFor(s),
       ),
     );
@@ -224,13 +251,23 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
 
   Widget _stateChip(SprintState st) {
     final (label, color) = switch (st) {
-      SprintState.active => (ppmT('ppm.sprint.state_active', 'Aktif'), Colors.green),
-      SprintState.future => (ppmT('ppm.sprint.state_future', 'Planlı'), Colors.blueGrey),
-      SprintState.closed => (ppmT('ppm.sprint.state_closed', 'Kapalı'), Colors.grey),
+      SprintState.active => (
+          ppmT('ppm.sprint.state_active', 'Aktif'),
+          Colors.green
+        ),
+      SprintState.future => (
+          ppmT('ppm.sprint.state_future', 'Planlı'),
+          Colors.blueGrey
+        ),
+      SprintState.closed => (
+          ppmT('ppm.sprint.state_closed', 'Kapalı'),
+          Colors.grey
+        ),
       SprintState.unknown => ('—', Colors.grey),
     };
     return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 11, color: Colors.white)),
+      label: Text(label,
+          style: const TextStyle(fontSize: 11, color: Colors.white)),
       backgroundColor: color,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

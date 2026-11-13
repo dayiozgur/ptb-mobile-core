@@ -36,7 +36,8 @@ class OrganizationService {
 
   // Stream controllers
   final _organizationController = StreamController<Organization?>.broadcast();
-  final _organizationsController = StreamController<List<Organization>>.broadcast();
+  final _organizationsController =
+      StreamController<List<Organization>>.broadcast();
 
   // Cache keys
   static const String _currentOrgKey = 'current_organization_id';
@@ -70,10 +71,12 @@ class OrganizationService {
   bool get hasOrganization => _currentOrganization != null;
 
   /// Organizasyon değişiklik stream'i
-  Stream<Organization?> get organizationStream => _organizationController.stream;
+  Stream<Organization?> get organizationStream =>
+      _organizationController.stream;
 
   /// Organizasyon listesi değişiklik stream'i
-  Stream<List<Organization>> get organizationsStream => _organizationsController.stream;
+  Stream<List<Organization>> get organizationsStream =>
+      _organizationsController.stream;
 
   // ============================================
   // READ OPERATIONS
@@ -100,10 +103,7 @@ class OrganizationService {
       }
 
       // Supabase'den getir
-      var query = _supabase
-          .from(_tableName)
-          .select()
-          .eq('tenant_id', tenantId);
+      var query = _supabase.from(_tableName).select().eq('tenant_id', tenantId);
 
       if (activeOnly) {
         // organizations.active NULLABLE + default'suz: `.eq('active', true)`
@@ -132,8 +132,9 @@ class OrganizationService {
       Logger.debug('Loaded ${organizations.length} organizations for tenant');
       return organizations;
     } catch (e) {
+      // Rethrown: callers show "could not load", never "no records".
       Logger.error('Failed to get organizations', e);
-      return [];
+      rethrow;
     }
   }
 
@@ -292,11 +293,8 @@ class OrganizationService {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final response = await _supabase
-          .from(_tableName)
-          .insert(data)
-          .select()
-          .single();
+      final response =
+          await _supabase.from(_tableName).insert(data).select().single();
 
       final organization = Organization.fromJson(response);
 
@@ -389,13 +387,10 @@ class OrganizationService {
       final org = await getOrganization(organizationId);
       if (org == null) return false;
 
-      await _supabase
-          .from(_tableName)
-          .update({
-            'active': false,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', organizationId);
+      await _supabase.from(_tableName).update({
+        'active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', organizationId);
 
       // Cache'leri temizle
       await _cacheManager.delete('organization_$organizationId');
