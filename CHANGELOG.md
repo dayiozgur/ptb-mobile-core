@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Proposed version: **`protoolbag_core` 1.4.0** (minor: new public API; two
+source-incompatible signatures are listed under *Changed*). The six apps stay
+at marketing version `1.0.0`; their build number is raised per store upload
+(`./scripts/build-testflight.sh <app> <issuer> <build>` /
+`./scripts/build-release-android.sh <app> <build>`). Nothing below has been
+released; `pubspec.yaml` versions are unchanged until the owner cuts the
+release.
+
+### Security
+- **Self-service password change verifies the current password (CRA F-108).**
+  `AuthService.changePasswordVerified` checks the current password with a
+  throwaway, stateless GoTrue password-grant call (nothing persisted, no auth
+  events, the throwaway session is revoked with `logout?scope=local`), then
+  calls `updateUser(password, current_password)` on the main client. Wrong
+  password, rate limit and network failures are distinct outcomes. Used by the
+  Security screen, the Settings screen (all six apps) and the demo app;
+  `changePassword` (unverified) is deprecated, `updatePassword` remains for
+  invite / recovery links only.
+- **Accounts with an authenticator (TOTP).** GoTrue refuses a password change
+  from an AAL1 session when MFA is enabled (`insufficient_aal`). The sheet now
+  asks for the 6-digit code and repeats the change after confirming it on the
+  main session (`mfaCode`); a wrong code is shown on the code field and nothing
+  is changed. "Secure password change" (`reauthentication_needed`) shows the
+  same "sign out and sign in again" text as the web app instead of a generic
+  failure.
+- **Microsoft disconnect goes through the `integration-disconnect` Edge
+  Function** (Graph subscriptions, Vault secret, audit row) instead of a direct
+  row delete (F-138).
+- **Special-category staff columns are no longer selected from `staffs`**
+  (`address`; KVKK md.6, S-06) — the queries failed with 42501 after the column
+  grant was revoked. A scan test guards every `staffs` select.
+
+### Added
+- `GraphProblem` / `GraphProblemKind`: classified Microsoft Graph failures (not
+  connected, reconnect, missing consent, administrator approval required,
+  forbidden, throttled with retry-after, not found, conflict, blocked,
+  unavailable, failed) and `MsProblemView`, the honest state shown instead of an
+  empty list on mail, files, calendar, people, Teams and Planner.
+- `OAuthReturnNotice` / `MicrosoftOAuthReturn`: the connect flow's
+  `oauth_error` / `admin_consent` deep-link results, one translated message per
+  value.
+- `AccessErrors`, `AppNoAccessView`, `AppLoadFailedView`: "no access" (42501 /
+  403) is a calm state, a failed load is never the empty state. `AsyncView`
+  uses them.
+- `InAppRoute.webOrigin` / `webUrlFor` and the web-only wording of
+  `ComingSoonScreen` with **Open on the web**; `ScreenResolver.canOpen`,
+  `isWebOnly`, `webOnlyScreen`.
+- `WorkflowService.pendingApprovalsOrThrow`, `WorkInboxService.loadOrThrow`,
+  `MicrosoftIntegrationService.lookupConnection`.
+
+### Changed
+- **Source-incompatible:** `MicrosoftIntegrationService.graphCall` returns a
+  non-null `GraphResult` (a failure carries `problem`; it used to return
+  `null`). `PlannerLinkService.listPlans` returns `PlannerPlansResult`.
+- `HrEssService.myGoals` / `myReviews` rethrow read errors (their screens show
+  "could not load" instead of "no goals / no reviews").
+- `/report/my` is the personal report builder, not a report code; `/m365/mail`
+  opens the core mailbox by link but is not a mobile menu entry; the PEM setup
+  wizard is hidden on mobile.
+- Approvals inbox, placeholder screen and the error view's retry label use
+  keywords instead of hardcoded Turkish text.
+
+### Fixed
+- Approvals inbox and work inbox showed "nothing pending" / "no assigned work"
+  when the load failed.
+- PMS Site and provider screens showed a green "0 active alarms" when the alarm
+  read failed.
+- PEM alarm priorities and unit types with `active IS NULL` were hidden.
+- An https app link to a page without a mobile screen was a silent no-op.
+
+### Keywords
+18 new keys (tr / en / de / it) are proposed in
+`docs/proposed-sql/20261113_mobile_store_prep_keywords.sql` — not applied; the
+apps fall back to the built-in texts until then.
+
 ### Planned for Phase 3
 - Controller/Provider/Variable models (IoT layer)
 - Workflow management system
