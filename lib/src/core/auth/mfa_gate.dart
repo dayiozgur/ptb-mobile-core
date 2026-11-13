@@ -1,119 +1,220 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Factor, FactorType, FactorStatus;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show FactorType, FactorStatus;
 
 import '../di/service_locator.dart';
+import '../permission/permission_service.dart' show CoarseRoles;
 import '../utils/logger.dart';
+import 'mfa_requirement.dart';
 
-/// Step-up durumu — router redirect'in (senkron) danışacağı tek gerçek kaynak.
-///  - [none]           : engelleme yok (izin ver).
-///  - [challenge]      : verified TOTP faktörü var → 6-hane kod doğrulaması iste.
-///  - [emailChallenge] : etkin e-posta 2FA faktörü var (TOTP yok) → e-posta ile
-///    kod gönderilir → 6-hane kod doğrulaması iste.
-///  - [enroll]         : politika MFA istiyor ama hiç faktör yok → kayıt iste
-///    (TOTP-QR veya e-posta).
-enum MfaStepUp { none, challenge, emailChallenge, enroll }
+/// Step-up state — the single source the (synchronous) router redirect reads.
+///  - [none]           : nothing to do (let the user in).
+///  - [challenge]      : a verified authenticator (TOTP) factor exists → ask
+///    for its 6-digit code.
+///  - [emailChallenge] : no authenticator, but a mailed code is possible (an
+///    active e-mail factor, or e-mail is an allowed factor) → mail a code and
+///    ask for it.
+///  - [enroll]         : a second factor is required and none is set up →
+///    enrolment (authenticator QR or mailed code).
+///  - [unavailable]    : the requirement could not be read for a user who is
+///    (or appears to be) an administrator → retry / sign-out state. Never a
+///    silent pass.
+enum MfaStepUp { none, challenge, emailChallenge, enroll, unavailable }
 
-/// MFA politika zorlaması için SENKRON-okunabilir kapı (web `mfa-stepup.guard`
-/// mobil karşılığı). go_router `redirect` senkron olduğundan, asenkron
-/// değerlendirme login/cold-start sırasında BİR KEZ yapılır ([evaluate]) ve
-/// sonucu burada saklanır; redirect yalnız bu senkron durumu okur.
+/// The operations [MfaGate] needs. Production delegates to [AuthService];
+/// tests pass a fake.
+abstract class MfaGateBackend {
+  /// `fn_my_mfa_requirement()`. Must THROW when it cannot be read.
+  Future<MfaRequirement> myRequirement();
+
+  /// 'aal1' | 'aal2' | null (unknown).
+  Future<String?> currentAal();
+
+  /// Has this session already passed the mailed-code factor?
+  Future<bool> emailSatisfied();
+
+  /// Id of a verified authenticator (TOTP) factor, or null.
+  Future<String?> verifiedTotpFactorId();
+
+  /// Does the user have an active, verified e-mail factor?
+  Future<bool> emailFactorEnabled();
+}
+
+class _AuthServiceMfaBackend implements MfaGateBackend {
+  const _AuthServiceMfaBackend();
+
+  @override
+  Future<MfaRequirement> myRequirement() => authService.getMyMfaRequirement();
+
+  @override
+  Future<String?> currentAal() => authService.getCurrentAal();
+
+  @override
+  Future<bool> emailSatisfied() => authService.isEmailMfaSatisfied();
+
+  @override
+  Future<String?> verifiedTotpFactorId() async {
+    final factors = await authService.listMfaFactors();
+    for (final f in factors) {
+      if (f.status == FactorStatus.verified &&
+          f.factorType == FactorType.totp) {
+        return f.id;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<bool> emailFactorEnabled() => authService.emailFactorEnabled();
+}
+
+/// Synchronously readable second-factor gate — the mobile counterpart of the
+/// web `mfa-stepup.guard`. go_router's `redirect` is synchronous, so the async
+/// evaluation runs once at sign-in / cold start ([evaluate]) and the result is
+/// kept here; the redirect only reads [state].
 ///
-/// FAIL-OPEN ZORUNLU SÖZLEŞME (web guard ile birebir): kapı YALNIZCA
-/// POZİTİF olarak (politika rol için MFA istiyor) VE (oturum AÇIKÇA 'aal1')
-/// doğrulandığında engeller. Eksik oturum/profil/politika, off/optional,
-/// bilinmeyen/aal2, timeout veya HERHANGİ bir hata → izin ver ([none]).
-/// Bir arama tökezlemesi kullanıcıyı ASLA kilitlememelidir.
+/// Source of truth: `fn_my_mfa_requirement()` (same as the web). Platform
+/// operators and active `admin` / `super_admin` holders ALWAYS need a second
+/// factor; a tenant `mfa_policy` can widen it to every member.
+///
+///   not required                          → none
+///   required, no verified factor          → enroll
+///   required, session aal2                → none
+///   required, mailed code already passed  → none
+///   required, otherwise                   → challenge / emailChallenge
+///
+/// Failure direction (identical to the web guard):
+///  - administrators (the requirement says privileged, or — when the lookup
+///    itself failed — the locally loaded coarse role is `ROLE_ADMIN`) fail
+///    CLOSED: [MfaStepUp.unavailable], a retry / sign-out state;
+///  - everyone else fails OPEN: a lookup hiccup never locks out a normal user.
 class MfaGate {
   MfaGate._();
   static final MfaGate instance = MfaGate._();
 
-  /// Güncel step-up kararı (varsayılan: engelleme yok).
+  /// Upper bound for each network lookup during the evaluation, so a stalled
+  /// request can never hang sign-in or cold start.
+  static const Duration lookupTimeout = Duration(seconds: 8);
+
+  /// Backend used by [evaluate] when none is passed (tests override it).
+  @visibleForTesting
+  MfaGateBackend backend = const _AuthServiceMfaBackend();
+
+  /// Current step-up decision (default: nothing to do).
   MfaStepUp state = MfaStepUp.none;
 
-  /// [MfaStepUp.challenge] durumunda doğrulanacak verified TOTP faktör id'si.
+  /// Verified authenticator factor to challenge in [MfaStepUp.challenge].
   String? challengeFactorId;
 
-  /// Tenant politikası e-posta 2FA'ya izin veriyor mu? Enroll ekranı buna göre
-  /// "E-posta ile kod" seçeneğini gösterir. Politika `allowed_factors` belirtmezse
-  /// (null) izin verilmiş sayılır; aksi halde listede 'email' olmalıdır.
+  /// Does the requirement allow the mailed-code factor? The enrolment screen
+  /// offers "code by e-mail" only then. Always true for administrators.
   bool policyAllowsEmail = false;
 
-  /// Her [evaluate]/[clear] çağrısında artar. App'ler bunu router'ın
-  /// `refreshListenable`'ına merge ederek redirect'i yeniden tetikler.
+  /// Whether the last evaluation saw a privileged (administrator) requirement.
+  bool privileged = false;
+
+  /// Coarse role passed to the last [evaluate] — reused by [retry].
+  String? _lastRole;
+
+  /// Incremented on every [evaluate] / [clear]. Apps merge it into the
+  /// router's `refreshListenable` so the redirect runs again.
   final ValueNotifier<int> revision = ValueNotifier<int>(0);
 
   void _bump() => revision.value++;
 
-  /// Login/cold-start sonrası MFA gereksinimini değerlendirir ve [state]'i kurar.
+  /// Evaluates the second-factor requirement after sign-in / cold start and
+  /// sets [state]. Never throws.
   ///
-  /// FAIL-OPEN: tüm gövde try/catch ile sarılıdır → HERHANGİ bir hata → [none].
-  /// Mantık (web `isMfaRequired` + step-up guard ile birebir):
-  ///   1. tenantId null → none.
-  ///   2. policy = getMfaPolicy; !isMfaRequired(policy, role) → none.
-  ///   3. aal = getCurrentAal(); aal != 'aal1' (aal2/bilinmeyen/null) → none.
-  ///   4. Gerekli + aal1: e-posta 2FA bu oturum için zaten tatmin edildiyse
-  ///      (isEmailMfaSatisfied) → none. Aksi halde: verified TOTP faktörü varsa
-  ///      → challenge (verified totp id); yoksa etkin e-posta faktörü varsa
-  ///      → emailChallenge; hiçbiri yoksa → enroll.
+  /// [role] is the locally loaded coarse role; it only matters when the
+  /// requirement cannot be read (a `ROLE_ADMIN` then fails closed).
+  /// [tenantId] is kept for source compatibility and is no longer used — the
+  /// server function resolves the caller's tenant itself.
   Future<void> evaluate({
-    required String? tenantId,
+    String? tenantId,
     required String? role,
+    MfaGateBackend? backend,
   }) async {
+    _lastRole = role;
+    final b = backend ?? this.backend;
+    final locallyPrivileged = role == CoarseRoles.admin;
     try {
-      if (tenantId == null || tenantId.isEmpty) {
+      final MfaRequirement req;
+      try {
+        req = await b.myRequirement().timeout(lookupTimeout);
+      } catch (e) {
+        Logger.warning('MfaGate: requirement unavailable '
+            '(${locallyPrivileged ? 'administrator → retry state' : 'fail-open'}): $e');
+        privileged = locallyPrivileged;
+        _set(locallyPrivileged ? MfaStepUp.unavailable : MfaStepUp.none);
+        return;
+      }
+
+      privileged = req.privileged;
+      policyAllowsEmail = req.allowsEmail;
+
+      if (!req.required) {
         _set(MfaStepUp.none);
         return;
       }
 
-      final auth = authService;
-      final policy = await auth.getMfaPolicy(tenantId);
-      if (!auth.isMfaRequired(policy, role)) {
+      if (!req.hasVerifiedFactor) {
+        _set(MfaStepUp.enroll);
+        return;
+      }
+
+      final aal = await _bounded(b.currentAal(), null);
+      if (aal == 'aal2') {
         _set(MfaStepUp.none);
         return;
       }
 
-      // Enroll ekranının e-posta seçeneğini gösterip göstermeyeceğini politika
-      // belirler. `allowed_factors` yoksa (null) izin verilmiş sayılır.
-      policyAllowsEmail = _policyAllowsEmail(policy);
-
-      final aal = await auth.getCurrentAal();
-      // Yalnız AÇIKÇA 'aal1' engeller; aal2/bilinmeyen/null → izin ver.
-      if (aal != 'aal1') {
+      // The mailed code is a custom factor that never shows in the aal.
+      // A failed lookup counts as "not satisfied" (at most one extra code).
+      if (await _bounded(b.emailSatisfied(), false)) {
         _set(MfaStepUp.none);
         return;
       }
 
-      // MFA gerekli ve oturum aal1. Önce e-posta 2FA bu oturum için zaten
-      // tatmin edilmiş mi? (native TOTP aal2 VEYA bu oturum için geçerli
-      // e-posta-doğrulaması). Tatminse engelleme yok.
-      if (await auth.isEmailMfaSatisfied()) {
+      // Unknown aal for a non-administrator (tenant policy only) keeps the
+      // historical fail-open, as on the web.
+      if (aal == null && !req.privileged) {
         _set(MfaStepUp.none);
         return;
       }
 
-      // Doğrulanmamış: hangi ikinci faktörle step-up isteyelim?
-      // 1) verified TOTP → challenge (gotrue aal2'ye yükseltir).
-      final hasVerified = await auth.hasVerifiedFactor();
-      if (hasVerified) {
-        final factors = await auth.listMfaFactors();
-        final Factor? totp = factors.firstWhereOrNullVerifiedTotp();
-        _set(MfaStepUp.challenge, factorId: totp?.id);
+      final totpId = await _bounded<String?>(b.verifiedTotpFactorId(), null);
+      if (totpId != null && totpId.isNotEmpty) {
+        _set(MfaStepUp.challenge, factorId: totpId);
         return;
       }
 
-      // 2) TOTP yok ama etkin e-posta faktörü var → e-posta ile kod (ekran
-      //    açılışta otomatik gönderir).
-      if (await auth.emailFactorEnabled()) {
+      if (req.allowsEmail || await _bounded(b.emailFactorEnabled(), false)) {
         _set(MfaStepUp.emailChallenge);
         return;
       }
 
-      // 3) Hiç faktör yok → kayıt (ekran TOTP-QR veya e-posta seçtirir).
+      // A verified factor exists that the app cannot challenge (e.g. a
+      // passkey) and the mailed code is not allowed → offer an authenticator.
       _set(MfaStepUp.enroll);
     } catch (e) {
-      // FAIL-OPEN: değerlendirme hiçbir koşulda kullanıcıyı kilitlemez.
-      Logger.warning('MfaGate.evaluate failed (fail-open → none): $e');
-      _set(MfaStepUp.none);
+      Logger.warning('MfaGate.evaluate failed: $e');
+      final closed = privileged || locallyPrivileged;
+      _set(closed ? MfaStepUp.unavailable : MfaStepUp.none);
+    }
+  }
+
+  /// Evaluates again with the role of the last [evaluate] (retry button of
+  /// the [MfaStepUp.unavailable] state).
+  Future<void> retry({MfaGateBackend? backend}) =>
+      evaluate(role: _lastRole, backend: backend);
+
+  Future<T> _bounded<T>(Future<T> f, T fallback) async {
+    try {
+      return await f.timeout(lookupTimeout);
+    } catch (_) {
+      return fallback;
     }
   }
 
@@ -123,46 +224,19 @@ class MfaGate {
     _bump();
   }
 
-  /// Politikanın `allowed_factors`'ına bakarak e-posta faktörüne izin verilip
-  /// verilmediğini belirler. null/eksik → izin var; liste 'email' içermeli.
-  /// Tolerant: farklı şekilleri (List / virgüllü String) kabul eder.
-  bool _policyAllowsEmail(Map<String, dynamic>? policy) {
-    if (policy == null) return false;
-    final raw = policy['allowed_factors'];
-    if (raw == null) return true; // belirtilmemiş → izin var
-    if (raw is List) {
-      return raw.map((e) => e.toString().toLowerCase()).contains('email');
-    }
-    if (raw is String) {
-      return raw.toLowerCase().contains('email');
-    }
-    return false;
-  }
-
-  /// Senkron redirect kararı. Engelleme yoksa null; aksi halde '/mfa-gate'.
-  /// Zaten '/mfa-gate' üzerindeyse null (yönlendirme döngüsünü önler).
+  /// Synchronous redirect decision: null when nothing is pending, otherwise
+  /// '/mfa-gate' (null when already there, to avoid a loop).
   String? redirectFor(String loc) {
     if (state == MfaStepUp.none) return null;
     if (loc.startsWith('/mfa-gate')) return null;
     return '/mfa-gate';
   }
 
-  /// Step-up tamamlandığında (veya oturum kapandığında) kapıyı temizler.
+  /// Clears the gate when the step-up is complete (or on sign-out).
   void clear() {
     state = MfaStepUp.none;
     challengeFactorId = null;
+    privileged = false;
     _bump();
-  }
-}
-
-extension _VerifiedTotpPick on List<Factor> {
-  /// Verified + TOTP olan ilk faktör (yoksa null).
-  Factor? firstWhereOrNullVerifiedTotp() {
-    for (final f in this) {
-      if (f.status == FactorStatus.verified && f.factorType == FactorType.totp) {
-        return f;
-      }
-    }
-    return null;
   }
 }

@@ -127,10 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
       context.go('/tenant-select');
       return;
     }
-    // MFA politika zorlaması: resolveSessionContext içinde MfaGate.evaluate
-    // çalıştı. Step-up gerekiyorsa (challenge/enroll) önce MFA kapısına git.
-    // FAIL-OPEN: kapı yalnız POZİTİF olarak gerekli+aal1 doğrulandığında
-    // none-dışıdır; belirsizlikte state=none kalır → doğrudan /main.
+    // Second factor: resolveSessionContext ran MfaGate.evaluate
+    // (`fn_my_mfa_requirement`). Enrolment, a challenge or — for an
+    // administrator whose requirement could not be read — the retry state all
+    // go through the gate screen first.
     if (MfaGate.instance.state != MfaStepUp.none) {
       context.go('/mfa-gate');
       return;

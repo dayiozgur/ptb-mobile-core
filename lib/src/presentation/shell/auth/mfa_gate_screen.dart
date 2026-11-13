@@ -45,6 +45,10 @@ enum _ScreenMode {
   /// E-posta ile kod: hem `emailChallenge` hem seçilen e-posta-enroll için
   /// (verifyEmailCode ilk doğrulamada otomatik kaydeder → tek akış).
   email,
+
+  /// The requirement could not be read for an administrator: retry or sign
+  /// out, never a silent pass ([MfaStepUp.unavailable]).
+  unavailable,
 }
 
 class _MfaGateScreenState extends State<MfaGateScreen> {
@@ -92,8 +96,8 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
         return _t('auth.mfa.email_error_no_email',
             'Hesabınıza bağlı bir e-posta adresi yok.');
       case 'INVALID_CODE':
-        return _t('auth.mfa.email_error_invalid_code',
-            'Girdiğiniz kod hatalı.');
+        return _t(
+            'auth.mfa.email_error_invalid_code', 'Girdiğiniz kod hatalı.');
       case 'NO_CHALLENGE':
         return _t('auth.mfa.email_error_no_challenge',
             'Aktif bir kod bulunamadı. Lütfen yeni kod isteyin.');
@@ -124,6 +128,14 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
     // Kapı temizlendiyse (state=none) burada bulunmamalıyız → güvenli hedef.
     if (gate.state == MfaStepUp.none) {
       if (mounted) context.go('/main');
+      return;
+    }
+
+    if (gate.state == MfaStepUp.unavailable) {
+      setState(() {
+        _mode = _ScreenMode.unavailable;
+        _verifying = false;
+      });
       return;
     }
 
@@ -292,6 +304,18 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
     }
   }
 
+  // ── Retry (requirement unavailable) ───────────────────────────────────────
+
+  Future<void> _retryRequirement() async {
+    setState(() {
+      _mode = _ScreenMode.loading;
+      _error = null;
+    });
+    await MfaGate.instance.retry();
+    if (!mounted) return;
+    await _prepare();
+  }
+
   // ── Kaçış yolu ──────────────────────────────────────────────────────────────
 
   /// Tamamlayamayan kullanıcı kilitlenmesin.
@@ -325,8 +349,11 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
             Icon(Icons.shield_outlined, size: 48, color: AppColors.primary),
             const SizedBox(height: AppSpacing.md),
             Text(
-              _t('auth.mfa.required_header',
-                  'Kuruluşunuz iki adımlı doğrulama gerektiriyor'),
+              MfaGate.instance.privileged
+                  ? _t('auth.mfa.required_header_admin',
+                      'Yönetici hesapları iki adımlı doğrulama gerektirir')
+                  : _t('auth.mfa.required_header',
+                      'Kuruluşunuz iki adımlı doğrulama gerektiriyor'),
               style: AppTypography.title3,
               textAlign: TextAlign.center,
             ),
@@ -353,6 +380,8 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
             child: CircularProgressIndicator(),
           ),
         );
+      case _ScreenMode.unavailable:
+        return _buildUnavailable(context);
       case _ScreenMode.enrollChoice:
         return _buildEnrollChoice(context);
       case _ScreenMode.email:
@@ -363,15 +392,48 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
     }
   }
 
+  /// Requirement could not be read for an administrator.
+  Widget _buildUnavailable(BuildContext context) {
+    return Column(
+      key: const ValueKey('mfa-gate-unavailable'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _t(
+              'auth.mfa.unavailable_message',
+              'İki adımlı doğrulama gereksiniminiz şu anda okunamadı. Yönetici '
+                  'hesapları bu kontrol yapılmadan açılmaz; bağlantınızı kontrol '
+                  'edip tekrar deneyin ya da çıkış yapın.'),
+          style: AppTypography.subheadline
+              .copyWith(color: AppColors.secondaryLabel(context)),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: _t('common.retry', 'Tekrar Dene'),
+          icon: Icons.refresh,
+          onPressed: _retryRequirement,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: _t('auth.mfa.sign_out', 'Çıkış Yap'),
+          icon: Icons.logout,
+          variant: AppButtonVariant.secondary,
+          onPressed: _signOut,
+        ),
+      ],
+    );
+  }
+
   /// Kayıt yöntemi seçimi (yalnız politika e-posta'ya izin verdiğinde).
   Widget _buildEnrollChoice(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _t('auth.mfa.enroll_choice_instruction',
+          _t(
+              'auth.mfa.enroll_choice_instruction',
               'Bir doğrulama yöntemi seçin. Her girişte ikinci bir adım '
-              'istenecek.'),
+                  'istenecek.'),
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),
@@ -405,9 +467,10 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _t('auth.mfa.email_instruction',
+          _t(
+              'auth.mfa.email_instruction',
               'Hesabınızın e-posta adresine 6 haneli bir kod gönderdik. '
-              'Devam etmek için kodu girin.'),
+                  'Devam etmek için kodu girin.'),
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),
@@ -463,12 +526,14 @@ class _MfaGateScreenState extends State<MfaGateScreen> {
       children: [
         Text(
           isEnroll
-              ? _t('auth.mfa.enroll_instruction',
+              ? _t(
+                  'auth.mfa.enroll_instruction',
                   'Bir authenticator uygulamasıyla QR kodu tarayın veya gizli '
-                  'anahtarı elle ekleyin, ardından 6 haneli kodu girin.')
-              : _t('auth.mfa.challenge_instruction',
+                      'anahtarı elle ekleyin, ardından 6 haneli kodu girin.')
+              : _t(
+                  'auth.mfa.challenge_instruction',
                   'Devam etmek için authenticator uygulamanızdaki 6 haneli '
-                  'kodu girin.'),
+                      'kodu girin.'),
           style: AppTypography.subheadline
               .copyWith(color: AppColors.secondaryLabel(context)),
         ),

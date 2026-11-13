@@ -7,7 +7,10 @@ import '../storage/secure_storage.dart';
 import '../utils/logger.dart';
 import 'auth_result.dart';
 import 'biometric_auth.dart';
+import 'mfa_requirement.dart';
 import 'password_change.dart';
+
+export 'mfa_requirement.dart';
 
 /// Authentication durumu
 class AuthState {
@@ -31,7 +34,8 @@ class AuthState {
   });
 
   /// Authenticated mi?
-  bool get isAuthenticated => status == AuthStatus.authenticated && user != null;
+  bool get isAuthenticated =>
+      status == AuthStatus.authenticated && user != null;
 
   /// Initial state
   static const initial = AuthState();
@@ -459,7 +463,8 @@ class AuthService {
         Logger.warning('Password change: MFA code given but no verified TOTP');
         return PasswordChangeOutcome.failed;
       }
-      await _supabase.auth.mfa.challengeAndVerify(factorId: factorId, code: code);
+      await _supabase.auth.mfa
+          .challengeAndVerify(factorId: factorId, code: code);
       return null;
     } on AuthException catch (e) {
       Logger.info('Password change: MFA step-up rejected (${e.code})');
@@ -485,11 +490,13 @@ class AuthService {
     }
     // MFA enabled + AAL1 session: "AAL2 session is required to update email or
     // password when MFA is enabled."
-    if (code == 'insufficient_aal' || message.contains('aal2 session is required')) {
+    if (code == 'insufficient_aal' ||
+        message.contains('aal2 session is required')) {
       return PasswordChangeOutcome.mfaRequired;
     }
     // "Secure password change": the session is older than the server allows.
-    if (code == 'reauthentication_needed' || code == 'reauthentication_not_valid') {
+    if (code == 'reauthentication_needed' ||
+        code == 'reauthentication_not_valid') {
       return PasswordChangeOutcome.reauthenticationNeeded;
     }
     if (e.statusCode == '429' ||
@@ -606,6 +613,19 @@ class AuthService {
       Logger.warning('MFA getCurrentAal failed (fail-open): $e');
       return null;
     }
+  }
+
+  /// The signed-in caller's second-factor requirement, resolved on the server
+  /// by `fn_my_mfa_requirement()` — the same source the web step-up guard uses.
+  /// Platform operators and active `admin` / `super_admin` holders are always
+  /// required; a tenant `mfa_policy` can widen it to every member.
+  ///
+  /// THROWS on any error or an empty / malformed payload: the caller ([MfaGate])
+  /// decides the failure direction (closed for administrators, open for
+  /// everyone else), exactly as the web does.
+  Future<MfaRequirement> getMyMfaRequirement() async {
+    final data = await _supabase.rpc('fn_my_mfa_requirement');
+    return MfaRequirement.fromJson(data);
   }
 
   /// Tenant'ın MFA politikasını (`mfa_policy` satırı) döndürür.
@@ -838,7 +858,8 @@ class AuthService {
       );
 
       Logger.info('Magic link sent to: $email');
-      _updateState(const AuthState(status: AuthStatus.emailVerificationPending));
+      _updateState(
+          const AuthState(status: AuthStatus.emailVerificationPending));
       return true;
     } catch (e) {
       Logger.error('Magic link sign in failed', e);
@@ -1129,7 +1150,8 @@ class AuthService {
   // ============================================
 
   /// Çıkış yap
-  Future<SignOutResult> signOut({SignOutScope scope = SignOutScope.local}) async {
+  Future<SignOutResult> signOut(
+      {SignOutScope scope = SignOutScope.local}) async {
     try {
       await _supabase.auth.signOut(scope: scope);
       await _clearSession();

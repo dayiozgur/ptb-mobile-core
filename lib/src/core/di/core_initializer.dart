@@ -315,11 +315,13 @@ class CoreInitializer {
       // olursa eski çok-sorgulu restore akışı fallback olarak çalışır.
       bool tenantRestored = false;
       bool bundleTenantResolved = false;
+      String? restoredCoarseRole;
       if (config.autoRestoreTenant && sessionRestored) {
         onProgress?.call('Profile bundle');
         try {
           final profile = await sl<ProfileService>().getProfileBundle();
           if (profile != null) {
+            restoredCoarseRole = profile.coarseRole;
             Logger.debug(
               'Profile bundle: ${profile.displayName} '
               '(role=${profile.coarseRole}, tenant=${profile.tenantId})',
@@ -372,6 +374,18 @@ class CoreInitializer {
         }
       }
 
+      // Step 12: second factor for a restored session (same rule as sign-in).
+      // Without this, an administrator who closed the app on the second-factor
+      // screen would reopen it straight into the shell with an aal1 session.
+      if (sessionRestored) {
+        onProgress?.call('Second factor');
+        try {
+          await MfaGate.instance.evaluate(role: restoredCoarseRole);
+        } catch (e) {
+          Logger.warning('MfaGate.evaluate threw on cold start: $e');
+        }
+      }
+
       stopwatch.stop();
       _isInitialized = true;
 
@@ -421,17 +435,15 @@ class CoreInitializer {
         if (orgOk) propagateOrganizationToServices(profile.organizationId!);
       }
 
-      // MFA politika zorlaması (web step-up guard paritesi). MfaGate.evaluate
-      // KENDİSİ fail-open'dır (asla fırlatmaz), ancak yine de temkinli olmak
-      // için sarılıdır: bir MFA değerlendirme hatası bu metodun sonucunu
-      // ASLA `false`'a çevirmemelidir (tenant/org zaten çözüldü).
+      // Second factor (web step-up guard parity, `fn_my_mfa_requirement`).
+      // MfaGate.evaluate never throws; administrators whose requirement cannot
+      // be read land on the retry state, everyone else fails open. Guarded
+      // anyway: an evaluation problem must never turn this result into
+      // `false` (tenant / organisation are already resolved).
       try {
-        await MfaGate.instance.evaluate(
-          tenantId: profile.tenantId,
-          role: profile.coarseRole,
-        );
+        await MfaGate.instance.evaluate(role: profile.coarseRole);
       } catch (e) {
-        Logger.warning('MfaGate.evaluate threw (ignored, fail-open): $e');
+        Logger.warning('MfaGate.evaluate threw: $e');
       }
 
       Logger.info('Session context resolved: tenant=${profile.tenantId}, '

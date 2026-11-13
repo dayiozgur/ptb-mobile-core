@@ -941,6 +941,9 @@ class AppLocalizations {
     'pms.alarm_ticket.route.external_team': '{{target}} FixFlow (ekip: {{team}}) — firmanın FixFlow hesabına gönderilecek',
     'pms.alarm_ticket.route.internal': "{{target}} FixFlow'unda {{team}} ekibine atanacak",
     'pms.alarm_ticket.route.internal_no_team': "{{target}} FixFlow'unda ekip atanmadan açılacak — firma detayından FixFlow ekibi seçin",
+    // mobile-followups (2026-11-14)
+    'auth.mfa.required_header_admin': 'Yönetici hesapları iki adımlı doğrulama gerektirir',
+    'auth.mfa.unavailable_message': 'İki adımlı doğrulama gereksiniminiz şu anda okunamadı. Yönetici hesapları bu kontrol yapılmadan açılmaz; bağlantınızı kontrol edip tekrar deneyin ya da çıkış yapın.',
   };
 
   // ============================================
@@ -1860,6 +1863,9 @@ class AppLocalizations {
     'pms.alarm_ticket.route.external_team': "{{target}} FixFlow (team: {{team}}) — will be sent to the company's FixFlow account",
     'pms.alarm_ticket.route.internal': 'Assigned to the {{team}} team in {{target}} FixFlow',
     'pms.alarm_ticket.route.internal_no_team': 'Opened unassigned in {{target}} FixFlow — choose a FixFlow team on the company detail',
+    // mobile-followups (2026-11-14)
+    'auth.mfa.required_header_admin': 'Administrator accounts require two-step verification',
+    'auth.mfa.unavailable_message': 'Your two-step verification requirement could not be read right now. Administrator accounts do not open without this check; check your connection and try again, or sign out.',
   };
 
   // ============================================
@@ -2782,5 +2788,8 @@ class AppLocalizations {
     'pms.alarm_ticket.route.external_team': '{{target}} FixFlow (Team: {{team}}) — wird an das FixFlow-Konto der Firma gesendet',
     'pms.alarm_ticket.route.internal': 'Wird dem Team {{team}} in {{target}} FixFlow zugewiesen',
     'pms.alarm_ticket.route.internal_no_team': 'Wird in {{target}} FixFlow ohne Zuweisung erstellt — wählen Sie in den Firmendetails ein FixFlow-Team',
+    // mobile-followups (2026-11-14)
+    'auth.mfa.required_header_admin': 'Administratorkonten erfordern eine zweistufige Verifizierung',
+    'auth.mfa.unavailable_message': 'Ihre Anforderung an die zweistufige Verifizierung konnte gerade nicht gelesen werden. Administratorkonten werden ohne diese Prüfung nicht geöffnet; prüfen Sie Ihre Verbindung und versuchen Sie es erneut oder melden Sie sich ab.',
   };
 }
