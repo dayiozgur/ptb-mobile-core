@@ -23,7 +23,7 @@ not repository work:
 
 | # | Blocker (all apps) | Why it blocks | Who |
 |---|---|---|---|
-| B1 | **No account-deletion path.** There is no "delete my account" in the apps and none in the web app either (the web has tenant erasure for operators and user removal for tenant admins only). | Apple 5.1.1(v) and Google Play's account-deletion policy require a way to delete the account for apps with accounts; Play also asks for a deletion **web URL** in the Data safety form. Accounts here are provisioned by the customer's administrator, but the app also completes sign-up (invite → set password) and has an access-request form, so neither store can be assumed to waive it. | Owner: product decision + a server-side request flow + an in-app entry and a public web page |
+| B1 | **No account-deletion path yet.** *Update 2026-11-14 (lane `mobile-followups`):* all six apps now have Settings → **Delete my account**, which explains what happens and opens `https://app.<code>.protoolbag.com/legal/account-deletion`. The requirement is met **once that public web page is live** (the web side is building the request flow, design `docs/compliance/ACCOUNT-DELETION-DESIGN.md`). Until then the link leads nowhere useful. | Apple 5.1.1(v) and Google Play's account-deletion policy require a way to delete the account for apps with accounts; Play also asks for a deletion **web URL** in the Data safety form. Accounts here are provisioned by the customer's administrator, but the app also completes sign-up (invite → set password) and has an access-request form, so neither store can be assumed to waive it. | Owner: product decision + a server-side request flow + an in-app entry and a public web page |
 | B2 | **Android release signing uses the debug key** (`signingConfig = signingConfigs.getByName("debug")` in all six `build.gradle.kts`). | Play rejects debug-signed bundles. | Owner: upload keystore + `key.properties` (git-ignored) + Play App Signing |
 | B3 | **No reviewer access.** Sign-in is invite-only; a reviewer cannot get in without credentials and a tenant with data. | Both stores reject apps they cannot sign in to. | Owner: demo tenant + accounts (see §9) |
 
@@ -163,13 +163,13 @@ en and tr have an `InfoPlist.strings`). Adding `de.lproj` / `it.lproj` is a tran
 |---|---|---|---|---|---|---|
 | iOS privacy manifest (`PrivacyInfo.xcprivacy`) | ✅ | ✅ 🔧 location | ✅ | ✅ 🔧 location | ✅ 🔧 location | 🔧 added |
 | `ITSAppUsesNonExemptEncryption = false` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Custom URL scheme (Microsoft connect return) | — | `ptbcrm` ✅ | — | — | `ptbfixflow` ⛔ not accepted by the server | — |
+| Custom URL scheme (Microsoft connect return) | `ptbpms` 🔧 | `ptbcrm` ✅ | `ptbphr` 🔧 | `ptbppm` 🔧 | `ptbfixflow` ⏳ server allow-list updated on the web branch, not deployed | — |
 | App / universal links declared in the app | — | `app.crm.protoolbag.com` | — | — | `app.fixflow.protoolbag.com` | `app.pem.protoolbag.com` |
 | Association files served by the web host | n/a | ❓ to verify | n/a | n/a | ❓ | ❓ |
 | iOS push (APNs, `aps-environment = production`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Android remote push | ⚠️ none | ⚠️ none | ⚠️ none | ⚠️ none | ⚠️ none | ⚠️ none |
 | Privacy policy reachable in the app | 🔧 | 🔧 | 🔧 | 🔧 | 🔧 | 🔧 |
-| Account deletion | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
+| Account deletion (in-app entry → public web page) | 🔧 ⏳ page | 🔧 ⏳ page | 🔧 ⏳ page | 🔧 ⏳ page | 🔧 ⏳ page | 🔧 ⏳ page |
 
 Details in §3–§8.
 
@@ -274,9 +274,9 @@ cryptographic library is ever added.
 
 | Kind | Apps | Configuration |
 |---|---|---|
-| Custom scheme `<scheme>://oauth-callback` (return of the Microsoft connect flow) | CRM `ptbcrm`, FixFlow `ptbfixflow` | Android intent filter, iOS `CFBundleURLTypes`, `CoreConfig.appUrlScheme` |
+| Custom scheme `<scheme>://oauth-callback` (return of the Microsoft connect flow) | CRM `ptbcrm`, FixFlow `ptbfixflow`, PMS `ptbpms` 🔧, PHR `ptbphr` 🔧, PPM `ptbppm` 🔧 | Android intent filter, iOS `CFBundleURLTypes`, `CoreConfig.appUrlScheme`; PMS / PHR / PPM: an OAuth-only link listener (2026-11-14) |
 | https links `https://app.<code>.protoolbag.com/<path>` | CRM, FixFlow, PEM | Android `autoVerify` intent filter for the whole host; iOS `applinks:` entitlement |
-| none | PMS, PHR, PPM | the apps neither declare a domain nor register a scheme |
+| none | PEM (scheme) | PEM has no Microsoft connect flow in the app |
 
 ### 6.2 Files the web hosts must serve
 
@@ -288,7 +288,12 @@ app's `index.html`).
 
 ### 6.3 Findings
 
-- **The server does not accept FixFlow's scheme.** `oauth-start` / `oauth-callback` only return to
+- *Update 2026-11-14:* `ptbfixflow:` is in `MOBILE_SCHEMES` on the web branch (not deployed yet);
+  the app side is unchanged and covered by a test (`oauth_complete` and `admin_consent_required`
+  returns). PHR, PMS and PPM now register their schemes (`ptbphr`, `ptbpms`, `ptbppm`) — custom
+  schemes need no entitlement or signing identity — so Microsoft can be connected from them; to
+  verify on a device.
+- *(2026-11-13)* **The server does not accept FixFlow's scheme.** `oauth-start` / `oauth-callback` only return to
   `ptbcrm:`, `ptbphr:`, `ptbpms:`, `ptbppm:`, `ptbmobile:` (`MOBILE_SCHEMES` in
   `supabase/functions/_shared/oauth-flow.ts`). FixFlow sends `ptbfixflow://oauth-callback`, which is
   replaced by the web fallback page: the Microsoft connect flow started in the FixFlow app ends on
@@ -325,8 +330,17 @@ app's `index.html`).
 
 ## 8. Account deletion (blocker B1)
 
-- **In the apps:** none. Settings has sign-out only. PHR's "My data" screen is a read-only overview
-  of processed categories and consents.
+- **In the apps (2026-11-14):** Settings → Data management → **Delete my account** (all six apps,
+  shared core Settings screen). A dialog explains in two sentences what happens and **Continue on
+  the web** opens `https://app.<code>.protoolbag.com/legal/account-deletion` (same per-app host as
+  the privacy-policy / terms links). It does not call any endpoint, so it works whatever the server
+  flow becomes. **The store requirement is met once that web page is live** — check the six URLs
+  return the page (not the web app's login) before submission, and give the same URL in Play's
+  Data safety form. iOS keeps `/legal/*` in the browser (excluded in the association template);
+  on Android the page opens in a Custom Tab — **to verify on a device** that a verified app link
+  does not pull it back into the app.
+- *(2026-11-13)* In the apps: none. Settings has sign-out only. PHR's "My data" screen is a
+  read-only overview of processed categories and consents.
 - **On the web:** none for the signed-in user. The web has `remove-user` (a tenant administrator
   removes a member) and `tenant-erasure` (operator console).
 - **What both stores need:** an entry in the app (Settings → Account → "Delete my account" or
@@ -350,11 +364,11 @@ this lane.
 |---|---|
 | Tenant | One dedicated demo tenant with seeded, clearly fictitious data and a licence for all six platforms (the apps show a licence screen when the tenant does not own the platform). Not the internal tenant. |
 | Role | `ROLE_USER`. Most menu rows of every platform are open to it (live `platform_menu_items`: 32–81 open rows per platform, 5–11 admin-only). An administrator account is not needed and would show configuration menus that mostly point at the web. |
-| Second factor | The tenant's `mfa_policy.enforce_for` must be `off` or `optional` — a reviewer cannot receive a mailed code or hold an authenticator. The apps follow the tenant policy today. |
+| Second factor | Since 2026-11-14 the apps follow `fn_my_mfa_requirement` like the web: **administrators (rbac `admin` / `super_admin`, platform operators) always need a second factor**, everyone else only when the tenant's `mfa_policy` asks for it. So the reviewer account must be a plain user (`ROLE_USER`, no admin rbac role) in a tenant whose `mfa_policy` is absent, `off`, `optional` or `admins_only` — a reviewer cannot receive a mailed code or hold an authenticator. |
 | Consent gate | Accept the KVKK / terms consent for the account beforehand, or leave it so the reviewer sees and accepts it — decide and say so in the review notes. |
 | Data per app | PMS: a few Sites with controllers, variables and some active and historical alarms. CRM: Firma, kişi, Potansiyel, Fırsat on the Satış Hattı, a few activities. PHR: a staff record for the reviewer with leave balance, payslips, attendance, one pending approval, a geofence. PPM: a project with a board, backlog, sprint and work logs. FixFlow: a few Talep in different states, one assigned to the reviewer. PEM: meters with consumption history and alarms. |
 | Things a reviewer cannot do | Microsoft 365 connection (needs their own Microsoft account — say in the notes that it is optional); workplace clock-in (needs to be inside the geofence — give the demo geofence a very large radius or describe it in the notes); biometric sign-in on their device works without preparation. |
-| Review notes | State that accounts are created by the customer's administrator (no self-registration), give the credentials, say which features need hardware or a third-party account, and — once B1 is solved — where account deletion is. |
+| Review notes | State that accounts are created by the customer's administrator (no self-registration), give the credentials, say which features need hardware or a third-party account, and where account deletion is (Settings → Delete my account → web page). |
 
 ---
 
@@ -459,6 +473,12 @@ Settings, release scripts for FixFlow / PEM, association-file templates, listing
 | `fix(android): launcher icons use each app's brand icon instead of the Flutter default` | brand icons in five densities |
 | `chore(scripts): release scripts accept FixFlow (and PEM on Android)` | build scripts cover all apps that can be built |
 | `feat(settings): privacy policy and terms links, real app version, translated section titles` | policy reachable in the app; no hardcoded version |
+| *2026-11-14, lane `mobile-followups`:* | |
+| `feat(auth): second factor follows fn_my_mfa_requirement — administrators always` | same second-factor rule as the web; retry state instead of a silent pass |
+| `feat(settings): "Delete my account" entry opening the app's public deletion page` | B1 in-app part |
+| `fix(load-states): …` (two commits) | failed reads show "could not load" / "no access", not an empty list |
+| `feat(i18n): dates and numbers follow the UI language; shared screens' Turkish texts become keywords` | §12 languages |
+| `feat(deeplink): PHR, PMS and PPM return from the Microsoft connect flow` | §6 |
 
 None of these was build-verified (no builds in this lane). Static checks that were run:
 `plutil -lint` on every changed plist, strings file and Xcode project; `xmllint` on the manifests;
@@ -469,7 +489,15 @@ side.
 
 ## 12. Other findings that affect a store release
 
-- **Languages.** The stores will list English, Turkish, German and Italian. About 100 visible texts
+- **Languages — update 2026-11-14.** Dates and numbers now follow the UI language everywhere the
+  8 fixed-locale files did (English uses `en_GB`, as on the web). The most visible shared screens
+  (main shell, profile, My Space, lock screen, notifications, comments, search, announcements,
+  clock-in / work-session / map cards, work inbox) use keywords. A ratchet test counts the
+  remaining literals with Turkish letters in `lib/src/presentation`: **225 in 37 files** (mostly
+  administrator screens, dashboard widgets, form fields); per-app screens (CRM / PPM / PHR helpers
+  `crmT` / `ppmT` / `essT`) still carry Turkish fallbacks behind keys. 124 keys are proposed in
+  `docs/proposed-sql/20261114_mobile_followups_keywords.sql`.
+- *(2026-11-13)* **Languages.** The stores will list English, Turkish, German and Italian. About 100 visible texts
   in the shared screens are still literal Turkish (counted with a pattern search; the real number is
   higher because many texts use a Turkish fallback when a keyword is missing), and 8 source files
   format dates or numbers with a fixed Turkish locale (`formatters.dart`, `date_extensions.dart`,
@@ -477,11 +505,12 @@ side.
   `login_screen.dart`, CRM `crm_record.dart`, PHR `ess_common.dart`). A reviewer using the English
   listing will meet Turkish screens. Either list only Turkish for the first release, or finish the
   keyword pass first.
-- **Second factor for administrators.** The web app requires a second factor for every
-  administrator (`fn_my_mfa_requirement`); the mobile apps follow only the tenant's `mfa_policy`, so
-  an administrator of a tenant without a policy signs in on mobile without the second factor. Not
-  changed here (it would gate every administrator at the next sign-in and could not be tested);
-  it should be aligned before release.
+- **Second factor for administrators — done 2026-11-14.** The apps call `fn_my_mfa_requirement`
+  at sign-in and on cold start: administrators always need a second factor (enrolment if they have
+  none), and an administrator whose requirement cannot be read sees a retry / sign-out state.
+  Live data on 2026-11-14 (counts only): no tenant has an `mfa_policy` row; 7 privileged accounts
+  exist, 6 active — 5 already have a factor (they will be asked for the code at their next mobile
+  sign-in) and 1 has none (enrolment at the next mobile sign-in). Nobody else is affected.
 - **Help.** Settings → Help and support still says "coming soon"; both listings need a support URL.
 - **`.env` is bundled as an asset** (Supabase URL and publishable key, by design). Nothing secret
   may ever be put in that file — it ships inside the app.

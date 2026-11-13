@@ -16,6 +16,20 @@ released; `pubspec.yaml` versions are unchanged until the owner cuts the
 release.
 
 ### Security
+- **Second factor for administrators, as on the web (2026-11-14).** `MfaGate`
+  reads `fn_my_mfa_requirement()` (new `AuthService.getMyMfaRequirement`,
+  `MfaRequirement`) instead of only the tenant's `mfa_policy`: platform
+  operators and active rbac `admin` / `super_admin` holders always need a
+  second factor; a tenant policy can widen it to every member. Outcomes:
+  enrolment / authenticator code / mailed code / none. When the requirement
+  cannot be read, an administrator (server says privileged, or local coarse
+  role `ROLE_ADMIN`) gets the new `MfaStepUp.unavailable` retry / sign-out
+  state; everyone else fails open (web parity). An unknown AAL is challenged
+  for administrators. The gate is also evaluated on cold start with a
+  restored session (closing the app on the second-factor screen no longer
+  skips it). Live data 2026-11-14: no tenant has an `mfa_policy`; 6 active
+  privileged accounts — 5 will be asked for their code at the next mobile
+  sign-in, 1 must enrol.
 - **Self-service password change verifies the current password (CRA F-108).**
   `AuthService.changePasswordVerified` checks the current password with a
   throwaway, stateless GoTrue password-grant call (nothing persisted, no auth
@@ -40,6 +54,18 @@ release.
   grant was revoked. A scan test guards every `staffs` select.
 
 ### Added
+- Settings → **Delete my account** (all six apps): two-sentence explanation,
+  then the app's public page `https://app.<code>.protoolbag.com/legal/account-deletion`
+  in the browser. Independent of the server endpoint (2026-11-14).
+- `RelativeTime` (`past` / `future` / `of` / `duration`) from `time.*`
+  keywords; `AppLocale.intlLocale` (tr_TR / en_GB / de_DE / it_IT).
+- `MfaRequirement`, `MfaGateBackend`, `MfaGate.retry`, `MfaStepUp.unavailable`.
+- PHR, PMS and PPM register their OAuth return schemes (`ptbphr`, `ptbpms`,
+  `ptbppm`) with an OAuth-only link listener — Microsoft can be connected
+  from these apps (server already accepts the schemes).
+- Tests: a ratchet against new hard-coded Turkish literals in
+  `lib/src/presentation` (`test/lint/`), and a contract test that every
+  `appUrlScheme` is registered on Android and iOS and allowed by the server.
 - `GraphProblem` / `GraphProblemKind`: classified Microsoft Graph failures (not
   connected, reconnect, missing consent, administrator approval required,
   forbidden, throttled with retry-after, not found, conflict, blocked,
@@ -58,6 +84,24 @@ release.
   `MicrosoftIntegrationService.lookupConnection`.
 
 ### Changed
+- **Behaviour change — list reads rethrow instead of returning an empty list
+  (2026-11-14):** `NotificationService.getNotifications`,
+  `CommentsService.list`, `CrmActionsService.listSequences`,
+  `AlarmService.getHistory` / `getResetAlarms` / `getTopAlarms`,
+  `IoTLogService.getLogs` / `getLogTimeSeries` / `getLogsByTimeRange`,
+  `SiteService.getSites`, `UnitService.getUnits`,
+  `OrganizationService.getOrganizations`, `MapService.getSiteMarkers`,
+  `AnnouncementService.list`, `SprintService.listSprints`,
+  `WorklogService.listWorklogs`, `SearchService.globalSearch`,
+  `EntityFileLinkService.list`, `FileStorageService.listEntityFiles`; CRM
+  `ContactsService.list` / `activityFeed`. Every caller in the six apps and the
+  demo app handles the error.
+- Dates and numbers follow the UI language: `LocalizationService` sets
+  `Intl.defaultLocale`; `Formatters` / `DateTime` extension / dynamic widget /
+  PHR ESS formatting no longer default to `tr_TR` (`locale` parameters are
+  nullable). Date symbols for all four languages load at start.
+- `MfaGate.evaluate`'s `tenantId` is optional and unused.
+- `translate()` replaces web-style `{{name}}` placeholders (and `{name}`).
 - **Source-incompatible:** `MicrosoftIntegrationService.graphCall` returns a
   non-null `GraphResult` (a failure carries `problem`; it used to return
   `null`). `PlannerLinkService.listPlans` returns `PlannerPlansResult`.
@@ -70,6 +114,21 @@ release.
   keywords instead of hardcoded Turkish text.
 
 ### Fixed
+- **Errors rendered as empty lists (2026-11-14):** a failed read now shows a
+  retry state, a refused read (42501 / 403) the calm no-access state, and an
+  RLS-filtered empty result stays the normal empty state, on: notifications
+  inbox; CRM contacts list, contact activity feed, enrol-in-sequence sheet;
+  shared comments thread; PMS site and provider pages (per section:
+  providers, controllers, alarm history, logs, top alarms; KPI shows '—'),
+  controller recent logs, variable / analytics / provider charts, alarm
+  history, global alarms, alarm dashboard, log viewer, sites list and
+  selector, site map, monitoring dashboard site count; organisation selector;
+  PPM sprint management and work-log history; global search; announcements;
+  the files card; the platform switcher. Kept fail-soft on purpose: badge
+  counts (notification unread count / summary, site alarm counts), lookups
+  (site types / groups, unit types), comment author names, search
+  suggestions, demo-only `SearchService.search`. 73 swallow-to-empty
+  `catch` blocks remain by the same pattern search (98 before).
 - Approvals inbox and work inbox showed "nothing pending" / "no assigned work"
   when the load failed.
 - PMS Site and provider screens showed a green "0 active alarms" when the alarm
@@ -97,8 +156,10 @@ release.
 
 ### Keywords
 18 new keys (tr / en / de / it) are proposed in
-`docs/proposed-sql/20261113_mobile_store_prep_keywords.sql` — not applied; the
-apps fall back to the built-in texts until then.
+`docs/proposed-sql/20261113_mobile_store_prep_keywords.sql` and 118 more in
+`docs/proposed-sql/20261114_mobile_followups_keywords.sql` (124 keys used; 6
+already exist live) — not applied; the apps fall back to the built-in tr / en
+/ de texts until then (Italian → English).
 
 ### Planned for Phase 3
 - Controller/Provider/Variable models (IoT layer)
