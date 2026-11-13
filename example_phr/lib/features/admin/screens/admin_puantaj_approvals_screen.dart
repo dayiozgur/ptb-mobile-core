@@ -68,8 +68,10 @@ class _AdminPuantajApprovalsScreenState
         setState(() => _busy.remove(key));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                '${essT('hr.puantaj.approve_failed', 'Onay başarısız')}: $e'),
+            // Refused for this role → translated "no permission"; never the raw
+            // exception text.
+            content: Text(AccessErrors.actionMessage(e,
+                fallback: essT('hr.puantaj.approve_failed', 'Onay başarısız'))),
             backgroundColor: AppColors.error,
           ),
         );

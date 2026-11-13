@@ -55,11 +55,11 @@ void main() {
       expect(await service.myGoals(), isEmpty);
     });
 
-    test('error is swallowed → [] (read never throws to UI)', () async {
+    test('a failed read throws — it must not look like "no goals"', () async {
       stubStaff('staff-1');
       h.stubFrom('employee_goals', error: Exception('db down'));
 
-      expect(await service.myGoals(), isEmpty);
+      await expectLater(service.myGoals(), throwsException);
     });
   });
 
@@ -74,11 +74,11 @@ void main() {
       expect(reviews.single.id, 'r-1');
     });
 
-    test('error is swallowed → []', () async {
+    test('a failed read throws — it must not look like "no reviews"', () async {
       stubStaff('staff-1');
       h.stubFrom('performance_reviews', error: Exception('boom'));
 
-      expect(await service.myReviews(), isEmpty);
+      await expectLater(service.myReviews(), throwsException);
     });
   });
 

@@ -18,6 +18,10 @@ class AdminPdksScreen extends StatefulWidget {
 class _AdminPdksScreenState extends State<AdminPdksScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+
+  /// The server refused the read for this role (42501 / 403) → "no access"
+  /// state instead of an error with a retry that cannot succeed.
+  bool _denied = false;
   List<AdminPdksRow> _rows = [];
   late DateTime _date;
 
@@ -32,6 +36,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _denied = false;
     });
     try {
       final rows = await adminAttendanceService.pdksBoard(_date);
@@ -45,6 +50,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
       Logger.error('Failed to load pdks board', e);
       if (mounted) {
         setState(() {
+          _denied = AccessErrors.isDenied(e);
           _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
           _isLoading = false;
         });
@@ -176,6 +182,7 @@ class _AdminPdksScreenState extends State<AdminPdksScreen> {
     if (_isLoading) {
       return const AppListSkeleton();
     }
+    if (_denied) return const Center(child: AppNoAccessView());
     if (_errorMessage != null) {
       return Center(
         child: AppErrorView(message: _errorMessage!, onRetry: _load),

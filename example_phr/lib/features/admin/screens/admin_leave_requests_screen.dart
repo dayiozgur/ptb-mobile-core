@@ -69,8 +69,10 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
         setState(() => _busy.remove(row.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                '${essT('hr.leave.decide_failed', 'İşlem başarısız')}: $e'),
+            // Refused for this role → translated "no permission"; never the raw
+            // exception text.
+            content: Text(AccessErrors.actionMessage(e,
+                fallback: essT('hr.leave.decide_failed', 'İşlem başarısız'))),
             backgroundColor: AppColors.error,
           ),
         );

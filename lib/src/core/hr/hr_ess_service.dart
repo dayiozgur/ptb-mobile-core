@@ -569,8 +569,9 @@ class HrEssService {
   /// ile birebir aynı okuma: `staff_id = benim staff'ım`, `performance_cycles(name)`
   /// embed'i dönem adını taşır.
   ///
-  /// Web okuma davranışıyla tutarlı olarak **hata durumunda `[]` döner**
-  /// (UI'a asla fırlatmaz).
+  /// Personel satırı yoksa `[]`. Okuma hatası FIRLATILIR: ekran (`AsyncView`)
+  /// "yüklenemedi" / "erişim yok" durumunu gösterir — yüklenemeyen liste
+  /// "hedef yok" diye sunulmaz.
   Future<List<EmployeeGoal>> myGoals({int limit = 100}) async {
     try {
       final staffId = await currentStaffId();
@@ -598,7 +599,7 @@ class HrEssService {
           .toList();
     } catch (e) {
       Logger.error('Error fetching my goals: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -607,7 +608,7 @@ class HrEssService {
   /// `PerformanceService.getMyReviews` ile birebir aynı okuma; embed'ler dönem
   /// adını ve değerlendiren (yönetici) adını taşır.
   ///
-  /// Web okuma davranışıyla tutarlı olarak **hata durumunda `[]` döner**.
+  /// Personel satırı yoksa `[]`. Okuma hatası FIRLATILIR (bkz. [myGoals]).
   Future<List<PerformanceReview>> myReviews({int limit = 100}) async {
     try {
       final staffId = await currentStaffId();
@@ -638,7 +639,7 @@ class HrEssService {
           .toList();
     } catch (e) {
       Logger.error('Error fetching my reviews: $e');
-      return [];
+      rethrow;
     }
   }
 

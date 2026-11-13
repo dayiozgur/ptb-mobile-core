@@ -18,6 +18,10 @@ class AdminPuantajScreen extends StatefulWidget {
 class _AdminPuantajScreenState extends State<AdminPuantajScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+
+  /// The server refused the read for this role (42501 / 403) → "no access"
+  /// state instead of an error with a retry that cannot succeed.
+  bool _denied = false;
   List<PuantajSummaryRow> _rows = [];
   late int _year;
   late int _month;
@@ -35,6 +39,7 @@ class _AdminPuantajScreenState extends State<AdminPuantajScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _denied = false;
     });
     try {
       final rows = await adminAttendanceService.puantajSummary(_year, _month);
@@ -48,6 +53,7 @@ class _AdminPuantajScreenState extends State<AdminPuantajScreen> {
       Logger.error('Failed to load puantaj summary', e);
       if (mounted) {
         setState(() {
+          _denied = AccessErrors.isDenied(e);
           _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
           _isLoading = false;
         });
@@ -121,6 +127,7 @@ class _AdminPuantajScreenState extends State<AdminPuantajScreen> {
     if (_isLoading) {
       return const AppListSkeleton();
     }
+    if (_denied) return const Center(child: AppNoAccessView());
     if (_errorMessage != null) {
       return Center(
         child: AppErrorView(message: _errorMessage!, onRetry: _load),

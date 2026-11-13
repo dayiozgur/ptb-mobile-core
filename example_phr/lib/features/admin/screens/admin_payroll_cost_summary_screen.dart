@@ -23,6 +23,10 @@ class _AdminPayrollCostSummaryScreenState
   bool _isLoading = true;
   String? _errorMessage;
 
+  /// The server refused the read for this role (42501 / 403) → "no access"
+  /// state instead of an error with a retry that cannot succeed.
+  bool _denied = false;
+
   // 0 = aylık, 1 = departman.
   int _dimIndex = 0;
   PayrollCostSummary? _summary;
@@ -39,6 +43,7 @@ class _AdminPayrollCostSummaryScreenState
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _denied = false;
     });
     try {
       final summary =
@@ -53,6 +58,7 @@ class _AdminPayrollCostSummaryScreenState
       Logger.error('AdminPayrollCostSummaryScreen yükleme hatası', e);
       if (mounted) {
         setState(() {
+          _denied = AccessErrors.isDenied(e);
           _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
           _isLoading = false;
         });
@@ -107,6 +113,7 @@ class _AdminPayrollCostSummaryScreenState
     if (_isLoading) {
       return const Center(child: AppLoadingIndicator());
     }
+    if (_denied) return const Center(child: AppNoAccessView());
     if (_errorMessage != null) {
       return Center(
         child: AppErrorView(message: _errorMessage!, onRetry: _load),

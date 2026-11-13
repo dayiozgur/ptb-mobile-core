@@ -18,6 +18,10 @@ class AdminPdksShiftsScreen extends StatefulWidget {
 class _AdminPdksShiftsScreenState extends State<AdminPdksShiftsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+
+  /// The server refused the read for this role (42501 / 403) → "no access"
+  /// state instead of an error with a retry that cannot succeed.
+  bool _denied = false;
   int _tabIndex = 0; // 0 = Tanımlar, 1 = Atamalar
 
   List<WorkShiftRow> _shifts = [];
@@ -33,6 +37,7 @@ class _AdminPdksShiftsScreenState extends State<AdminPdksShiftsScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _denied = false;
     });
     try {
       final shifts = await adminAttendanceService.listShifts();
@@ -48,6 +53,7 @@ class _AdminPdksShiftsScreenState extends State<AdminPdksShiftsScreen> {
       Logger.error('Failed to load shifts', e);
       if (mounted) {
         setState(() {
+          _denied = AccessErrors.isDenied(e);
           _errorMessage = essT('common.data_load_error', 'Veriler yüklenemedi');
           _isLoading = false;
         });
@@ -96,6 +102,7 @@ class _AdminPdksShiftsScreenState extends State<AdminPdksShiftsScreen> {
     if (_isLoading) {
       return const AppListSkeleton();
     }
+    if (_denied) return const Center(child: AppNoAccessView());
     if (_errorMessage != null) {
       return Center(
         child: AppErrorView(message: _errorMessage!, onRetry: _load),
