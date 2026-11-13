@@ -11,6 +11,10 @@ class SelectFieldWidget extends FieldWidget {
   @override
   Widget build(BuildContext context, FieldRenderContext ctx) {
     final field = ctx.field;
+    final opts = field.options;
+    if (opts.isLookup && (opts.table ?? '').isNotEmpty) {
+      return _LookupSelectField(ctx: ctx);
+    }
     final items = field.options.items
         .map((o) => AppDropdownItem<dynamic>(
               value: o.value,
@@ -30,6 +34,113 @@ class SelectFieldWidget extends FieldWidget {
         placeholder: field.placeholder,
         enabled: ctx.enabled,
         onChanged: (v) => ctx.onChanged(v),
+      ),
+    );
+  }
+}
+
+/// `select` whose options come from a table (`options.type == 'lookup'`, e.g.
+/// the service-request priority). Options are read once through
+/// [LookupService.selectOptions] (static filters with `null` → IS NULL, as on
+/// the web) and again when the `dependsOn` source value changes. A failed read
+/// shows "options could not be loaded" with a retry, not an empty list.
+class _LookupSelectField extends StatefulWidget {
+  final FieldRenderContext ctx;
+  const _LookupSelectField({required this.ctx});
+
+  @override
+  State<_LookupSelectField> createState() => _LookupSelectFieldState();
+}
+
+class _LookupSelectFieldState extends State<_LookupSelectField> {
+  List<FieldOption> _options = const [];
+  bool _loading = true;
+  bool _failed = false;
+
+  Object? get _dependsOnValue {
+    final dep = widget.ctx.field.options.dependsOn;
+    return dep == null ? null : widget.ctx.formValues[dep.fieldCode];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LookupSelectField old) {
+    super.didUpdateWidget(old);
+    final dep = widget.ctx.field.options.dependsOn;
+    if (dep != null &&
+        old.ctx.formValues[dep.fieldCode] != _dependsOnValue) {
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _failed = false;
+    });
+    try {
+      final options = await sl<LookupService>().selectOptions(
+        widget.ctx.field.options,
+        dependsOnValues: widget.ctx.formValues,
+      );
+      if (!mounted) return;
+      setState(() {
+        _options = options;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _options = const [];
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctx = widget.ctx;
+    final field = ctx.field;
+    final value = ctx.value?.toString();
+    final items = _options
+        .map((o) => AppDropdownItem<dynamic>(
+              value: o.value,
+              label: o.label,
+              enabled: !o.disabled,
+            ))
+        .toList();
+    final known = value == null || _options.any((o) => o.value == value);
+    return FieldScaffold(
+      labelText: field.label,
+      required: field.isRequired,
+      helpText: field.helpText,
+      errorText: _failed
+          ? sl<LocalizationService>().translate('field.options_load_failed')
+          : ctx.errorText,
+      child: Row(
+        children: [
+          Expanded(
+            child: AppDropdown<dynamic>(
+              items: items,
+              value: known ? value : null,
+              placeholder: field.placeholder,
+              enabled: ctx.enabled && !_loading,
+              onChanged: (v) => ctx.onChanged(v),
+            ),
+          ),
+          if (_failed)
+            AppIconButton(
+              icon: Icons.refresh,
+              tooltip: sl<LocalizationService>().translate('common.retry'),
+              onPressed: _load,
+            ),
+        ],
       ),
     );
   }

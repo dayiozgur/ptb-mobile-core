@@ -1073,6 +1073,7 @@ class AppLocalizations {
     'entity.backlog.reorder_failed': 'Sıra kaydedilemedi. Lütfen tekrar deneyin.',
     'ppm.permission.sprint_denied': 'Bu projede sprint yönetme yetkiniz yok.',
     'ppm.permission.issue_edit_denied': 'Bu projede iş kaydını düzenleme yetkiniz yok.',
+    'field.options_load_failed': 'Seçenekler yüklenemedi',
   };
 
   // ============================================
@@ -2124,6 +2125,7 @@ class AppLocalizations {
     'entity.backlog.reorder_failed': 'The order could not be saved. Please try again.',
     'ppm.permission.sprint_denied': 'You are not allowed to manage sprints in this project.',
     'ppm.permission.issue_edit_denied': 'You are not allowed to edit work items in this project.',
+    'field.options_load_failed': 'Options could not be loaded',
   };
 
   // ============================================
@@ -3178,5 +3180,6 @@ class AppLocalizations {
     'entity.backlog.reorder_failed': 'Die Reihenfolge konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
     'ppm.permission.sprint_denied': 'Sie dürfen in diesem Projekt keine Sprints verwalten.',
     'ppm.permission.issue_edit_denied': 'Sie dürfen in diesem Projekt keine Arbeitselemente bearbeiten.',
+    'field.options_load_failed': 'Optionen konnten nicht geladen werden',
   };
 }
