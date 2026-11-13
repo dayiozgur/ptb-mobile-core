@@ -5,7 +5,8 @@ void main() {
   group('NotificationType', () {
     test('fromString returns correct type', () {
       expect(NotificationType.fromString('ALERT'), NotificationType.alert);
-      expect(NotificationType.fromString('REMINDER'), NotificationType.reminder);
+      expect(
+          NotificationType.fromString('REMINDER'), NotificationType.reminder);
       expect(NotificationType.fromString('INFO'), NotificationType.info);
     });
 
@@ -30,9 +31,12 @@ void main() {
 
   group('NotificationEntityType', () {
     test('fromString returns correct type', () {
-      expect(NotificationEntityType.fromString('INVOICE'), NotificationEntityType.invoice);
-      expect(NotificationEntityType.fromString('PRODUCTION'), NotificationEntityType.production);
-      expect(NotificationEntityType.fromString('UNIT'), NotificationEntityType.unit);
+      expect(NotificationEntityType.fromString('INVOICE'),
+          NotificationEntityType.invoice);
+      expect(NotificationEntityType.fromString('PRODUCTION'),
+          NotificationEntityType.production);
+      expect(NotificationEntityType.fromString('UNIT'),
+          NotificationEntityType.unit);
     });
 
     test('fromString returns null for invalid value', () {
@@ -187,25 +191,26 @@ void main() {
       expect(notifWithoutBoth.message, '');
     });
 
+    // No LocalizationService registered → built-in English (RelativeTime).
     test('timeAgo returns correct relative time', () {
       // Create notification with recent time
       final recentNotification = AppNotification(
         id: 'recent',
         dateTime: DateTime.now().subtract(const Duration(minutes: 5)),
       );
-      expect(recentNotification.timeAgo.contains('dakika'), true);
+      expect(recentNotification.timeAgo, '5 minutes ago');
 
       final hourAgoNotification = AppNotification(
         id: 'hour-ago',
         dateTime: DateTime.now().subtract(const Duration(hours: 2)),
       );
-      expect(hourAgoNotification.timeAgo.contains('saat'), true);
+      expect(hourAgoNotification.timeAgo, '2 hours ago');
 
       final dayAgoNotification = AppNotification(
         id: 'day-ago',
         dateTime: DateTime.now().subtract(const Duration(days: 3)),
       );
-      expect(dayAgoNotification.timeAgo.contains('gün'), true);
+      expect(dayAgoNotification.timeAgo, '3 days ago');
     });
 
     test('equality works correctly', () {
@@ -330,12 +335,11 @@ void main() {
 
     test('missing / empty / foreign action_url → no route', () {
       expect(AppNotification.fromJson({'id': 'n1'}).route, isNull);
-      expect(
-          AppNotification.fromJson({'id': 'n1', 'action_url': ''}).route, isNull);
+      expect(AppNotification.fromJson({'id': 'n1', 'action_url': ''}).route,
+          isNull);
       expect(
           AppNotification.fromJson(
-                  {'id': 'n1', 'action_url': 'https://evil.example.com/x'})
-              .route,
+              {'id': 'n1', 'action_url': 'https://evil.example.com/x'}).route,
           isNull);
     });
   });

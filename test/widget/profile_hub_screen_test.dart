@@ -27,6 +27,9 @@ void main() {
 
     registerFake<ProfileService>(profiles);
     registerFake<FileStorageService>(storage);
+    registerFake<LocalizationService>(buildFakeLocalization(
+      overrides: AppLocalizations.getTranslations(AppLocale.turkish),
+    ));
   });
 
   tearDown(() async {
@@ -36,8 +39,9 @@ void main() {
   testWidgets('shows a spinner while the profile bundle is loading',
       (tester) async {
     final completer = Completer<UserProfile?>();
-    when(() => profiles.getProfileBundle(
-        forceRefresh: any(named: 'forceRefresh'))).thenAnswer(
+    when(() =>
+            profiles.getProfileBundle(forceRefresh: any(named: 'forceRefresh')))
+        .thenAnswer(
       (_) => completer.future,
     );
 
@@ -52,8 +56,8 @@ void main() {
 
   testWidgets('renders name and role in the header when a profile loads',
       (tester) async {
-    when(() => profiles.getProfileBundle(
-            forceRefresh: any(named: 'forceRefresh')))
+    when(() =>
+            profiles.getProfileBundle(forceRefresh: any(named: 'forceRefresh')))
         .thenAnswer(
       (_) async => const UserProfile(
         id: 'p-1',
@@ -79,8 +83,8 @@ void main() {
 
   testWidgets('shows the error state when the profile fails to load',
       (tester) async {
-    when(() => profiles.getProfileBundle(
-            forceRefresh: any(named: 'forceRefresh')))
+    when(() =>
+            profiles.getProfileBundle(forceRefresh: any(named: 'forceRefresh')))
         .thenAnswer((_) async => null);
 
     await tester.pumpWidget(const MaterialApp(home: ProfileHubScreen()));

@@ -91,7 +91,8 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
     UserProfile? profile;
     String? avatar;
     try {
-      profile = await profileService.getProfileBundle(forceRefresh: forceRefresh);
+      profile =
+          await profileService.getProfileBundle(forceRefresh: forceRefresh);
       avatar = await fileStorageService.getAvatarUrl(profile?.avatarUrl);
     } catch (_) {
       profile = null;
@@ -171,9 +172,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
   /// (kendisi de yola sahip ve çözülebilirse dahil).
   List<MenuItem> _collectResolvable(MenuItem item) {
     final out = <MenuItem>[];
-    if (item.hasPath &&
-        !item.disabled &&
-        ScreenResolver.hasScreen(item.path)) {
+    if (item.hasPath && !item.disabled && ScreenResolver.hasScreen(item.path)) {
       out.add(item);
     }
     for (final child in item.children) {
@@ -203,7 +202,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       showAppBar: !widget.embedded,
-      title: 'My Space',
+      title: _t('nav.my_space'),
       showBackButton: false,
       child: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -233,7 +232,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
   Widget _buildGreeting(BuildContext context) {
     final name = _profile?.displayName ??
         authService.currentUser?.email ??
-        'Kullanıcı';
+        _t('settings.user_fallback');
     return AppCard(
       child: Padding(
         padding: AppSpacing.cardInsets,
@@ -250,7 +249,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Merhaba,',
+                    _t('myspace.greeting'),
                     style: AppTypography.subheadline.copyWith(
                       color: AppColors.secondaryLabel(context),
                     ),
@@ -277,7 +276,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppSectionHeader(title: 'Kişisel'),
+        AppSectionHeader(title: _t('myspace.personal')),
         const SizedBox(height: AppSpacing.sm),
         GridView.count(
           crossAxisCount: 2,
@@ -336,7 +335,7 @@ class _MySpaceScreenState extends State<MySpaceScreen> {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
-                'Kişisel öğe bulunamadı',
+                _t('myspace.no_items'),
                 style: AppTypography.subheadline.copyWith(
                   color: AppColors.secondaryLabel(context),
                 ),

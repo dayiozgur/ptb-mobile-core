@@ -20,6 +20,7 @@ export 'src/core/branding/branding_service.dart';
 // Core - Utils
 export 'src/core/utils/validators.dart';
 export 'src/core/utils/formatters.dart';
+export 'src/core/utils/relative_time.dart';
 export 'src/core/utils/logger.dart';
 export 'src/core/utils/db_field_helpers.dart';
 

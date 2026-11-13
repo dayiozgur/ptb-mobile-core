@@ -130,8 +130,8 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
           padding: const EdgeInsets.fromLTRB(
               AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xs),
           child: Text(_groupLabel(group),
-              style: AppTypography.withColor(AppTypography.footnote,
-                  AppColors.secondaryLabel(context))),
+              style: AppTypography.withColor(
+                  AppTypography.footnote, AppColors.secondaryLabel(context))),
         ));
       }
       for (final it in items) {
@@ -151,13 +151,13 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
   String _groupLabel(String g) {
     switch (g) {
       case 'overdue':
-        return 'GECİKMİŞ';
+        return _tr('work_inbox.group.overdue', 'OVERDUE');
       case 'today':
-        return 'BUGÜN';
+        return _tr('work_inbox.group.today', 'TODAY');
       case 'stale':
-        return 'DURGUN';
+        return _tr('work_inbox.group.stale', 'STALE');
       case 'upcoming':
-        return 'YAKLAŞAN';
+        return _tr('work_inbox.group.upcoming', 'UPCOMING');
       default:
         return g.toUpperCase();
     }

@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../utils/relative_time.dart';
+
 /// DateTime için uzantı metodları
 extension DateTimeExtensions on DateTime {
   // ============================================
@@ -9,14 +11,14 @@ extension DateTimeExtensions on DateTime {
   /// Standart tarih formatı (dd/MM/yyyy)
   String get formatted => DateFormat('dd/MM/yyyy').format(this);
 
-  /// Uzun tarih formatı (26 Ocak 2024)
-  String get formattedLong => DateFormat.yMMMMd('tr_TR').format(this);
+  /// Uzun tarih formatı (26 Ocak 2024 / 26 January 2024) — UI language.
+  String get formattedLong => DateFormat.yMMMMd().format(this);
 
-  /// Kısa tarih formatı (26 Oca)
-  String get formattedShort => DateFormat.MMMd('tr_TR').format(this);
+  /// Kısa tarih formatı (26 Oca / 26 Jan) — UI language.
+  String get formattedShort => DateFormat.MMMd().format(this);
 
-  /// Saat formatı (14:30)
-  String get formattedTime => DateFormat.Hm('tr_TR').format(this);
+  /// Saat formatı (14:30) — UI language.
+  String get formattedTime => DateFormat.Hm().format(this);
 
   /// Tarih ve saat formatı (26/01/2024 14:30)
   String get formattedDateTime => DateFormat('dd/MM/yyyy HH:mm').format(this);
@@ -25,7 +27,8 @@ extension DateTimeExtensions on DateTime {
   String get formattedIso => toIso8601String();
 
   /// Özel format
-  String format(String pattern, {String locale = 'tr_TR'}) {
+  /// [locale] defaults to the UI language.
+  String format(String pattern, {String? locale}) {
     return DateFormat(pattern, locale).format(this);
   }
 
@@ -33,38 +36,8 @@ extension DateTimeExtensions on DateTime {
   // RELATIVE TIME
   // ============================================
 
-  /// Göreli zaman (5 dakika önce, Dün, vb.)
-  String get relative {
-    final now = DateTime.now();
-    final diff = now.difference(this);
-
-    if (diff.isNegative) {
-      return _relativeFuture(diff.abs());
-    }
-    return _relativePast(diff);
-  }
-
-  String _relativePast(Duration diff) {
-    if (diff.inSeconds < 60) return 'Az önce';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} dakika önce';
-    if (diff.inHours < 24) return '${diff.inHours} saat önce';
-    if (diff.inDays == 1) return 'Dün';
-    if (diff.inDays < 7) return '${diff.inDays} gün önce';
-    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} hafta önce';
-    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} ay önce';
-    return '${(diff.inDays / 365).floor()} yıl önce';
-  }
-
-  String _relativeFuture(Duration diff) {
-    if (diff.inSeconds < 60) return 'Birazdan';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} dakika içinde';
-    if (diff.inHours < 24) return '${diff.inHours} saat içinde';
-    if (diff.inDays == 1) return 'Yarın';
-    if (diff.inDays < 7) return '${diff.inDays} gün içinde';
-    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} hafta içinde';
-    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} ay içinde';
-    return '${(diff.inDays / 365).floor()} yıl içinde';
-  }
+  /// Göreli zaman (5 dakika önce, Dün, vb.) — UI language.
+  String get relative => RelativeTime.of(this);
 
   // ============================================
   // COMPARISON

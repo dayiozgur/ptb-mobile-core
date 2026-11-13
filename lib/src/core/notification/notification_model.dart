@@ -1,4 +1,5 @@
 import '../navigation/in_app_route.dart';
+import '../utils/relative_time.dart';
 
 /// Bildirim türleri (mevcut DB şemasına uygun)
 enum NotificationType {
@@ -334,27 +335,8 @@ class AppNotification {
   }
 
   /// Bildirim ne kadar önce oluşturuldu
-  String get timeAgo {
-    final date = dateTime ?? createdAt ?? DateTime.now();
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inSeconds < 60) {
-      return 'Az önce';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} dakika önce';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} saat önce';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else if (difference.inDays < 30) {
-      return '${(difference.inDays / 7).floor()} hafta önce';
-    } else if (difference.inDays < 365) {
-      return '${(difference.inDays / 30).floor()} ay önce';
-    } else {
-      return '${(difference.inDays / 365).floor()} yıl önce';
-    }
-  }
+  String get timeAgo =>
+      RelativeTime.past(dateTime ?? createdAt ?? DateTime.now());
 
   /// [actionUrl]'den çözülen uygulama-içi yol; yoksa / yabancı host ise null.
   String? get route => InAppRoute.normalize(actionUrl);

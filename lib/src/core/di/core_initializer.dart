@@ -229,11 +229,13 @@ class CoreInitializer {
       onProgress?.call('Flutter binding');
       WidgetsFlutterBinding.ensureInitialized();
 
-      // intl locale-data init — `DateFormat(pattern, 'tr_TR')` çağrıları
-      // initializeDateFormatting olmadan LocaleDataException fırlatıyordu
-      // (tarih/lokalizasyon "yüklenmedi" belirtisi). tr + en yükle.
+      // intl locale data for every UI language: dates and numbers follow the
+      // app's language (Intl.defaultLocale is set by LocalizationService);
+      // without this DateFormat throws LocaleDataException.
       try {
-        await initializeDateFormatting('tr_TR', null);
+        for (final l in AppLocale.values) {
+          await initializeDateFormatting(l.intlLocale, null);
+        }
         await initializeDateFormatting('en_US', null);
       } catch (e) {
         Logger.warning('initializeDateFormatting failed: $e');

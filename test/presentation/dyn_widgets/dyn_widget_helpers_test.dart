@@ -2,6 +2,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart' show Intl;
 // Dahili yardımcı (barrel'da re-export edilmez) — doğrudan src yolundan import.
 import 'package:protoolbag_core/src/presentation/dyn_widgets/dyn_widget_helpers.dart';
 
@@ -10,9 +11,12 @@ import 'package:protoolbag_core/src/presentation/dyn_widgets/dyn_widget_helpers.
 /// Widget pump'ı gerekmez; deterministik birim testleri.
 void main() {
   setUpAll(() async {
-    // formatCell/DateFormat('dd.MM.yyyy','tr_TR') tarih-sembolleri gerektirir.
+    // Numbers and dates follow the UI language (Intl.defaultLocale); pin it.
     await initializeDateFormatting('tr_TR', null);
+    await initializeDateFormatting('en_GB', null);
   });
+  setUp(() => Intl.defaultLocale = 'tr_TR');
+  tearDown(() => Intl.defaultLocale = null);
 
   group('readString', () {
     test('değer var → string', () {
@@ -43,7 +47,10 @@ void main() {
 
   group('readStringList', () {
     test('liste → boşları eleyerek string listesi', () {
-      expect(DynWidgetHelpers.readStringList({'c': ['a', '', 'b', 3]}, 'c'),
+      expect(
+          DynWidgetHelpers.readStringList({
+            'c': ['a', '', 'b', 3]
+          }, 'c'),
           ['a', 'b', '3']);
     });
     test('liste değil → boş liste', () {
@@ -68,7 +75,8 @@ void main() {
 
   group('firstNumericKey / firstStringKey', () {
     test('firstNumericKey ilk sayısalı bulur (bool hariç)', () {
-      expect(DynWidgetHelpers.firstNumericKey({'name': 'a', 'count': 5}), 'count');
+      expect(
+          DynWidgetHelpers.firstNumericKey({'name': 'a', 'count': 5}), 'count');
       expect(DynWidgetHelpers.firstNumericKey({'flag': true, 'n': 3}), 'n');
       expect(DynWidgetHelpers.firstNumericKey({'name': 'a'}), isNull);
     });
@@ -81,13 +89,15 @@ void main() {
 
   group('tryDate', () {
     test('ISO string / DateTime → tarih', () {
-      expect(DynWidgetHelpers.tryDate('2026-09-02'), DateTime.parse('2026-09-02'));
+      expect(
+          DynWidgetHelpers.tryDate('2026-09-02'), DateTime.parse('2026-09-02'));
       final now = DateTime(2026, 9, 2);
       expect(DynWidgetHelpers.tryDate(now), now);
     });
     test('kısa / geçersiz → null', () {
       expect(DynWidgetHelpers.tryDate('short'), isNull); // len<8
-      expect(DynWidgetHelpers.tryDate('not-a-real-date'), isNull); // parse edilemez
+      expect(DynWidgetHelpers.tryDate('not-a-real-date'),
+          isNull); // parse edilemez
       expect(DynWidgetHelpers.tryDate(42), isNull);
     });
   });
@@ -100,13 +110,20 @@ void main() {
       expect(DynWidgetHelpers.formatNumber(1234.5), '1.234,50');
     });
     test('decimals + prefix + suffix', () {
-      expect(DynWidgetHelpers.formatNumber(42, decimals: 0, prefix: '₺', suffix: ' KDV'),
+      expect(
+          DynWidgetHelpers.formatNumber(42,
+              decimals: 0, prefix: '₺', suffix: ' KDV'),
           '₺42 KDV');
+    });
+    test('English UI → English separators', () {
+      Intl.defaultLocale = 'en_GB';
+      expect(DynWidgetHelpers.formatNumber(1234.5), '1,234.50');
     });
   });
 
   group('formatCell', () {
-    test('null → em-dash', () => expect(DynWidgetHelpers.formatCell(null), '—'));
+    test(
+        'null → em-dash', () => expect(DynWidgetHelpers.formatCell(null), '—'));
     test('bool → Evet/Hayır', () {
       expect(DynWidgetHelpers.formatCell(true), 'Evet');
       expect(DynWidgetHelpers.formatCell(false), 'Hayır');
@@ -114,23 +131,33 @@ void main() {
     test('ISO tarih → dd.MM.yyyy', () {
       expect(DynWidgetHelpers.formatCell('2026-09-02'), '02.09.2026');
     });
-    test('metin → aynen', () => expect(DynWidgetHelpers.formatCell('merhaba'), 'merhaba'));
+    test('metin → aynen',
+        () => expect(DynWidgetHelpers.formatCell('merhaba'), 'merhaba'));
   });
 
   group('resolveColors / palette', () {
     test('geçerli colors[] → parse edilmiş', () {
-      final colors = DynWidgetHelpers.resolveColors({'colors': ['#FF0000', '#00FF00']});
+      final colors = DynWidgetHelpers.resolveColors({
+        'colors': ['#FF0000', '#00FF00']
+      });
       expect(colors, hasLength(2));
       expect(colors.first, const Color(0xFFFF0000));
     });
     test('#AARRGGBB ve int desteklenir', () {
-      final colors = DynWidgetHelpers.resolveColors({'colors': ['#80FF0000', 0xFF123456]});
+      final colors = DynWidgetHelpers.resolveColors({
+        'colors': ['#80FF0000', 0xFF123456]
+      });
       expect(colors, [const Color(0x80FF0000), const Color(0xFF123456)]);
     });
     test('boş / geçersiz / eksik → varsayılan 10-renk paleti', () {
-      expect(DynWidgetHelpers.resolveColors({}), DynWidgetHelpers.defaultPalette);
-      expect(DynWidgetHelpers.resolveColors({'colors': []}), DynWidgetHelpers.defaultPalette);
-      expect(DynWidgetHelpers.resolveColors({'colors': ['garbage']}),
+      expect(
+          DynWidgetHelpers.resolveColors({}), DynWidgetHelpers.defaultPalette);
+      expect(DynWidgetHelpers.resolveColors({'colors': []}),
+          DynWidgetHelpers.defaultPalette);
+      expect(
+          DynWidgetHelpers.resolveColors({
+            'colors': ['garbage']
+          }),
           DynWidgetHelpers.defaultPalette);
     });
     test('varsayılan palet 10 renk', () {

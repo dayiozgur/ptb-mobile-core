@@ -1,9 +1,14 @@
 import 'package:intl/intl.dart';
 
+import 'relative_time.dart';
+
 /// Veri formatlama yardımcıları
 ///
 /// Para birimi, sayı, tarih ve diğer veri tiplerini
 /// kullanıcı dostu formatlara dönüştürür.
+///
+/// `locale` is optional everywhere: when omitted, dates and numbers follow the
+/// UI language (`Intl.defaultLocale`, set by LocalizationService).
 class Formatters {
   Formatters._();
 
@@ -18,7 +23,7 @@ class Formatters {
     double amount, {
     String symbol = '₺',
     int decimals = 2,
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = NumberFormat.currency(
       locale: locale,
@@ -34,7 +39,7 @@ class Formatters {
   static String currencyCompact(
     double amount, {
     String symbol = '₺',
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = NumberFormat.compactCurrency(
       locale: locale,
@@ -53,7 +58,7 @@ class Formatters {
   static String number(
     num value, {
     int decimals = 0,
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = NumberFormat.decimalPatternDigits(
       locale: locale,
@@ -65,7 +70,7 @@ class Formatters {
   /// Kompakt sayı formatı
   ///
   /// Örnek: 1234567 → "1.23M"
-  static String numberCompact(num value, {String locale = 'tr_TR'}) {
+  static String numberCompact(num value, {String? locale}) {
     final formatter = NumberFormat.compact(locale: locale);
     return formatter.format(value);
   }
@@ -76,7 +81,7 @@ class Formatters {
   static String decimal(
     double value, {
     int decimals = 2,
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = NumberFormat.decimalPatternDigits(
       locale: locale,
@@ -95,7 +100,7 @@ class Formatters {
   static String percentage(
     double value, {
     int decimals = 1,
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = NumberFormat.percentPattern(locale);
     return formatter.format(value);
@@ -121,7 +126,7 @@ class Formatters {
   static String date(
     DateTime date, {
     String format = 'dd/MM/yyyy',
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = DateFormat(format, locale);
     return formatter.format(date);
@@ -130,7 +135,7 @@ class Formatters {
   /// Uzun tarih formatı
   ///
   /// Örnek: DateTime.now() → "26 Ocak 2024"
-  static String dateLong(DateTime date, {String locale = 'tr_TR'}) {
+  static String dateLong(DateTime date, {String? locale}) {
     final formatter = DateFormat.yMMMMd(locale);
     return formatter.format(date);
   }
@@ -138,7 +143,7 @@ class Formatters {
   /// Kısa tarih formatı
   ///
   /// Örnek: DateTime.now() → "26 Oca"
-  static String dateShort(DateTime date, {String locale = 'tr_TR'}) {
+  static String dateShort(DateTime date, {String? locale}) {
     final formatter = DateFormat.MMMd(locale);
     return formatter.format(date);
   }
@@ -146,7 +151,7 @@ class Formatters {
   /// Saat formatı
   ///
   /// Örnek: DateTime.now() → "14:30"
-  static String time(DateTime date, {String locale = 'tr_TR'}) {
+  static String time(DateTime date, {String? locale}) {
     final formatter = DateFormat.Hm(locale);
     return formatter.format(date);
   }
@@ -157,7 +162,7 @@ class Formatters {
   static String dateTime(
     DateTime date, {
     String format = 'dd/MM/yyyy HH:mm',
-    String locale = 'tr_TR',
+    String? locale,
   }) {
     final formatter = DateFormat(format, locale);
     return formatter.format(date);
@@ -166,64 +171,10 @@ class Formatters {
   /// Göreli zaman formatı
   ///
   /// Örnek: 5 dakika önce, 2 saat önce, Dün, 3 gün önce
-  static String relativeTime(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  static String relativeTime(DateTime date) => RelativeTime.past(date);
 
-    if (difference.inSeconds < 60) {
-      return 'Az önce';
-    } else if (difference.inMinutes < 60) {
-      final minutes = difference.inMinutes;
-      return '$minutes dakika önce';
-    } else if (difference.inHours < 24) {
-      final hours = difference.inHours;
-      return '$hours saat önce';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks hafta önce';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return '$months ay önce';
-    } else {
-      final years = (difference.inDays / 365).floor();
-      return '$years yıl önce';
-    }
-  }
-
-  /// Göreli gelecek zaman formatı
-  ///
-  /// Örnek: 5 dakika içinde, 2 saat içinde, Yarın
-  static String relativeTimeFuture(DateTime date) {
-    final now = DateTime.now();
-    final difference = date.difference(now);
-
-    if (difference.inSeconds < 60) {
-      return 'Birazdan';
-    } else if (difference.inMinutes < 60) {
-      final minutes = difference.inMinutes;
-      return '$minutes dakika içinde';
-    } else if (difference.inHours < 24) {
-      final hours = difference.inHours;
-      return '$hours saat içinde';
-    } else if (difference.inDays == 1) {
-      return 'Yarın';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün içinde';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks hafta içinde';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return '$months ay içinde';
-    } else {
-      final years = (difference.inDays / 365).floor();
-      return '$years yıl içinde';
-    }
-  }
+  /// Göreli gelecek zaman formatı (translated: "in 5 minutes", "tomorrow" …).
+  static String relativeTimeFuture(DateTime date) => RelativeTime.future(date);
 
   // ============================================
   // FILE SIZE
@@ -269,25 +220,8 @@ class Formatters {
   /// Okunabilir süre formatı
   ///
   /// Örnek: Duration(hours: 2, minutes: 30) → "2 saat 30 dakika"
-  static String durationReadable(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-
-    final parts = <String>[];
-
-    if (hours > 0) {
-      parts.add('$hours saat');
-    }
-    if (minutes > 0) {
-      parts.add('$minutes dakika');
-    }
-    if (seconds > 0 && hours == 0) {
-      parts.add('$seconds saniye');
-    }
-
-    return parts.isEmpty ? '0 saniye' : parts.join(' ');
-  }
+  static String durationReadable(Duration duration) =>
+      RelativeTime.duration(duration);
 
   // ============================================
   // PHONE

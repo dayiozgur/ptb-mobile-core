@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+String _t(String key, [Map<String, dynamic>? params]) =>
+    sl.isRegistered<LocalizationService>()
+        ? sl<LocalizationService>().translate(key, params: params)
+        : key;
+
 /// FixFlow **on-site süre takibi** kartı — bir iş kaydının (work_request)
 /// yapıldığı işyeri geofence'ine göre oturum **Başlat / Bitir**; süre sunucu
 /// tarafında `worklogs`'a otomatik yazılır.
@@ -76,15 +81,14 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
 
   Future<void> _start() async {
     setState(() => _busy = true);
-    final r = await _svc.start(widget.workRequestId, preferSiteId: widget.siteId);
+    final r =
+        await _svc.start(widget.workRequestId, preferSiteId: widget.siteId);
     if (!mounted) return;
     if (r.ok) {
       await _load();
     }
     setState(() => _busy = false);
-    _snack(r.ok
-        ? 'Oturum başladı ✓'
-        : _errMsg(r.error));
+    _snack(r.ok ? _t('geo.session.started') : _errMsg(r.error));
   }
 
   Future<void> _stop() async {
@@ -98,40 +102,39 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
     setState(() => _busy = false);
     _snack(r.ok
         ? (r.durationMinutes != null
-            ? 'Oturum bitti ✓ (${r.durationMinutes} dk worklog)'
-            : 'Oturum bitti ✓')
+            ? _t('geo.session.ended_logged', {
+                'duration':
+                    RelativeTime.duration(Duration(minutes: r.durationMinutes!))
+              })
+            : _t('geo.session.ended'))
         : _errMsg(r.error));
   }
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   String _errMsg(String? code) {
     switch (code) {
       case 'out_of_range':
-        return 'İş konumunun dışındasınız.';
+        return _t('geo.session.out_of_range');
       case 'no_geofence':
-        return 'Bu iş için konum tanımlı değil.';
+        return _t('geo.session.no_geofence');
       case 'no_session':
-        return 'Açık oturum bulunamadı.';
+        return _t('geo.session.no_session');
       case 'no_staff':
-        return 'Personel kaydı bulunamadı.';
+        return _t('geo.error.no_staff');
       case 'already_open':
-        return 'Zaten açık bir oturumunuz var.';
+        return _t('geo.session.already_open');
       default:
-        return 'İşlem başarısız.';
+        return _t('geo.error.failed');
     }
   }
 
   String _elapsed(DateTime from) {
     final mins = DateTime.now().difference(from).inMinutes;
-    if (mins < 60) return '$mins dk';
-    final h = mins ~/ 60;
-    final m = mins % 60;
-    return m == 0 ? '$h sa' : '$h sa $m dk';
+    return RelativeTime.duration(Duration(minutes: mins < 0 ? 0 : mins));
   }
 
   @override
@@ -148,22 +151,23 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
     if (active != null) {
       statusColor = AppColors.success;
       statusIcon = Icons.timer;
-      statusText = 'Oturum açık · ${_elapsed(active.startedAt)}';
+      statusText =
+          _t('geo.session.open', {'elapsed': _elapsed(active.startedAt)});
     } else if (inRange) {
       statusColor = AppColors.success;
       statusIcon = Icons.location_on;
-      statusText = 'İş konumundasınız: ${gfName ?? "-"}';
+      statusText = _t('geo.session.on_site', {'name': gfName ?? '-'});
     } else if (_near?.geofence != null) {
       statusColor = AppColors.warning;
       statusIcon = Icons.my_location_outlined;
       final d = _near?.distanceM;
       statusText = d != null
-          ? 'İş konumuna ${d.round()} m uzaktasınız'
-          : 'İş konumunun dışındasınız';
+          ? _t('geo.session.distance', {'distance': '${d.round()} m'})
+          : _t('geo.session.off_site');
     } else {
       statusColor = AppColors.textSecondary(b);
       statusIcon = Icons.location_searching;
-      statusText = 'Konum alınıyor…';
+      statusText = _t('geo.locating');
     }
 
     return AppCard(
@@ -177,9 +181,9 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
                 Icon(statusIcon, color: statusColor, size: 22),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Text('Konum-tabanlı süre takibi',
-                      style: AppTypography.withColor(AppTypography.subhead,
-                          AppColors.textPrimary(b))),
+                  child: Text(_t('geo.session.title'),
+                      style: AppTypography.withColor(
+                          AppTypography.subhead, AppColors.textPrimary(b))),
                 ),
               ],
             ),
@@ -194,7 +198,7 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _stop,
                   icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                  label: const Text('Oturumu Bitir'),
+                  label: Text(_t('geo.session.stop')),
                 ),
               )
             else
@@ -203,7 +207,7 @@ class _WorkGeoSessionCardState extends State<WorkGeoSessionCard> {
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _start,
                   icon: const Icon(Icons.play_circle_outline, size: 18),
-                  label: const Text('Oturum Başlat'),
+                  label: Text(_t('geo.session.start')),
                 ),
               ),
           ],

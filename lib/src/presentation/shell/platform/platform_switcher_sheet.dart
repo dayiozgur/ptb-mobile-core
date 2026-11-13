@@ -45,11 +45,14 @@ class _PlatformSwitcherSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Platform Değiştir', style: AppTypography.title3),
+                child: Text(
+                    sl<LocalizationService>()
+                        .translate('platform.switch_title'),
+                    style: AppTypography.title3),
               ),
             ),
             const Divider(height: 1),
@@ -63,11 +66,15 @@ class _PlatformSwitcherSheet extends StatelessWidget {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
+                  if (snap.hasError) {
+                    return AppLoadFailedView(error: snap.error, compact: true);
+                  }
                   final platforms = snap.data ?? const [];
                   if (platforms.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Erişilebilir platform yok'),
+                    return Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(sl<LocalizationService>()
+                          .translate('platform.none_accessible')),
                     );
                   }
                   final activeId = sl<PlatformContext>().activePlatformId;
@@ -105,9 +112,7 @@ class _PlatformSwitcherSheet extends StatelessWidget {
           : null,
       trailing: active
           ? const Icon(Icons.check_circle, color: Color(0xFF16A34A))
-          : (p.isTrial
-              ? _badge('Deneme', const Color(0xFFD97706))
-              : null),
+          : (p.isTrial ? _badge('Deneme', const Color(0xFFD97706)) : null),
       onTap: () {
         Navigator.of(ctx).pop();
         final activeId = sl<PlatformContext>().activePlatformId;
@@ -129,7 +134,10 @@ class _PlatformSwitcherSheet extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
-            (p.code.isNotEmpty ? p.code : p.name).characters.first.toUpperCase(),
+            (p.code.isNotEmpty ? p.code : p.name)
+                .characters
+                .first
+                .toUpperCase(),
             style: AppTypography.headline.copyWith(color: color),
           ),
         );

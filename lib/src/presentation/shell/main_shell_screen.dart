@@ -41,6 +41,9 @@ class MainShellScreen extends StatefulWidget {
 /// Alt-nav hedefi (config — dinamikleştirmeye hazır).
 class _NavDest {
   final IconData icon;
+
+  /// Keyword key of the label (translated when drawn, so a language change
+  /// applies without rebuilding the list).
   final String label;
   final Widget Function() build;
   const _NavDest(this.icon, this.label, this.build);
@@ -73,13 +76,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   // Alt-nav hedefleri (sabit çekirdek; ileride DB/kullanıcı-seçimi ile dinamik).
   late final List<_NavDest> _dests = [
-    _NavDest(Icons.home_outlined, 'Ana Sayfa',
+    _NavDest(Icons.home_outlined, 'nav.home',
         () => const HomeScreen(embedded: true)),
-    _NavDest(Icons.workspaces_outline, 'My Space',
+    _NavDest(Icons.workspaces_outline, 'nav.my_space',
         () => const MySpaceScreen(embedded: true)),
-    _NavDest(Icons.grid_view_outlined, 'Modüller',
+    _NavDest(Icons.grid_view_outlined, 'nav.modules',
         () => const ModulesScreen(embedded: true)),
-    _NavDest(Icons.settings_outlined, 'Ayarlar',
+    _NavDest(Icons.settings_outlined, 'nav.settings',
         () => const SettingsScreen(embedded: true)),
   ];
 
@@ -105,7 +108,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
     });
     _orgSub = organizationService.organizationStream.listen((_) {
       if (mounted) {
-        setState(() => _orgName = organizationService.currentOrganization?.name);
+        setState(
+            () => _orgName = organizationService.currentOrganization?.name);
       }
     });
   }
@@ -142,8 +146,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
       }
       final tid = tenantService.currentTenantId;
       if (tid != null) {
-        final orgs = await organizationService.getOrganizations(tid,
-            forceRefresh: true);
+        final orgs =
+            await organizationService.getOrganizations(tid, forceRefresh: true);
         if (mounted) setState(() => _orgs = orgs);
       }
     } catch (_) {
@@ -318,67 +322,69 @@ class _MainShellScreenState extends State<MainShellScreen> {
       translate: _t,
       onSignOut: _signOutFromLocked,
       child: MainShellScope(
-      switchTab: _select,
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: AppColors.background(brightness),
-        appBar: AppBar(
-          backgroundColor: AppColors.surface(brightness),
-          elevation: 0,
-          scrolledUnderElevation: 0.5,
-          centerTitle: false,
-          title: Text(
-            locked ? _t(LicenseKeys.lockedTitle) : _dests[_currentIndex].label,
-            style: AppTypography.headline
-                .copyWith(color: AppColors.textPrimary(brightness)),
-          ),
-          actions: [
-            if (!locked) ...[
-              IconButton(
-                icon: const Icon(Icons.search),
-                tooltip: 'Ara',
-                onPressed: () => _push(const GlobalSearchScreen()),
-              ),
-              IconButton(
-                icon: const Icon(Icons.auto_awesome),
-                tooltip: 'AI Asistan',
-                onPressed: () => _push(const AiAssistantScreen()),
-              ),
-              IconButton(
-                icon: Badge.count(
-                  count: _unreadCount,
-                  isLabelVisible: _unreadCount > 0,
-                  child: const Icon(Icons.notifications_outlined),
-                ),
-                tooltip: 'Bildirimler',
-                onPressed: () => _push(const NotificationsScreen()),
-              ),
-            ],
-            // Platform değiştir kilitliyken de açık: kullanıcı lisanslı başka bir
-            // platforma geçebilir.
-            IconButton(
-              icon: const Icon(Icons.apps),
-              tooltip: 'Platform Değiştir',
-              onPressed: () => showPlatformSwitcher(context),
+        switchTab: _select,
+        child: Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: AppColors.background(brightness),
+          appBar: AppBar(
+            backgroundColor: AppColors.surface(brightness),
+            elevation: 0,
+            scrolledUnderElevation: 0.5,
+            centerTitle: false,
+            title: Text(
+              locked
+                  ? _t(LicenseKeys.lockedTitle)
+                  : _t(_dests[_currentIndex].label),
+              style: AppTypography.headline
+                  .copyWith(color: AppColors.textPrimary(brightness)),
             ),
-            const SizedBox(width: 4),
-          ],
-        ),
-        drawer: _buildDrawer(brightness, locked: locked),
-        body: body,
-        bottomNavigationBar: locked
-            ? null
-            : AppBottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: _select,
-                items: [
-                  for (var i = 0; i < _dests.length; i++)
-                    AppBottomNavItem(
-                        icon: _dests[i].icon, label: _dests[i].label),
-                ],
+            actions: [
+              if (!locked) ...[
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Ara',
+                  onPressed: () => _push(const GlobalSearchScreen()),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.auto_awesome),
+                  tooltip: 'AI Asistan',
+                  onPressed: () => _push(const AiAssistantScreen()),
+                ),
+                IconButton(
+                  icon: Badge.count(
+                    count: _unreadCount,
+                    isLabelVisible: _unreadCount > 0,
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                  tooltip: 'Bildirimler',
+                  onPressed: () => _push(const NotificationsScreen()),
+                ),
+              ],
+              // Platform değiştir kilitliyken de açık: kullanıcı lisanslı başka bir
+              // platforma geçebilir.
+              IconButton(
+                icon: const Icon(Icons.apps),
+                tooltip: _t('platform.switch_title'),
+                onPressed: () => showPlatformSwitcher(context),
               ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          drawer: _buildDrawer(brightness, locked: locked),
+          body: body,
+          bottomNavigationBar: locked
+              ? null
+              : AppBottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onTap: _select,
+                  items: [
+                    for (var i = 0; i < _dests.length; i++)
+                      AppBottomNavItem(
+                          icon: _dests[i].icon, label: _t(_dests[i].label)),
+                  ],
+                ),
+        ),
       ),
-    ),
     );
   }
 
@@ -401,7 +407,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
       if (!locked)
         ListTile(
           leading: Icon(Icons.grid_view_rounded, color: AppColors.primary),
-          title: const Text('Modüller'),
+          title: Text(_t('nav.modules')),
           onTap: () {
             Navigator.of(context).pop();
             _push(const ModulesScreen());
@@ -410,7 +416,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
       // Hesabım — abonelik/krediler/faturalar/kullanım/güvenlik hub'ı.
       ListTile(
         leading: Icon(Icons.account_circle_outlined, color: AppColors.primary),
-        title: const Text('Hesabım'),
+        title: Text(_t('nav.my_account')),
         onTap: () {
           Navigator.of(context).pop();
           _push(const AccountHubScreen());
@@ -531,7 +537,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void _showTenantSwitcher() {
     Navigator.of(context).pop(); // drawer'ı kapat
     _showWorkspaceSwitcher<Tenant>(
-      title: 'Tenant seç',
+      title: _t('workspace.select_tenant'),
       items: _tenants,
       activeId: tenantService.currentTenantId,
       idOf: (t) => t.id,
@@ -551,7 +557,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void _showOrgSwitcher() {
     Navigator.of(context).pop();
     _showWorkspaceSwitcher<Organization>(
-      title: 'Organizasyon seç',
+      title: _t('org.select_title'),
       items: _orgs,
       activeId: organizationService.currentOrganizationId,
       idOf: (o) => o.id,
@@ -613,10 +619,12 @@ class _MainShellScreenState extends State<MainShellScreen> {
                       if (!mounted) return;
                       if (ok) {
                         AppSnackbar.showSuccess(context,
-                            message: '${nameOf(it)} seçildi');
+                            message: sl<LocalizationService>().translate(
+                                'workspace.selected',
+                                params: {'name': nameOf(it)}));
                       } else {
                         AppSnackbar.showError(context,
-                            message: 'Değiştirilemedi');
+                            message: _t('workspace.switch_failed'));
                       }
                     },
                   );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart' show Intl;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../storage/cache_manager.dart';
@@ -31,6 +32,21 @@ enum AppLocale {
 
   /// Flutter Locale'e dönüştür
   Locale toLocale() => Locale(languageCode, countryCode);
+
+  /// `intl` locale used for dates and numbers. Follows the UI language, as on
+  /// the web (English → en_GB: day-month order, 24-hour clock).
+  String get intlLocale {
+    switch (this) {
+      case AppLocale.turkish:
+        return 'tr_TR';
+      case AppLocale.english:
+        return 'en_GB';
+      case AppLocale.german:
+        return 'de_DE';
+      case AppLocale.italian:
+        return 'it_IT';
+    }
+  }
 
   /// Web `keywords` tablosundaki `language_id` (canlı DB — tek doğruluk kaynağı).
   ///
@@ -175,6 +191,7 @@ class LocalizationService {
 
       // Çevirileri yükle
       await _loadTranslations(_currentLocale);
+      _applyIntlLocale(_currentLocale);
 
       _isInitialized = true;
       Logger.info(
@@ -197,10 +214,17 @@ class LocalizationService {
 
     _currentLocale = locale;
     await _loadTranslations(locale);
+    _applyIntlLocale(locale);
     await _storage.write(key: _localeKey, value: locale.languageCode);
     _localeController.add(locale);
 
     Logger.info('Locale changed to: ${locale.displayName}');
+  }
+
+  /// Dates and numbers formatted without an explicit locale (`DateFormat(p)`,
+  /// `NumberFormat.decimalPattern()`) follow the UI language.
+  void _applyIntlLocale(AppLocale locale) {
+    Intl.defaultLocale = locale.intlLocale;
   }
 
   /// Sistem diline ayarla

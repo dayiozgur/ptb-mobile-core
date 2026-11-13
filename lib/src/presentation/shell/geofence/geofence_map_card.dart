@@ -3,6 +3,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+String _t(String key, [Map<String, dynamic>? params]) =>
+    sl.isRegistered<LocalizationService>()
+        ? sl<LocalizationService>().translate(key, params: params)
+        : key;
+
 /// İşyeri geofence'ini (kapsam dairesi) + kullanıcının **canlı GPS konumunu**
 /// haritada gösterir; altında en yakın işyerine mesafe + içeride/dışarıda durumu.
 ///
@@ -70,8 +75,7 @@ class _GeofenceMapCardState extends State<GeofenceMapCard> {
     if (user != null && regions.isNotEmpty) {
       double best = double.infinity;
       for (final r in regions) {
-        final d =
-            _distance.as(LengthUnit.Meter, user, r.center);
+        final d = _distance.as(LengthUnit.Meter, user, r.center);
         if (d < best) best = d;
         if (d <= r.radiusMeters) inside = true;
       }
@@ -114,13 +118,12 @@ class _GeofenceMapCardState extends State<GeofenceMapCard> {
           children: [
             Row(
               children: [
-                Icon(Icons.map_outlined,
-                    size: 20, color: AppColors.primary),
+                Icon(Icons.map_outlined, size: 20, color: AppColors.primary),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text('Konum & Kapsam',
-                      style: AppTypography.withColor(AppTypography.subhead,
-                          AppColors.textPrimary(b))),
+                      style: AppTypography.withColor(
+                          AppTypography.subhead, AppColors.textPrimary(b))),
                 ),
                 AppIconButton(icon: Icons.refresh, onPressed: _load),
               ],
@@ -134,7 +137,7 @@ class _GeofenceMapCardState extends State<GeofenceMapCard> {
                     ? const Center(child: AppLoadingIndicator())
                     : !_hasGeofences
                         ? Center(
-                            child: Text('İşyeri tanımlı değil',
+                            child: Text(_t('geo.map.no_workplace'),
                                 style: AppTypography.withColor(
                                     AppTypography.footnote,
                                     AppColors.textSecondary(b))))
@@ -162,14 +165,15 @@ class _GeofenceMapCardState extends State<GeofenceMapCard> {
                 Expanded(
                   child: Text(
                     _userLoc == null
-                        ? 'GPS konumu alınamadı (izin gerekli)'
+                        ? _t('geo.map.no_gps')
                         : _inside
-                            ? 'İşyeri kapsamındasınız'
+                            ? _t('geo.map.inside')
                             : _nearestM != null
-                                ? 'İşyerine ${_fmtDist(_nearestM!)} uzaktasınız'
-                                : 'Konum hesaplanıyor…',
-                    style: AppTypography.withColor(AppTypography.footnote,
-                        AppColors.textSecondary(b)),
+                                ? _t('geo.map.distance',
+                                    {'distance': _fmtDist(_nearestM!)})
+                                : _t('geo.locating'),
+                    style: AppTypography.withColor(
+                        AppTypography.footnote, AppColors.textSecondary(b)),
                   ),
                 ),
                 if (_regions.isNotEmpty)

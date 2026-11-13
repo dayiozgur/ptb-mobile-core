@@ -8,6 +8,12 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../dyn_widgets/dyn_widgets.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
+
+String _summaryT(String key) => sl.isRegistered<LocalizationService>()
+    ? sl<LocalizationService>().translate(key)
+    : key;
 
 /// Tek bir KPI tanımı — json gövdesindeki [key] değerini [label] ile gösterir.
 class KpiSpec {
@@ -98,7 +104,7 @@ class _KpiRowCardState extends State<KpiRowCard> {
       future: _future,
       builder: (context, snap) {
         final loading = snap.connectionState == ConnectionState.waiting;
-        final error = snap.hasError ? 'Yüklenemedi' : null;
+        final error = snap.hasError ? _summaryT('common.load_error') : null;
         final obj = snap.hasData ? _resolveObject(snap.data) : null;
 
         return DynWidgetCard(
@@ -209,7 +215,8 @@ class _AggregateChartCardState extends State<AggregateChartCard> {
   Future<List<Map<String, dynamic>>> _fetch() async {
     final t = widget.transform;
     if (t != null) {
-      final raw = await AggregateService().json(widget.rpc, params: widget.params);
+      final raw =
+          await AggregateService().json(widget.rpc, params: widget.params);
       return t(raw);
     }
     return AggregateService().rows(widget.rpc, params: widget.params);
@@ -229,7 +236,7 @@ class _AggregateChartCardState extends State<AggregateChartCard> {
       future: _future,
       builder: (context, snap) {
         final loading = snap.connectionState == ConnectionState.waiting;
-        final error = snap.hasError ? 'Yüklenemedi' : null;
+        final error = snap.hasError ? _summaryT('common.load_error') : null;
         final rows = snap.data ?? const <Map<String, dynamic>>[];
 
         return DynWidgetCard(
@@ -255,7 +262,7 @@ class _AggregateChartCardState extends State<AggregateChartCard> {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         child: Center(
           child: Text(
-            'Henüz veri yok',
+            _summaryT('common.no_data_yet'),
             style: AppTypography.caption1.copyWith(
               color: AppColors.secondaryLabel(context),
             ),

@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Dinamik widget'lar için ortak yardımcılar: config okuma, tip-güvenli
-/// sayı/tarih biçimlendirme (tr_TR) ve varsayılan renk paleti.
+/// sayı/tarih biçimlendirme (UI dili) ve varsayılan renk paleti.
 class DynWidgetHelpers {
   DynWidgetHelpers._();
 
-  static const String locale = 'tr_TR';
+  /// Locale for numbers and dates: the UI language (`Intl.defaultLocale`,
+  /// set by LocalizationService); null lets intl use that default.
+  static String? get locale => Intl.defaultLocale;
 
   /// visualConfig'ten string değer okur (null-güvenli).
   static String? readString(Map<String, dynamic> config, String key) {

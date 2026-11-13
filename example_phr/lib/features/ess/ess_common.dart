@@ -3,10 +3,9 @@ import 'package:protoolbag_core/protoolbag_core.dart';
 
 /// PHR ESS ekranları için ortak yardımcılar (i18n + biçimlendirme).
 ///
-/// Tarih/sayı biçimlendirmesi Türk pazarı (LOCALE_ID=tr-TR) ile tutarlıdır.
-/// NOT: `intl` tarih-locale verisi `initializeDateFormatting` olmadan
-/// yüklenmediği için tarihler MANUEL biçimlenir (Türkçe ay adları burada).
-/// Sayı sembolleri intl'e gömülü olduğundan `NumberFormat(..., 'tr_TR')` güvenli.
+/// Dates and numbers follow the UI language (`Intl.defaultLocale`, set by the
+/// core LocalizationService; date symbols for every UI language are loaded at
+/// start-up) — no fixed Turkish locale.
 
 /// i18n çeviri — anahtar bulunamazsa (translate anahtarı geri döndürür)
 /// Türkçe [fallback] gösterilir.
@@ -15,24 +14,10 @@ String essT(String key, String fallback) {
   return v == key ? fallback : v;
 }
 
-const List<String> _trMonths = [
-  'Ocak',
-  'Şubat',
-  'Mart',
-  'Nisan',
-  'Mayıs',
-  'Haziran',
-  'Temmuz',
-  'Ağustos',
-  'Eylül',
-  'Ekim',
-  'Kasım',
-  'Aralık',
-];
+/// Grouping and decimal separators of the UI language (e.g. 1.234,56 / 1,234.56).
+NumberFormat get _moneyFmt => NumberFormat('#,##0.00');
 
-final NumberFormat _moneyFmt = NumberFormat('#,##0.00', 'tr_TR');
-
-/// Para birimi — `₺1.234,56` (Türk biçimi).
+/// Para birimi — `₺1.234,56` (tr) / `₺1,234.56` (en). Payroll is in TRY.
 String essMoney(num value) => '₺${_moneyFmt.format(value)}';
 
 /// Kısa tarih — `gg.aa.yyyy`.
@@ -58,23 +43,17 @@ String essDateRange(DateTime? start, DateTime? end) {
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Ay + yıl — `Ağustos 2026`.
+/// Ay + yıl — `Ağustos 2026` / `August 2026` (UI language).
 String essMonthYear(int? year, int? month) {
   if (year == null || month == null || month < 1 || month > 12) {
     return [month, year].where((e) => e != null).join('/');
   }
-  return '${_trMonths[month - 1]} $year';
+  return DateFormat.yMMMM().format(DateTime(year, month));
 }
 
-/// Saat/dakika biçimi — dakikadan `Xs Ydk` (ör. 90 → `1s 30dk`).
-String essDuration(int minutes) {
-  if (minutes <= 0) return '0dk';
-  final h = minutes ~/ 60;
-  final m = minutes % 60;
-  if (h == 0) return '${m}dk';
-  if (m == 0) return '${h}s';
-  return '${h}s ${m}dk';
-}
+/// Süre — dakikadan, UI dilinde (ör. 90 → `1 sa 30 dk` / `1 h 30 min`).
+String essDuration(int minutes) =>
+    RelativeTime.duration(Duration(minutes: minutes < 0 ? 0 : minutes));
 
 /// Saat — `HH:mm`.
 String essTime(DateTime? d) {

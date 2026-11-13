@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+/// Lock-screen texts (keywords; English if the locale service is not up yet).
+String _lockT(String key) {
+  const fallback = {
+    'security.lock.reason': 'Verify your identity to open the app',
+    'security.lock.title': 'App locked',
+    'security.lock.message': 'Verify your identity to continue',
+    'security.lock.verifying': 'Verifying…',
+    'security.lock.unlock': 'Unlock',
+  };
+  if (!sl.isRegistered<LocalizationService>()) return fallback[key] ?? key;
+  final v = sl<LocalizationService>().translate(key);
+  return v == key ? (fallback[key] ?? key) : v;
+}
+
 /// **Biyometrik uygulama kilidi** — biyometrik giriş etkinse (Ayarlar toggle'ı)
 /// ve kullanıcı oturum açmışsa, uygulama açılışında ve arka plandan dönüşte
 /// Face ID / Touch ID doğrulaması ister; doğrulanana kadar içeriği gizler.
@@ -30,7 +44,8 @@ class _BiometricLockGateState extends State<BiometricLockGate>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // Cold-start: etkin + oturum varsa kilitle ve doğrulamayı başlat.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _lockIfEnabled(prompt: true));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _lockIfEnabled(prompt: true));
   }
 
   @override
@@ -67,7 +82,7 @@ class _BiometricLockGateState extends State<BiometricLockGate>
     BiometricResult result;
     try {
       result = await authService.authenticateWithBiometric(
-        reason: 'Uygulamaya erişmek için kimliğinizi doğrulayın',
+        reason: _lockT('security.lock.reason'),
       );
     } catch (_) {
       result = BiometricResult.failure(status: BiometricStatus.unknown);
@@ -121,20 +136,20 @@ class _LockOverlay extends StatelessWidget {
             children: [
               const Icon(Icons.lock_outline, size: 56, color: Colors.white),
               const SizedBox(height: 20),
-              const Text(
-                'Uygulama Kilitli',
+              Text(
+                _lockT('security.lock.title'),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Devam etmek için kimliğinizi doğrulayın',
+              Text(
+                _lockT('security.lock.message'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 28),
               SizedBox(
@@ -148,7 +163,9 @@ class _LockOverlay extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.fingerprint),
-                  label: Text(busy ? 'Doğrulanıyor…' : 'Kilidi Aç'),
+                  label: Text(busy
+                      ? _lockT('security.lock.verifying')
+                      : _lockT('security.lock.unlock')),
                 ),
               ),
             ],

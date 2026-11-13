@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
 
+String _t(String key, [Map<String, dynamic>? params]) =>
+    sl.isRegistered<LocalizationService>()
+        ? sl<LocalizationService>().translate(key, params: params)
+        : key;
+
 /// PDKS **Giriş/Çıkış** kartı — geofence tabanlı otomatik PDKS'i açıp kapatır,
 /// işyeri-içinde olup olmadığını gösterir ve manuel giriş/çıkış sağlar.
 ///
@@ -59,13 +64,15 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
       // Sessiz geçme: kullanıcı neden punch olmadığını anlasın.
       final reason = r.raw['reason']?.toString();
       msg = reason == 'already_in'
-          ? 'Zaten açık bir girişiniz var (giriş atlandı).'
+          ? _t('geo.clock.already_in_skipped')
           : reason == 'no_open_punch'
-              ? 'Açık giriş bulunamadı (çıkış atlandı).'
-              : 'Değişiklik yok.';
+              ? _t('geo.clock.no_open_punch_skipped')
+              : _t('geo.clock.no_change');
     } else {
       msg = r.ok
-          ? (r.event.contains('in') ? 'Giriş yapıldı ✓' : 'Çıkış yapıldı ✓')
+          ? (r.event.contains('in')
+              ? _t('geo.clock.clocked_in')
+              : _t('geo.clock.clocked_out'))
           : _errMsg(r.error);
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -77,15 +84,15 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
   String _errMsg(String? code) {
     switch (code) {
       case 'out_of_range':
-        return 'İşyeri sınırının dışındasınız.';
+        return _t('geo.error.out_of_range');
       case 'no_staff':
-        return 'Personel kaydı bulunamadı.';
+        return _t('geo.error.no_staff');
       case 'geofence_not_found':
-        return 'İşyeri tanımı bulunamadı.';
+        return _t('geo.error.geofence_not_found');
       case 'no_position':
-        return 'Konum alınamadı.';
+        return _t('geo.error.no_position');
       default:
-        return 'İşlem başarısız.';
+        return _t('geo.error.failed');
     }
   }
 
@@ -97,8 +104,8 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
       await sl<LocalNotificationService>().requestPermission();
       final ok = await _svc.start();
       if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Konum izni gerekli (Ayarlar → Konum).')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_t('geo.location_permission_required'))));
       }
     } else {
       _svc.stop();
@@ -117,13 +124,15 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
       if (!r.isNoop) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(r.ok
-                ? (event == 'in' ? 'Manuel giriş yapıldı ✓' : 'Manuel çıkış yapıldı ✓')
+                ? (event == 'in'
+                    ? _t('geo.clock.manual_in')
+                    : _t('geo.clock.manual_out'))
                 : _errMsg(r.error))));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(event == 'in'
-                ? 'Zaten açık bir girişiniz var.'
-                : 'Açık giriş bulunamadı.')));
+                ? _t('geo.clock.already_in')
+                : _t('geo.clock.no_open_punch'))));
       }
     }
   }
@@ -142,19 +151,19 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
       statusColor = AppColors.textSecondary(b);
       statusIcon = Icons.location_off_outlined;
       statusText = _geofenceCount > 0
-          ? 'Otomatik PDKS kapalı · $_geofenceCount işyeri tanımlı'
-          : 'İşyeri tanımlı değil (yönetici tanımlamalı)';
+          ? _t('geo.clock.auto_off', {'count': _geofenceCount})
+          : _t('geo.clock.no_workplace');
     } else if (onSite) {
       statusColor = AppColors.success;
       statusIcon = Icons.location_on;
-      statusText = 'İşyerindesiniz: ${gf?.name ?? "-"}';
+      statusText = _t('geo.clock.on_site', {'name': gf?.name ?? '-'});
     } else {
       statusColor = AppColors.warning;
       statusIcon = Icons.my_location_outlined;
       final dist = _svc.nearestDistanceM;
       statusText = dist != null
-          ? 'İşyeri dışındasınız · en yakın ${_fmtDist(dist)}'
-          : 'İşyeri dışındasınız (konum bekleniyor)';
+          ? _t('geo.clock.off_site_nearest', {'distance': _fmtDist(dist)})
+          : _t('geo.clock.off_site_waiting');
     }
 
     return AppCard(
@@ -178,13 +187,14 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
             Row(
               children: [
                 Expanded(
-                  child: Text('Otomatik giriş/çıkış (konum)',
-                      style: AppTypography.withColor(AppTypography.footnote,
-                          AppColors.textSecondary(b))),
+                  child: Text(_t('geo.clock.auto_toggle'),
+                      style: AppTypography.withColor(
+                          AppTypography.footnote, AppColors.textSecondary(b))),
                 ),
                 Switch(
                   value: auto,
-                  onChanged: (_busy || _geofenceCount == 0) ? null : _toggleAuto,
+                  onChanged:
+                      (_busy || _geofenceCount == 0) ? null : _toggleAuto,
                 ),
               ],
             ),
@@ -195,7 +205,7 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
                   child: OutlinedButton.icon(
                     onPressed: _busy ? null : () => _manual('in'),
                     icon: const Icon(Icons.login, size: 18),
-                    label: const Text('Giriş'),
+                    label: Text(_t('geo.clock.in')),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -203,7 +213,7 @@ class _GeofenceClockCardState extends State<GeofenceClockCard> {
                   child: OutlinedButton.icon(
                     onPressed: _busy ? null : () => _manual('out'),
                     icon: const Icon(Icons.logout, size: 18),
-                    label: const Text('Çıkış'),
+                    label: Text(_t('geo.clock.out')),
                   ),
                 ),
               ],

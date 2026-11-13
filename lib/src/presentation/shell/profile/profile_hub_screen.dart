@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/di/core_initializer.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/localization/localization_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -72,19 +74,20 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden Seç'),
+              title: Text(_t('profile.photo.pick_gallery')),
               onTap: () => Navigator.pop(ctx, _AvatarAction.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Fotoğraf Çek'),
+              title: Text(_t('profile.photo.take')),
               onTap: () => Navigator.pop(ctx, _AvatarAction.camera),
             ),
             if (profile.hasAvatar)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.error),
-                title: const Text('Fotoğrafı Kaldır',
-                    style: TextStyle(color: AppColors.error)),
+                leading:
+                    const Icon(Icons.delete_outline, color: AppColors.error),
+                title: Text(_t('profile.photo.remove'),
+                    style: const TextStyle(color: AppColors.error)),
                 onTap: () => Navigator.pop(ctx, _AvatarAction.remove),
               ),
           ],
@@ -116,12 +119,12 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
         file: File(picked.path),
       );
       if (!result.success || result.path == null) {
-        _toast('Fotoğraf yüklenemedi: ${result.error ?? ''}', error: true);
+        _toast(_t('profile.photo.upload_failed'), error: true);
         return;
       }
       await _saveAvatar(profile.id, result.path!);
     } catch (e) {
-      _toast('Fotoğraf yüklenemedi', error: true);
+      _toast(_t('profile.photo.upload_failed'), error: true);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -131,7 +134,9 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
     await profileService.updateAvatar(userId, path);
     await profileService.invalidateCache(userId);
     await _load(force: true);
-    _toast(path.isEmpty ? 'Fotoğraf kaldırıldı' : 'Profil fotoğrafı güncellendi');
+    _toast(path.isEmpty
+        ? _t('profile.photo.removed')
+        : _t('profile.photo.updated'));
   }
 
   void _toast(String msg, {bool error = false}) {
@@ -159,17 +164,17 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Çıkış Yap'),
-        content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
+        title: Text(_t('settings.logout')),
+        content: Text(_t('settings.logout_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal'),
+            child: Text(_t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Çıkış Yap'),
+            child: Text(_t('settings.logout')),
           ),
         ],
       ),
@@ -234,11 +239,11 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
               Icon(Icons.person_off_outlined,
                   size: 48, color: AppColors.secondaryLabel(context)),
               const SizedBox(height: 12),
-              const Text('Profil yüklenemedi'),
+              Text(_t('profile.load_failed')),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () => _load(force: true),
-                child: const Text('Tekrar Dene'),
+                child: Text(_t('common.retry')),
               ),
             ],
           ),
@@ -318,7 +323,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _editProfile,
                         icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('Profili Düzenle'),
+                        label: Text(_t('profile.edit')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -395,10 +400,9 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
 
   Widget _buildContactCard(Brightness brightness) {
     final p = _profile!;
-    return _section('İletişim', [
+    return _section(_t('profile.section.contact'), [
       _infoRow(Icons.mail_outline, 'E-posta', p.email.isEmpty ? '—' : p.email),
-      if (p.hasPhone)
-        _infoRow(Icons.phone_outlined, 'Telefon', p.phone!),
+      if (p.hasPhone) _infoRow(Icons.phone_outlined, 'Telefon', p.phone!),
     ]);
   }
 
@@ -409,15 +413,17 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
       if ((p.tenantName ?? '').isNotEmpty)
         _infoRow(Icons.apartment_outlined, 'Organizasyon', p.tenantName!),
       if (p.createdAt != null)
-        _infoRow(Icons.event_outlined, 'Üyelik', _fmtDate(p.createdAt!)),
+        _infoRow(Icons.event_outlined, _t('profile.member_since'),
+            _fmtDate(p.createdAt!)),
       if (p.lastLogin != null)
-        _infoRow(Icons.login_outlined, 'Son giriş', _fmtDate(p.lastLogin!)),
-      _infoRow(Icons.fingerprint, 'Kullanıcı ID', p.id, mono: true),
+        _infoRow(Icons.login_outlined, _t('profile.last_login'),
+            _fmtDate(p.lastLogin!)),
+      _infoRow(Icons.fingerprint, _t('profile.user_id'), p.id, mono: true),
     ]);
   }
 
   Widget _buildAboutCard(Brightness brightness) {
-    return _section('Hakkımda', [
+    return _section(_t('profile.bio'), [
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(_profile!.bio!.trim(), style: AppTypography.body),
@@ -445,8 +451,8 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.shield_outlined),
-              title: const Text('Güvenlik'),
-              subtitle: const Text('2FA · Şifre'),
+              title: Text(_t('settings.security')),
+              subtitle: Text(_t('profile.security_subtitle')),
               trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const SecurityScreen()),
@@ -455,8 +461,8 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.error),
-              title:
-                  const Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
+              title: Text(_t('settings.logout'),
+                  style: const TextStyle(color: AppColors.error)),
               onTap: _logout,
             ),
           ],
@@ -539,15 +545,13 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
   String _roleLabel(String? role) {
     switch (role) {
       case 'ROLE_ADMIN':
-        return 'Yönetici';
+        return _t('role.admin');
       case 'ROLE_MANAGER':
-        return 'Müdür';
-      case 'ROLE_USER':
-        return 'Kullanıcı';
+        return _t('role.manager');
       case 'ROLE_CUSTOMER':
-        return 'Müşteri';
+        return _t('role.customer');
       default:
-        return 'Kullanıcı';
+        return _t('role.user');
     }
   }
 
@@ -564,13 +568,12 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
     }
   }
 
-  String _fmtDate(DateTime d) {
-    const months = [
-      'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
-      'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  }
+  /// Date in the UI language (e.g. 3 Ağu 2026 / 3 Aug 2026).
+  String _fmtDate(DateTime d) => DateFormat.yMMMd().format(d);
+
+  String _t(String key) => sl.isRegistered<LocalizationService>()
+      ? sl<LocalizationService>().translate(key)
+      : key;
 }
 
 enum _AvatarAction { gallery, camera, remove }

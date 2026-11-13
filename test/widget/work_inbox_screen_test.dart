@@ -122,8 +122,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Grup başlıkları (bucket → TR etiket).
-    expect(find.text('GECİKMİŞ'), findsOneWidget);
-    expect(find.text('BUGÜN'), findsOneWidget);
+    // No LocalizationService registered → the built-in English group labels.
+    expect(find.text('OVERDUE'), findsOneWidget);
+    expect(find.text('TODAY'), findsOneWidget);
     // Öğe içerikleri.
     expect(find.text('Gecikmiş görev'), findsOneWidget);
     expect(find.text('Bugünkü görev'), findsOneWidget);
