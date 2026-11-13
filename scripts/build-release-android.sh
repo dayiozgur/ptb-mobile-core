@@ -9,7 +9,7 @@
 # before publishing. This script never reads or creates signing material.
 #
 # Usage:
-#   ./scripts/build-release-android.sh <crm|phr|pms|ppm> [build_number]
+#   ./scripts/build-release-android.sh <crm|phr|pms|ppm|fixflow|pem> [build_number]
 #
 # Output:
 #   example_<app>/build/app/outputs/bundle/release/app-release.aab
@@ -18,12 +18,12 @@
 #
 set -euo pipefail
 
-APP="${1:?usage: build-release-android.sh <crm|phr|pms|ppm> [build_number]}"
+APP="${1:?usage: build-release-android.sh <crm|phr|pms|ppm|fixflow|pem> [build_number]}"
 BUILD_NUMBER="${2:-}"
 
 case "$APP" in
-  crm|phr|pms|ppm) ;;
-  *) echo "error: app must be one of crm|phr|pms|ppm (got '$APP')" >&2; exit 2 ;;
+  crm|phr|pms|ppm|fixflow|pem) ;;
+  *) echo "error: app must be one of crm|phr|pms|ppm|fixflow|pem (got '$APP')" >&2; exit 2 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

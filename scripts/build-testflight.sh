@@ -11,24 +11,28 @@
 #   1. App registered in App Store Connect for the app's bundle id.
 #   2. Signed into Xcode with an account on team 283AHKB4WM.
 #   3. App Store Connect API key active. This repo ships the .p8 at
-#      .secrets/AuthKey_79V5P3733J.p8 (key id 79V5P3733J, untracked). You supply the
+#      .secrets/AuthKey_<KEY_ID>.p8 (key id = API_KEY_ID below, untracked). You supply the
 #      ISSUER id (App Store Connect → Users and Access → Integrations → App Store Connect API).
 #
 # Usage:
-#   ./scripts/build-testflight.sh <crm|phr|pms|ppm> <ASC_ISSUER_ID> [build_number]
+#   ./scripts/build-testflight.sh <crm|phr|pms|ppm|fixflow> <ASC_ISSUER_ID> [build_number]
+#
+# PEM is not accepted yet: its Xcode project has no ios/ExportOptions.plist and points at a
+# different DEVELOPMENT_TEAM than the other five apps (owner decision — see
+# docs/store/STORE-READINESS-2026-11.md).
 #
 # Example:
 #   ./scripts/build-testflight.sh crm 69a6de70-XXXX-XXXX-XXXX-XXXXXXXXXXXX 2
 #
 set -euo pipefail
 
-APP="${1:?usage: build-testflight.sh <crm|phr|pms|ppm> <ASC_ISSUER_ID> [build_number]}"
+APP="${1:?usage: build-testflight.sh <crm|phr|pms|ppm|fixflow> <ASC_ISSUER_ID> [build_number]}"
 ISSUER="${2:?ASC issuer id required (App Store Connect → Users and Access → Integrations)}"
 BUILD_NUMBER="${3:-}"
 
 case "$APP" in
-  crm|phr|pms|ppm) ;;
-  *) echo "error: app must be one of crm|phr|pms|ppm (got '$APP')" >&2; exit 2 ;;
+  crm|phr|pms|ppm|fixflow) ;;
+  *) echo "error: app must be one of crm|phr|pms|ppm|fixflow (got '$APP')" >&2; exit 2 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
