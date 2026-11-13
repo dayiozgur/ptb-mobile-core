@@ -21,6 +21,11 @@ class PpmSprintsManageScreen extends StatefulWidget {
 class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
   late final SupabaseClient _sb = sl<SupabaseClient>();
   late final SprintService _svc = SprintService(supabase: _sb);
+  late final PpmPermissionService _perms = PpmPermissionService(supabase: _sb);
+
+  /// Project permission scheme snapshot: Start / Complete are hidden when the
+  /// caller's project role lacks `sprint.manage` (the server refuses them).
+  PpmPermissions _permissions = PpmPermissions.open;
   bool _loading = false;
   bool _loadingProjects = true;
   List<Sprint> _sprints = const [];
@@ -71,6 +76,7 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
     setState(() {
       _projectId = id;
       _sprints = const [];
+      _permissions = PpmPermissions.open;
     });
     if (id != null) _load();
   }
@@ -84,7 +90,12 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
     });
     final List<Sprint> s;
     try {
-      s = await _svc.listSprints(pid);
+      final results = await Future.wait<Object>([
+        _svc.listSprints(pid),
+        _perms.load(pid),
+      ]);
+      s = results[0] as List<Sprint>;
+      _permissions = results[1] as PpmPermissions;
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -108,21 +119,24 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
     });
   }
 
-  void _toast(bool ok, String okKey, String okFb) {
+  void _toast(WriteOutcome outcome, String okKey, String okFb) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok
-            ? ppmT(okKey, okFb)
-            : ppmT('ppm.common.action_failed', 'İşlem başarısız'))));
+    final text = switch (outcome) {
+      WriteOutcome.ok => ppmT(okKey, okFb),
+      WriteOutcome.denied => ppmT('ppm.permission.sprint_denied',
+          'Bu projede sprint yönetme yetkiniz yok.'),
+      WriteOutcome.failed => ppmT('ppm.common.action_failed', 'İşlem başarısız'),
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   Future<void> _start(Sprint s) async {
     setState(() => _busyId = s.id);
-    final ok = await _svc.startSprint(s.id);
+    final outcome = await _svc.startSprint(s.id);
     if (!mounted) return;
     setState(() => _busyId = null);
-    _toast(ok, 'ppm.sprint.started', 'Sprint başlatıldı ✓');
-    if (ok) await _load();
+    _toast(outcome, 'ppm.sprint.started', 'Sprint başlatıldı ✓');
+    if (outcome.isOk) await _load();
   }
 
   Future<void> _complete(Sprint s) async {
@@ -144,11 +158,11 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
     );
     if (confirm != true) return;
     setState(() => _busyId = s.id);
-    final ok = await _svc.completeSprint(s.id);
+    final outcome = await _svc.completeSprint(s.id);
     if (!mounted) return;
     setState(() => _busyId = null);
-    _toast(ok, 'ppm.sprint.completed', 'Sprint tamamlandı ✓');
-    if (ok) await _load();
+    _toast(outcome, 'ppm.sprint.completed', 'Sprint tamamlandı ✓');
+    if (outcome.isOk) await _load();
   }
 
   @override
@@ -274,7 +288,9 @@ class _PpmSprintsManageScreenState extends State<PpmSprintsManageScreen> {
     );
   }
 
-  Widget? _actionFor(Sprint s) => switch (s.state) {
+  Widget? _actionFor(Sprint s) => !_permissions.allows(PpmAction.sprintManage)
+      ? null
+      : switch (s.state) {
         SprintState.future => TextButton(
             onPressed: () => _start(s),
             child: Text(ppmT('ppm.sprint.start', 'Başlat'))),

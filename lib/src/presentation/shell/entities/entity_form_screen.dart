@@ -164,12 +164,16 @@ class _EntityFormScreenState extends State<EntityFormScreen> {
       // DB trigger tg_enforce_create_quota (aktif satırları sayar:
       // active IS DISTINCT FROM false) → 'quota_exceeded: …' (23514). Mobilde
       // istemci-taraflı kota sayımı YOK; sunucu yetkili, burada dostça mesaj.
+      // A refused write (403 / 42501 — e.g. the PPM permission scheme) gets
+      // the calm "no permission" text; never the raw exception (it carries
+      // SQL / policy names).
       final quota = '$e'.contains('quota_exceeded');
       AppSnackbar.error(
         context,
         message: quota
             ? sl<LocalizationService>().translate('quota.exceeded')
-            : '${_t('entity.save_failed', 'Kayıt kaydedilemedi')}: $e',
+            : AccessErrors.actionMessage(e,
+                fallback: _t('entity.save_failed', 'Kayıt kaydedilemedi')),
       );
       setState(() => _submitting = false);
     }

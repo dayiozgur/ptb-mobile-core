@@ -31,8 +31,7 @@
   "lib/src/presentation/shell/admin/user_management_screen.dart": 8,
   "lib/src/presentation/shell/ai/ai_assistant_screen.dart": 11,
   "lib/src/presentation/shell/dashboard/personal_dashboard_screen.dart": 7,
-  "lib/src/presentation/shell/entities/backlog_screen.dart": 4,
-  "lib/src/presentation/shell/entities/entity_kanban_screen.dart": 2,
+  "lib/src/presentation/shell/entities/backlog_screen.dart": 3,
   "lib/src/presentation/shell/home/home_widgets_section.dart": 1,
   "lib/src/presentation/shell/modules/modules_screen.dart": 10,
   "lib/src/presentation/shell/orgchart/org_chart_screen.dart": 5

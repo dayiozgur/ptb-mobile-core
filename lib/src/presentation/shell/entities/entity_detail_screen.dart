@@ -308,7 +308,7 @@ class _EntityDetailScreenState extends State<EntityDetailScreen> {
   /// EF hata kodu → kullanıcı mesajı (FixFlow modülüyle aynı anahtarlar).
   String _transitionError(Object e) {
     final s = e.toString();
-    if (s.contains('ERR_FORBIDDEN')) {
+    if (AccessErrors.isDenied(e) || s.contains('ERR_FORBIDDEN')) {
       return _t('fixflow.mobile.transition_forbidden',
           'Bu değişikliği yapma yetkiniz yok.');
     }

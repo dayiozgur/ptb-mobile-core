@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../di/service_locator.dart';
+import '../errors/write_outcome.dart';
 import '../platform/builder_platform_filter.dart';
 import '../platform/platform_context.dart';
 import '../utils/logger.dart';
@@ -64,8 +65,11 @@ class Sprint {
 /// mobil kalıbı gereği **RLS'e** (`tenant_id = get_my_tenant_id()`) bırakılır —
 /// web'in aksine explicit `tenant_id` geçilmez.
 ///
-/// Yazma sözleşmesi: hata → `false` (UI'a ASLA fırlatmaz), diğer mobil write-
-/// servisleriyle (CrmActionsService / WorklogService) aynı.
+/// Yazma sözleşmesi: UI'a ASLA fırlatmaz; [WriteOutcome] döner. Since the PPM
+/// permission scheme (2026-11-13) the `sprints` update policy requires
+/// `fn_ppm_can_manage_sprint(project_id)`: a refused update is filtered by RLS
+/// and changes no row although the sprint is readable — that is reported as
+/// [WriteOutcome.denied], like a `42501` raised by the issue trigger.
 class SprintService {
   final SupabaseClient _supabase;
 
@@ -94,40 +98,47 @@ class SprintService {
   }
 
   /// Sprint'i başlat (state='active'). Aynı anda tek aktif sprint kısıtı varsa
-  /// unique-violation → `false` (UI "zaten aktif sprint var" der). Etkilenen
-  /// satır yoksa (RLS/eşleşme) → `false`.
-  Future<bool> startSprint(String id) async {
+  /// unique-violation → [WriteOutcome.failed]. No row changed although the
+  /// sprint was listed → [WriteOutcome.denied] (RLS refused the update).
+  Future<WriteOutcome> startSprint(String id) async {
     final sid = id.trim();
-    if (sid.isEmpty) return false;
+    if (sid.isEmpty) return WriteOutcome.failed;
     try {
       final rows = await _supabase
           .from('sprints')
           .update({'state': 'active'})
           .eq('id', sid)
           .select('id');
-      return (rows as List).isNotEmpty;
+      return (rows as List).isNotEmpty ? WriteOutcome.ok : WriteOutcome.denied;
     } catch (e) {
       Logger.error('startSprint ($id) hata', e);
-      return false;
+      return WriteOutcome.fromError(e);
     }
   }
 
-  /// Sprint'i tamamla — web `_completeSprint` deseni: (1) `entity_type` oku,
-  /// (2) state='closed', (3) o tipin final ("done") status kodlarını çöz,
-  /// (4) biten-OLMAYAN issue'ları backlog'a döndür (`sprint_id=null`). Final
-  /// tanımı yoksa sprint'teki tüm issue'lar döner (web ile aynı). Hata → `false`.
-  Future<bool> completeSprint(String id) async {
+  /// Sprint'i tamamla — web `_completeSprint` deseni: (1) state='closed'
+  /// (returning `entity_type`), (2) o tipin final ("done") status kodlarını çöz,
+  /// (3) biten-OLMAYAN issue'ları backlog'a döndür (`sprint_id=null`). Final
+  /// tanımı yoksa sprint'teki tüm issue'lar döner (web ile aynı).
+  ///
+  /// The close is checked: no row changed → [WriteOutcome.denied] and nothing
+  /// else is written (before, a refused close still reported success). Moving
+  /// the issues back can be refused by the issue trigger (`42501`,
+  /// `backlog.rank` / `sprint.manage`) → [WriteOutcome.denied]. Other errors →
+  /// [WriteOutcome.failed].
+  Future<WriteOutcome> completeSprint(String id) async {
     final sid = id.trim();
-    if (sid.isEmpty) return false;
+    if (sid.isEmpty) return WriteOutcome.failed;
     try {
-      final sprintRow = await _supabase
+      final closed = await _supabase
           .from('sprints')
-          .select('entity_type')
+          .update({'state': 'closed'})
           .eq('id', sid)
-          .maybeSingle();
-      final entityType = sprintRow?['entity_type'] as String?;
-
-      await _supabase.from('sprints').update({'state': 'closed'}).eq('id', sid);
+          .select('id, entity_type');
+      final closedRows = closed as List;
+      if (closedRows.isEmpty) return WriteOutcome.denied;
+      final entityType =
+          (closedRows.first as Map)['entity_type'] as String?;
 
       var finalCodes = <String>[];
       if (entityType != null && entityType.isNotEmpty) {
@@ -156,10 +167,10 @@ class SprintService {
         q = q.not('status', 'in', '(${finalCodes.join(',')})');
       }
       await q;
-      return true;
+      return WriteOutcome.ok;
     } catch (e) {
       Logger.error('completeSprint ($id) hata', e);
-      return false;
+      return WriteOutcome.fromError(e);
     }
   }
 }

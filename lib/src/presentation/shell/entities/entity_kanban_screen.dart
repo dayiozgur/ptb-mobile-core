@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Bir entity tipinin kayıtlarını durum (status) kolonlarına göre gruplayan,
 /// sürükle-bırak destekli Kanban panosu. Web `ptb-entity-kanban`'ın mobil
@@ -48,6 +49,13 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
   final Map<String, List<GenericEntity>> _byStatus = {};
 
   final _rt = RealtimeRefresher();
+
+  /// PPM project permission scheme (board scoped to a project, issue type):
+  /// a move the caller's project role may not make is refused up front with
+  /// the "no permission" text; the server refuses it anyway (403).
+  PpmPermissions _ppm = PpmPermissions.open;
+
+  String _t(String key) => sl<LocalizationService>().translate(key);
 
   @override
   void initState() {
@@ -103,6 +111,7 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
           limit: 200, ancestorId: widget.ancestorId);
 
       final columns = _buildColumns(defsRaw, entities);
+      _ppm = await _loadPpmPermissions();
 
       _byStatus.clear();
       for (final col in columns) {
@@ -199,6 +208,12 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
       }
     }
     if (sourceKey == null || sourceKey == targetStatus) return;
+    if (!_ppm.allows(PpmAction.issueTransition)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AccessErrors.deniedActionText())),
+      );
+      return;
+    }
 
     final source = _byStatus[sourceKey]!;
     final target = _byStatus.putIfAbsent(targetStatus, () => []);
@@ -226,19 +241,33 @@ class _EntityKanbanScreenState extends State<EntityKanbanScreen> {
         target.remove(entity);
         source.insert(index.clamp(0, source.length), entity);
       });
-      // Belirsiz "Hata" yerine gerçek sebebi göster. En sık durum: entity
-      // tipinde bu from→to için `status_transitions` kuralı yok →
-      // status-transition EF `ERR_INVALID_TRANSITION` döner (web ile aynı).
+      // Belirsiz "Hata" yerine gerçek sebebi göster: a refusal (403 /
+      // ERR_FORBIDDEN, e.g. the PPM permission scheme) first, then a
+      // transition with no `status_transitions` rule (ERR_INVALID_TRANSITION).
       final raw = e.toString();
-      final invalidTransition = raw.contains('ERR_INVALID_TRANSITION') ||
-          raw.toLowerCase().contains('transition');
-      final msg = invalidTransition
-          ? 'Bu durum geçişi tanımlı değil'
-          : 'Durum güncellenemedi. Lütfen tekrar deneyin.';
+      final String msg;
+      if (AccessErrors.isDenied(e) || raw.contains('ERR_FORBIDDEN')) {
+        msg = AccessErrors.deniedActionText();
+      } else if (raw.contains('ERR_INVALID_TRANSITION')) {
+        msg = _t('entity.kanban.invalid_transition');
+      } else {
+        msg = _t('entity.kanban.move_failed');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
     }
+  }
+
+  /// Permission snapshot when this board shows PPM issues of one project.
+  Future<PpmPermissions> _loadPpmPermissions() async {
+    final project = widget.ancestorId;
+    if (project == null ||
+        !kPpmIssueTypes.contains(widget.typeCode) ||
+        !sl.isRegistered<SupabaseClient>()) {
+      return PpmPermissions.open;
+    }
+    return PpmPermissionService(supabase: sl<SupabaseClient>()).load(project);
   }
 
   String get _title {

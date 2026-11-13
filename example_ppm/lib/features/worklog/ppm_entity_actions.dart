@@ -74,14 +74,18 @@ Future<void> _editStoryPoints(BuildContext ctx, String entityId, num? current,
         content: Text(ppmT('ppm.story_points.invalid', 'Geçersiz puan'))));
     return;
   }
-  final ok = await sl<EntityDataService>()
+  final outcome = await sl<EntityDataService>()
       .updateStoryPoints(entityId: entityId, points: points);
   if (!ctx.mounted) return;
   ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-      content: Text(ok
-          ? ppmT('ppm.story_points.saved', 'Story point güncellendi ✓')
-          : ppmT('ppm.common.action_failed', 'İşlem başarısız'))));
-  if (ok) await reload();
+      content: Text(switch (outcome) {
+    WriteOutcome.ok =>
+      ppmT('ppm.story_points.saved', 'Story point güncellendi ✓'),
+    WriteOutcome.denied => ppmT('ppm.permission.issue_edit_denied',
+        'Bu projede iş kaydını düzenleme yetkiniz yok.'),
+    WriteOutcome.failed => ppmT('ppm.common.action_failed', 'İşlem başarısız'),
+  })));
+  if (outcome.isOk) await reload();
 }
 
 Future<void> _logWork(BuildContext ctx, String submissionId,

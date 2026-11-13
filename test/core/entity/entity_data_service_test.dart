@@ -98,7 +98,7 @@ void main() {
 
       final ok = await service.updateStoryPoints(entityId: '  s1  ', points: 5);
 
-      expect(ok, isTrue);
+      expect(ok, WriteOutcome.ok);
       final calls = h.queryByTable['form_submissions']!.calls;
       final upd = calls.firstWhere((i) => i.memberName == #update);
       final payload = upd.positionalArguments.first as Map;
@@ -113,7 +113,7 @@ void main() {
       h.stubFrom('form_submissions',
           result: <Map<String, dynamic>>[{'id': 's1'}]);
       final ok = await service.updateStoryPoints(entityId: 's1', points: null);
-      expect(ok, isTrue);
+      expect(ok, WriteOutcome.ok);
       final upd = h.queryByTable['form_submissions']!.calls
           .firstWhere((i) => i.memberName == #update);
       final payload = upd.positionalArguments.first as Map;
@@ -121,18 +121,29 @@ void main() {
       expect(payload['story_points'], isNull);
     });
 
-    test('boş entityId → yazma yok, false', () async {
-      expect(await service.updateStoryPoints(entityId: '  ', points: 3), isFalse);
+    test('boş entityId → yazma yok, failed', () async {
+      expect(await service.updateStoryPoints(entityId: '  ', points: 3),
+          WriteOutcome.failed);
     });
 
-    test('etkilenen satır yok → false', () async {
+    test('etkilenen satır yok → failed', () async {
       h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
-      expect(await service.updateStoryPoints(entityId: 's1', points: 3), isFalse);
+      expect(await service.updateStoryPoints(entityId: 's1', points: 3),
+          WriteOutcome.failed);
     });
 
-    test('DB hatası → false (fırlatmaz)', () async {
+    test('DB hatası → failed (fırlatmaz)', () async {
       h.stubFrom('form_submissions', error: Exception('db down'));
-      expect(await service.updateStoryPoints(entityId: 's1', points: 3), isFalse);
+      expect(await service.updateStoryPoints(entityId: 's1', points: 3),
+          WriteOutcome.failed);
+    });
+
+    test('PPM scheme trigger refusal (42501) → denied', () async {
+      h.stubFrom('form_submissions',
+          error: const PostgrestException(
+              message: 'ppm_permission_denied: issue.edit', code: '42501'));
+      expect(await service.updateStoryPoints(entityId: 's1', points: 3),
+          WriteOutcome.denied);
     });
   });
 

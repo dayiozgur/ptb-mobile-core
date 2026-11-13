@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../connectivity/connectivity_service.dart';
 import '../connectivity/offline_sync_service.dart';
 import '../di/service_locator.dart';
+import '../errors/write_outcome.dart';
 import '../localization/localization_service.dart';
 import '../platform/builder_platform_filter.dart';
 import '../platform/platform_context.dart';
@@ -645,14 +646,16 @@ class EntityDataService {
   /// `form_submissions` native kolonuna tekil `update`, diğer alanlara
   /// DOKUNULMAZ (submitEntity-tam-değer alan-silme riski yok). RLS tenant +
   /// sahiplik scope eder; `is_standalone=true` ile bağlı-tablo entity'lerini
-  /// dışlar. [points] null → puanı temizler. Hata / etkilenen-satır-yok →
-  /// `false` (fırlatmaz), mobil write-servis sözleşmesiyle aynı.
-  Future<bool> updateStoryPoints({
+  /// dışlar. [points] null → puanı temizler. Fırlatmaz: hata / etkilenen-
+  /// satır-yok → [WriteOutcome.failed]; a PPM issue whose project role lacks
+  /// `issue.edit` is refused by `fn_ppm_scheme_guard_update` (`42501`) →
+  /// [WriteOutcome.denied].
+  Future<WriteOutcome> updateStoryPoints({
     required String entityId,
     required int? points,
   }) async {
     final id = entityId.trim();
-    if (id.isEmpty) return false;
+    if (id.isEmpty) return WriteOutcome.failed;
     try {
       final rows = await _supabase
           .from('form_submissions')
@@ -665,10 +668,10 @@ class EntityDataService {
           .select('id');
       final ok = rows.isNotEmpty;
       if (!ok) Logger.error('updateStoryPoints: etkilenen satır yok ($id)');
-      return ok;
+      return ok ? WriteOutcome.ok : WriteOutcome.failed;
     } catch (e) {
       Logger.error('updateStoryPoints ($entityId) hata', e);
-      return false;
+      return WriteOutcome.fromError(e);
     }
   }
 

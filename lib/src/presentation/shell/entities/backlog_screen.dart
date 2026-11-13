@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide FormField;
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Bir entity tipinin kayıtlarını sürükle-bırak ile yeniden sıralayan Backlog
 /// ekranı. Web `ptb-backlog` / scrum board'un mobil karşılığıdır: bir kaydı
@@ -44,6 +45,11 @@ class _BacklogScreenState extends State<BacklogScreen> {
   List<GenericEntity> _entities = [];
 
   final _rt = RealtimeRefresher();
+
+  /// PPM project permission scheme (backlog scoped to a project, issue type):
+  /// re-ranking needs `backlog.rank` or `sprint.manage`; refused up front with
+  /// the "no permission" text (the server refuses it anyway, 42501).
+  PpmPermissions _ppm = PpmPermissions.open;
 
   @override
   void initState() {
@@ -93,6 +99,7 @@ class _BacklogScreenState extends State<BacklogScreen> {
 
       final entities =
           await dataService.loadBacklog(config, ancestorId: widget.ancestorId);
+      _ppm = await _loadPpmPermissions();
 
       if (mounted) {
         setState(() {
@@ -118,6 +125,12 @@ class _BacklogScreenState extends State<BacklogScreen> {
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     // onReorderItem newIndex'i zaten düzeltilmiş verir (çıkarılan öğe hesaba katılı).
     if (newIndex == oldIndex) return;
+    if (!_ppm.canRank) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AccessErrors.deniedActionText())),
+      );
+      return;
+    }
 
     final previous = List<GenericEntity>.from(_entities);
     setState(() {
@@ -140,11 +153,24 @@ class _BacklogScreenState extends State<BacklogScreen> {
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sıra kaydedilemedi. Lütfen tekrar deneyin.'),
+        SnackBar(
+          content: Text(AccessErrors.actionMessage(e,
+              fallback: sl<LocalizationService>()
+                  .translate('entity.backlog.reorder_failed'))),
         ),
       );
     }
+  }
+
+  /// Permission snapshot when this backlog shows PPM issues of one project.
+  Future<PpmPermissions> _loadPpmPermissions() async {
+    final project = widget.ancestorId;
+    if (project == null ||
+        !kPpmIssueTypes.contains(widget.typeCode) ||
+        !sl.isRegistered<SupabaseClient>()) {
+      return PpmPermissions.open;
+    }
+    return PpmPermissionService(supabase: sl<SupabaseClient>()).load(project);
   }
 
   String get _title {

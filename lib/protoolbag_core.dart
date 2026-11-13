@@ -34,6 +34,7 @@ export 'src/core/errors/failures.dart';
 export 'src/core/errors/exceptions.dart';
 export 'src/core/errors/entitlement_errors.dart';
 export 'src/core/errors/access_errors.dart';
+export 'src/core/errors/write_outcome.dart';
 export 'src/core/entitlement/entitlement_service.dart';
 export 'src/core/consent/consent_service.dart';
 
@@ -103,6 +104,7 @@ export 'src/core/observability/error_reporting_service.dart';
 export 'src/core/work/work_inbox_service.dart';
 export 'src/core/ppm/worklog_service.dart';
 export 'src/core/ppm/sprint_service.dart';
+export 'src/core/ppm/ppm_permission_service.dart';
 export 'src/core/ppm/planner_link_service.dart';
 export 'src/core/ppm/ppm_metrics.dart';
 export 'src/core/crm/crm_actions_service.dart';

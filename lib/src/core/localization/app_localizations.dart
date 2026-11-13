@@ -1068,6 +1068,11 @@ class AppLocalizations {
     'geo.map.distance': 'İşyerine {{distance}} uzaktasınız',
     // mobile wave 3
     'hr.profile.sensitive_denied': 'Hassas bilgileri (maaş, kimlik no, IBAN) görme yetkiniz yok.',
+    'entity.kanban.invalid_transition': 'Bu durum geçişi tanımlı değil',
+    'entity.kanban.move_failed': 'Durum güncellenemedi. Lütfen tekrar deneyin.',
+    'entity.backlog.reorder_failed': 'Sıra kaydedilemedi. Lütfen tekrar deneyin.',
+    'ppm.permission.sprint_denied': 'Bu projede sprint yönetme yetkiniz yok.',
+    'ppm.permission.issue_edit_denied': 'Bu projede iş kaydını düzenleme yetkiniz yok.',
   };
 
   // ============================================
@@ -2114,6 +2119,11 @@ class AppLocalizations {
     'geo.map.distance': 'You are {{distance}} from the workplace',
     // mobile wave 3
     'hr.profile.sensitive_denied': 'You are not authorised to see the sensitive details (salary, ID number, IBAN).',
+    'entity.kanban.invalid_transition': 'This status change is not defined',
+    'entity.kanban.move_failed': 'The status could not be updated. Please try again.',
+    'entity.backlog.reorder_failed': 'The order could not be saved. Please try again.',
+    'ppm.permission.sprint_denied': 'You are not allowed to manage sprints in this project.',
+    'ppm.permission.issue_edit_denied': 'You are not allowed to edit work items in this project.',
   };
 
   // ============================================
@@ -3163,5 +3173,10 @@ class AppLocalizations {
     'geo.map.distance': 'Sie sind {{distance}} vom Arbeitsort entfernt',
     // mobile wave 3
     'hr.profile.sensitive_denied': 'Sie sind nicht berechtigt, die sensiblen Angaben (Gehalt, Ausweisnummer, IBAN) zu sehen.',
+    'entity.kanban.invalid_transition': 'Dieser Statuswechsel ist nicht definiert',
+    'entity.kanban.move_failed': 'Der Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.',
+    'entity.backlog.reorder_failed': 'Die Reihenfolge konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+    'ppm.permission.sprint_denied': 'Sie dürfen in diesem Projekt keine Sprints verwalten.',
+    'ppm.permission.issue_edit_denied': 'Sie dürfen in diesem Projekt keine Arbeitselemente bearbeiten.',
   };
 }

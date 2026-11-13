@@ -68,7 +68,10 @@ class AccessErrors {
   /// text when the server refused it, else the caller's own [fallback] text.
   /// Never the raw exception (it carries SQL / policy names).
   static String actionMessage(Object? error, {required String fallback}) =>
-      isDenied(error)
-          ? _t(actionKey, 'You do not have permission to perform this action')
-          : fallback;
+      isDenied(error) ? deniedActionText() : fallback;
+
+  /// The translated "you may not do this" one-liner — also for an action the
+  /// app refuses before calling the server (a permission snapshot says no).
+  static String deniedActionText() =>
+      _t(actionKey, 'You do not have permission to perform this action');
 }

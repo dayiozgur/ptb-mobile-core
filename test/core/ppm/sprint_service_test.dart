@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../helpers/supabase_fakes.dart';
 
@@ -7,7 +8,7 @@ import '../../helpers/supabase_fakes.dart';
 ///   • listSprints    → sprints (RLS scope)
 ///   • startSprint    → sprints.state='active'
 ///   • completeSprint → state='closed' + biten-olmayan issue'ları backlog'a
-/// Yazma hatası → false (fırlatmaz). Tenant RLS'e bırakılır (explicit yok).
+/// Yazma hatası → WriteOutcome.failed / .denied (fırlatmaz). Tenant RLS'e bırakılır (explicit yok).
 void main() {
   late SupabaseHarness h;
   late SprintService service;
@@ -60,32 +61,33 @@ void main() {
 
       final ok = await service.startSprint('  s1  ');
 
-      expect(ok, isTrue);
+      expect(ok, WriteOutcome.ok);
       final upd = h.queryByTable['sprints']!.calls
           .firstWhere((i) => i.memberName == #update);
       expect((upd.positionalArguments.first as Map)['state'], 'active');
     });
 
-    test('boş id → false', () async {
-      expect(await service.startSprint('  '), isFalse);
+    test('boş id → failed', () async {
+      expect(await service.startSprint('  '), WriteOutcome.failed);
     });
 
-    test('etkilenen satır yok → false', () async {
+    test('no row changed (RLS refused the update) → denied', () async {
       h.stubFrom('sprints', result: <Map<String, dynamic>>[]);
-      expect(await service.startSprint('s1'), isFalse);
+      expect(await service.startSprint('s1'), WriteOutcome.denied);
     });
 
-    test('unique-violation/hata → false (fırlatmaz)', () async {
+    test('unique-violation/hata → failed (fırlatmaz)', () async {
       h.stubFrom('sprints', error: Exception('duplicate key value'));
-      expect(await service.startSprint('s1'), isFalse);
+      expect(await service.startSprint('s1'), WriteOutcome.failed);
     });
   });
 
   group('completeSprint', () {
     test('geçerli → state=closed + biten-olmayanı backlog (not-in final), true',
         () async {
-      h.stubFrom('sprints',
-          result: <String, dynamic>{'entity_type': 'ppm_task'});
+      h.stubFrom('sprints', result: <Map<String, dynamic>>[
+        {'id': 's1', 'entity_type': 'ppm_task'}
+      ]);
       h.stubFrom('status_definitions', result: <Map<String, dynamic>>[
         {'code': 'done'},
         {'code': 'cancelled'}
@@ -94,7 +96,7 @@ void main() {
 
       final ok = await service.completeSprint('s1');
 
-      expect(ok, isTrue);
+      expect(ok, WriteOutcome.ok);
       // sprint 'closed' yazıldı
       final closed = h.queryByTable['sprints']!.calls
           .where((i) => i.memberName == #update)
@@ -110,13 +112,34 @@ void main() {
       expect(fs.any((i) => i.memberName == #not), isTrue);
     });
 
-    test('boş id → false', () async {
-      expect(await service.completeSprint(''), isFalse);
+    test('boş id → failed', () async {
+      expect(await service.completeSprint(''), WriteOutcome.failed);
     });
 
-    test('hata → false (fırlatmaz)', () async {
+    test('hata → failed (fırlatmaz)', () async {
       h.stubFrom('sprints', error: Exception('db down'));
-      expect(await service.completeSprint('s1'), isFalse);
+      expect(await service.completeSprint('s1'), WriteOutcome.failed);
+    });
+
+    test('refused close (no row changed) → denied, issues untouched',
+        () async {
+      h.stubFrom('sprints', result: <Map<String, dynamic>>[]);
+      h.stubFrom('form_submissions', result: <Map<String, dynamic>>[]);
+
+      expect(await service.completeSprint('s1'), WriteOutcome.denied);
+      expect(h.queryByTable['form_submissions'], isNull);
+    });
+
+    test('issue trigger refuses moving issues back (42501) → denied',
+        () async {
+      h.stubFrom('sprints', result: <Map<String, dynamic>>[
+        {'id': 's1', 'entity_type': null}
+      ]);
+      h.stubFrom('form_submissions',
+          error: const PostgrestException(
+              message: 'ppm_permission_denied: backlog.rank', code: '42501'));
+
+      expect(await service.completeSprint('s1'), WriteOutcome.denied);
     });
   });
 }
