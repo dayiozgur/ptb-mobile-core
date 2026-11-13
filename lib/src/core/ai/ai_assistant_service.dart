@@ -48,6 +48,8 @@ class AiAssistantService {
 
   /// Kullanıcının geçmiş AI konuşmaları (RLS tenant+user kapsamlı), en yeni önce.
   /// Web `AiAssistantService.listConversations` ile birebir (`ai_conversations`).
+  /// A failed read is rethrown (the history sheet says "could not load", not
+  /// "no conversations yet").
   Future<List<AiConversation>> listConversations({int limit = 30}) async {
     try {
       final res = await _supabase
@@ -60,7 +62,7 @@ class AiAssistantService {
           .toList();
     } catch (e) {
       Logger.warning('ai listConversations başarısız', e);
-      return [];
+      rethrow;
     }
   }
 

@@ -70,7 +70,8 @@ class CrmForecastService {
 
   CrmForecastService({required SupabaseClient supabase}) : _supabase = supabase;
 
-  /// Dönem için per-temsilci forecast-vs-quota rollup'ı. Hata → [].
+  /// Dönem için per-temsilci forecast-vs-quota rollup'ı. A failed read is
+  /// rethrown (the screen says "could not load", not "no data this period").
   Future<List<ForecastRow>> getRollup(String periodType, DateTime periodStart) async {
     try {
       final res = await _supabase.rpc('fn_crm_forecast_submit_rollup', params: {
@@ -82,7 +83,7 @@ class CrmForecastService {
           .toList();
     } catch (e) {
       Logger.error('crm getRollup hata', e);
-      return const [];
+      rethrow;
     }
   }
 

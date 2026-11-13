@@ -16,10 +16,12 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
   final _ctrl = AsyncViewController();
   int _mode = 0; // 0 = organizasyon, 1 = departman
 
+  String _t(String key) => sl<LocalizationService>().translate(key);
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Organizasyon Şeması',
+      title: _t('orgchart.title'),
       showBackButton: true,
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
@@ -30,7 +32,10 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
           Padding(
             padding: AppSpacing.screenPadding,
             child: AppSegmentedControl(
-              segments: const ['Organizasyon', 'Departman'],
+              segments: [
+                _t('orgchart.mode_organization'),
+                _t('orgchart.mode_department')
+              ],
               selectedIndex: _mode,
               onSegmentChanged: (i) {
                 if (i == _mode) return;
@@ -45,14 +50,14 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
               load: () => _mode == 0
                   ? orgChartService.organizationTree()
                   : orgChartService.departmentTree(),
-              errorFallback: 'Şema yüklenemedi',
+              errorFallback: _t('orgchart.load_failed'),
               isEmpty: (d) => d.isEmpty,
               emptyBuilder: (context) => Center(
                 child: AppEmptyState(
                   icon: Icons.account_tree_outlined,
                   title: _mode == 0
-                      ? 'Organizasyon tanımlı değil'
-                      : 'Departman tanımlı değil',
+                      ? _t('orgchart.empty_organizations')
+                      : _t('orgchart.empty_departments'),
                 ),
               ),
               builder: (context, roots) => ListView(
@@ -98,8 +103,13 @@ class _OrgNodeTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '${node.totalMembers} kişi'
-          '${node.children.isNotEmpty ? ' · ${node.children.length} alt-birim' : ''}',
+          [
+            sl<LocalizationService>().translate('orgchart.member_count',
+                params: {'count': node.totalMembers}),
+            if (node.children.isNotEmpty)
+              sl<LocalizationService>().translate('orgchart.sub_unit_count',
+                  params: {'count': node.children.length}),
+          ].join(' · '),
           style: AppTypography.caption1
               .copyWith(color: AppColors.textSecondary(brightness)),
         ),

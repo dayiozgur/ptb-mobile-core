@@ -61,7 +61,7 @@ class OrgChartService {
       );
     } catch (e) {
       Logger.error('Organizasyon ağacı yüklenemedi', e);
-      return const [];
+      rethrow; // the screen says "could not load", not "no organisation"
     }
   }
 
@@ -84,7 +84,7 @@ class OrgChartService {
       );
     } catch (e) {
       Logger.error('Departman ağacı yüklenemedi', e);
-      return const [];
+      rethrow; // the screen says "could not load", not "no department"
     }
   }
 

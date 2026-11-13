@@ -143,7 +143,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
   /// Geçmiş konuşmaları listele (alt-sayfa) → seçilince yükle.
   Future<void> _openHistory() async {
-    final convos = await sl<AiAssistantService>().listConversations();
+    final List<AiConversation> convos;
+    try {
+      convos = await sl<AiAssistantService>().listConversations();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AccessErrors.actionMessage(e,
+              fallback: sl<LocalizationService>()
+                  .translate('ai.history.load_failed')))));
+      return;
+    }
     if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,

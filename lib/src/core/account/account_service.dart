@@ -43,7 +43,8 @@ class AccountService {
     }
   }
 
-  /// Kredi hareketleri — `tenant_credit_transactions` (yeni → eski). Hata → [].
+  /// Kredi hareketleri — `tenant_credit_transactions` (yeni → eski). A failed
+  /// read is rethrown (the screen says "could not load", not "no movements").
   Future<List<CreditTransaction>> creditTransactions({int limit = 50}) async {
     try {
       final t = _tenantId;
@@ -59,11 +60,12 @@ class AccountService {
           .toList();
     } catch (e, st) {
       Logger.error('AccountService.creditTransactions hata', e, st);
-      return const [];
+      rethrow;
     }
   }
 
-  /// Faturalar — `tenant_invoices` (yeni → eski). Hata → [].
+  /// Faturalar — `tenant_invoices` (yeni → eski). A failed read is rethrown
+  /// (the screen says "could not load", not "no invoices").
   Future<List<Invoice>> invoices({int limit = 50}) async {
     try {
       final t = _tenantId;
@@ -79,7 +81,7 @@ class AccountService {
           .toList();
     } catch (e, st) {
       Logger.error('AccountService.invoices hata', e, st);
-      return const [];
+      rethrow;
     }
   }
 

@@ -17,8 +17,8 @@
   "lib/src/presentation/dynamic_form/fields/unsupported_field.dart": 1,
   "lib/src/presentation/report_viewer/report_viewer_screen.dart": 11,
   "lib/src/presentation/shell/account/account_hub_screen.dart": 9,
-  "lib/src/presentation/shell/account/credits_screen.dart": 6,
-  "lib/src/presentation/shell/account/invoices_screen.dart": 7,
+  "lib/src/presentation/shell/account/credits_screen.dart": 5,
+  "lib/src/presentation/shell/account/invoices_screen.dart": 6,
   "lib/src/presentation/shell/account/usage_screen.dart": 8,
   "lib/src/presentation/shell/admin/audit_log_screen.dart": 11,
   "lib/src/presentation/shell/admin/bug_reports_screen.dart": 14,
@@ -33,6 +33,5 @@
   "lib/src/presentation/shell/dashboard/personal_dashboard_screen.dart": 7,
   "lib/src/presentation/shell/entities/backlog_screen.dart": 3,
   "lib/src/presentation/shell/home/home_widgets_section.dart": 1,
-  "lib/src/presentation/shell/modules/modules_screen.dart": 10,
-  "lib/src/presentation/shell/orgchart/org_chart_screen.dart": 5
+  "lib/src/presentation/shell/modules/modules_screen.dart": 10
 }

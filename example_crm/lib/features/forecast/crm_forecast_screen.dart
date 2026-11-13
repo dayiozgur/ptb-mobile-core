@@ -21,6 +21,7 @@ class _CrmForecastScreenState extends State<CrmForecastScreen> {
   bool _loading = true;
   bool _submitting = false;
   List<ForecastRow> _rows = const [];
+  Object? _error;
   String _periodType = 'month';
   late DateTime _periodStart = _snap(DateTime.now(), 'month');
 
@@ -40,13 +41,25 @@ class _CrmForecastScreenState extends State<CrmForecastScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final rows = await _svc.getRollup(_periodType, _periodStart);
-    if (!mounted) return;
     setState(() {
-      _rows = rows;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final rows = await _svc.getRollup(_periodType, _periodStart);
+      if (!mounted) return;
+      setState(() {
+        _rows = rows;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _rows = const [];
+        _error = e;
+        _loading = false;
+      });
+    }
   }
 
   void _onTypeChanged(String? t) {
@@ -132,6 +145,16 @@ class _CrmForecastScreenState extends State<CrmForecastScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? RefreshIndicator(
+                    onRefresh: _load,
+                    child: AppLoadFailedView(
+                      error: _error,
+                      message: crmT('crm.forecast.load_failed',
+                          'Tahmin yüklenemedi. Bu, veri olmadığı anlamına gelmez; tekrar deneyin.'),
+                      onRetry: _load,
+                    ),
+                  )
                 : RefreshIndicator(
                     onRefresh: _load,
                     child: _rows.isEmpty

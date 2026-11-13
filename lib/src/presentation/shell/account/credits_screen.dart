@@ -15,7 +15,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
   CreditBalance? _balance;
   List<CreditTransaction> _transactions = const [];
   bool _loading = true;
-  String? _error;
+  Object? _error;
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Krediler yüklenemedi';
+        _error = e;
         _loading = false;
       });
     }
@@ -90,7 +90,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Krediler',
+      title: sl<LocalizationService>().translate('account.credits.title'),
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _load),
@@ -104,7 +104,12 @@ class _CreditsScreenState extends State<CreditsScreen> {
       return const Center(child: AppLoadingIndicator());
     }
     if (_error != null) {
-      return AppErrorView(message: _error!, onRetry: _load);
+      return AppLoadFailedView(
+        error: _error,
+        message:
+            sl<LocalizationService>().translate('account.credits.load_failed'),
+        onRetry: _load,
+      );
     }
 
     final b = _balance;
@@ -123,9 +128,9 @@ class _CreditsScreenState extends State<CreditsScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (_transactions.isEmpty)
-          const AppEmptyState(
+          AppEmptyState(
             icon: Icons.history_outlined,
-            title: 'Kredi hareketi yok',
+            title: sl<LocalizationService>().translate('account.credits.empty'),
           )
         else
           AppCard(

@@ -15,7 +15,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   List<Invoice> _invoices = const [];
   InvoiceSummary _summary = const InvoiceSummary();
   bool _loading = true;
-  String? _error;
+  Object? _error;
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Faturalar yüklenemedi';
+        _error = e;
         _loading = false;
       });
     }
@@ -109,7 +109,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Faturalar',
+      title: sl<LocalizationService>().translate('account.invoices.title'),
       onBack: () => Navigator.of(context).maybePop(),
       actions: [
         AppIconButton(icon: Icons.refresh, onPressed: _load),
@@ -123,7 +123,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       return const Center(child: AppLoadingIndicator());
     }
     if (_error != null) {
-      return AppErrorView(message: _error!, onRetry: _load);
+      return AppLoadFailedView(
+        error: _error,
+        message:
+            sl<LocalizationService>().translate('account.invoices.load_failed'),
+        onRetry: _load,
+      );
     }
 
     return ListView(
@@ -141,9 +146,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (_invoices.isEmpty)
-          const AppEmptyState(
+          AppEmptyState(
             icon: Icons.receipt_long_outlined,
-            title: 'Fatura yok',
+            title:
+                sl<LocalizationService>().translate('account.invoices.empty'),
           )
         else
           AppCard(
@@ -166,8 +172,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     return Row(
       children: [
         Expanded(
-          child: _chip(context, 'Toplam', '${s.totalCount}',
-              AppColors.primary, Icons.receipt_outlined),
+          child: _chip(context, 'Toplam', '${s.totalCount}', AppColors.primary,
+              Icons.receipt_outlined),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(

@@ -47,9 +47,10 @@ void main() {
       expect(p?['p_period_start'], '2026-07-01');
     });
 
-    test('hata → boş liste (fırlatmaz)', () async {
+    test('a failed read is rethrown (not "no data this period")', () async {
       h.stubRpc('fn_crm_forecast_submit_rollup', error: Exception('db down'));
-      expect(await service.getRollup('month', DateTime(2026, 9, 1)), isEmpty);
+      await expectLater(
+          service.getRollup('month', DateTime(2026, 9, 1)), throwsException);
     });
   });
 
