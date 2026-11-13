@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:protoolbag_core/protoolbag_core.dart';
@@ -79,5 +80,60 @@ void main() {
     expect(find.text('Change Password'), findsOneWidget);
     expect(find.text('Güvenlik'), findsNothing);
     expect(find.text('1.0.0 (Build 1)'), findsNothing);
+  });
+
+  group('Delete my account', () {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final launched = <String>[];
+
+    setUp(() {
+      launched.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'launch') {
+          launched.add((call.arguments as Map)['url'] as String);
+          return true;
+        }
+        return true;
+      });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    testWidgets('explains what happens, then opens the app host page',
+        (tester) async {
+      InAppRoute.configure(webOrigin: 'https://app.fixflow.protoolbag.com');
+      await pump(tester);
+
+      expect(find.text('Delete my account'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('settings.delete_account')));
+      await tester.pumpAndSettle();
+
+      // Two-sentence explanation in a confirmation dialog.
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.textContaining('cannot be undone'), findsOneWidget);
+
+      // Cancel does nothing.
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(launched, isEmpty);
+
+      await tester.tap(find.byKey(const ValueKey('settings.delete_account')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settings.delete_account.continue')));
+      await tester.pumpAndSettle();
+      expect(launched,
+          ['https://app.fixflow.protoolbag.com/legal/account-deletion']);
+    });
+
+    testWidgets('no web origin → no dead entry', (tester) async {
+      await pump(tester);
+      expect(
+          find.byKey(const ValueKey('settings.delete_account')), findsNothing);
+    });
   });
 }

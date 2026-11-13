@@ -944,6 +944,10 @@ class AppLocalizations {
     // mobile-followups (2026-11-14)
     'auth.mfa.required_header_admin': 'Yönetici hesapları iki adımlı doğrulama gerektirir',
     'auth.mfa.unavailable_message': 'İki adımlı doğrulama gereksiniminiz şu anda okunamadı. Yönetici hesapları bu kontrol yapılmadan açılmaz; bağlantınızı kontrol edip tekrar deneyin ya da çıkış yapın.',
+    'settings.delete_account.title': 'Hesabımı sil',
+    'settings.delete_account.subtitle': 'Silme talebi web sayfasından iletilir',
+    'settings.delete_account.explanation': 'Hesabınızın silinmesini tarayıcıda açılacak sayfadan talep edersiniz; talep doğrulandıktan sonra hesabınız ve kişisel verileriniz, yasal olarak saklanması gerekenler dışında silinir. Kuruluşunuza ait iş kayıtları kuruluşunuzda kalabilir ve silme işlemi geri alınamaz.',
+    'settings.delete_account.continue': 'Web\'de devam et',
   };
 
   // ============================================
@@ -1866,6 +1870,10 @@ class AppLocalizations {
     // mobile-followups (2026-11-14)
     'auth.mfa.required_header_admin': 'Administrator accounts require two-step verification',
     'auth.mfa.unavailable_message': 'Your two-step verification requirement could not be read right now. Administrator accounts do not open without this check; check your connection and try again, or sign out.',
+    'settings.delete_account.title': 'Delete my account',
+    'settings.delete_account.subtitle': 'The request is made on our web page',
+    'settings.delete_account.explanation': 'You request the deletion of your account on the page that opens in your browser; once the request is confirmed, your account and your personal data are deleted, except what the law requires us to keep. Business records that belong to your organisation may stay with your organisation, and the deletion cannot be undone.',
+    'settings.delete_account.continue': 'Continue on the web',
   };
 
   // ============================================
@@ -2791,5 +2799,9 @@ class AppLocalizations {
     // mobile-followups (2026-11-14)
     'auth.mfa.required_header_admin': 'Administratorkonten erfordern eine zweistufige Verifizierung',
     'auth.mfa.unavailable_message': 'Ihre Anforderung an die zweistufige Verifizierung konnte gerade nicht gelesen werden. Administratorkonten werden ohne diese Prüfung nicht geöffnet; prüfen Sie Ihre Verbindung und versuchen Sie es erneut oder melden Sie sich ab.',
+    'settings.delete_account.title': 'Mein Konto löschen',
+    'settings.delete_account.subtitle': 'Die Anfrage wird auf unserer Webseite gestellt',
+    'settings.delete_account.explanation': 'Sie beantragen die Löschung Ihres Kontos auf der Seite, die sich in Ihrem Browser öffnet; nach Bestätigung der Anfrage werden Ihr Konto und Ihre personenbezogenen Daten gelöscht, ausgenommen Daten, die wir gesetzlich aufbewahren müssen. Geschäftsunterlagen Ihrer Organisation können bei Ihrer Organisation verbleiben, und die Löschung kann nicht rückgängig gemacht werden.',
+    'settings.delete_account.continue': 'Im Web fortfahren',
   };
 }

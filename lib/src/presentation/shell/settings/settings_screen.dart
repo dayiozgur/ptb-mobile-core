@@ -67,6 +67,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ];
   }
 
+  /// Public account-deletion page on the app's web origin
+  /// (`/legal/account-deletion`); null when no origin is configured.
+  Uri? get _accountDeletionUrl =>
+      InAppRoute.webUrlFor('/legal/account-deletion');
+
+  /// "Delete my account": explains what happens, then opens the public web
+  /// page in the browser. Deliberately independent of the server endpoint —
+  /// the request itself is filed on that page.
+  Future<void> _confirmAccountDeletion(Uri url) async {
+    final loc = sl<LocalizationService>();
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(loc.translate('settings.delete_account.title')),
+        content: Text(loc.translate('settings.delete_account.explanation')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(loc.translate('common.cancel')),
+          ),
+          TextButton(
+            key: const ValueKey('settings.delete_account.continue'),
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(loc.translate('settings.delete_account.continue')),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) await _openLegal(url);
+  }
+
   Future<void> _openLegal(Uri url) async {
     final ok = await ComingSoonScreen.openOnWeb(url);
     if (!ok && mounted) {
@@ -101,12 +133,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(sl<LocalizationService>().translate('settings.logout')),
-        content: Text(sl<LocalizationService>()
-            .translate('settings.logout_confirm')),
+        content: Text(
+            sl<LocalizationService>().translate('settings.logout_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(sl<LocalizationService>().translate('common.cancel_ascii')),
+            child: Text(
+                sl<LocalizationService>().translate('common.cancel_ascii')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -193,13 +226,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Integrations section — connect Microsoft (Outlook / Teams / OneDrive)
             AppSectionHeader(
-                title: sl<LocalizationService>().translate('integrations.title')),
+                title:
+                    sl<LocalizationService>().translate('integrations.title')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: AppListTile(
                 leading: const Icon(Icons.cloud_sync_outlined),
-                title: sl<LocalizationService>().translate('integrations.ms.title'),
-                subtitle: sl<LocalizationService>().translate('integrations.ms.subtitle'),
+                title: sl<LocalizationService>()
+                    .translate('integrations.ms.title'),
+                subtitle: sl<LocalizationService>()
+                    .translate('integrations.ms.subtitle'),
                 showChevron: true,
                 showDivider: false,
                 onTap: () => Navigator.of(context).push(
@@ -246,7 +282,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.fingerprint, color: Colors.green),
+                          child: const Icon(Icons.fingerprint,
+                              color: Colors.green),
                         ),
                         title: sl<LocalizationService>()
                             .translate('settings.biometric_login'),
@@ -275,8 +312,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Preferences section
             AppSectionHeader(
-                title:
-                    sl<LocalizationService>().translate('settings.preferences')),
+                title: sl<LocalizationService>()
+                    .translate('settings.preferences')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -291,7 +328,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: const Icon(Icons.language, color: Colors.blue),
                     ),
                     title: _languageLabel(),
-                    subtitle: sl<LocalizationService>().currentLocale.displayName,
+                    subtitle:
+                        sl<LocalizationService>().currentLocale.displayName,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       await showLanguagePicker(context);
@@ -308,7 +346,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: const Icon(Icons.palette, color: Colors.indigo),
                     ),
-                    title: sl<LocalizationService>().translate('settings.theme'),
+                    title:
+                        sl<LocalizationService>().translate('settings.theme'),
                     subtitle: _getThemeName(_themeMode),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showThemeSelector(),
@@ -323,8 +362,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: const Icon(Icons.notifications, color: Colors.red),
                     ),
-                    title:
-                        sl<LocalizationService>().translate('settings.notifications'),
+                    title: sl<LocalizationService>()
+                        .translate('settings.notifications'),
                     trailing: Switch.adaptive(
                       value: _notificationsEnabled,
                       onChanged: (value) {
@@ -371,6 +410,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+                  // Account deletion (Apple 5.1.1(v), Google Play account
+                  // deletion policy): explained here, requested on the public
+                  // web page of the app's own host.
+                  if (_accountDeletionUrl != null) ...[
+                    Divider(height: 1, color: AppColors.separator(context)),
+                    AppListTile(
+                      key: const ValueKey('settings.delete_account'),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.person_remove_outlined,
+                            color: AppColors.error),
+                      ),
+                      title: sl<LocalizationService>()
+                          .translate('settings.delete_account.title'),
+                      subtitle: sl<LocalizationService>()
+                          .translate('settings.delete_account.subtitle'),
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () =>
+                          _confirmAccountDeletion(_accountDeletionUrl!),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -379,8 +443,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // About
             AppSectionHeader(
-                title:
-                    sl<LocalizationService>().translate('settings.about_ascii')),
+                title: sl<LocalizationService>()
+                    .translate('settings.about_ascii')),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -394,7 +458,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Icon(Icons.info_outline, color: AppColors.primary),
                     ),
-                    title: sl<LocalizationService>().translate('settings.version'),
+                    title:
+                        sl<LocalizationService>().translate('settings.version'),
                     // The installed version, not a hardcoded one.
                     subtitle: _version,
                   ),
@@ -471,7 +536,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case AppThemeMode.system:
         return sl<LocalizationService>().translate('settings.theme_system');
       case AppThemeMode.light:
-        return sl<LocalizationService>().translate('settings.theme_light_ascii');
+        return sl<LocalizationService>()
+            .translate('settings.theme_light_ascii');
       case AppThemeMode.dark:
         return sl<LocalizationService>().translate('settings.theme_dark');
     }
@@ -487,7 +553,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _ThemeOption(
               icon: Icons.brightness_auto,
-              title: sl<LocalizationService>().translate('settings.theme_system'),
+              title:
+                  sl<LocalizationService>().translate('settings.theme_system'),
               subtitle: sl<LocalizationService>()
                   .translate('settings.theme_system_subtitle'),
               isSelected: _themeMode == AppThemeMode.system,
@@ -500,8 +567,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Divider(height: 1, color: AppColors.separator(context)),
             _ThemeOption(
               icon: Icons.light_mode,
-              title:
-                  sl<LocalizationService>().translate('settings.theme_light_ascii'),
+              title: sl<LocalizationService>()
+                  .translate('settings.theme_light_ascii'),
               subtitle: sl<LocalizationService>()
                   .translate('settings.theme_light_subtitle'),
               isSelected: _themeMode == AppThemeMode.light,
@@ -545,8 +612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case PasswordChangeOutcome.rateLimited:
         return sl<LocalizationService>().tr('settings.password_rate_limited');
       case PasswordChangeOutcome.reauthenticationNeeded:
-        return sl<LocalizationService>()
-            .tr('profile.password_reauth_required');
+        return sl<LocalizationService>().tr('profile.password_reauth_required');
       case PasswordChangeOutcome.mfaRequired:
         return sl<LocalizationService>()
             .tr('account.security.password.mfa_required');
@@ -644,14 +710,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       AppTextField(
                         key: const Key('settings.password.mfa_code'),
                         controller: mfaController,
-                        label: sl<LocalizationService>()
-            .tr('auth.mfa.code_label'),
+                        label:
+                            sl<LocalizationService>().tr('auth.mfa.code_label'),
                         keyboardType: TextInputType.number,
                         maxLength: 6,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return sl<LocalizationService>()
-            .tr('account.security.password.mfa_code_required');
+                            return sl<LocalizationService>().tr(
+                                'account.security.password.mfa_code_required');
                           }
                           return mfaError;
                         },
@@ -726,7 +792,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   mfaError =
                                       _passwordChangeError(result.outcome);
                                   formKey.currentState?.validate();
-                                case PasswordChangeOutcome.reauthenticationNeeded:
+                                case PasswordChangeOutcome
+                                      .reauthenticationNeeded:
                                 case PasswordChangeOutcome.rateLimited:
                                 case PasswordChangeOutcome.networkError:
                                 case PasswordChangeOutcome.sessionMissing:
@@ -769,7 +836,8 @@ class _ThemeOption extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: (isSelected ? AppColors.primary : Colors.grey).withValues(alpha: 0.1),
+          color: (isSelected ? AppColors.primary : Colors.grey)
+              .withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
