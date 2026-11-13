@@ -1,5 +1,7 @@
 package com.protoolbag.example_phr
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// local_auth (biyometrik giriş) bir FragmentActivity ister: düz FlutterActivity ile
+// `no_fragment_activity` hatası döner ve parmak izi / yüz ile giriş hiç çalışmaz.
+class MainActivity : FlutterFragmentActivity()
