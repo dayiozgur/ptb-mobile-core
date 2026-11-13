@@ -94,7 +94,7 @@ void main() {
     expect('.select(_staffColumns)'.allMatches(src).length,
         greaterThanOrEqualTo(5),
         reason: 'reads and RETURNING selects all use the grant-safe list');
-    expect(RegExp(r"\.select\(\s*\)").hasMatch(
+    expect(RegExp(r'\.select\(\s*\)').hasMatch(
             src.substring(0, src.indexOf('// STAFF TYPES'))),
         isFalse,
         reason: 'no `select()` (= *) on staffs');
