@@ -15,20 +15,20 @@
 #      ISSUER id (App Store Connect → Users and Access → Integrations → App Store Connect API).
 #
 # Usage:
-#   ./scripts/build-testflight.sh <crm|phr|pms|ppm> <ASC_ISSUER_ID> [build_number]
+#   ./scripts/build-testflight.sh <crm|phr|pms|ppm|fixflow|pem> <ASC_ISSUER_ID> [build_number]
 #
 # Example:
 #   ./scripts/build-testflight.sh crm 69a6de70-XXXX-XXXX-XXXX-XXXXXXXXXXXX 2
 #
 set -euo pipefail
 
-APP="${1:?usage: build-testflight.sh <crm|phr|pms|ppm> <ASC_ISSUER_ID> [build_number]}"
+APP="${1:?usage: build-testflight.sh <crm|phr|pms|ppm|fixflow|pem> <ASC_ISSUER_ID> [build_number]}"
 ISSUER="${2:?ASC issuer id required (App Store Connect → Users and Access → Integrations)}"
 BUILD_NUMBER="${3:-}"
 
 case "$APP" in
-  crm|phr|pms|ppm) ;;
-  *) echo "error: app must be one of crm|phr|pms|ppm (got '$APP')" >&2; exit 2 ;;
+  crm|phr|pms|ppm|fixflow|pem) ;;
+  *) echo "error: app must be one of crm|phr|pms|ppm|fixflow|pem (got '$APP')" >&2; exit 2 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -62,6 +62,10 @@ APP_VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 SYMBOLS_DIR="$APP_DIR/build/debug-info/ios/${APP_VERSION}${BUILD_NUMBER:+-b$BUILD_NUMBER}"
 mkdir -p "$SYMBOLS_DIR"
 
+# `flutter build ipa` can exit 0 without exporting a new IPA (signing / SPM pod conflict);
+# remove the previous IPA first so a stale one can never be validated or uploaded.
+rm -rf "$APP_DIR/build/ios/ipa"
+
 echo "▸ [$APP] flutter build ipa (release, obfuscated, ExportOptions.plist)"
 flutter build ipa --release \
   --obfuscate --split-debug-info="$SYMBOLS_DIR" \
@@ -80,6 +84,13 @@ xcrun altool --validate-app -f "$IPA" -t ios \
 echo "▸ [$APP] uploading to TestFlight…"
 xcrun altool --upload-app -f "$IPA" -t ios \
   --apiKey "$API_KEY_ID" --apiIssuer "$ISSUER"
+
+# Free disk: drop the archive + intermediates (several GB per app); keep the Dart symbols.
+# Set KEEP_BUILD=1 to keep them.
+if [ "${KEEP_BUILD:-0}" != "1" ]; then
+  rm -rf "$APP_DIR/build/ios"
+  echo "▸ [$APP] removed build/ios (symbols kept in $SYMBOLS_DIR)"
+fi
 
 echo "✔ [$APP] uploaded. It appears in App Store Connect → TestFlight after processing (~5–15 min)."
 echo "  Export-compliance is pre-answered via ITSAppUsesNonExemptEncryption=false, so no manual prompt."

@@ -1,6 +1,6 @@
 # TestFlight Yayın Rehberi
 
-4 ürün uygulaması TestFlight'a hazır: **CRM, PHR, PMS, PPM** (paid team `283AHKB4WM`).
+6 ürün uygulaması TestFlight'a hazır: **CRM, PHR, PMS, PPM, FixFlow, PEM** (paid team `283AHKB4WM`).
 `example/` demo'su yayınlanmaz.
 
 | App | Bundle ID | Display Name | Assoc. Domains |
@@ -72,3 +72,11 @@ Tüm mağaza/TestFlight build'leri **obfuscated** ve Dart sembolleri ayrılmış
   bkz. `lib/src/core/config/app_version_gate.dart`).
 - Android release imzası henüz debug anahtarıyla (Gradle şablonu) — mağaza yüklemesi öncesi gerçek upload key
   (`key.properties`, git-ignored) yapılandırılmalı.
+
+## 2026-11-16 — mağaza öncesi düzenleme
+
+- FixFlow (`com.protoolbag.fixflow`) ve PEM (`com.protoolbag.pem`) betiğe eklendi; PEM ücretli ekibe (`283AHKB4WM`) alındı ve `ExportOptions.plist` kazandı.
+- İki uygulamanın App Store Connect kaydı yoksa yükleme "no suitable application records" ile durur: kayıt önce açılır (ASC → Apps → New App, paket kimliği yukarıdaki).
+- Betik derlemeden önce eski IPA'yı siler (bayat IPA yüklenemez) ve yüklemeden sonra `build/ios` klasörünü siler (disk); Dart sembolleri `build/debug-info/ios/…` altında kalır. `KEEP_BUILD=1` ile silme kapatılır.
+- Derlemeleri tek tek çalıştırın (paralel iOS derlemesi disk ve belleği doldurur). Yapı numarası tarih bazlı verin (ör. `2026111601`).
+- Android: beş uygulama PEM ile aynı şablona getirildi (Gradle 9.3.1, AGP 9.1.0, Kotlin 2.4.0, `compilerOptions`); CI'daki güncel Flutter bunu istiyor.
