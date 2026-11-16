@@ -79,4 +79,4 @@ Tüm mağaza/TestFlight build'leri **obfuscated** ve Dart sembolleri ayrılmış
 - İki uygulamanın App Store Connect kaydı yoksa yükleme "no suitable application records" ile durur: kayıt önce açılır (ASC → Apps → New App, paket kimliği yukarıdaki).
 - Betik derlemeden önce eski IPA'yı siler (bayat IPA yüklenemez) ve yüklemeden sonra `build/ios` klasörünü siler (disk); Dart sembolleri `build/debug-info/ios/…` altında kalır. `KEEP_BUILD=1` ile silme kapatılır.
 - Derlemeleri tek tek çalıştırın (paralel iOS derlemesi disk ve belleği doldurur). Yapı numarası tarih bazlı verin (ör. `2026111601`).
-- Android: beş uygulama PEM ile aynı şablona getirildi (Gradle 9.3.1, AGP 9.1.0, Kotlin 2.4.0, `compilerOptions`); CI'daki güncel Flutter bunu istiyor.
+- Android: beş uygulama PEM ile aynı şablona getirildi (Gradle 9.3.1, AGP 9.1.1, Kotlin 2.4.0, `compilerOptions`); CI'daki güncel Flutter bunu istiyor.
